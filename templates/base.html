@@ -12,6 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+    // Make payment options available to JavaScript
+    window.paymentOptions = {{ payment_options|tojson }};
+</script>
 </head>
 <body>
 <div class="app-container">
@@ -24,43 +28,24 @@
 
         <div class="sidebar-content">
             <!-- Theme Selector -->
-            <div class="theme-toggle">
-                <button class="theme-toggle-btn">
+            <div class="theme-toggle mb-3 px-3">
+                <button class="theme-toggle-btn btn btn-outline-light w-100">
                     <i class="bi bi-sun"></i>
                     <span>Light Mode</span>
                 </button>
             </div>
 
+<!--            <div class="theme-selector mb-3 px-3">-->
+            <!--                <h6 class="text-white mb-2"><i class="bi bi-palette me-2"></i>Theme Colors</h6>-->
+            <!--                <div class="d-flex justify-content-between">-->
+            <!--                    <div class="theme-color blue active" data-color="blue"></div>-->
+            <!--                    <div class="theme-color purple" data-color="purple"></div>-->
+            <!--                    <div class="theme-color green" data-color="green"></div>-->
+            <!--                    <div class="theme-color orange" data-color="orange"></div>-->
+            <!--                    <div class="theme-color red" data-color="red"></div>-->
+            <!--                </div>-->
+            <!--            </div>-->
 
-            <div class="theme-selector">
-                <div class="theme-color blue active" data-color="blue"></div>
-                <div class="theme-color purple" data-color="purple"></div>
-                <div class="theme-color green" data-color="green"></div>
-                <div class="theme-color orange" data-color="orange"></div>
-                <div class="theme-color red" data-color="red"></div>
-            </div>
-
-
-            <div class="theme-selector mb-3 px-3">
-                <h6 class="text-primary mb-2"><i class="bi bi-palette me-2"></i>Theme Colors</h6>
-                <div class="d-flex justify-content-between">
-                    <div class="theme-color blue active" data-color="blue"></div>
-                    <div class="theme-color purple" data-color="purple"></div>
-                    <div class="theme-color green" data-color="green"></div>
-                    <div class="theme-color orange" data-color="orange"></div>
-                    <div class="theme-color red" data-color="red"></div>
-                </div>
-            </div>
-            <div class="theme-selector mb-3 px-3">
-                <h6 class="text-primary mb-2"><i class="bi bi-palette me-2"></i>Theme Colors</h6>
-                <div class="d-flex justify-content-between">
-                    <div class="theme-color blue active" data-color="blue"></div>
-                    <div class="theme-color purple" data-color="purple"></div>
-                    <div class="theme-color green" data-color="green"></div>
-                    <div class="theme-color orange" data-color="orange"></div>
-                    <div class="theme-color red" data-color="red"></div>
-                </div>
-            </div>
             <!-- Navigation -->
             <ul class="nav flex-column">
                 <li class="nav-item">
@@ -86,7 +71,7 @@
             </ul>
 
             <div class="mt-4 px-3">
-                <h6 class="text-primary mb-3"><i class="bi bi-graph-up"></i> Quick Stats</h6>
+                <h6 class="text-white mb-3"><i class="bi bi-graph-up"></i> Quick Stats</h6>
                 <div class="stat-card">
                     <div class="stat-number">{{ products|length }}</div>
                     <div class="stat-label">PRODUCTS</div>
@@ -102,18 +87,18 @@
             </div>
 
             <div class="mt-4 px-3">
-                <h6 class="text-primary mb-3"><i class="bi bi-lightning"></i> Quick Actions</h6>
+                <h6 class="text-white mb-3"><i class="bi bi-lightning"></i> Quick Actions</h6>
                 <div class="d-grid gap-2">
-                    <a href="{{ url_for('load_default') }}" class="btn btn-outline-primary">
+                    <a href="{{ url_for('load_default') }}" class="btn btn-outline-light">
                         <i class="bi bi-arrow-clockwise"></i> Load Default
                     </a>
-                    <a href="{{ url_for('clear_all') }}" class="btn btn-outline-primary">
+                    <a href="{{ url_for('clear_all') }}" class="btn btn-outline-light">
                         <i class="bi bi-trash"></i> Clear All
                     </a>
-                    <a href="{{ url_for('export_json') }}" class="btn btn-outline-primary" target="_blank">
+                    <a href="{{ url_for('export_json') }}" class="btn btn-outline-light" target="_blank">
                         <i class="bi bi-download"></i> Export JSON
                     </a>
-                    <a href="#api-tab" class="btn btn-outline-primary" data-bs-toggle="tab">
+                    <a href="#api-tab" class="btn btn-outline-light" data-bs-toggle="tab">
                         <i class="bi bi-send"></i> Send Request
                     </a>
                 </div>
@@ -551,8 +536,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
-                <!-- Add Cancel Order section -->
+                <!-- Cancel Order section -->
                 <div class="card mt-4">
                     <div class="card-header">
                         <h5 class="mb-0"><i class="bi bi-x-circle me-2"></i>Cancel Order</h5>
@@ -592,6 +578,24 @@
                     </div>
                 </div>
 
+                {% if cancel_response %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-response me-2"></i>Cancel Order Response</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Status Code:</strong> {{ cancel_response.status_code }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>URL Sent:</strong> {{ cancel_response.url_sent }}
+                        </div>
+                        <div>
+                            <strong>Response:</strong>
+                            <pre class="bg-light p-3 rounded">{{ cancel_response.response_text|tojson|safe }}</pre>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
             </div>
 
@@ -738,23 +742,23 @@
 </div>
 
 <!-- Theme Switcher -->
-<div class="theme-switcher">
-    <button class="btn btn-primary rounded-circle p-3" id="themeToggle">
-        <i class="bi bi-sun"></i>
-    </button>
-    <button class="btn btn-primary rounded-circle p-3 mt-2" id="themeColorToggle">
-        <i class="bi bi-palette"></i>
-    </button>
-</div>
+<!--<div class="theme-switcher">-->
+<!--    <button class="btn btn-primary rounded-circle p-3" id="themeToggle">-->
+<!--        <i class="bi bi-sun"></i>-->
+<!--    </button>-->
+<!--    <button class="btn btn-primary rounded-circle p-3 mt-2" id="themeColorToggle">-->
+<!--        <i class="bi bi-palette"></i>-->
+<!--    </button>-->
+<!--</div>-->
 
 <!-- Theme Selector -->
-<div class="theme-selector" id="themeSelector">
-    <div class="theme-color blue active" data-color="blue"></div>
-    <div class="theme-color purple" data-color="purple"></div>
-    <div class="theme-color green" data-color="green"></div>
-    <div class="theme-color orange" data-color="orange"></div>
-    <div class="theme-color red" data-color="red"></div>
-</div>
+<!--<div class="theme-selector" id="themeSelector">-->
+<!--    <div class="theme-color blue active" data-color="blue"></div>-->
+<!--    <div class="theme-color purple" data-color="purple"></div>-->
+<!--    <div class="theme-color green" data-color="green"></div>-->
+<!--    <div class="theme-color orange" data-color="orange"></div>-->
+<!--    <div class="theme-color red" data-color="red"></div>-->
+<!--</div>-->
 
 <!-- Bootstrap & Vanilla JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

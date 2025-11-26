@@ -1,0 +1,62 @@
+{
+  "branch_code": "2000",
+  "order_code": "ORD_1",
+  "parent_order_code": "",
+  "order_creation_date": "2025-11-25T13:29:54.994207Z",
+  "order_notes": "Don't Ring the bell",
+  "order_product_total_value": 135.5,
+  "is_delivery": 1,
+  "order_delivery_cost": 10.0,
+  "order_total_discount": 0.0,
+  "order_final_total_value": 145.5,
+  "order_payment_method": "cash",
+  "order_status": "new",
+  "client_country_code": "966",
+  "client_phone": "556028080",
+  "client_first_name": "Hossam",
+  "client_middle_name": "Mohamed",
+  "client_last_name": "Abdallah",
+  "client_email": "Hossam.Mohamed@dbsmena.com",
+  "client_birthdate": "1989-04-11T12:00:00.000Z",
+  "client_gender": "Male",
+  "order_address": "123 Main St, City, State 12345",
+  "order_payment_status": "not_payment",
+  "order_gps": [
+    21.779006345949554,
+    39.08578576461103
+  ],
+  "order_products": [
+    {
+      "item_code": "000000000000036596",
+      "item_name": "الان زيت اللافندر30 مل",
+      "offer_code": "",
+      "offer_message": "",
+      "quantity": 1.0,
+      "row_net_total": 65.71,
+      "row_total_discount": 0.0,
+      "total_vat_amount": 8.57,
+      "unit_price": 57.14,
+      "unit_vat_amount": 8.57,
+      "vat_percentage": 0.15
+    },
+    {
+      "item_code": "000000000000053002",
+      "item_name": "إيسي جل كوتور طلاء اظافر - 360",
+      "offer_code": "",
+      "offer_message": "",
+      "quantity": 1.0,
+      "row_net_total": 69.79,
+      "row_total_discount": 0.0,
+      "total_vat_amount": 9.1,
+      "unit_price": 60.69,
+      "unit_vat_amount": 9.1,
+      "vat_percentage": 0.15
+    }
+  ],
+  "payment_methods_with_options": [],
+  "delivery_date": "2025-11-25",
+  "delivery_from_time": "12:00:00",
+  "delivery_to_time": "13:00:00",
+  "shipping_address_2": "Cairo",
+  "fullfilment_plant": "1000"
+}

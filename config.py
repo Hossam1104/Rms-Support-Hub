@@ -1,136 +1,113 @@
-# config.py
-# API URLs with descriptive names
+# API Configuration
 API_URLS = {
-    "Adam Pharmacy - Production": "http://10.2.1.6/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-    "Adam Pharmacy - Testing": "http://10.2.1.6:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
     "UPC Pharmacy - Production": "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
     "UPC Pharmacy - Testing": "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
     "Whites Pharmacy - Production": "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CreateAndAssignOrder",
     "Whites Pharmacy - Testing": "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CreateAndAssignOrder"
 }
 
-# Cancel Order API URLs
 CANCEL_API_URLS = {
-    "Adam Pharmacy - Production": "http://10.2.1.6/RmsMainServerApi/api/Order/CancelOrder",
-    "Adam Pharmacy - Testing": "http://10.2.1.6:8080/RmsMainServerApi/api/Order/CancelOrder",
     "UPC Pharmacy - Production": "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
     "UPC Pharmacy - Testing": "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder",
     "Whites Pharmacy - Production": "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CancelOrder",
     "Whites Pharmacy - Testing": "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder"
 }
 
-# Default API endpoint
-DEFAULT_API_ENDPOINT = "UPC Pharmacy - Testing"
+DEFAULT_API_ENDPOINT = "Whites Pharmacy - Testing"
 
-# Updated Payment options
-PAYMENT_METHODS = ["Visa", "Points", "Tamara", "Tabby", "MisPay", "Emkan", "YouGotaGift", "OgMoney", "PostToCredit"]
-PAYMENT_STATUSES = ["done_payment", "partially_paid", "not_payment", "failed_payment", "refunded_payment"]
+# Payment Configuration
+PAYMENT_METHODS = [
+    "cash",
+    "credit_card",
+    "debit_card",
+    "bank_transfer",
+    "wallet",
+    "PostToCredit",
+    "Points",
+    "Visa",
+    "Tamara",
+    "Tabby",
+    "MisPay",
+    "Emkan",
+    "YouGotaGift",
+    "OgMoney"
+]
+
+PAYMENT_STATUSES = [
+    "not_payment",
+    "done_payment",
+    "pending_payment",
+    "failed_payment",
+    "refunded"
+]
+
 PAYMENT_OPTIONS = {
-    "Visa": ["visa", "mastercard", "mada", "other"],
-    "Points": ["points"],
+    "cash": ["cash"],
+    "credit_card": ["visa", "mastercard", "amex"],
+    "debit_card": ["visa_debit", "mastercard_debit"],
+    "bank_transfer": ["bank_transfer"],
+    "wallet": ["apple_pay", "google_pay", "samsung_pay"],
+    "PostToCredit": ["PostToCredit"],
+    "Points": ["Points"],
+    "Visa": ["visa"],
     "Tamara": ["tamara"],
     "Tabby": ["tabby"],
-    "MisPay": ["MisPay"],
-    "Emkan": ["Emkan"],
-    "YouGotaGift": ["YouGotaGift"],
-    "OgMoney": ["OgMoney"],
-    "PostToCredit": ["PostToCredit"]
+    "MisPay": ["mispay"],
+    "Emkan": ["emkan"],
+    "YouGotaGift": ["yougotagift"],
+    "OgMoney": ["ogmoney"]
 }
 
-# Updated Default data
+# Default Data
 DEFAULT_DATA = {
-    "branch_code": "4000",
-    "order_code": "Order_7",
+    "branch_code": "2000",
+    "order_code": "ORD123456",
     "parent_order_code": "",
-    "order_creation_date": "2025-09-08T17:00:11.000Z",
-    "order_notes": "Don't Ring the bell",
-    "order_product_total_value": 73.75,
-    "is_delivery": 1,
     "order_delivery_cost": 10.0,
-    "order_total_discount": 45.0,
-    "order_final_total_value": 83.75,
-    "order_payment_method": "MisPay",
+    "is_delivery": 1,
     "order_status": "new",
-    "client_country_code": "966",
-    "client_phone": "556028080",
-    "client_first_name": "Hossam",
-    "client_middle_name": "Mohamed",
-    "client_last_name": "Abdallah",
-    "client_email": "Hossam.Mohamed@dbsmena.com",
-    "client_birthdate": "1989-04-11T12:23:10.323Z",
+    "order_payment_status": "not_payment",
+    "delivery_date": "2023-12-15",
+    "delivery_from_time": "12:00:00",
+    "delivery_to_time": "13:00:00",
+    "shipping_address_2": "",
+    "fullfilment_plant": "MAIN",
+    "order_notes": "Don't Ring the bell",
+    "client_first_name": "John",
+    "client_middle_name": "Michael",
+    "client_last_name": "Doe",
+    "client_phone": "5551234567",
+    "client_email": "john.doe@example.com",
+    "client_birthdate": "1989-04-11T12:00:00.000Z",
     "client_gender": "Male",
-    "order_address": "Tabarak City",
-    "address_code": "",
-    "order_country_code": "null",
-    "order_phone": "null",
-    "order_payment_status": "partially_paid",
-    "order_gps": [
-        21.779006345949554,
-        39.08578576461103
-    ],
+    "client_country_code": "966",
+    "order_address": "123 Main St, City, State 12345",
     "order_products": [
         {
-            "item_code": "000000000000021252",
-            "item_name": "J&J Tb Reach Interdntl Full Me",
+            "item_code": "123456",
+            "item_name": "Sample Product",
+            "quantity": 2.0,
+            "unit_price": 25.0,
+            "unit_vat_amount": 3.75,
+            "total_vat_amount": 7.5,
+            "vat_percentage": 0.15,
             "offer_code": "",
             "offer_message": "",
-            "quantity": 2.0,
-            "row_net_total": 22.0,
             "row_total_discount": 0.0,
-            "total_vat_amount": 0.0,
-            "unit_price": 11.0,
-            "unit_vat_amount": 0.0,
-            "vat_percentage": 0.0
-        },
-        {
-            "item_code": "000000000000021241",
-            "item_name": "The Balm Meet Matt Hughes - Brilliant",
-            "offer_code": "000000000011",
-            "offer_message": "Buy One Get One",
-            "quantity": 1.0,
-            "row_net_total": 51.75,
-            "row_total_discount": 45.0,
-            "total_vat_amount": 6.75,
-            "unit_price": 90.0,
-            "unit_vat_amount": 6.75,
-            "vat_percentage": 0.15
+            "row_net_total": 57.5
         }
     ],
     "payment_methods_with_options": [
         {
-            "payment_method": "visa",
-            "payment_amount": 25.00,
-            "transaction_id": "",
-            "payment_option": "visa",
-            "card_name": "null",
-            "bank_code": "null",
+            "payment_method": "cash",
+            "payment_status": "done_payment",
+            "payment_amount": 57.5,
+            "transaction_id": "TXN123456",
+            "payment_option": "cash",
             "option_commission": 0.0,
-            "credit_customer_info": "null"
-        },
-        {
-            "payment_method": "tamara",
-            "payment_amount": 25.0,
-            "transaction_id": "",
-            "payment_option": "tamara",
-            "card_name": "null",
-            "bank_code": "null",
-            "option_commission": 0.0,
-            "credit_customer_info": "null"
-        },
-        {
-            "payment_method": "points",
-            "payment_amount": 33.75,
-            "transaction_id": "",
-            "payment_option": "points",
-            "card_name": "null",
-            "bank_code": "null",
-            "option_commission": 0.0,
-            "credit_customer_info": "null"
+            "card_name": "",
+            "bank_code": "",
+            "credit_customer_info": None
         }
-    ],
-    "delivery_date": "CURRENT_DATE",
-    "delivery_from_time": "CURRENT_TIME",
-    "delivery_to_time": "CURRENT_TIME_PLUS_1H",
-    "shipping_address_2": "Cairo",
-    "fullfilment_plant": "1000"
+    ]
 }
