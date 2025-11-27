@@ -45,6 +45,7 @@ body {
     transition: background-color var(--transition-speed), color var(--transition-speed);
 }
 
+
 /* App Layout */
 .app-container {
     display: flex;
@@ -224,6 +225,43 @@ body {
     padding: 2rem;
     transition: margin-left var(--transition-speed);
 }
+
+/* Payment summary colors */
+.quick-stat .text-success {
+    color: var(--success-color) !important;
+}
+
+.quick-stat .text-warning {
+    color: var(--warning-color) !important;
+}
+
+/* Form improvements */
+.form-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    background: var(--bs-body-bg);
+}
+
+.form-section h6 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Better form spacing */
+.form-row-compact {
+    margin-bottom: 0.75rem;
+}
+
+/* Real-time update indicators */
+.field-updated {
+    border-color: var(--success-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(var(--success-color-rgb), 0.25) !important;
+}
+
 
 /* Section Titles */
 .section-title {

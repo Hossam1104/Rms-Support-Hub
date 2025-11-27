@@ -1,0 +1,87 @@
+{
+  "branch_code": "",
+  "order_code": "",
+  "parent_order_code": "",
+  "order_creation_date": "2025-11-27T13:09:00.904299Z",
+  "order_notes": "Test",
+  "order_product_total_value": 248.4,
+  "is_delivery": 1,
+  "order_delivery_cost": 0.0,
+  "order_total_discount": 216.0,
+  "order_final_total_value": 248.4,
+  "order_payment_method": "Tamara,Points",
+  "order_status": "new",
+  "client_country_code": "966",
+  "client_phone": "5",
+  "client_first_name": "Hossam",
+  "client_middle_name": "",
+  "client_last_name": "Abdallah",
+  "client_email": "",
+  "client_birthdate": "1989-04-11T12:00:00.000Z",
+  "client_gender": "Male",
+  "order_address": "",
+  "order_payment_status": "partially_paid",
+  "order_gps": [
+    21.779006345949554,
+    39.08578576461103
+  ],
+  "order_products": [
+    {
+      "item_code": "000000000000060134",
+      "item_name": "000000000000060134",
+      "offer_code": "GET_1",
+      "offer_message": "Buy One Get One Free",
+      "quantity": 2.0,
+      "row_net_total": 86.25,
+      "row_total_discount": 75.0,
+      "total_vat_amount": 11.25,
+      "unit_price": 75.0,
+      "unit_vat_amount": 5.62,
+      "vat_percentage": 0.15
+    },
+    {
+      "item_code": "000000000000060124",
+      "item_name": "\u062a\u0634\u064a\u0631\u064a \u0628\u0648\u0645\u0628 \u0633\u0648\u0628\u0631\u064a \u062a\u0627\u0646 \u0644\u0648\u0634\u0646 235 \u0645\u0644",
+      "offer_code": "GET_1",
+      "offer_message": "Buy One Get One Free",
+      "quantity": 2.0,
+      "row_net_total": 162.15,
+      "row_total_discount": 141.0,
+      "total_vat_amount": 21.15,
+      "unit_price": 141.0,
+      "unit_vat_amount": 10.57,
+      "vat_percentage": 0.15
+    }
+  ],
+  "payment_methods_with_options": [
+    {
+      "bank_code": "",
+      "card_name": "",
+      "credit_customer_info": null,
+      "option_commission": 0.0,
+      "payment_amount": 50.0,
+      "payment_method": "Tamara",
+      "payment_option": "tamara",
+      "payment_status": "done_payment",
+      "transaction_id": "1"
+    },
+    {
+      "bank_code": "",
+      "card_name": "",
+      "credit_customer_info": null,
+      "option_commission": 0.0,
+      "payment_amount": 20.0,
+      "payment_method": "Points",
+      "payment_option": "",
+      "payment_status": "done_payment",
+      "transaction_id": ""
+    }
+  ],
+  "delivery_date": "",
+  "delivery_from_time": "",
+  "delivery_to_time": "",
+  "shipping_address_2": "",
+  "fullfilment_plant": "",
+  "total_paid": 70.0,
+  "remaining_amount": 178.4
+}
