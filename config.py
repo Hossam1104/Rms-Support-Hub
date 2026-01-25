@@ -22,29 +22,33 @@ CANCEL_API_URLS = {
 
 DEFAULT_API_ENDPOINT = "Whites Pharmacy - Testing"
 
-# Payment Configuration
+# Payment Configuration - Update with allowed methods from API
 PAYMENT_METHODS = [
-    "cash",
-    "PostToCredit",
-    "Points",
-    "credit_card",
+    "cash",  # This should map to COD
+    "Visa",
+    "RajhiPoints",
     "Tamara",
     "Tabby",
+    "NeqatyPoints",
+    "QitafPoints",
     "MisPay",
     "Emkan",
     "YouGotaGift",
     "OgMoney",
+    "COD"
 ]
 
 PAYMENT_STATUSES = ["not_payment", "done_payment", "partially_paid"]
 
 PAYMENT_OPTIONS = {
     "cash": ["cash"],
-    "credit_card": ["visa", "mastercard", "mada", "amex"],
-    "PostToCredit": ["PostToCredit"],
-    "Points": ["Points"],
+    "COD": ["COD"],
+    "Visa": ["visa", "mastercard", "mada", "amex"],
+    "RajhiPoints": ["RajhiPoints"],
     "Tamara": ["tamara"],
     "Tabby": ["tabby"],
+    "NeqatyPoints": ["NeqatyPoints"],
+    "QitafPoints": ["QitafPoints"],
     "MisPay": ["mispay"],
     "Emkan": ["emkan"],
     "YouGotaGift": ["yougotagift"],
@@ -69,12 +73,11 @@ class AppConfig:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 
 
-# Default Data Template
 def get_default_data():
     """Get default order data with current timestamps"""
     current_date = datetime.now().strftime("%Y-%m-%d")
     current_time = datetime.now().strftime("%H:%M:%S")
-    one_hour_later = (datetime.now() + timedelta(hours=1)).strftime("%H:%M:%S")
+    three_hours_later = (datetime.now() + timedelta(hours=3)).strftime("%H:%M:%S")
 
     return {
         "branch_code": "2000",
@@ -86,7 +89,7 @@ def get_default_data():
         "order_payment_status": "not_payment",
         "delivery_date": current_date,
         "delivery_from_time": current_time,
-        "delivery_to_time": one_hour_later,
+        "delivery_to_time": three_hours_later,
         "shipping_address_2": "",
         "fullfilment_plant": "MAIN",
         "order_notes": "Don't Ring the bell",
@@ -107,7 +110,7 @@ def get_default_data():
                 "unit_price": 25.0,
                 "unit_vat_amount": 3.75,
                 "total_vat_amount": 7.5,
-                "vat_percentage": 15.0,  # Store as percentage for consistency
+                "vat_percentage": 15.0,
                 "offer_code": "",
                 "offer_message": "",
                 "row_total_discount": 0.0,

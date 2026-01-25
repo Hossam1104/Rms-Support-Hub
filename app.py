@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 from typing import Dict, List, Any, Optional
 import json
 import os
-
 import pyodbc
 import requests
 from flask import (
@@ -47,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 class ValidationError(Exception):
     """Custom validation error"""
+
     pass
 
 
@@ -97,9 +97,9 @@ class DatabaseManager:
         Look up item details from database
         """
         if (
-                not material_number
-                or not material_number.isdigit()
-                or len(material_number) != 6
+            not material_number
+            or not material_number.isdigit()
+            or len(material_number) != 6
         ):
             raise ValidationError("Material number must be 6 digits")
 
@@ -110,24 +110,25 @@ class DatabaseManager:
         try:
             cursor = conn.cursor()
             query = """
-            SELECT TOP 1
-                I.MaterialNumber,
-                IUOMB.UniversalBarCode,
-                I.Name AS EnglishName,
-                I.NativeName AS ArabicName,
-                IP.Price AS UnitPrice,
-                TT.Rate AS VatRate,
-                CAST(ROUND(((IP.Price * TT.Rate)/100) + IP.Price, 2) AS DECIMAL(10,2)) AS NetPrice
-            FROM dbo.Items AS I
-            LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
-            INNER JOIN dbo.ItemUnitOfMeasures AS IUM ON I.Id = IUM.ItemId
-            INNER JOIN dbo.ItemUnitOfMeasureBarCodes AS IUOMB ON IUM.Id = IUOMB.ItemUnitOfMeasureId
-            LEFT JOIN dbo.ItemPrices AS IP ON IUM.Id = IP.ItemUnitOfMeasureId
-            WHERE RIGHT(I.MaterialNumber, 6) = ?
-            AND IP.IsActive = 1
-            AND IP.Price IS NOT NULL
-            AND IP.ToDate > GETDATE()
-            """
+                    SELECT TOP 1
+                I.MaterialNumber, IUOMB.UniversalBarCode,
+                           I.Name                                                                    AS EnglishName,
+                           I.NativeName                                                              AS ArabicName,
+                           IP.Price                                                                  AS UnitPrice,
+                           TT.Rate                                                                   AS VatRate,
+                           CAST(ROUND(((IP.Price * TT.Rate) / 100) + IP.Price, 2) AS DECIMAL(10, 2)) AS NetPrice
+                    FROM dbo.Items AS I
+                             LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
+                             INNER JOIN dbo.ItemUnitOfMeasures AS IUM ON I.Id = IUM.ItemId
+                             INNER JOIN dbo.ItemUnitOfMeasureBarCodes AS IUOMB ON IUM.Id = IUOMB.ItemUnitOfMeasureId
+                             LEFT JOIN dbo.ItemPrices AS IP ON IUM.Id = IP.ItemUnitOfMeasureId
+                    WHERE RIGHT (I.MaterialNumber
+                        , 6) = ?
+                      AND IP.IsActive = 1
+                      AND IP.Price IS NOT NULL
+                      AND IP.ToDate
+                        > GETDATE() \
+                    """
 
             params = [material_number]
 
@@ -197,7 +198,7 @@ class ProductCalculator:
 
     @staticmethod
     def calculate_product_totals(
-            quantity: float, unit_price: float, vat_percentage: float, discount: float
+        quantity: float, unit_price: float, vat_percentage: float, discount: float
     ) -> Dict[str, float]:
         """
         Calculate product totals including VAT and discounts
@@ -246,7 +247,7 @@ class OrderManager:
             # Try to load last saved order data
             last_order_file = "last_order.json"
             if os.path.exists(last_order_file):
-                with open(last_order_file, 'r') as f:
+                with open(last_order_file, "r") as f:
                     last_order_data = json.load(f)
             else:
                 last_order_data = None
@@ -264,10 +265,17 @@ class OrderManager:
                     session["products"] = session["order_data"]["order_products"].copy()
 
             if "payments" not in session:
-                if last_order_data and "payment_methods_with_options" in last_order_data:
-                    session["payments"] = last_order_data["payment_methods_with_options"].copy()
+                if (
+                    last_order_data
+                    and "payment_methods_with_options" in last_order_data
+                ):
+                    session["payments"] = last_order_data[
+                        "payment_methods_with_options"
+                    ].copy()
                 else:
-                    session["payments"] = session["order_data"]["payment_methods_with_options"].copy()
+                    session["payments"] = session["order_data"][
+                        "payment_methods_with_options"
+                    ].copy()
 
             if "api_endpoint" not in session:
                 session["api_endpoint"] = DEFAULT_API_ENDPOINT
@@ -293,14 +301,14 @@ class OrderManager:
     def save_last_order(order_data: Dict[str, Any]):
         """Save order data to file for persistence"""
         try:
-            with open("last_order.json", 'w') as f:
+            with open("last_order.json", "w") as f:
                 json.dump(order_data, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving last order: {str(e)}")
 
     @staticmethod
     def prepare_order_data() -> Dict[str, Any]:
-        """Prepare complete order data for API submission"""
+        """Prepare complete order data for API submission with API rules"""
         try:
             order_data = session.get("order_data", get_default_data())
             products = session.get("products", [])
@@ -319,6 +327,27 @@ class OrderManager:
             # Calculate payment totals
             total_paid = round(sum(p.get("payment_amount", 0) for p in payments), 2)
             remaining_amount = round(order_final_total - total_paid, 2)
+
+            # Apply API-specific rules for payment methods
+            payment_status = OrderManager._determine_payment_status(payments)
+
+            # SPECIAL RULE: For credit methods, payment amount must equal order total
+            credit_methods = ["PostToCredit"]
+            payment_methods = [p.get("payment_method", "") for p in payments]
+
+            if any(method in credit_methods for method in payment_methods):
+                # Force payment amount to equal order total for credit methods
+                if payments and abs(total_paid - order_final_total) > 0.01:
+                    adjustment_needed = order_final_total - total_paid
+                    payments[0]["payment_amount"] = round(
+                        payments[0].get("payment_amount", 0) + adjustment_needed, 2
+                    )
+                    total_paid = order_final_total
+                    remaining_amount = 0.0
+
+                    # Update session
+                    session["payments"] = payments
+                    session.modified = True
 
             # Prepare final order data
             final_data = {
@@ -347,9 +376,7 @@ class OrderManager:
                 ),
                 "client_gender": order_data.get("client_gender", "Male"),
                 "order_address": order_data.get("order_address", ""),
-                "order_payment_status": OrderManager._determine_payment_status(
-                    payments
-                ),
+                "order_payment_status": payment_status,
                 "order_gps": order_data.get(
                     "order_gps", [21.779006345949554, 39.08578576461103]
                 ),
@@ -383,12 +410,15 @@ class OrderManager:
     def calculate_payment_summary() -> Dict[str, float]:
         """Calculate payment summary including total paid and remaining amount"""
         try:
-            order_data = OrderManager.prepare_order_data()
+            order_data = session.get("order_data", get_default_data())
             products = session.get("products", [])
             payments = session.get("payments", [])
 
             order_product_total = round(
                 sum(p.get("row_net_total", 0) for p in products), 2
+            )
+            order_discount = round(
+                sum(p.get("row_total_discount", 0) for p in products), 2
             )
             delivery_cost = round(order_data.get("order_delivery_cost", 0), 2)
             order_final_total = round(order_product_total + delivery_cost, 2)
@@ -399,44 +429,102 @@ class OrderManager:
             return {
                 "total_paid": total_paid,
                 "remaining_amount": remaining_amount,
-                "order_final_total": order_final_total
+                "order_final_total": order_final_total,
+                "delivery_cost": delivery_cost,
+                "products_total": order_product_total,
+                "order_discount": order_discount,
             }
         except Exception as e:
             logger.error(f"Error calculating payment summary: {str(e)}")
-            return {"total_paid": 0.0, "remaining_amount": 0.0, "order_final_total": 0.0}
+            return {
+                "total_paid": 0.0,
+                "remaining_amount": 0.0,
+                "order_final_total": 0.0,
+                "delivery_cost": 0.0,
+                "products_total": 0.0,
+                "order_discount": 0.0,
+            }
 
     @staticmethod
     def _get_payment_method_string(payments: List[Dict]) -> str:
-        """Convert payment methods to comma-separated string"""
-        methods = [
-            p.get("payment_method", "") for p in payments if p.get("payment_method")
-        ]
-        return ",".join(methods) if methods else "cash"
+        """Convert payment methods to comma-separated string with API-compatible names"""
+        methods = []
+        for payment in payments:
+            method = payment.get("payment_method", "")
+            # Map to API-compatible names
+            if method == "cash":
+                methods.append("COD")
+            elif method == "credit_card":
+                methods.append("Visa")
+            else:
+                methods.append(method)
+        return ",".join(methods) if methods else "COD"
 
     @staticmethod
     def _determine_payment_status(payments: List[Dict]) -> str:
-        """Determine order payment status based on payment methods"""
+        """Determine order payment status based on payment methods and API rules"""
         if not payments:
             return "not_payment"
+
+        # Calculate totals for validation
+        order_data = session.get("order_data", get_default_data())
+        products = session.get("products", [])
+        order_product_total = round(sum(p.get("row_net_total", 0) for p in products), 2)
+        delivery_cost = round(order_data.get("order_delivery_cost", 0), 2)
+        order_final_total = round(order_product_total + delivery_cost, 2)
+
+        total_paid = round(sum(p.get("payment_amount", 0) for p in payments), 2)
 
         methods = [p.get("payment_method", "") for p in payments]
         statuses = [p.get("payment_status", "") for p in payments]
 
+        # SPECIAL RULES FOR SPECIFIC PAYMENT METHODS
+
+        # Rule 1: Credit methods (PostToCredit) must have not_payment status
+        credit_methods = ["PostToCredit"]
+        if any(method in credit_methods for method in methods):
+            # For credit methods, payment status must be not_payment
+            # and payment amount must equal order total
+            if abs(total_paid - order_final_total) > 0.01:
+                # Auto-adjust payment amount to match total
+                if payments:
+                    adjustment_needed = order_final_total - total_paid
+                    payments[0]["payment_amount"] = round(
+                        payments[0].get("payment_amount", 0) + adjustment_needed, 2
+                    )
+                    # Update session
+                    session["payments"] = payments
+                    session.modified = True
+            return "not_payment"
+
+        # Rule 2: Digital wallets (Tamara, Tabby, etc.) should be done_payment when amount matches total
+        digital_wallets = ["Tamara", "Tabby", "MisPay", "Emkan", "Visa"]
+        if any(method in digital_wallets for method in methods):
+            if "done_payment" in statuses:
+                if abs(total_paid - order_final_total) <= 0.01:
+                    return "done_payment"
+                else:
+                    return "partially_paid"
+
+        # Rule 3: COD/cash should be not_payment
+        cod_methods = ["cash", "COD"]
+        if any(method in cod_methods for method in methods):
+            return "not_payment"
+
+        # Rule 4: Points systems
+        points_methods = ["RajhiPoints", "NeqatyPoints", "QitafPoints", "Points"]
+        if any(method in points_methods for method in methods):
+            if (
+                "done_payment" in statuses
+                and abs(total_paid - order_final_total) <= 0.01
+            ):
+                return "done_payment"
+            else:
+                return "partially_paid"
+
+        # Default logic
         if len(methods) > 1:
             return "partially_paid"
-
-        if (
-                methods
-                and methods[0] in ["Visa", "Points"]
-                and statuses[0] == "done_payment"
-        ):
-            return "done_payment"
-        elif (
-                methods
-                and methods[0] in ["PostToCredit", "cash"]
-                and statuses[0] == "not_payment"
-        ):
-            return "not_payment"
 
         return statuses[0] if statuses else "not_payment"
 
@@ -506,7 +594,7 @@ class OrderManager:
 
     @staticmethod
     def validate_order_data(order_data: Dict[str, Any]) -> List[str]:
-        """Validate order data before sending to API"""
+        """Validate order data before sending to API with specific payment rules"""
         errors = []
 
         required_fields = [
@@ -524,15 +612,37 @@ class OrderManager:
 
         if not order_data.get("order_products"):
             errors.append("No products in the order")
-        else:
-            for i, product in enumerate(order_data["order_products"]):
-                if not product.get("item_code"):
-                    errors.append(f"Product {i + 1}: Missing item code")
-                if not product.get("item_name"):
-                    errors.append(f"Product {i + 1}: Missing item name")
 
-        if order_data.get("order_final_total_value", 0) <= 0:
-            errors.append("Order total must be greater than 0")
+        # Payment method validation
+        payment_method = order_data.get("order_payment_method", "")
+        payment_status = order_data.get("order_payment_status", "")
+        total_paid = order_data.get("total_paid", 0)
+        order_final_total = order_data.get("order_final_total_value", 0)
+
+        # Rule 1: Credit methods require specific conditions
+        credit_methods = ["PostToCredit"]
+        if any(method in payment_method for method in credit_methods):
+            if payment_status != "not_payment":
+                errors.append("Credit payment methods must have 'not_payment' status")
+            if abs(total_paid - order_final_total) > 0.01:
+                errors.append(
+                    f"Credit payments must cover full order amount. Current: ${total_paid}, Required: ${order_final_total}"
+                )
+
+        # Rule 2: Digital wallets validation
+        digital_wallets = ["Tamara", "Tabby", "MisPay", "Emkan", "Visa"]
+        if any(method in payment_method for method in digital_wallets):
+            if (
+                payment_status == "done_payment"
+                and abs(total_paid - order_final_total) > 0.01
+            ):
+                errors.append(
+                    f"Digital wallet 'done_payment' must equal order total. Current: ${total_paid}, Required: ${order_final_total}"
+                )
+
+        # Rule 3: COD validation
+        if "COD" in payment_method and payment_status != "not_payment":
+            errors.append("COD payments must have 'not_payment' status")
 
         return errors
 
@@ -605,15 +715,14 @@ def index():
 def calculate_totals():
     """Calculate order totals"""
     try:
-        order_data = OrderManager.prepare_order_data()
         payment_summary = OrderManager.calculate_payment_summary()
 
         return jsonify(
             {
-                "products_total": order_data["order_product_total_value"],
-                "order_discount": order_data["order_total_discount"],
-                "delivery_cost": order_data["order_delivery_cost"],
-                "final_total": order_data["order_final_total_value"],
+                "products_total": payment_summary["products_total"],
+                "order_discount": payment_summary["order_discount"],
+                "delivery_cost": payment_summary["delivery_cost"],
+                "final_total": payment_summary["order_final_total"],
                 "total_paid": payment_summary["total_paid"],
                 "remaining_amount": payment_summary["remaining_amount"],
             }
@@ -1016,49 +1125,49 @@ def update_payment(index):
 def update_order_field():
     """Update individual order field via AJAX"""
     try:
-        field = request.json.get('field')
-        value = request.json.get('value')
+        field = request.json.get("field")
+        value = request.json.get("value")
 
         if not field:
             return jsonify({"success": False, "error": "No field specified"}), 400
 
         order_data = session.get("order_data", get_default_data())
 
-        # Map field names to session keys
+        # Field mapping for session data
         field_mapping = {
-            'branch_code': 'branch_code',
-            'order_code': 'order_code',
-            'parent_order_code': 'parent_order_code',
-            'delivery_cost': 'order_delivery_cost',
-            'is_delivery': 'is_delivery',
-            'order_status': 'order_status',
-            'delivery_date': 'delivery_date',
-            'fulfillment_plant': 'fullfilment_plant',
-            'shipping_address_2': 'shipping_address_2',
-            'order_notes': 'order_notes',
-            'first_name': 'client_first_name',
-            'middle_name': 'client_middle_name',
-            'last_name': 'client_last_name',
-            'phone': 'client_phone',
-            'email': 'client_email',
-            'birthdate': 'client_birthdate',
-            'gender': 'client_gender',
-            'country_code': 'client_country_code',
-            'address': 'order_address',
-            'delivery_from_time': 'delivery_from_time',
-            'delivery_to_time': 'delivery_to_time',
-            'order_payment_status': 'order_payment_status'
+            "branch_code": "branch_code",
+            "order_code": "order_code",
+            "parent_order_code": "parent_order_code",
+            "delivery_cost": "order_delivery_cost",
+            "is_delivery": "is_delivery",
+            "order_status": "order_status",
+            "delivery_date": "delivery_date",
+            "fulfillment_plant": "fullfilment_plant",
+            "shipping_address_2": "shipping_address_2",
+            "order_notes": "order_notes",
+            "first_name": "client_first_name",
+            "middle_name": "client_middle_name",
+            "last_name": "client_last_name",
+            "phone": "client_phone",
+            "email": "client_email",
+            "birthdate": "client_birthdate",
+            "gender": "client_gender",
+            "country_code": "client_country_code",
+            "address": "order_address",
+            "delivery_from_time": "delivery_from_time",
+            "delivery_to_time": "delivery_to_time",
+            "order_payment_status": "order_payment_status",
         }
 
         if field in field_mapping:
             session_key = field_mapping[field]
 
             # Handle data type conversions
-            if field in ['delivery_cost', 'is_delivery']:
+            if field in ["delivery_cost", "is_delivery"]:
                 try:
-                    value = float(value) if field == 'delivery_cost' else int(value)
+                    value = float(value) if field == "delivery_cost" else int(value)
                 except (ValueError, TypeError):
-                    value = 0 if field == 'is_delivery' else 0.0
+                    value = 0 if field == "is_delivery" else 0.0
 
             order_data[session_key] = value
             session["order_data"] = order_data
@@ -1096,6 +1205,16 @@ def send_request():
         url = custom_url if custom_url else API_URLS.get(api_endpoint)
 
         if not url:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Please select an API endpoint or enter a custom URL",
+                        }
+                    ),
+                    400,
+                )
             flash("Please select an API endpoint or enter a custom URL", "danger")
             return redirect(url_for("index"))
 
@@ -1103,9 +1222,32 @@ def send_request():
         order_data = OrderManager.prepare_order_data()
 
         # Validate if checkbox is checked
-        if request.form.get("validateBeforeSend"):
+        validate_flag = request.form.get("validateBeforeSend")
+        should_validate = (
+            validate_flag == "on"
+            or validate_flag == "true"
+            or validate_flag == "1"
+            or validate_flag is True
+        )
+
+        if should_validate:
             errors = OrderManager.validate_order_data(order_data)
             if errors:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return (
+                        jsonify(
+                            {
+                                "status_code": 400,
+                                "response_text": json.dumps(
+                                    {"validation_errors": errors}, indent=2
+                                ),
+                                "url_sent": "Validation Check",
+                                "success": False,
+                            }
+                        ),
+                        400,
+                    )
+
                 for error in errors:
                     flash(error, "danger")
                 return redirect(url_for("index"))
@@ -1117,6 +1259,9 @@ def send_request():
         if api_endpoint:
             session["api_endpoint"] = api_endpoint
             session.modified = True
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify(response)
 
         if response["success"]:
             flash(
@@ -1144,6 +1289,8 @@ def send_request():
 
     except Exception as e:
         logger.error(f"Error sending request: {str(e)}")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": str(e)}), 500
         flash(f"Error sending request: {str(e)}", "danger")
         return redirect(url_for("index"))
 
@@ -1164,6 +1311,16 @@ def cancel_order():
         )
 
         if not url:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Please select a cancel API endpoint or enter a custom URL",
+                        }
+                    ),
+                    400,
+                )
             flash("Please select a cancel API endpoint or enter a custom URL", "danger")
             return redirect(url_for("index"))
 
@@ -1172,6 +1329,16 @@ def cancel_order():
         reason = request.form.get("reason", "").strip()
 
         if not order_number or not reason:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Order number and reason are required",
+                        }
+                    ),
+                    400,
+                )
             flash("Order number and reason are required", "danger")
             return redirect(url_for("index"))
 
@@ -1183,6 +1350,9 @@ def cancel_order():
 
         # Send to API
         response = APIManager.send_order(url, cancel_data)
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify(response)
 
         if response["success"]:
             flash(
@@ -1211,6 +1381,8 @@ def cancel_order():
 
     except Exception as e:
         logger.error(f"Error canceling order: {str(e)}")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": str(e)}), 500
         flash(f"Error canceling order: {str(e)}", "danger")
         return redirect(url_for("index"))
 
