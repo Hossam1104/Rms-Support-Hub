@@ -1,0 +1,54 @@
+{
+  "ReferenceNumber": "TRN-RET-002",
+  "OnlineOrderNumber": "TRN-ORD-00012-RET",
+  "IsReturn": true,
+  "ParentReferenceNumber": "TRN-00012",
+  "OrderCreationDate": "2026-01-08T11:00:00.000",
+  "TotalDiscount": 45.000,
+  "TotalVat": 6.750,
+  "GrossAmount": 90.000,
+  "NetAmount": 51.750,
+  "CustomerName": "TRENDYOL",
+  "CustomerCreditAmount": 51.750,
+  "PaidOnlineAmount": 0,
+  "PaidWithPointsAmount": 0,
+  "InvoiceConsumer": {
+    "FirstName": "Trend",
+    "MiddleName": null,
+    "LastName": "Customer",
+    "ConsumerCode": "TRN-RET-02",
+    "Gender": "Female",
+    "BirthDate": "1994-09-09T00:00:00",
+    "PrimaryPhoneNumber": "966500000012",
+    "Email": "customer@trendyol.com",
+    "NationalId": null,
+    "Nationality": null
+  },
+  "DeliveryDetails": {
+    "DeliveryPhoneNumber": "966500000012",
+    "DeliveryAddress": "Riyadh",
+    "DeliveryLocationUrl": null,
+    "DeliveryNotes": "Partial return – item only",
+    "DeliveryFees": 0.000
+  },
+  "RowItems": [
+    {
+      "Quantity": 1.000,
+      "MaterialNumber": "000000000000021241",
+      "ItemPrice": 90.000,
+      "ItemDiscount": 45.000,
+      "RowTotalDiscount": 45.000,
+      "ItemVat": 6.750,
+      "RowTotalVat": 6.750,
+      "BatchNumber": null,
+      "ExpireDate": null,
+      "SerialNumber": null,
+      "Barcode": "681619810619",
+      "ScannedCode": null,
+      "GrossAmount": 90.000,
+      "NetAmount": 51.750,
+      "VatPercentage": 0.15,
+      "OfferIdentifier": "000000000011"
+    }
+  ]
+}

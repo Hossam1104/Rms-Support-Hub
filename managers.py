@@ -334,18 +334,8 @@ class OrderManager:
             payment_methods = [p.get("payment_method", "") for p in payments]
 
             if any(method in credit_methods for method in payment_methods):
-                # Force payment amount to equal order total for credit methods
-                if payments and abs(total_paid - order_final_total) > 0.01:
-                    adjustment_needed = order_final_total - total_paid
-                    payments[0]["payment_amount"] = round(
-                        payments[0].get("payment_amount", 0) + adjustment_needed, 2
-                    )
-                    total_paid = order_final_total
-                    remaining_amount = 0.0
-
-                    # Update session
-                    session["payments"] = payments
-                    session.modified = True
+                # Strict validation handles amount checks - no silent overrides
+                pass
 
             # Prepare final order data
             final_data = {
@@ -445,16 +435,11 @@ class OrderManager:
 
     @staticmethod
     def _get_payment_method_string(payments: List[Dict]) -> str:
-        """Convert payment methods to comma-separated string with API-compatible names"""
+        """Convert payment methods to comma-separated string"""
         methods = []
         for payment in payments:
             method = payment.get("payment_method", "")
-            # Map to API-compatible names
-            if method == "cash":
-                methods.append("COD")
-            elif method == "credit_card":
-                methods.append("Visa")
-            else:
+            if method:
                 methods.append(method)
         return ",".join(methods) if methods else "COD"
 
@@ -482,17 +467,7 @@ class OrderManager:
         credit_methods = ["PostToCredit"]
         if any(method in credit_methods for method in methods):
             # For credit methods, payment status must be not_payment
-            # and payment amount must equal order total
-            if abs(total_paid - order_final_total) > 0.01:
-                # Auto-adjust payment amount to match total
-                if payments:
-                    adjustment_needed = order_final_total - total_paid
-                    payments[0]["payment_amount"] = round(
-                        payments[0].get("payment_amount", 0) + adjustment_needed, 2
-                    )
-                    # Update session
-                    session["payments"] = payments
-                    session.modified = True
+            # Validation will ensure payment amount equals order total without auto-adjusting
             return "not_payment"
 
         # Rule 2: Digital wallets (Tamara, Tabby, etc.) should be done_payment when amount matches total
@@ -504,9 +479,8 @@ class OrderManager:
                 else:
                     return "partially_paid"
 
-        # Rule 3: COD/cash should be not_payment
-        cod_methods = ["cash", "COD"]
-        if any(method in cod_methods for method in methods):
+        # Rule 3: COD should be not_payment
+        if "COD" in methods:
             return "not_payment"
 
         # Rule 4: Points systems
@@ -576,15 +550,21 @@ class OrderManager:
 
     @staticmethod
     def _prepare_payments(payments: List[Dict]) -> List[Dict]:
-        """Prepare payments data with proper formatting"""
+        """Prepare payments data with proper formatting and strict field selection"""
         prepared_payments = []
         for payment in payments:
-            prepared_payment = payment.copy()
-
-            # Round all float values to 2 decimal places
-            for key, value in prepared_payment.items():
-                if isinstance(value, float):
-                    prepared_payment[key] = round(value, 2)
+            # Strict allowed keys based on request examples
+            prepared_payment = {
+                "payment_method": payment.get("payment_method"),
+                "payment_status": payment.get("payment_status"),
+                "payment_amount": round(float(payment.get("payment_amount", 0)), 2),
+                "transaction_id": payment.get("transaction_id", ""),
+                "payment_option": payment.get("payment_option", ""),
+                "option_commission": round(
+                    float(payment.get("option_commission", 0)), 2
+                ),
+                "credit_customer_info": payment.get("credit_customer_info"),
+            }
 
             prepared_payments.append(prepared_payment)
 
@@ -637,10 +617,13 @@ class OrderManager:
                 errors.append(
                     f"Digital wallet 'done_payment' must equal order total. Current: ${total_paid}, Required: ${order_final_total}"
                 )
-
         # Rule 3: COD validation
         if "COD" in payment_method and payment_status != "not_payment":
             errors.append("COD payments must have 'not_payment' status")
+
+        # Rule 4: Customer info validation (OPTIONAL per new requirement)
+        # No strict validation for customer_info presence
+        pass
 
         return errors
 

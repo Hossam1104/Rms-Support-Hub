@@ -36,7 +36,7 @@ from managers import (
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=".", static_folder=".", static_url_path="/static")
 app.config.from_object(AppConfig)
 
 # Setup logging
@@ -58,7 +58,7 @@ def index():
     payment_summary = OrderManager.calculate_payment_summary()
 
     return render_template(
-        "base.html",
+        "index.html",
         api_urls=API_URLS,
         cancel_api_urls=CANCEL_API_URLS,
         payment_methods=PAYMENT_METHODS,
@@ -209,7 +209,7 @@ def add_product():
     try:
         quantity = float(request.form.get("quantity", 0))
         unit_price = float(request.form.get("unit_price", 0))
-        vat_input = request.form.get("vat_percentage", "0")
+        vat_input = float(request.form.get("vat_percentage", "0"))
         discount = float(request.form.get("discount", 0))
 
         calculations = ProductCalculator.calculate_product_totals(
@@ -329,7 +329,7 @@ def update_product(index):
         if 0 <= index < len(products):
             quantity = float(request.form.get("quantity", 0))
             unit_price = float(request.form.get("unit_price", 0))
-            vat_input = request.form.get("vat_percentage", "0")
+            vat_input = float(request.form.get("vat_percentage", "0"))
             discount = float(request.form.get("discount", 0))
 
             calculations = ProductCalculator.calculate_product_totals(
@@ -635,7 +635,7 @@ def send_request():
             )
 
         return render_template(
-            "base.html",
+            "index.html",
             api_urls=API_URLS,
             cancel_api_urls=CANCEL_API_URLS,
             payment_methods=PAYMENT_METHODS,
@@ -727,7 +727,7 @@ def cancel_order():
             )
 
         return render_template(
-            "base.html",
+            "index.html",
             api_urls=API_URLS,
             cancel_api_urls=CANCEL_API_URLS,
             payment_methods=PAYMENT_METHODS,

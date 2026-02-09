@@ -336,10 +336,17 @@ class OnlineOrderTool {
     updatePaymentOptions(method, isEdit = false) {
         try {
             const prefix = isEdit ? 'edit' : '';
-            const optionSelect = document.getElementById(`${prefix}PaymentOption`);
-            const creditCustomerInfo = document.getElementById(`${prefix}CreditCustomerInfo`);
-            const paymentStatusSelect = document.getElementById(`${prefix}PaymentStatus`);
-            const paymentAmountField = document.getElementById(`${prefix}PaymentAmount`);
+
+            // Helper to get correct ID (Add: camelCase, Edit: edit+PascalCase)
+            const getId = (baseName) => {
+                if (isEdit) return 'edit' + baseName.charAt(0).toUpperCase() + baseName.slice(1);
+                return baseName.charAt(0).toLowerCase() + baseName.slice(1);
+            };
+
+            const optionSelect = document.getElementById(getId('paymentOption'));
+            const creditCustomerInfo = document.getElementById(getId('creditCustomerInfo'));
+            const paymentStatusSelect = document.getElementById(getId('paymentStatus'));
+            const paymentAmountField = document.getElementById(getId('paymentAmount'));
 
             if (!optionSelect) return;
 
@@ -348,44 +355,105 @@ class OnlineOrderTool {
 
             // Populate payment options based on selected method
             if (method && this.paymentOptions[method]) {
-                this.paymentOptions[method].forEach(option => {
+                const options = this.paymentOptions[method];
+                options.forEach(option => {
                     const optionElement = document.createElement('option');
                     optionElement.value = option;
                     optionElement.textContent = option.charAt(0).toUpperCase() + option.slice(1);
                     optionSelect.appendChild(optionElement);
                 });
-            }
 
-            // Show customer info fields for ALL payment methods
-            if (creditCustomerInfo) {
-                creditCustomerInfo.style.display = 'block';
-            }
-
-            // Auto-set payment status and amount based on API rules
-            if (paymentStatusSelect && paymentAmountField) {
-                // API RULES:
-                // - COD: must be not_payment with full amount
-                // - Digital wallets (Tamara, Tabby, etc.): done_payment with full amount
-                // - Visa: done_payment with full amount
-                // - Points systems: done_payment with full amount
-
-                if (method === 'COD') {
-                    paymentStatusSelect.value = 'not_payment';
-                    this.setPaymentAmountToFullTotal(paymentAmountField);
-                } else if (['Visa', 'Tamara', 'Tabby', 'MisPay', 'Emkan', 'YouGotaGift', 'OgMoney'].includes(method)) {
-                    paymentStatusSelect.value = 'done_payment';
-                    this.setPaymentAmountToFullTotal(paymentAmountField);
-                } else if (['RajhiPoints', 'NeqatyPoints', 'QitafPoints'].includes(method)) {
-                    paymentStatusSelect.value = 'done_payment';
-                    this.setPaymentAmountToFullTotal(paymentAmountField);
-                } else {
-                    paymentStatusSelect.value = '';
+                // Auto-select if there's only one option (e.g., COD, Tamara)
+                if (options.length === 1) {
+                    optionSelect.value = options[0];
                 }
             }
+            // Show customer info fields for COD, Visa, and PostToCredit
+            if (creditCustomerInfo) {
+                creditCustomerInfo.style.display = (['COD', 'Visa', 'PostToCredit'].includes(method)) ? 'block' : 'none';
+            }
+
+            // Default logic for status and amount (only if empty)
+            if (paymentStatusSelect && paymentAmountField) {
+                if (method === 'COD') {
+                    if (!paymentStatusSelect.value) paymentStatusSelect.value = 'not_payment';
+                    if (!paymentAmountField.value) this.setPaymentAmountToFullTotal(paymentAmountField);
+                } else if (['Visa', 'Tamara', 'Tabby', 'MisPay', 'Emkan', 'YouGotaGift', 'OgMoney', 'RajhiPoints', 'QitafPoints', 'NeqatyPoints'].includes(method)) {
+                    if (!paymentStatusSelect.value) paymentStatusSelect.value = 'done_payment';
+                    if (!paymentAmountField.value) this.setPaymentAmountToFullTotal(paymentAmountField);
+                }
+            }
+
+            // Trigger Validation
+            this.validatePaymentForm(isEdit);
 
         } catch (error) {
             console.error('Error updating payment options:', error);
         }
+    }
+
+    validatePaymentForm(isEdit) {
+        const prefix = isEdit ? 'edit' : '';
+
+        let methodId = isEdit ? 'editPaymentMethod' : 'paymentMethod';
+        let statusId = isEdit ? 'editPaymentStatus' : 'paymentStatus';
+        let amountId = isEdit ? 'editPaymentAmount' : 'paymentAmount';
+        let errorId = isEdit ? 'editPaymentError' : 'addPaymentError';
+        let submitBtnSelector = isEdit ? '#editPaymentModal button[type="submit"]' : '#addPaymentModal button[type="submit"]';
+
+        const method = document.getElementById(methodId)?.value;
+        const status = document.getElementById(statusId)?.value;
+        const amount = parseFloat(document.getElementById(amountId)?.value || 0);
+        const errorEl = document.getElementById(errorId);
+
+        const finalTotalElement = document.getElementById('finalTotal');
+        const orderTotal = parseFloat(finalTotalElement ? finalTotalElement.textContent : 0) || 0;
+
+        if (!method) return;
+
+        let isValid = true;
+        let message = '';
+
+        // Helper to get customer field IDs
+        const getId = (baseName) => {
+            if (isEdit) return 'edit' + baseName.charAt(0).toUpperCase() + baseName.slice(1);
+            return baseName.charAt(0).toLowerCase() + baseName.slice(1);
+        };
+
+        // Validate customer fields for COD, Visa, and PostToCredit
+        // FIELDS ARE OPTIONAL as per new requirement
+        if (['COD', 'Visa', 'PostToCredit'].includes(method)) {
+            // No strict validation required for customer name/number
+        }
+
+        // Only check other validations if customer fields are valid
+        if (isValid) {
+            if (method === 'COD') {
+                if (status && status !== 'not_payment') {
+                    isValid = false;
+                    message = 'COD must be "Not Payment"';
+                }
+            } else {
+                // Digital / Points
+                if (status && status !== 'done_payment') {
+                    isValid = false;
+                    message = method + ' must be "Done Payment"';
+                }
+                // Strict amount check
+                if (Math.abs(amount - orderTotal) > 0.01) {
+                    isValid = false;
+                    message = `Amount must equal Order Total (${orderTotal})`;
+                }
+            }
+        }
+
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.style.display = isValid ? 'none' : 'block';
+        }
+
+        const btn = document.querySelector(submitBtnSelector);
+        if (btn) btn.disabled = !isValid;
     }
 
     setPaymentAmountToFullTotal(paymentAmountField) {
@@ -753,11 +821,11 @@ class OnlineOrderTool {
 
             // Build the response text
             const responseText = `=== API Response - ${timestamp} ===\n` +
-                               `Status: ${responseData.status_code}\n` +
-                               `URL: ${responseData.url_sent}\n` +
-                               `Success: ${responseData.success}\n\n` +
-                               `Response Body:\n${formattedResponse}\n\n` +
-                               '='.repeat(50) + '\n\n';
+                `Status: ${responseData.status_code}\n` +
+                `URL: ${responseData.url_sent}\n` +
+                `Success: ${responseData.success}\n\n` +
+                `Response Body:\n${formattedResponse}\n\n` +
+                '='.repeat(50) + '\n\n';
 
             // Update display elements
             responseDisplay.textContent = responseText;
@@ -1042,12 +1110,31 @@ class OnlineOrderTool {
                 }
             }
 
-            const editPaymentMethod = document.getElementById('editPaymentMethod');
             if (editPaymentMethod) {
                 editPaymentMethod.addEventListener('change', () => {
                     this.updatePaymentOptions(editPaymentMethod.value, true);
                 });
             }
+
+            // Payment Validation - Add Modal
+            const addStatus = document.getElementById('paymentStatus');
+            const addAmount = document.getElementById('paymentAmount');
+            [addStatus, addAmount].forEach(el => {
+                if (el) {
+                    el.addEventListener('change', () => this.validatePaymentForm(false));
+                    el.addEventListener('input', () => this.validatePaymentForm(false));
+                }
+            });
+
+            // Payment Validation - Edit Modal
+            const editStatus = document.getElementById('editPaymentStatus');
+            const editAmount = document.getElementById('editPaymentAmount');
+            [editStatus, editAmount].forEach(el => {
+                if (el) {
+                    el.addEventListener('change', () => this.validatePaymentForm(true));
+                    el.addEventListener('input', () => this.validatePaymentForm(true));
+                }
+            });
 
             // Product form calculation events
             const productInputs = document.querySelectorAll('#addProductModal input');
@@ -1267,29 +1354,29 @@ class OnlineOrderTool {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => response.json().then(data => ({ status: response.status, body: data })))
-                .then(({ status, body }) => {
-                    this.displayApiResponse(body);
-                    
-                    if (status === 400 && body.response_text) {
-                        try {
-                             const parsed = JSON.parse(body.response_text);
-                             if (parsed.validation_errors) {
-                                 this.showAlert('Validation failed. Please check errors.', 'danger');
-                             }
-                        } catch(e) {}
-                    }
-                })
-                .catch(error => {
-                    console.error('Error sending request:', error);
-                    this.showAlert('Error sending request: ' + error.message, 'danger');
-                })
-                .finally(() => {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Send Request';
-                    }
-                });
+                    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                    .then(({ status, body }) => {
+                        this.displayApiResponse(body);
+
+                        if (status === 400 && body.response_text) {
+                            try {
+                                const parsed = JSON.parse(body.response_text);
+                                if (parsed.validation_errors) {
+                                    this.showAlert('Validation failed. Please check errors.', 'danger');
+                                }
+                            } catch (e) { }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error sending request:', error);
+                        this.showAlert('Error sending request: ' + error.message, 'danger');
+                    })
+                    .finally(() => {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Send Request';
+                        }
+                    });
             });
         }
     }

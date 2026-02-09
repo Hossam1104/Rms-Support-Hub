@@ -1,0 +1,54 @@
+{
+  "ReferenceNumber": "B2C-VISA-ARMX-RET-002",
+  "OnlineOrderNumber": "B2C-ORD-ARMX-002-RET",
+  "IsReturn": true,
+  "ParentReferenceNumber": "B2C-VISA-ARMX-002",
+  "OrderCreationDate": "2026-01-11T11:00:00.000",
+  "TotalDiscount": 45.000,
+  "TotalVat": 6.750,
+  "GrossAmount": 90.000,
+  "NetAmount": 51.750,
+  "CustomerName": "ARAMEX",
+  "CustomerCreditAmount": 0,
+  "PaidOnlineAmount": 51.750,
+  "PaidWithPointsAmount": 0,
+  "InvoiceConsumer": {
+    "FirstName": "WalkIn",
+    "MiddleName": null,
+    "LastName": "Customer",
+    "ConsumerCode": null,
+    "Gender": null,
+    "BirthDate": null,
+    "PrimaryPhoneNumber": "966500000102",
+    "Email": null,
+    "NationalId": null,
+    "Nationality": null
+  },
+  "DeliveryDetails": {
+    "DeliveryPhoneNumber": null,
+    "DeliveryAddress": null,
+    "DeliveryLocationUrl": null,
+    "DeliveryNotes": "Partial return – item only",
+    "DeliveryFees": 0.000
+  },
+  "RowItems": [
+    {
+      "Quantity": 1.000,
+      "MaterialNumber": "000000000000021241",
+      "ItemPrice": 90.000,
+      "ItemDiscount": 45.000,
+      "RowTotalDiscount": 45.000,
+      "ItemVat": 6.750,
+      "RowTotalVat": 6.750,
+      "BatchNumber": null,
+      "ExpireDate": null,
+      "SerialNumber": null,
+      "Barcode": "681619810619",
+      "ScannedCode": null,
+      "GrossAmount": 90.000,
+      "NetAmount": 51.750,
+      "VatPercentage": 0.15,
+      "OfferIdentifier": "000000000011"
+    }
+  ]
+}

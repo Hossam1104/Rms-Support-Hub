@@ -1,0 +1,54 @@
+{
+  "ReferenceNumber": "OWN-00004",
+  "OnlineOrderNumber": "OWN-ORD-00004",
+  "IsReturn": false,
+  "ParentReferenceNumber": null,
+  "OrderCreationDate": "2026-01-06T12:30:25.997",
+  "TotalDiscount": 90.000,
+  "TotalVat": 13.500,
+  "GrossAmount": 180.000,
+  "NetAmount": 113.500,
+  "CustomerName": "OWNFLEET",
+  "CustomerCreditAmount": 113.500,
+  "PaidOnlineAmount": 0,
+  "PaidWithPointsAmount": 0,
+  "InvoiceConsumer": {
+    "FirstName": "Khaled",
+    "MiddleName": null,
+    "LastName": "Nasser",
+    "ConsumerCode": "OWN-5544",
+    "Gender": "Male",
+    "BirthDate": "1985-03-01T00:00:00",
+    "PrimaryPhoneNumber": "966500111222",
+    "Email": "khaled@ownfleet.com",
+    "NationalId": null,
+    "Nationality": null
+  },
+  "DeliveryDetails": {
+    "DeliveryPhoneNumber": "966500111222",
+    "DeliveryAddress": "Khobar",
+    "DeliveryLocationUrl": null,
+    "DeliveryNotes": "Security gate",
+    "DeliveryFees": 10.000
+  },
+  "RowItems": [
+    {
+      "Quantity": 2.000,
+      "MaterialNumber": "000000000000021241",
+      "ItemPrice": 90.000,
+      "ItemDiscount": 45.000,
+      "RowTotalDiscount": 90.000,
+      "ItemVat": 6.750,
+      "RowTotalVat": 13.500,
+      "BatchNumber": null,
+      "ExpireDate": null,
+      "SerialNumber": null,
+      "Barcode": "681619810619",
+      "ScannedCode": null,
+      "GrossAmount": 180.000,
+      "NetAmount": 103.500,
+      "VatPercentage": 0.15,
+      "OfferIdentifier": "000000000011"
+    }
+  ]
+}

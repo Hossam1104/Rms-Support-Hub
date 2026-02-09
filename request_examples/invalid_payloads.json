@@ -1,0 +1,57 @@
+[
+  {
+    "description": "INVALID: Credit Payment with Partial Amount",
+    "violation": "Credit payments must cover full order amount",
+    "payload": {
+      "order_payment_method": "PostToCredit",
+      "order_final_total_value": 100.00,
+      "payment_methods_with_options": [
+        {
+          "payment_method": "PostToCredit",
+          "payment_amount": 50.00
+        }
+      ]
+    }
+  },
+  {
+    "description": "INVALID: COD with done_payment status",
+    "violation": "COD payments must have 'not_payment' status",
+    "payload": {
+      "order_payment_method": "COD",
+      "order_payment_status": "done_payment",
+      "payment_methods_with_options": [
+        {
+          "payment_method": "COD",
+          "payment_status": "done_payment"
+        }
+      ]
+    }
+  },
+  {
+    "description": "INVALID: Visa with not_payment status",
+    "violation": "Digital payments (Visa) must have 'done_payment' status",
+    "payload": {
+      "order_payment_method": "Visa",
+      "order_payment_status": "not_payment",
+      "payment_methods_with_options": [
+        {
+          "payment_method": "Visa",
+          "payment_status": "not_payment"
+        }
+      ]
+    }
+  },
+  {
+    "description": "INVALID: Cash method used instead of COD",
+    "violation": "Use 'COD' instead of 'cash'",
+    "payload": {
+      "order_payment_method": "cash",
+      "payment_methods_with_options": [
+        {
+          "payment_method": "cash",
+          "payment_option": "cash"
+        }
+      ]
+    }
+  }
+]

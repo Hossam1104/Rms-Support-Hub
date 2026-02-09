@@ -1,0 +1,40 @@
+[
+  {
+    "description": "EDGE CASE: Mixed Payment (Visa + Tamara)",
+    "notes": "Valid if total matches order total and statuses are correct",
+    "payload": {
+      "order_final_total_value": 200.00,
+      "order_payment_method": "Visa,Tamara",
+      "order_payment_status": "done_payment",
+      "payment_methods_with_options": [
+        {
+          "payment_method": "Visa",
+          "payment_status": "done_payment",
+          "payment_amount": 100.00,
+          "payment_option": "visa"
+        },
+        {
+          "payment_method": "Tamara",
+          "payment_status": "done_payment",
+          "payment_amount": 100.00,
+          "payment_option": "tamara"
+        }
+      ],
+      "total_paid": 200.00,
+      "remaining_amount": 0.00
+    }
+  },
+  {
+    "description": "EDGE CASE: Rounding Differences",
+    "notes": "Backend should handle small floating point differences",
+    "payload": {
+      "order_final_total_value": 33.33,
+      "payment_methods_with_options": [
+        {
+          "payment_method": "Visa",
+          "payment_amount": 33.3333333
+        }
+      ]
+    }
+  }
+]

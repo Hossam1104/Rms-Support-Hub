@@ -1,0 +1,64 @@
+{
+  "branch_code": "P900",
+  "order_code": "112",
+  "parent_order_code": "",
+  "order_creation_date": "2024-12-24T12:23:10.323Z",
+  "order_notes": "Don't Ring the bell",
+  "order_product_total_value": 145.0,
+  "order_total_discount": 75.0,
+  "is_delivery": 0,
+  "order_delivery_cost": 0.0,
+  "order_final_total_value": 145.0,
+  "order_payment_method": "cash,visa",
+  "order_status": "new",
+  "client_country_code": "966",
+  "client_phone": "556028080",
+  "client_first_name": "Hossam",
+  "client_middle_name": "Mohamed",
+  "client_last_name": "Abdallah",
+  "client_email": "Hossam.Mohamed@dbsmena.com",
+  "client_birthdate": "1989-04-11T12:23:10.323Z",
+  "client_gender": "Male",
+  "order_address": "Tabarak City",
+  "address_code": "",
+  "order_payment_status": "partially_paid",
+  "order_gps": ["21.779006345949554", "39.08578576461103"],
+  "order_products": [
+    {
+      "item_code": "000000000000200573",
+      "item_name": "Avene Hand Cream W/Cold 50Ml",
+      "quantity": 1,
+      "unit_price": 70.0,
+      "offer_code": "000100000018",
+      "offer_message": "Avene 50% on 2nd PC",
+      "row_total_discount": 0.0,
+      "unit_vat_amount": 0.0,
+      "total_vat_amount": 0.0,
+      "vat_percentage": 0.0,
+      "row_net_total": 70.0
+    },
+    {
+      "item_code": "000000000000200551",
+      "item_name": "Avene Akerat Cream 200Ml 4121",
+      "quantity": 1,
+      "unit_price": 150.0,
+      "offer_code": "000100000018",
+      "offer_message": "Avene 50% on 2nd PC",
+      "row_total_discount": 75.0,
+      "unit_vat_amount": 0.0,
+      "total_vat_amount": 0.0,
+      "vat_percentage": 0.0,
+      "row_net_total": 75.0
+    }
+  ],
+  "payment_methods_with_options": [
+    {
+      "payment_method": "visa",
+      "payment_status": "done_payment",
+      "payment_amount": 100.0,
+      "transaction_id": "",
+      "payment_option": "visa",
+      "option_commission": 0
+    }
+  ]
+}

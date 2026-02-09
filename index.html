@@ -12,7 +12,7 @@
     <!-- Cairo Font -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         // Make payment options available to JavaScript from backend config
         window.paymentOptions = JSON.parse('{{ payment_options | tojson }}');
@@ -818,7 +818,7 @@
     <!-- Bootstrap & Vanilla JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
@@ -898,6 +898,8 @@
                                         <option value="{{ method }}">{{ method }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="addPaymentError" class="text-danger mt-2 small" style="display:none"></div>
+                                    <div id="addPaymentError" class="text-danger mt-2 small"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -948,9 +950,9 @@
                             </div>
                         </div>
 
-                        <!-- Credit Customer Info (shown only for PostToCredit) -->
+                        <!-- Customer Info (shown for COD, Visa, PostToCredit) -->
                         <div id="creditCustomerInfo" style="display: none;">
-                            <h6 class="mb-3">Credit Customer Information</h6>
+                            <h6 class="mb-3">Customer Information</h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -1053,6 +1055,9 @@
                                         <option value="{{ method }}">{{ method }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="editPaymentError" class="text-danger mt-2 small" style="display:none">
+                                    </div>
+                                    <div id="editPaymentError" class="text-danger mt-2 small"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -1104,9 +1109,9 @@
                             </div>
                         </div>
 
-                        <!-- Credit Customer Info (shown only for credit payment methods) -->
+                        <!-- Customer Info (shown for COD, Visa, PostToCredit) -->
                         <div id="editCreditCustomerInfo" style="display: none;">
-                            <h6 class="mb-3">Credit Customer Information</h6>
+                            <h6 class="mb-3">Customer Information</h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">

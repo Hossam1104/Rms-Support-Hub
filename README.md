@@ -12,6 +12,31 @@ A comprehensive web application for creating, managing, and exporting pharmacy o
 - **Theme Customization**: Light/dark mode with color theme options
 - **Responsive Design**: Works on desktop and mobile devices
 
+## 💳 Payment Logic & Validation
+
+## Payment Logic & Validation
+
+### Payment Method Rules
+- **COD (Cash on Delivery)**: Must have `not_payment` status. Customer name and number are optional.
+- **Visa**: Must have `done_payment` status with amount equal to order total. Customer name and number are optional.
+- **Digital Wallets** (Tamara, Tabby, MisPay, Emkan, etc.): Must have `done_payment` status with amount equal to order total.
+- **Points** (RajhiPoints, QitafPoints, NeqatyPoints): Must have `done_payment` status with amount equal to order total.
+- **PostToCredit**: Must have `not_payment` status. Customer name and number are optional.
+
+### Customer Information
+For **COD**, **Visa**, and **PostToCredit** payment methods:
+- Customer Name and Customer Number fields appear automatically
+- These fields are **optional** and can be left blank
+- Data is stored in the `credit_customer_info` object within the payment payload if provided
+
+### UI Validation
+- Real-time validation prevents invalid payment combinations
+- Submit button is disabled until all validation rules pass
+- Error messages guide users to correct input
+
+### Auto-Selection
+- Payment options with only one choice (e.g., COD, Tamara) are automatically selected
+
 ## 📋 Prerequisites
 
 - Python 3.8 or higher
@@ -59,11 +84,9 @@ online-order-tool/
 ├── config.py             # Configuration settings
 ├── requirements.txt      # Python dependencies
 ├── last_order.json      # Auto-saved last order data
-├── static/
-│   └── css/
-│       └── style.css    # Custom styles
-├── templates/
-│   └── base.html        # Main template
+├── index.html           # Main template (previously templates/base.html)
+├── style.css            # Custom styles (previously static/css/style.css)
+├── script.js            # Custom JS (previously static/js/script.js)
 └── README.md           # This file
 🆘 Support
 For issues and questions:

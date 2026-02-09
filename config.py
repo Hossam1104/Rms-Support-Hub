@@ -24,7 +24,7 @@ DEFAULT_API_ENDPOINT = "Whites Pharmacy - Testing"
 
 # Payment Configuration - Update with allowed methods from API
 PAYMENT_METHODS = [
-    "cash",  # This should map to COD
+    "COD",
     "Visa",
     "RajhiPoints",
     "Tamara",
@@ -35,13 +35,11 @@ PAYMENT_METHODS = [
     "Emkan",
     "YouGotaGift",
     "OgMoney",
-    "COD"
 ]
 
 PAYMENT_STATUSES = ["not_payment", "done_payment", "partially_paid"]
 
 PAYMENT_OPTIONS = {
-    "cash": ["cash"],
     "COD": ["COD"],
     "Visa": ["visa", "mastercard", "mada", "amex"],
     "RajhiPoints": ["RajhiPoints"],
@@ -119,11 +117,11 @@ def get_default_data():
         ],
         "payment_methods_with_options": [
             {
-                "payment_method": "cash",
+                "payment_method": "COD",
                 "payment_status": "not_payment",
                 "payment_amount": 57.5,
-                "transaction_id": f"TXN{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "payment_option": "cash",
+                "transaction_id": "",
+                "payment_option": "COD",
                 "option_commission": 0.0,
                 "card_name": "",
                 "bank_code": "",
