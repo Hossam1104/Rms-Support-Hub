@@ -5,22 +5,144 @@ Configuration settings for Online Order Tool
 import os
 from datetime import datetime, timedelta
 
-# API Configuration
+ASSET_BASE_URL = "/static/assets"
+CLIENT_LOGOS = {
+    "UPC": f"{ASSET_BASE_URL}/upc_logo.svg",
+    "GHC": f"{ASSET_BASE_URL}/kunooz_logo.svg",
+    "Whites UniCommerce": f"{ASSET_BASE_URL}/whites_logo.svg",
+}
+
+CLIENT_ENDPOINTS = {
+    "UPC Production": {
+        "client": "UPC",
+        "environment": "Production",
+        "description": "UPC live routing.",
+        "accent": "sunrise",
+        "cue": "Retail Ops",
+        "icon": "bi-bag-check",
+        "route_label": "Live lane",
+        "visual_url": CLIENT_LOGOS["UPC"],
+        "visual_alt": "UPC logo",
+        "available": True,
+        "api_url": "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+        "cancel_url": "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
+    },
+    "UPC Testing": {
+        "client": "UPC",
+        "environment": "Testing",
+        "description": "UPC QA routing.",
+        "accent": "electric",
+        "cue": "QA Grid",
+        "icon": "bi-sliders2-vertical",
+        "route_label": "Test lane",
+        "visual_url": CLIENT_LOGOS["UPC"],
+        "visual_alt": "UPC logo",
+        "available": True,
+        "api_url": "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+        "cancel_url": "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder",
+    },
+    "GHC Production": {
+        "client": "GHC",
+        "environment": "Production",
+        "description": "GHC live routing.",
+        "accent": "ember",
+        "cue": "Warehouse",
+        "icon": "bi-box-seam",
+        "route_label": "Live lane",
+        "visual_url": CLIENT_LOGOS["GHC"],
+        "visual_alt": "GHC logo",
+        "available": True,
+        "api_url": "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+        "cancel_url": "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CancelOrder",
+    },
+    "GHC Testing": {
+        "client": "GHC",
+        "environment": "Testing",
+        "description": "GHC QA routing.",
+        "accent": "ocean",
+        "cue": "Dispatch",
+        "icon": "bi-truck",
+        "route_label": "QA lane",
+        "visual_url": CLIENT_LOGOS["GHC"],
+        "visual_alt": "GHC logo",
+        "available": True,
+        "api_url": "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+        "cancel_url": "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder",
+    },
+    "Whites UniCommerce Production": {
+        "client": "Whites UniCommerce",
+        "environment": "Production",
+        "description": "UniCommerce live lane pending.",
+        "accent": "aurora",
+        "cue": "Automation",
+        "icon": "bi-cpu",
+        "route_label": "Pending lane",
+        "visual_url": CLIENT_LOGOS["Whites UniCommerce"],
+        "visual_alt": "Whites UniCommerce logo",
+        "available": False,
+        "api_url": None,
+        "cancel_url": None,
+    },
+    "Whites UniCommerce Testing": {
+        "client": "Whites UniCommerce",
+        "environment": "Testing",
+        "description": "UniCommerce QA lane pending.",
+        "accent": "violet",
+        "cue": "Staging",
+        "icon": "bi-hourglass-split",
+        "route_label": "Pending lane",
+        "visual_url": CLIENT_LOGOS["Whites UniCommerce"],
+        "visual_alt": "Whites UniCommerce logo",
+        "available": False,
+        "api_url": None,
+        "cancel_url": None,
+    },
+}
+
+LEGACY_ENDPOINT_ALIASES = {
+    "UPC Pharmacy - Production": "UPC Production",
+    "UPC Pharmacy - Testing": "UPC Testing",
+    "Whites Pharmacy - Production": "GHC Production",
+    "Whites Pharmacy - Testing": "GHC Testing",
+}
+
 API_URLS = {
-    "UPC Pharmacy - Production": "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-    "UPC Pharmacy - Testing": "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-    "Whites Pharmacy - Production": "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-    "Whites Pharmacy - Testing": "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+    name: config["api_url"]
+    for name, config in CLIENT_ENDPOINTS.items()
+    if config["api_url"]
 }
 
 CANCEL_API_URLS = {
-    "UPC Pharmacy - Production": "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
-    "UPC Pharmacy - Testing": "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder",
-    "Whites Pharmacy - Production": "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CancelOrder",
-    "Whites Pharmacy - Testing": "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder",
+    name: config["cancel_url"]
+    for name, config in CLIENT_ENDPOINTS.items()
+    if config["cancel_url"]
 }
 
-DEFAULT_API_ENDPOINT = "Whites Pharmacy - Testing"
+CLIENT_OPTIONS = [
+    {
+        "key": name,
+        "client": config["client"],
+        "environment": config["environment"],
+        "description": config["description"],
+        "accent": config["accent"],
+        "cue": config["cue"],
+        "icon": config["icon"],
+        "route_label": config["route_label"],
+        "visual_url": config["visual_url"],
+        "visual_alt": config["visual_alt"],
+        "available": config["available"],
+        "api_url": config["api_url"] or "",
+        "cancel_url": config["cancel_url"] or "",
+        "status_label": (
+            "Live"
+            if config["available"] and config["environment"] == "Production"
+            else "Test" if config["available"] else "Soon"
+        ),
+    }
+    for name, config in CLIENT_ENDPOINTS.items()
+]
+
+DEFAULT_API_ENDPOINT = "GHC Testing"
 
 # Payment Configuration - Update with allowed methods from API
 PAYMENT_METHODS = [

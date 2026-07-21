@@ -2,6 +2,7 @@ import pyodbc
 import logging
 import json
 import os
+import copy
 import requests
 import socket
 from datetime import datetime
@@ -238,29 +239,47 @@ class ProductCalculator:
 class OrderManager:
     """Order data management and validation"""
 
+    _last_order_cache = None
+    _last_order_mtime = None
+
+    @classmethod
+    def _load_last_order(cls) -> Optional[Dict[str, Any]]:
+        """Load the last order from disk only when the file changes."""
+        last_order_file = "last_order.json"
+
+        if not os.path.exists(last_order_file):
+            cls._last_order_cache = None
+            cls._last_order_mtime = None
+            return None
+
+        file_mtime = os.path.getmtime(last_order_file)
+        if cls._last_order_cache is None or cls._last_order_mtime != file_mtime:
+            with open(last_order_file, "r") as f:
+                cls._last_order_cache = json.load(f)
+            cls._last_order_mtime = file_mtime
+
+        return copy.deepcopy(cls._last_order_cache)
+
     @staticmethod
     def initialize_session_data():
         """Initialize or update session data with defaults"""
         try:
-            # Try to load last saved order data
-            last_order_file = "last_order.json"
-            if os.path.exists(last_order_file):
-                with open(last_order_file, "r") as f:
-                    last_order_data = json.load(f)
-            else:
-                last_order_data = None
+            last_order_data = OrderManager._load_last_order()
+            session_changed = False
 
             if "order_data" not in session:
                 if last_order_data:
                     session["order_data"] = last_order_data
                 else:
                     session["order_data"] = get_default_data()
+                session_changed = True
 
             if "products" not in session:
                 if last_order_data and "order_products" in last_order_data:
                     session["products"] = last_order_data["order_products"].copy()
                 else:
                     session["products"] = session["order_data"]["order_products"].copy()
+                session_changed = True
 
             if "payments" not in session:
                 if (
@@ -274,12 +293,18 @@ class OrderManager:
                     session["payments"] = session["order_data"][
                         "payment_methods_with_options"
                     ].copy()
+                session_changed = True
 
             if "api_endpoint" not in session:
                 session["api_endpoint"] = DEFAULT_API_ENDPOINT
+                session_changed = True
 
-            # Ensure session is marked as modified
-            session.modified = True
+            if "client_selected" not in session:
+                session["client_selected"] = False
+                session_changed = True
+
+            if session_changed:
+                session.modified = True
 
         except Exception as e:
             logger.error(f"Error initializing session data: {str(e)}")
@@ -292,8 +317,10 @@ class OrderManager:
                     "products": default_data["order_products"].copy(),
                     "payments": default_data["payment_methods_with_options"].copy(),
                     "api_endpoint": DEFAULT_API_ENDPOINT,
+                    "client_selected": False,
                 }
             )
+            session.modified = True
 
     @staticmethod
     def save_last_order(order_data: Dict[str, Any]):
@@ -301,6 +328,8 @@ class OrderManager:
         try:
             with open("last_order.json", "w") as f:
                 json.dump(order_data, f, indent=2)
+            OrderManager._last_order_cache = copy.deepcopy(order_data)
+            OrderManager._last_order_mtime = os.path.getmtime("last_order.json")
         except Exception as e:
             logger.error(f"Error saving last order: {str(e)}")
 
@@ -329,14 +358,6 @@ class OrderManager:
             # Apply API-specific rules for payment methods
             payment_status = OrderManager._determine_payment_status(payments)
 
-            # SPECIAL RULE: For credit methods, payment amount must equal order total
-            credit_methods = ["PostToCredit"]
-            payment_methods = [p.get("payment_method", "") for p in payments]
-
-            if any(method in credit_methods for method in payment_methods):
-                # Strict validation handles amount checks - no silent overrides
-                pass
-
             # Prepare final order data
             final_data = {
                 "branch_code": order_data.get("branch_code", ""),
@@ -364,6 +385,7 @@ class OrderManager:
                 ),
                 "client_gender": order_data.get("client_gender", "Male"),
                 "order_address": order_data.get("order_address", ""),
+                "address_code": order_data.get("address_code", ""),
                 "order_payment_status": payment_status,
                 "order_gps": order_data.get(
                     "order_gps", [21.779006345949554, 39.08578576461103]
@@ -381,8 +403,6 @@ class OrderManager:
                 ),
                 "shipping_address_2": order_data.get("shipping_address_2", ""),
                 "fullfilment_plant": order_data.get("fullfilment_plant", ""),
-                "total_paid": total_paid,
-                "remaining_amount": remaining_amount,
             }
 
             # Save this order data for persistence

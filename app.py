@@ -16,7 +16,10 @@ from dotenv import load_dotenv
 # Import configuration
 from config import (
     API_URLS,
+    CLIENT_ENDPOINTS,
+    CLIENT_OPTIONS,
     DEFAULT_API_ENDPOINT,
+    LEGACY_ENDPOINT_ALIASES,
     PAYMENT_METHODS,
     PAYMENT_STATUSES,
     PAYMENT_OPTIONS,
@@ -46,29 +49,63 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def normalize_endpoint_name(endpoint_name):
+    """Map legacy endpoint labels to the current client catalog."""
+    if not endpoint_name:
+        return DEFAULT_API_ENDPOINT
+    return LEGACY_ENDPOINT_ALIASES.get(endpoint_name, endpoint_name)
+
+
 # Initialize session data before each request
 @app.before_request
 def before_request():
     OrderManager.initialize_session_data()
+    normalized_endpoint = normalize_endpoint_name(session.get("api_endpoint"))
+    if normalized_endpoint != session.get("api_endpoint"):
+        session["api_endpoint"] = normalized_endpoint
+        session.modified = True
 
 
 @app.route("/")
 def index():
     """Main application page"""
-    payment_summary = OrderManager.calculate_payment_summary()
+    return render_template("index.html")
 
-    return render_template(
-        "index.html",
-        api_urls=API_URLS,
-        cancel_api_urls=CANCEL_API_URLS,
-        payment_methods=PAYMENT_METHODS,
-        payment_statuses=PAYMENT_STATUSES,
-        payment_options=PAYMENT_OPTIONS,
-        data=session.get("order_data", get_default_data()),
-        products=session.get("products", []),
-        payments=session.get("payments", []),
-        selected_endpoint=session.get("api_endpoint", DEFAULT_API_ENDPOINT),
-        payment_summary=payment_summary,
+
+@app.route("/select-client", methods=["POST"])
+def select_client():
+    """Persist the selected client/environment from the landing page."""
+    payload = request.get_json(silent=True) or request.form
+    client_key = normalize_endpoint_name(
+        (payload.get("client") or payload.get("api_endpoint") or "").strip()
+    )
+    client_config = CLIENT_ENDPOINTS.get(client_key)
+
+    if not client_config:
+        return jsonify({"success": False, "error": "Unknown client selection"}), 400
+
+    if not client_config.get("available") or not client_config.get("api_url"):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "This client environment is not available yet.",
+                }
+            ),
+            409,
+        )
+
+    session["api_endpoint"] = client_key
+    session["client_selected"] = True
+    session.modified = True
+
+    return jsonify(
+        {
+            "success": True,
+            "selected_client": client_key,
+            "api_url": client_config["api_url"],
+            "cancel_url": client_config["cancel_url"],
+        }
     )
 
 
@@ -375,13 +412,11 @@ def add_payment():
             "transaction_id": request.form.get("transaction_id", "").strip(),
             "payment_option": request.form.get("payment_option", "").strip(),
             "option_commission": float(request.form.get("option_commission", 0)),
-            "card_name": request.form.get("card_name", "").strip(),
-            "bank_code": request.form.get("bank_code", "").strip(),
             "credit_customer_info": None,
         }
 
-        # Handle credit customer info for PostToCredit
-        if payment["payment_method"] == "PostToCredit":
+        # Handle credit customer info for COD, Visa, and PostToCredit
+        if payment["payment_method"] in ["COD", "Visa", "PostToCredit"]:
             customer_number = request.form.get("customer_number", "").strip()
             customer_name = request.form.get("customer_name", "").strip()
             if customer_number or customer_name:
@@ -454,13 +489,11 @@ def update_payment(index):
                 "transaction_id": request.form.get("transaction_id", "").strip(),
                 "payment_option": request.form.get("payment_option", "").strip(),
                 "option_commission": float(request.form.get("option_commission", 0)),
-                "card_name": request.form.get("card_name", "").strip(),
-                "bank_code": request.form.get("bank_code", "").strip(),
                 "credit_customer_info": None,
             }
 
-            # Handle credit customer info for PostToCredit
-            if payment["payment_method"] == "PostToCredit":
+            # Handle credit customer info for COD, Visa, and PostToCredit
+            if payment["payment_method"] in ["COD", "Visa", "PostToCredit"]:
                 customer_number = request.form.get("customer_number", "").strip()
                 customer_name = request.form.get("customer_name", "").strip()
                 if customer_number or customer_name:
@@ -559,7 +592,9 @@ def send_request():
     """Send order to API endpoint"""
     try:
         # Get selected endpoint or custom URL
-        api_endpoint = request.form.get("api_endpoint", "").strip()
+        api_endpoint = normalize_endpoint_name(
+            request.form.get("api_endpoint", "").strip()
+        )
         custom_url = request.form.get("custom_url", "").strip()
 
         # Determine which URL to use
@@ -619,6 +654,7 @@ def send_request():
         # Store endpoint selection
         if api_endpoint:
             session["api_endpoint"] = api_endpoint
+            session["client_selected"] = True
             session.modified = True
 
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -636,15 +672,6 @@ def send_request():
 
         return render_template(
             "index.html",
-            api_urls=API_URLS,
-            cancel_api_urls=CANCEL_API_URLS,
-            payment_methods=PAYMENT_METHODS,
-            payment_statuses=PAYMENT_STATUSES,
-            payment_options=PAYMENT_OPTIONS,
-            data=session.get("order_data", get_default_data()),
-            products=session.get("products", []),
-            payments=session.get("payments", []),
-            selected_endpoint=session.get("api_endpoint", DEFAULT_API_ENDPOINT),
             response=response,
         )
 
@@ -661,7 +688,9 @@ def cancel_order():
     """Cancel an existing order"""
     try:
         # Get selected endpoint or custom URL
-        cancel_api_endpoint = request.form.get("cancel_api_endpoint", "").strip()
+        cancel_api_endpoint = normalize_endpoint_name(
+            request.form.get("cancel_api_endpoint", "").strip()
+        )
         cancel_custom_url = request.form.get("cancel_custom_url", "").strip()
 
         # Determine which URL to use
@@ -728,15 +757,6 @@ def cancel_order():
 
         return render_template(
             "index.html",
-            api_urls=API_URLS,
-            cancel_api_urls=CANCEL_API_URLS,
-            payment_methods=PAYMENT_METHODS,
-            payment_statuses=PAYMENT_STATUSES,
-            payment_options=PAYMENT_OPTIONS,
-            data=session.get("order_data", get_default_data()),
-            products=session.get("products", []),
-            payments=session.get("payments", []),
-            selected_endpoint=session.get("api_endpoint", DEFAULT_API_ENDPOINT),
             cancel_response=response,
         )
 
@@ -835,6 +855,8 @@ def inject_global_variables():
     return dict(
         api_urls=API_URLS,
         cancel_api_urls=CANCEL_API_URLS,
+        client_options=CLIENT_OPTIONS,
+        client_endpoints=CLIENT_ENDPOINTS,
         payment_methods=PAYMENT_METHODS,
         payment_statuses=PAYMENT_STATUSES,
         payment_options=PAYMENT_OPTIONS,
@@ -844,11 +866,17 @@ def inject_global_variables():
 @app.context_processor
 def inject_session_data():
     payment_summary = OrderManager.calculate_payment_summary()
+    selected_endpoint = normalize_endpoint_name(
+        session.get("api_endpoint", DEFAULT_API_ENDPOINT)
+    )
     return dict(
         data=session.get("order_data", get_default_data()),
         products=session.get("products", []),
         payments=session.get("payments", []),
         payment_summary=payment_summary,
+        selected_endpoint=selected_endpoint,
+        selected_client_option=CLIENT_ENDPOINTS.get(selected_endpoint, {}),
+        client_selected=session.get("client_selected", False),
     )
 
 
