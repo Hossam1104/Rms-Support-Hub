@@ -36,7 +36,7 @@ Discounts and offers if applicable
 
 Click "Add Product" to save
 
-Method 2: Database Lookup
+Method 2: Database Lookup (GHC)
 
 Go to "Database Connection" tab
 
@@ -45,6 +45,18 @@ Enter 6-digit material number
 Click "Search Item" to retrieve product details
 
 Click "Add to Order" to include the product
+
+Method 2: Database Lookup (UPC)
+
+UPC's item pricing is branch-specific, so the lookup lives inside the "Add Product" dialog itself instead of a separate tab
+
+Fill in the Branch Code in Order Information first — the search uses it
+
+Click "Add Product", then in the "Find Item" box at the top enter either the 6-digit item number or the full 18-digit material number
+
+Click "Find" (or press Enter) — Item Code, Item Name, Unit Price, and VAT % fill in automatically
+
+Set Quantity (and Discount/Offer if applicable), then click "Add Product" to save
 
 4. Setting Up Payments
 Click "Add Payment" button
@@ -80,6 +92,63 @@ Select your API endpoint or enter custom URL
 Choose to validate data before sending (recommended)
 
 Click "Send Request" to submit the order
+
+If you're on UPC, an inline status box appears under the response as soon as the order lands in the database — it shows the order's current status and, if already invoiced, the invoice barcode. Click "View in Order Validation" in that box to jump straight to the order in the Order Validation tab.
+
+7. Order Validation (UPC only)
+This tab only appears for UPC E-Commerce. It reads live from the database — separate from the order you're currently building — so you can look up and manage any order that was ever sent, not just the one on your screen.
+
+Searching for Orders
+
+Go to the "Order Validation" tab
+
+Fill in any combination of: Order Number, Client Phone, Branch Code, Status, Date From, Date To — you don't need to fill them all in, only the ones you want to filter by
+
+Click "Search"
+
+Matching orders appear in the results grid, one row per order. If the same order was resent to a different branch, each attempt shows as its own row
+
+Reading the Results Grid
+
+Status is shown as a colored badge with its code and name (e.g. "1 - New", "9 - Done") — see the status list below
+
+Invoice Barcode and Invoice Date are filled in once the order has actually been invoiced; they're blank otherwise
+
+The "Creation vs Invoice" column compares when the order was placed against when it was invoiced, so you can spot orders that took unusually long
+
+Order Status Meanings
+
+1 - New
+
+2 - Confirmed (pharmacist confirmed the order)
+
+3 - Ready (ready to be executed)
+
+4 - With Delegate (executed and invoiced, out for delivery)
+
+5 - Rejected (rejected by the pharmacy)
+
+6 - Canceled By Client
+
+7 - Canceled By Admin
+
+8 - Processing (in the POS cart)
+
+9 - Done (executed and invoiced, picked up in store)
+
+Viewing Order Details
+
+Click the eye icon on any row to open its full details: header info, every line item, and every payment transaction
+
+Resending an Order to a Different Branch
+
+A "resend" button (circular arrow icon) appears on a row, or as a button inside the Details view, only when the order's status allows it — orders that are already With Delegate, Processing, or Done cannot be resent
+
+Click it, enter the new branch code, and click "Resend"
+
+The app resends the order exactly as it was originally sent, only with the new branch code — it does not touch whatever order you currently have open on the Order Dashboard tab
+
+The result appears in the same API Response area as a normal send, and the grid refreshes to show the new branch attempt
 
 Data Persistence
 The application automatically saves your last order

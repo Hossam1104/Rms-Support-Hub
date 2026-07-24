@@ -1124,3 +1124,17 @@ pre {
         grid-template-columns: 1fr;
     }
 }
+
+/* Saudi Riyal currency symbol (replaces "$" everywhere prices are shown).
+   Rendered via CSS mask instead of <img> so it always matches the
+   surrounding text color — including in dark mode and inside colored
+   badges/buttons — which a plain <img src="...svg"> cannot do. */
+.riyal-icon {
+    display: inline-block;
+    width: 0.72em;
+    height: 0.8em;
+    background-color: currentColor;
+    -webkit-mask: url('/static/assets/Saudi_Riyal.svg') no-repeat center / contain;
+    mask: url('/static/assets/Saudi_Riyal.svg') no-repeat center / contain;
+    vertical-align: -0.05em;
+}

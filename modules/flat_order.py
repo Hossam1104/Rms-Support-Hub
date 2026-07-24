@@ -13,6 +13,7 @@ decoupled from any particular session/persistence model.
 """
 
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -23,6 +24,65 @@ from config import get_default_data
 from .base import ValidationError
 
 logger = logging.getLogger(__name__)
+
+
+# --------------------------------------------------------------------------
+# UPC order-validation status codes (RequestOrderHeaders.OrderStatus)
+# --------------------------------------------------------------------------
+
+UPC_ORDER_STATUS_LABELS: Dict[int, str] = {
+    1: "New",
+    2: "Confirmed",
+    3: "Ready",
+    4: "With_Delegate",
+    5: "Rejected",
+    6: "CanceledByClient",
+    7: "CanceledByAdmin",
+    8: "Processing",
+    9: "Done",
+}
+
+# An order may be resent to a different branch unless it's already been
+# executed/invoiced (With_Delegate, Done) or is actively in the POS cart
+# (Processing).
+UPC_RESEND_BLOCKED_STATUSES = {4, 8, 9}
+
+
+def upc_resend_allowed(status: Optional[int]) -> bool:
+    return status is not None and status not in UPC_RESEND_BLOCKED_STATUSES
+
+
+def normalize_upc_material_number(raw: str) -> str:
+    """UPC's MaterialNumber is always 18 digits (typically 12 leading zeros +
+    a 6-digit item number, e.g. "000000000000212401"). The UI accepts either
+    the full 18-digit code or just the 6-digit item number, which is padded
+    with 12 leading zeros here.
+    """
+    value = (raw or "").strip()
+    if not value.isdigit():
+        raise ValidationError("Item number must be numeric")
+    if len(value) == 18:
+        return value
+    if len(value) == 6:
+        return "0" * 12 + value
+    raise ValidationError(
+        "Item number must be either 6 digits or the full 18-digit material number"
+    )
+
+
+def normalize_phone_search(phone: str) -> str:
+    """Canonicalize a phone number for search, regardless of how the user
+    types it: with/without a leading '+', with/without the '966' country
+    code, with/without a leading '0' trunk prefix. All of
+    "+966556028080" / "966556028080" / "0556028080" / "556028080" collapse
+    to the same 9-digit local number, which is compared against the stored
+    column via SQL "RIGHT(column, 9) = ?" so it matches regardless of which
+    of those forms the number happens to be stored in.
+    """
+    digits = re.sub(r"\D", "", phone or "")
+    if len(digits) < 9:
+        raise ValidationError("Phone number is too short")
+    return digits[-9:]
 
 
 # --------------------------------------------------------------------------
@@ -165,6 +225,7 @@ class FlatOrderDatabaseManager:
         phone = (phone or "").strip()
         if not phone:
             raise ValidationError("Phone number is required")
+        canonical_phone = normalize_phone_search(phone)
 
         conn = self.get_db_connection()
         if not conn:
@@ -177,11 +238,11 @@ class FlatOrderDatabaseManager:
                         C.CustomerNumber, C.FirstName, C.MiddleName, C.LastName,
                         C.Email, C.PhoneNumber, C.Gender, C.BirthDate
                     FROM dbo.Customers AS C
-                    WHERE C.PhoneNumber = ?
+                    WHERE RIGHT(C.PhoneNumber, 9) = ?
                       AND C.IsActive = 1
                     ORDER BY C.Id DESC
                     """  # TODO(db-creds): confirm real table/column names
-            cursor.execute(query, [phone])
+            cursor.execute(query, [canonical_phone])
             row = cursor.fetchone()
 
             if not row:
@@ -197,6 +258,399 @@ class FlatOrderDatabaseManager:
                 "gender": row[6] or "",
                 "birthdate": row[7].isoformat() if row[7] else "",
             }
+        finally:
+            conn.close()
+
+    def lookup_upc_item(
+        self, material_number: str, branch_code: str
+    ) -> Dict[str, Any]:
+        """Look up branch-specific item pricing for UPC.
+
+        Confirmed live against Items / BranchItemUnitOfMeasures /
+        ItemUnitOfMeasurePrices / Branches on RmsMainTest2 (see the "Item
+        Lookup" addendum in UPC_Enhancments_Plan.md). Unlike GHC's still-
+        guessed lookup_item, price is branch-specific (BranchItemUnitOfMeasures
+        joins Items to Branches), so branch_code is required, not optional.
+        When an item has more than one unit-of-measure/price row for the same
+        branch, the base unit of measure is preferred, then the highest price
+        (mirrors the confirmed reference query's own ROW_NUMBER ordering).
+        """
+        padded = normalize_upc_material_number(material_number)
+
+        branch_code = (branch_code or "").strip()
+        if not branch_code:
+            raise ValidationError("Branch code is required to look up UPC item pricing")
+
+        conn = self.get_db_connection()
+        if not conn:
+            raise ConnectionError("Database connection failed")
+
+        try:
+            cursor = conn.cursor()
+            query = """
+                    WITH ItemPricesRanked AS (
+                        SELECT
+                            B.BranchCode AS Branch_Code,
+                            I.MaterialNumber AS Full_Material_Number,
+                            I.Name AS Item_Name_EN,
+                            I.NativeName AS Item_Name_AR,
+                            IUOMP.Price AS Item_Price,
+                            BIUOM.IsBase AS IsBase,
+                            TT.Rate AS Tax_Rate,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY I.Id, B.Id
+                                ORDER BY BIUOM.IsBase DESC, IUOMP.Price DESC
+                            ) AS rn
+                        FROM dbo.Items AS I
+                        JOIN dbo.BranchItemUnitOfMeasures AS BIUOM ON BIUOM.ItemId = I.Id
+                        JOIN dbo.ItemUnitOfMeasurePrices AS IUOMP
+                            ON IUOMP.BranchItemUnitOfMeasureId = BIUOM.Id
+                        JOIN dbo.Branches AS B ON B.Id = BIUOM.BranchId
+                        LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
+                        WHERE I.MaterialNumber = ? AND B.BranchCode = ?
+                    )
+                    SELECT TOP 1
+                        Full_Material_Number, Item_Name_EN, Item_Name_AR,
+                        Item_Price, Tax_Rate
+                    FROM ItemPricesRanked
+                    WHERE rn = 1
+                    """
+            cursor.execute(query, [padded, branch_code])
+            row = cursor.fetchone()
+
+            if not row:
+                raise ValueError(
+                    f"No item found for material number '{padded}' at branch '{branch_code}'"
+                )
+
+            price = float(row[3]) if row[3] is not None else 0.0
+            vat_rate = float(row[4]) if row[4] is not None else 0.0
+
+            return {
+                "item_code": row[0] or padded,
+                "item_Barcode": "",
+                "item_EN_Name": row[1] or "",
+                "item_AR_Name": row[2] or "",
+                "unit_price": price,
+                "vat_percentage": vat_rate,
+                "net_price": round(price + (price * vat_rate / 100), 2),
+            }
+        finally:
+            conn.close()
+
+    def lookup_upc_consumer_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
+        """Look up an existing UPC consumer by phone, with their loyalty address.
+
+        Confirmed live against Consumers / LoyaltyConsumerAddresses on
+        RmsMainTest2 (see "Schema discovery" in UPC_Enhancments_Plan.md).
+        LoyaltyConsumerAddresses has no single "the" address per consumer, so
+        the OUTER APPLY prefers the row flagged IsMaster, falling back to the
+        most recently added address if no master is set.
+        """
+        phone = (phone or "").strip()
+        if not phone:
+            raise ValidationError("Phone number is required")
+        canonical_phone = normalize_phone_search(phone)
+
+        conn = self.get_db_connection()
+        if not conn:
+            raise ConnectionError("Database connection failed")
+
+        try:
+            cursor = conn.cursor()
+            query = """
+                    SELECT TOP 1
+                        C.Id, C.FirstName, C.MiddleName, C.LastName,
+                        C.Email, C.PhoneNumber, C.Gender, C.BirthDate, C.ConsumerCode,
+                        A.FullAddress, A.AddressCode, A.StreetName, A.Building,
+                        A.Floor, A.Landmark, A.Area
+                    FROM Consumers AS C
+                    OUTER APPLY (
+                        SELECT TOP 1
+                            FullAddress, AddressCode, StreetName, Building,
+                            Floor, Landmark, Area
+                        FROM LoyaltyConsumerAddresses
+                        WHERE ConsumerId = C.Id
+                        ORDER BY IsMaster DESC, Id DESC
+                    ) AS A
+                    WHERE RIGHT(C.PhoneNumber, 9) = ?
+                    ORDER BY C.Id DESC
+                    """
+            cursor.execute(query, [canonical_phone])
+            row = cursor.fetchone()
+
+            if not row:
+                return None
+
+            full_address = row[9] or ""
+            if not full_address:
+                # Compose a best-effort address from the parts when
+                # FullAddress itself is blank.
+                parts = [row[11], row[12], row[13], row[14], row[15]]
+                full_address = ", ".join(p for p in parts if p)
+
+            return {
+                "customer_number": row[8] or "",
+                "first_name": row[1] or "",
+                "middle_name": row[2] or "",
+                "last_name": row[3] or "",
+                "email": row[4] or "",
+                "phone": row[5] or phone,
+                "gender": row[6] or "",
+                "birthdate": row[7].isoformat() if row[7] else "",
+                "address": full_address,
+                "address_code": row[10] or "",
+            }
+        finally:
+            conn.close()
+
+    def search_upc_orders(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Search RequestOrderHeaders (the order-of-record) for the Order
+        Validation grid, joined to OrderRequests (the raw API call log) and
+        Invoices (for the barcode / invoice-date comparison).
+
+        `filters` keys (all optional): order_number, phone, branch_code,
+        status (int), date_from, date_to (date-only strings, inclusive).
+        """
+        conn = self.get_db_connection()
+        if not conn:
+            raise ConnectionError("Database connection failed")
+
+        where_clauses = []
+        params: List[Any] = []
+
+        if filters.get("order_number"):
+            where_clauses.append("H.OrderNumber = ?")
+            params.append(filters["order_number"])
+        if filters.get("phone"):
+            canonical_phone = normalize_phone_search(filters["phone"])
+            where_clauses.append(
+                "(RIGHT(H.ConsumerMobile, 9) = ? OR RIGHT(H.OrderMobileNumber, 9) = ?)"
+            )
+            params.append(canonical_phone)
+            params.append(canonical_phone)
+        if filters.get("branch_code"):
+            where_clauses.append("H.BranchCode = ?")
+            params.append(filters["branch_code"])
+        if filters.get("status") is not None:
+            where_clauses.append("H.OrderStatus = ?")
+            params.append(filters["status"])
+        if filters.get("date_from"):
+            where_clauses.append("H.OrderDate >= ?")
+            params.append(filters["date_from"])
+        if filters.get("date_to"):
+            where_clauses.append("H.OrderDate < DATEADD(day, 1, ?)")
+            params.append(filters["date_to"])
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        # OrderRequests and Invoices are not 1:1 with OrderNumber (retries and
+        # re-invoicing both create extra rows), so both are pulled via
+        # OUTER APPLY TOP 1 rather than a plain LEFT JOIN, which would
+        # otherwise multiply a single header into duplicate result rows.
+        query = f"""
+                SELECT TOP 200
+                    H.Id, H.OrderNumber, H.BranchCode, H.BranchName, H.OrderStatus,
+                    H.OrderDate, H.ConsumerMobile, H.NetTotal, H.ParentOrderNumber,
+                    OR2.IsSucceeded,
+                    I.Barcode, I.CloseDateLocalTime
+                FROM RequestOrderHeaders AS H
+                OUTER APPLY (
+                    SELECT TOP 1 IsSucceeded
+                    FROM OrderRequests
+                    WHERE OrderNumber = H.OrderNumber
+                    ORDER BY Id DESC
+                ) AS OR2
+                OUTER APPLY (
+                    SELECT TOP 1 Barcode, CloseDateLocalTime
+                    FROM Invoices
+                    WHERE OnlineOrderNumber = H.OrderNumber
+                    ORDER BY Id DESC
+                ) AS I
+                {where_sql}
+                ORDER BY H.OrderDate DESC
+                """
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            results = []
+            for row in rows:
+                status = row[4]
+                results.append(
+                    {
+                        "order_header_id": row[0],
+                        "order_number": row[1],
+                        "branch_code": row[2] or "",
+                        "branch_name": row[3] or "",
+                        "status": status,
+                        "status_label": UPC_ORDER_STATUS_LABELS.get(
+                            status, "Unknown"
+                        ),
+                        "order_date": row[5].isoformat() if row[5] else "",
+                        "consumer_mobile": row[6] or "",
+                        "net_total": float(row[7]) if row[7] is not None else 0.0,
+                        "parent_order_number": row[8] or "",
+                        "request_succeeded": bool(row[9]) if row[9] is not None else None,
+                        "invoice_barcode": row[10] or "",
+                        "invoice_date": row[11].isoformat() if row[11] else "",
+                        "resend_allowed": upc_resend_allowed(status),
+                    }
+                )
+            return results
+        finally:
+            conn.close()
+
+    def get_upc_order_details(
+        self, order_number: str, order_header_id: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Full detail view for one order: header, line items, transactions,
+        and invoice info (joined the same way as search_upc_orders).
+
+        The same order_number can have more than one RequestOrderHeaders row
+        (the app can resend an order to a different branch), so pass
+        order_header_id — as returned by search_upc_orders — to target an
+        exact row. Without it, this returns the most recently created header
+        for that order_number.
+        """
+        conn = self.get_db_connection()
+        if not conn:
+            raise ConnectionError("Database connection failed")
+
+        try:
+            cursor = conn.cursor()
+            if order_header_id is not None:
+                header_filter, header_param = "H.Id = ?", order_header_id
+            else:
+                header_filter, header_param = "H.OrderNumber = ?", order_number
+            cursor.execute(
+                f"""
+                SELECT TOP 1
+                    H.Id, H.OrderNumber, H.BranchCode, H.BranchName, H.OrderStatus,
+                    H.OrderDate, H.ConsumerMobile, H.Address, H.GrossTotal, H.NetTotal,
+                    H.TotalVat, H.TotalDiscount, H.OrderPaymentMethod, H.OrderNote,
+                    H.RejectionMessage, H.ParentOrderNumber,
+                    I.Barcode, I.CloseDateLocalTime
+                FROM RequestOrderHeaders AS H
+                OUTER APPLY (
+                    SELECT TOP 1 Barcode, CloseDateLocalTime
+                    FROM Invoices
+                    WHERE OnlineOrderNumber = H.OrderNumber
+                    ORDER BY Id DESC
+                ) AS I
+                WHERE {header_filter}
+                ORDER BY H.Id DESC
+                """,
+                [header_param],
+            )
+            header_row = cursor.fetchone()
+            if not header_row:
+                return None
+
+            header_id = header_row[0]
+            status = header_row[4]
+            header = {
+                "order_header_id": header_id,
+                "order_number": header_row[1],
+                "branch_code": header_row[2] or "",
+                "branch_name": header_row[3] or "",
+                "status": status,
+                "status_label": UPC_ORDER_STATUS_LABELS.get(status, "Unknown"),
+                "order_date": header_row[5].isoformat() if header_row[5] else "",
+                "consumer_mobile": header_row[6] or "",
+                "address": header_row[7] or "",
+                "gross_total": float(header_row[8]) if header_row[8] is not None else 0.0,
+                "net_total": float(header_row[9]) if header_row[9] is not None else 0.0,
+                "total_vat": float(header_row[10]) if header_row[10] is not None else 0.0,
+                "total_discount": float(header_row[11])
+                if header_row[11] is not None
+                else 0.0,
+                "payment_method": header_row[12] or "",
+                "order_note": header_row[13] or "",
+                "rejection_message": header_row[14] or "",
+                "parent_order_number": header_row[15] or "",
+                "invoice_barcode": header_row[16] or "",
+                "invoice_date": header_row[17].isoformat() if header_row[17] else "",
+                "resend_allowed": upc_resend_allowed(status),
+            }
+
+            cursor.execute(
+                """
+                SELECT ItemName, MaterialNumber, Quantity, UnitPrice, TotalPrice,
+                       TotalDiscount, ItemVat, ItemVatPercentage, OfferCode, OfferMessage
+                FROM RequestOrderDetails
+                WHERE RequestOrderHeaderId = ?
+                """,
+                [header_id],
+            )
+            details = [
+                {
+                    "item_name": r[0] or "",
+                    "material_number": r[1] or "",
+                    "quantity": float(r[2]) if r[2] is not None else 0.0,
+                    "unit_price": float(r[3]) if r[3] is not None else 0.0,
+                    "total_price": float(r[4]) if r[4] is not None else 0.0,
+                    "total_discount": float(r[5]) if r[5] is not None else 0.0,
+                    "item_vat": float(r[6]) if r[6] is not None else 0.0,
+                    "item_vat_percentage": float(r[7]) if r[7] is not None else 0.0,
+                    "offer_code": r[8] or "",
+                    "offer_message": r[9] or "",
+                }
+                for r in cursor.fetchall()
+            ]
+
+            cursor.execute(
+                """
+                SELECT PaymentAmount, ECommercePaymentMethod, ECommercePaymentOption,
+                       OptionCommission, PaymentStatus, TransactionCode
+                FROM RequestOrderTransactions
+                WHERE RequestOrderHeaderId = ?
+                """,
+                [header_id],
+            )
+            transactions = [
+                {
+                    "payment_amount": float(r[0]) if r[0] is not None else 0.0,
+                    "payment_method": r[1] or "",
+                    "payment_option": r[2] or "",
+                    "option_commission": float(r[3]) if r[3] is not None else 0.0,
+                    "payment_status": r[4] or "",
+                    "transaction_code": r[5] or "",
+                }
+                for r in cursor.fetchall()
+            ]
+
+            header["details"] = details
+            header["transactions"] = transactions
+            return header
+        finally:
+            conn.close()
+
+    def get_latest_request_json(self, order_number: str) -> Optional[str]:
+        """The raw JSON body of the most recent send for this order_number
+        (OrderRequests.RequestJson), used to resend an order to a different
+        branch without depending on whatever draft currently happens to be
+        loaded in the session.
+        """
+        conn = self.get_db_connection()
+        if not conn:
+            raise ConnectionError("Database connection failed")
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT TOP 1 RequestJson
+                FROM OrderRequests
+                WHERE OrderNumber = ?
+                ORDER BY Id DESC
+                """,
+                [order_number],
+            )
+            row = cursor.fetchone()
+            return row[0] if row and row[0] else None
         finally:
             conn.close()
 

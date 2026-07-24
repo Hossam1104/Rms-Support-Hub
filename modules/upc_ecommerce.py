@@ -15,7 +15,7 @@ from config import CLIENT_LOGOS
 
 from . import flat_order
 from .base import ModuleEnvironment, OrderModule
-from .db_config import DB_CONFIGS
+from .db_config import UPC_DB_CONFIGS
 
 
 class UpcEcommerceModule(OrderModule):
@@ -25,7 +25,8 @@ class UpcEcommerceModule(OrderModule):
     available = True
 
     def __init__(self):
-        db_config = DB_CONFIGS["upc_ecommerce"]
+        prod_db_config = UPC_DB_CONFIGS["UPC Production"]
+        test_db_config = UPC_DB_CONFIGS["UPC Testing"]
         self.environments: Dict[str, ModuleEnvironment] = {
             "UPC Production": ModuleEnvironment(
                 key="UPC Production",
@@ -40,7 +41,7 @@ class UpcEcommerceModule(OrderModule):
                 available=True,
                 api_url="http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
                 cancel_url="http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
-                db_config=db_config,
+                db_config=prod_db_config,
             ),
             "UPC Testing": ModuleEnvironment(
                 key="UPC Testing",
@@ -55,10 +56,21 @@ class UpcEcommerceModule(OrderModule):
                 available=True,
                 api_url="http://10.10.9.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
                 cancel_url="http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder",
-                db_config=db_config,
+                db_config=test_db_config,
             ),
         }
-        self._db = flat_order.FlatOrderDatabaseManager(db_config)
+        # One DB manager per environment (Production -> RmsMainProd, Testing ->
+        # RmsMainTest2), built lazily so a missing driver/connection to one
+        # environment doesn't prevent using the other.
+        self._db_by_env: Dict[str, flat_order.FlatOrderDatabaseManager] = {}
+
+    def _db_for(self, env_key: Optional[str]) -> flat_order.FlatOrderDatabaseManager:
+        environment = self.get_environment(env_key)
+        if environment.key not in self._db_by_env:
+            self._db_by_env[environment.key] = flat_order.FlatOrderDatabaseManager(
+                environment.db_config
+            )
+        return self._db_by_env[environment.key]
 
     def default_state(self) -> Dict[str, Any]:
         return flat_order.default_state()
@@ -70,11 +82,44 @@ class UpcEcommerceModule(OrderModule):
     def validate(self, payload: Dict[str, Any]) -> List[str]:
         return flat_order.validate(payload)
 
-    def lookup_item(self, code: str, **filters) -> Dict[str, Any]:
-        return self._db.lookup_item(code, **filters)
+    def lookup_item(
+        self, code: str, env_key: Optional[str] = None, **filters
+    ) -> Dict[str, Any]:
+        # UPC pricing is branch-specific (confirmed schema), distinct from
+        # GHC's still-guessed, branch-agnostic lookup_item.
+        return self._db_for(env_key).lookup_upc_item(
+            code, filters.get("branch_code", "")
+        )
 
-    def lookup_consumer_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
-        return self._db.lookup_consumer_by_phone(phone)
+    def lookup_consumer_by_phone(
+        self, phone: str, env_key: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        # UPC has its own Consumers/LoyaltyConsumerAddresses schema, distinct
+        # from GHC's (still-placeholder) dbo.Customers lookup.
+        return self._db_for(env_key).lookup_upc_consumer_by_phone(phone)
+
+    # ----- Order Validation (UPC-only feature; not part of the OrderModule
+    # base interface since GHC/OMS/call-center don't have this yet) -----
+
+    def search_orders(
+        self, filters: Dict[str, Any], env_key: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        return self._db_for(env_key).search_upc_orders(filters)
+
+    def get_order_details(
+        self,
+        order_number: str,
+        env_key: Optional[str] = None,
+        order_header_id: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        return self._db_for(env_key).get_upc_order_details(
+            order_number, order_header_id=order_header_id
+        )
+
+    def get_latest_request_json(
+        self, order_number: str, env_key: Optional[str] = None
+    ) -> Optional[str]:
+        return self._db_for(env_key).get_latest_request_json(order_number)
 
 
 MODULE = UpcEcommerceModule()

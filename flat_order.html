@@ -67,6 +67,13 @@
                             <i class="bi bi-plug"></i> Test Endpoints
                         </a>
                     </li>
+                    {% if module.key == 'upc_ecommerce' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#validation-tab" data-bs-toggle="tab">
+                            <i class="bi bi-patch-check"></i> Order Validation
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
 
                 <div class="mt-4 px-3">
@@ -222,6 +229,7 @@
                                             </select>
                                         </div>
 
+                                        {% if module.key != 'upc_ecommerce' %}
                                         <div class="col-md-6">
                                             <label class="form-label">Delivery Date</label>
                                             <input type="date" class="form-control order-field" name="delivery_date"
@@ -239,12 +247,28 @@
                                                 name="shipping_address_2" value="{{ data.shipping_address_2 }}"
                                                 data-field="shipping_address_2">
                                         </div>
+                                        {% endif %}
 
                                         <div class="col-12">
                                             <label class="form-label">Order Notes</label>
                                             <textarea class="form-control order-field" name="order_notes" rows="2"
                                                 data-field="order_notes">{{ data.order_notes }}</textarea>
                                         </div>
+
+                                        {% if module.key == 'upc_ecommerce' %}
+                                        <div class="col-12">
+                                            <label class="form-label">Payment Status</label>
+                                            <select class="form-select order-field" name="order_payment_status"
+                                                data-field="order_payment_status">
+                                                {% for status in payment_statuses %}
+                                                <option value="{{ status }}" {% if data.order_payment_status==status
+                                                    %}selected{% endif %}>
+                                                    {{ status|replace('_', ' ')|title }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -262,7 +286,7 @@
                                         <label class="form-label">Find Consumer by Phone</label>
                                         <div class="input-group">
                                             <input type="text" class="form-control" id="consumerLookupPhone"
-                                                placeholder="Enter phone number">
+                                                placeholder="e.g. 556028080, 0556028080, or 966556028080">
                                             <button class="btn btn-outline-primary" type="button"
                                                 id="consumerLookupBtn">
                                                 <i class="bi bi-search"></i> Lookup
@@ -336,7 +360,9 @@
                             </div>
                         </div>
 
-                        <!-- Delivery Information Card -->
+                        {% if module.key != 'upc_ecommerce' %}
+                        <!-- Delivery Information Card (GHC only - UPC moves Payment Status
+                             into Order Information and doesn't use delivery from/to time) -->
                         <div class="grid-item">
                             <div class="card">
                                 <div class="card-header">
@@ -374,6 +400,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Products Card -->
@@ -415,10 +442,10 @@
                                                 {% endif %}
                                             </td>
                                             <td>{{ product.quantity }}</td>
-                                            <td>${{ product.unit_price }}</td>
-                                            <td>${{ product.row_total_discount }}</td>
+                                            <td><span class="riyal-icon"></span> {{ product.unit_price }}</td>
+                                            <td><span class="riyal-icon"></span> {{ product.row_total_discount }}</td>
                                             <td>{{ (product.vat_percentage)|round(2) }}%</td>
-                                            <td class="fw-bold">${{ product.row_net_total }}</td>
+                                            <td class="fw-bold"><span class="riyal-icon"></span> {{ product.row_net_total }}</td>
                                             <td>
                                                 <div class="btn-group">
                                                     <button class="btn btn-sm btn-outline-primary edit-product"
@@ -467,7 +494,9 @@
                                             <th>Transaction ID</th>
                                             <th>Payment Option</th>
                                             <th>Commission</th>
+                                            {% if module.key != 'upc_ecommerce' %}
                                             <th>Customer Info</th>
+                                            {% endif %}
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -480,6 +509,7 @@
                                             <td>{{ payment.transaction_id }}</td>
                                             <td>{{ payment.payment_option }}</td>
                                             <td>{{ payment.option_commission }}</td>
+                                            {% if module.key != 'upc_ecommerce' %}
                                             <td>
                                                 {% if payment.credit_customer_info %}
                                                 {{ payment.credit_customer_info.customer_name }} ({{
@@ -488,6 +518,7 @@
                                                 -
                                                 {% endif %}
                                             </td>
+                                            {% endif %}
                                             <td>
                                                 <div class="btn-group">
                                                     <button class="btn btn-sm btn-outline-primary edit-payment"
@@ -620,6 +651,10 @@
                                     Auto-scroll to latest response
                                 </label>
                             </div>
+
+                            {% if module.key == 'upc_ecommerce' %}
+                            <div id="upcPostSendStatus" class="alert alert-info mt-3 d-none" role="alert"></div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -671,7 +706,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-lg-6">
+                        <div class="{% if module.key == 'upc_ecommerce' %}col-lg-8 mx-auto{% else %}col-lg-6{% endif %}">
                             <div class="card h-100">
                                 <div class="card-header">
                                     <h5 class="mb-0"><i class="bi bi-database me-2"></i>Database Settings</h5>
@@ -710,6 +745,7 @@
                             </div>
                         </div>
 
+                        {% if module.key != 'upc_ecommerce' %}
                         <div class="col-lg-6">
                             <div class="card h-100">
                                 <div class="card-header">
@@ -761,6 +797,17 @@
                                 </div>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="col-lg-4">
+                            <div class="alert alert-info h-100 mb-0 d-flex align-items-center">
+                                <div>
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    UPC item lookup has moved into the <strong>Add Product</strong> dialog
+                                    (Order Dashboard tab), where it can use the order's own branch code.
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -808,6 +855,151 @@
                         </div>
                     </div>
                 </div>
+
+                {% if module.key == 'upc_ecommerce' %}
+                <!-- Order Validation Tab (UPC only) -->
+                <div class="tab-pane fade" id="validation-tab">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="section-title">Order Validation</h2>
+                    </div>
+
+                    <!-- Search Card -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-search me-2"></i>Search Orders</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="orderSearchForm">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Order Number</label>
+                                        <input type="text" class="form-control" id="searchOrderNumber">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Client Phone</label>
+                                        <input type="text" class="form-control" id="searchPhone"
+                                            placeholder="e.g. 556028080, 0556028080, or 966556028080">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Branch Code</label>
+                                        <input type="text" class="form-control" id="searchBranchCode">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-select" id="searchStatus">
+                                            <option value="">Any</option>
+                                            <option value="1">1 - New</option>
+                                            <option value="2">2 - Confirmed</option>
+                                            <option value="3">3 - Ready</option>
+                                            <option value="4">4 - With Delegate</option>
+                                            <option value="5">5 - Rejected</option>
+                                            <option value="6">6 - Canceled By Client</option>
+                                            <option value="7">7 - Canceled By Admin</option>
+                                            <option value="8">8 - Processing</option>
+                                            <option value="9">9 - Done</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Date From</label>
+                                        <input type="date" class="form-control" id="searchDateFrom">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Date To</label>
+                                        <input type="date" class="form-control" id="searchDateTo">
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="d-grid gap-2 d-md-flex w-100">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-search me-2"></i>Search
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" id="clearOrderSearch">
+                                                <i class="bi bi-x-circle me-2"></i>Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Results Grid -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Results
+                                (<span id="validationResultCount">0</span>)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Branch</th>
+                                            <th>Status</th>
+                                            <th>Order Creation Date</th>
+                                            <th>Invoice Barcode</th>
+                                            <th>Invoice Date</th>
+                                            <th>Creation vs Invoice</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="validationResultsBody">
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted py-4">Search to see
+                                                results</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Details Modal (UPC only) -->
+                <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Order Details</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="orderDetailsBody">
+                                <div class="text-center text-muted py-4">Loading…</div>
+                            </div>
+                            <div class="modal-footer" id="orderDetailsFooter">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resend to Branch Modal (UPC only) -->
+                <div class="modal fade" id="resendOrderModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form id="resendOrderForm">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Resend Order to Another Branch</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" id="resendOrderNumber">
+                                    <div class="mb-3">
+                                        <label class="form-label">New Branch Code</label>
+                                        <input type="text" class="form-control" id="resendBranchCode" required>
+                                    </div>
+                                    <div id="resendOrderError" class="text-danger small" style="display:none"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Resend</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -815,6 +1007,9 @@
     <!-- Bootstrap & Custom JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='flat_order.js') }}"></script>
+    {% if module.key == 'upc_ecommerce' %}
+    <script src="{{ url_for('static', filename='upc_validation.js') }}"></script>
+    {% endif %}
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
@@ -826,6 +1021,22 @@
                 </div>
                 <form method="POST" action="{{ url_for('module_add_product', module_key=module.key) }}">
                     <div class="modal-body">
+                        {% if module.key == 'upc_ecommerce' %}
+                        <div class="card bg-body-secondary mb-3">
+                            <div class="card-body">
+                                <label class="form-label">Find Item (by number, at the order's branch)</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="modalItemSearchNumber"
+                                        placeholder="6-digit item number or full 18-digit material number"
+                                        maxlength="18">
+                                    <button class="btn btn-outline-primary" type="button" id="modalItemSearchBtn">
+                                        <i class="bi bi-search"></i> Find
+                                    </button>
+                                </div>
+                                <small class="text-muted" id="modalItemSearchStatus"></small>
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Item Code</label>
@@ -861,7 +1072,10 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Estimated Total</label>
-                                <input type="text" class="form-control" id="estimatedTotal" readonly value="$0.00">
+                                <div class="input-group">
+                                    <span class="input-group-text"><span class="riyal-icon"></span></span>
+                                    <input type="text" class="form-control" id="estimatedTotal" readonly value="0.00">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -945,6 +1159,7 @@
                             </div>
                         </div>
 
+                        {% if module.key != 'upc_ecommerce' %}
                         <div id="creditCustomerInfo" style="display: none;">
                             <h6 class="mb-3">Customer Information</h6>
                             <div class="row">
@@ -962,6 +1177,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -1101,6 +1317,7 @@
                             </div>
                         </div>
 
+                        {% if module.key != 'upc_ecommerce' %}
                         <div id="editCreditCustomerInfo" style="display: none;">
                             <h6 class="mb-3">Customer Information</h6>
                             <div class="row">
@@ -1120,6 +1337,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

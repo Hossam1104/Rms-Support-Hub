@@ -707,13 +707,18 @@ class OnlineOrderTool {
             document.getElementById('editPaymentOption').value = data.payment_option || '';
             document.getElementById('editOptionCommission').value = data.option_commission || 0;
 
-            // Show customer info fields for ALL payment methods
-            document.getElementById('editCreditCustomerInfo').style.display = 'block';
+            // Show customer info fields for ALL payment methods (not present for UPC)
+            const editCreditCustomerInfo = document.getElementById('editCreditCustomerInfo');
+            if (editCreditCustomerInfo) {
+                editCreditCustomerInfo.style.display = 'block';
+            }
 
             // Populate customer info if available
             if (data.credit_customer_info) {
-                document.getElementById('editCustomerName').value = data.credit_customer_info.customer_name || '';
-                document.getElementById('editCustomerNumber').value = data.credit_customer_info.customer_number || '';
+                const editCustomerName = document.getElementById('editCustomerName');
+                const editCustomerNumber = document.getElementById('editCustomerNumber');
+                if (editCustomerName) editCustomerName.value = data.credit_customer_info.customer_name || '';
+                if (editCustomerNumber) editCustomerNumber.value = data.credit_customer_info.customer_number || '';
             }
 
             // Update payment options and show/hide credit customer fields

@@ -81,11 +81,23 @@ class OrderModule(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def lookup_item(self, code: str, **filters) -> Dict[str, Any]:
-        """Look up an item/material by code in this module's own DB."""
+    def lookup_item(
+        self, code: str, env_key: Optional[str] = None, **filters
+    ) -> Dict[str, Any]:
+        """Look up an item/material by code in this module's own DB.
+
+        env_key selects which environment's DB to query, for modules (like UPC)
+        whose Production/Testing environments use different databases. Modules
+        whose environments share one DB config may ignore it.
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def lookup_consumer_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
-        """Look up a consumer/customer by phone number in this module's own DB."""
+    def lookup_consumer_by_phone(
+        self, phone: str, env_key: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Look up a consumer/customer by phone number in this module's own DB.
+
+        See lookup_item for env_key semantics.
+        """
         raise NotImplementedError

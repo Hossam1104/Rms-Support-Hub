@@ -125,10 +125,152 @@ def verify_module(module_key: str, reference_path: str) -> bool:
     return ok
 
 
+def verify_upc_ui_and_db() -> bool:
+    """UPC-only structural checks that aren't about the payload schema:
+    the Delivery Information card must be gone from UPC's page (GHC keeps
+    it), and UPC's two environments must resolve to two different databases
+    on the same server (every other module shares one config across its
+    environments).
+    """
+    ok = True
+
+    import app as flask_app
+
+    with flask_app.app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["active_module"] = "upc_ecommerce"
+            sess["active_environment"] = "UPC Testing"
+        upc_html = client.get("/modules/upc_ecommerce/").get_data(as_text=True)
+
+        with client.session_transaction() as sess:
+            sess["active_module"] = "ghc_ecommerce"
+            sess["active_environment"] = "GHC Testing"
+        ghc_html = client.get("/modules/ghc_ecommerce/").get_data(as_text=True)
+
+    if "Delivery Information" in upc_html:
+        print("[upc_ui] FAIL: UPC page still renders the Delivery Information card")
+        ok = False
+    if "validation-tab" not in upc_html:
+        print("[upc_ui] FAIL: UPC page is missing the Order Validation tab")
+        ok = False
+    if "modalItemSearchBtn" not in upc_html:
+        print("[upc_ui] FAIL: UPC page is missing the Add Product modal's item search")
+        ok = False
+    if "Item Lookup" in upc_html:
+        print("[upc_ui] FAIL: UPC page still has the old Database-Connection-tab Item Lookup card")
+        ok = False
+    if "Delivery Information" not in ghc_html:
+        print("[upc_ui] FAIL: GHC page lost its Delivery Information card (regression)")
+        ok = False
+    if "validation-tab" in ghc_html:
+        print("[upc_ui] FAIL: Order Validation tab leaked into the GHC page")
+        ok = False
+    if "modalItemSearchBtn" in ghc_html:
+        print("[upc_ui] FAIL: UPC's Add Product item search leaked into the GHC page")
+        ok = False
+    if "Item Lookup" not in ghc_html:
+        print("[upc_ui] FAIL: GHC lost its Database-Connection-tab Item Lookup card (regression)")
+        ok = False
+
+    if ok:
+        print("[upc_ui] OK — UPC/GHC page differences are exactly as designed")
+
+    from modules import MODULE_REGISTRY
+
+    upc = MODULE_REGISTRY["upc_ecommerce"]
+    prod_db = upc.environments["UPC Production"].db_config
+    test_db = upc.environments["UPC Testing"].db_config
+
+    if prod_db["database"] != "RmsMainProd":
+        print(f"[upc_db] FAIL: UPC Production database is '{prod_db['database']}', expected 'RmsMainProd'")
+        ok = False
+    if test_db["database"] != "RmsMainTest2":
+        print(f"[upc_db] FAIL: UPC Testing database is '{test_db['database']}', expected 'RmsMainTest2'")
+        ok = False
+    if prod_db["database"] == test_db["database"]:
+        print("[upc_db] FAIL: UPC Production and Testing resolved to the same database")
+        ok = False
+    if prod_db["server"] != test_db["server"]:
+        print(
+            "[upc_db] FAIL: UPC Production/Testing are on different servers "
+            f"({prod_db['server']} vs {test_db['server']}), expected the same server"
+        )
+        ok = False
+
+    if ok:
+        print(
+            f"[upc_db] OK — UPC Production -> {prod_db['database']}, "
+            f"UPC Testing -> {test_db['database']}, both on {prod_db['server']}"
+        )
+
+    return ok
+
+
+def verify_upc_material_number_normalization() -> bool:
+    """UPC's Add Product item search accepts either the 6-digit item number
+    or the full 18-digit material number (12 leading zeros + 6 digits); any
+    other length must be rejected. Pure-function check, no DB needed.
+    """
+    from modules.base import ValidationError
+    from modules.flat_order import normalize_upc_material_number
+
+    ok = True
+
+    if normalize_upc_material_number("207350") != "000000000000207350":
+        print("[upc_item] FAIL: 6-digit input was not padded to 18 digits correctly")
+        ok = False
+    if normalize_upc_material_number("000000000000207350") != "000000000000207350":
+        print("[upc_item] FAIL: an already-18-digit input was altered")
+        ok = False
+    for bad in ["12345", "1234567", "1234567890123456789", "abcdef", ""]:
+        try:
+            normalize_upc_material_number(bad)
+            print(f"[upc_item] FAIL: invalid input {bad!r} was not rejected")
+            ok = False
+        except ValidationError:
+            pass
+
+    if ok:
+        print("[upc_item] OK — material number normalization (6-digit <-> 18-digit) is correct")
+    return ok
+
+
+def verify_phone_search_normalization() -> bool:
+    """Phone-number search (consumer lookup + Order Validation) must accept
+    a number typed with or without '+', the '966' country code, or a leading
+    '0' trunk prefix, and treat them all as the same number. Pure-function
+    check, no DB needed.
+    """
+    from modules.base import ValidationError
+    from modules.flat_order import normalize_phone_search
+
+    ok = True
+    variants = ["+966556028080", "966556028080", "0556028080", "556028080"]
+    canonical = {normalize_phone_search(v) for v in variants}
+    if canonical != {"556028080"}:
+        print(f"[phone_search] FAIL: variants {variants} did not all normalize to '556028080', got {canonical}")
+        ok = False
+
+    for bad in ["12345", "", "abc"]:
+        try:
+            normalize_phone_search(bad)
+            print(f"[phone_search] FAIL: too-short input {bad!r} was not rejected")
+            ok = False
+        except ValidationError:
+            pass
+
+    if ok:
+        print("[phone_search] OK — +966/966/0/bare phone variants all normalize identically")
+    return ok
+
+
 def main():
     results = [
         verify_module("ghc_ecommerce", GHC_REFERENCE),
         verify_module("upc_ecommerce", UPC_REFERENCE),
+        verify_upc_ui_and_db(),
+        verify_upc_material_number_normalization(),
+        verify_phone_search_normalization(),
     ]
     if all(results):
         print("\nAll flat-order modules verified.")

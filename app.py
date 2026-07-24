@@ -107,6 +107,14 @@ def require_flat_order_module(module_key: str):
         )
 
 
+def require_upc_module(module_key: str):
+    """Order Validation (search/details/resend) is UPC-only."""
+    if module_key != "upc_ecommerce":
+        abort(
+            400, description=f"This action is not supported by module '{module_key}'."
+        )
+
+
 # Initialize session data before each request
 @app.before_request
 def before_request():
@@ -137,6 +145,15 @@ def docs():
 
     def escape(s):
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    def inline(s):
+        # Inline code
+        s = re.sub(r"`([^`]+)`", r'<code class="docs-inline-code">\1</code>', s)
+        # Bold
+        s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
+        # Italic
+        s = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", s)
+        return s
 
     lines = md.splitlines()
     html_parts = []
@@ -252,15 +269,6 @@ def docs():
     if in_table:
         flush_table()
 
-    def inline(s):
-        # Inline code
-        s = re.sub(r"`([^`]+)`", r'<code class="docs-inline-code">\1</code>', s)
-        # Bold
-        s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
-        # Italic
-        s = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", s)
-        return s
-
     rendered = "\n".join(html_parts)
     return jsonify({"html": rendered})
 
@@ -336,7 +344,10 @@ def module_home(module_key):
             for env in module.environments.values()
             if env.cancel_url
         }
-        db_config = DB_CONFIGS.get(module_key, {})
+        # Use the active environment's own db_config (UPC's Production/Testing
+        # environments point at different databases; other modules' environments
+        # share one config, so this is equivalent to the old DB_CONFIGS lookup).
+        db_config = environment.db_config or {}
         return render_template(
             "flat_order.html",
             module=module,
@@ -400,6 +411,7 @@ def module_get_item_details(module_key):
         customer_number = request.args.get("customer_number", "").strip()
         sap_tax_code = request.args.get("sap_tax_code", "").strip()
         sap_mat_generic = request.args.get("sap_mat_generic", "").strip()
+        branch_code = request.args.get("branch_code", "").strip()
 
         filters = {}
         if customer_number:
@@ -408,6 +420,13 @@ def module_get_item_details(module_key):
             filters["sap_tax_code"] = sap_tax_code
         if sap_mat_generic:
             filters["sap_mat_generic"] = sap_mat_generic
+
+        # UPC's Production/Testing environments query different databases,
+        # and its item pricing is branch-specific; every other module's
+        # environments share one DB config and don't accept these arguments.
+        if module_key == "upc_ecommerce":
+            filters["env_key"] = get_active_environment(module).key
+            filters["branch_code"] = branch_code
 
         item_details = module.lookup_item(material_number, **filters)
         return jsonify(item_details)
@@ -429,7 +448,13 @@ def module_get_consumer_details(module_key):
     module = get_module_or_404(module_key)
     try:
         phone = request.args.get("phone", "").strip()
-        consumer = module.lookup_consumer_by_phone(phone)
+        # See module_get_item_details: only UPC's lookup accepts env_key.
+        if module_key == "upc_ecommerce":
+            consumer = module.lookup_consumer_by_phone(
+                phone, env_key=get_active_environment(module).key
+            )
+        else:
+            consumer = module.lookup_consumer_by_phone(phone)
         if consumer is None:
             return jsonify({"found": False}), 404
         return jsonify({"found": True, "consumer": consumer})
@@ -440,6 +465,87 @@ def module_get_consumer_details(module_key):
         return jsonify({"error": str(e)}), 500
     except Exception as e:
         logger.error(f"Database error: {str(e)}")
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+
+
+# --------------------------------------------------------------------------
+# Order Validation (UPC-only): search sent orders and inspect their status
+# --------------------------------------------------------------------------
+
+
+@app.route("/modules/<module_key>/search-orders", methods=["POST"])
+def module_search_orders(module_key):
+    """Search RequestOrderHeaders (+ Invoices) for the Order Validation grid."""
+    module = get_module_or_404(module_key)
+    require_upc_module(module_key)
+    try:
+        data = request.get_json(silent=True) or {}
+        filters = {}
+
+        order_number = (data.get("order_number") or "").strip()
+        if order_number:
+            filters["order_number"] = order_number
+
+        phone = (data.get("phone") or "").strip()
+        if phone:
+            filters["phone"] = phone
+
+        branch_code = (data.get("branch_code") or "").strip()
+        if branch_code:
+            filters["branch_code"] = branch_code
+
+        status = data.get("status")
+        if status not in (None, ""):
+            filters["status"] = int(status)
+
+        date_from = (data.get("date_from") or "").strip()
+        if date_from:
+            filters["date_from"] = date_from
+
+        date_to = (data.get("date_to") or "").strip()
+        if date_to:
+            filters["date_to"] = date_to
+
+        env_key = get_active_environment(module).key
+        results = module.search_orders(filters, env_key=env_key)
+        return jsonify({"results": results, "count": len(results)})
+
+    except ModuleValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    except ValueError as e:
+        return jsonify({"error": f"Invalid search criteria: {str(e)}"}), 400
+    except ConnectionError as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        logger.error(f"Database error searching orders: {str(e)}")
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+
+
+@app.route("/modules/<module_key>/order-details/<order_number>", methods=["GET"])
+def module_order_details(module_key, order_number):
+    """Header + line items + transactions + invoice info for one order.
+
+    The same order_number can have more than one RequestOrderHeaders row (an
+    order can be resent to a different branch), so pass ?header_id=<id> (from
+    a search-orders result row) to target an exact one; otherwise this
+    returns the most recently created header for that order_number.
+    """
+    module = get_module_or_404(module_key)
+    require_upc_module(module_key)
+    try:
+        env_key = get_active_environment(module).key
+        header_id = request.args.get("header_id", type=int)
+        details = module.get_order_details(
+            order_number, env_key=env_key, order_header_id=header_id
+        )
+        if details is None:
+            return jsonify({"found": False}), 404
+        return jsonify({"found": True, "order": details})
+
+    except ConnectionError as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        logger.error(f"Database error fetching order details: {str(e)}")
         return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
@@ -1201,6 +1307,35 @@ def module_clear_all(module_key):
     return redirect(url_for("module_home", module_key=module_key))
 
 
+def _upc_post_send_status(module, environment, order_code: str) -> dict:
+    """Best-effort read-back of an order's landed DB status right after
+    sending it, for the inline "did it land?" indicator. Never raises: the
+    order was already sent successfully by the time this runs, so a lookup
+    failure here (e.g. the header row hasn't been created yet, or a
+    transient DB error) shouldn't be treated as a send failure.
+    """
+    if not order_code:
+        return {"found": False}
+    try:
+        details = module.get_order_details(order_code, env_key=environment.key)
+    except Exception as e:
+        logger.warning(f"Post-send UPC status lookup failed: {str(e)}")
+        return {"found": False, "error": str(e)}
+    if details is None:
+        return {"found": False}
+    return {
+        "found": True,
+        "order_number": details["order_number"],
+        "branch_code": details["branch_code"],
+        "status": details["status"],
+        "status_label": details["status_label"],
+        "order_date": details["order_date"],
+        "invoice_barcode": details["invoice_barcode"],
+        "invoice_date": details["invoice_date"],
+        "resend_allowed": details["resend_allowed"],
+    }
+
+
 @app.route("/modules/<module_key>/send-request", methods=["POST"])
 def module_send_request(module_key):
     """Send the module's draft to its API endpoint."""
@@ -1254,6 +1389,11 @@ def module_send_request(module_key):
         response = APIManager.send_order(url, payload)
         set_module_state(module_key, state)  # autosave the draft that was sent
 
+        if module_key == "upc_ecommerce" and response.get("success"):
+            response["upc_validation"] = _upc_post_send_status(
+                module, environment, payload.get("order_code", "")
+            )
+
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify(response)
 
@@ -1274,6 +1414,114 @@ def module_send_request(module_key):
             return jsonify({"success": False, "error": str(e)}), 500
         flash(f"Error sending request: {str(e)}", "danger")
         return redirect(url_for("module_home", module_key=module_key))
+
+
+@app.route("/modules/<module_key>/resend-order", methods=["POST"])
+def module_resend_order(module_key):
+    """Resend a previously-sent order to a different branch.
+
+    Deliberately does NOT reuse send-request's "build payload from whatever
+    draft is currently loaded in the session" behavior: the order being
+    resent from the Order Validation tab is very likely not the order
+    currently open in the Order Dashboard tab. Instead this rebuilds the
+    exact payload from that order's own last-sent RequestJson (OrderRequests
+    table) and only overrides branch_code, so resending an old order can
+    never accidentally send today's in-progress draft instead.
+    """
+    module = get_module_or_404(module_key)
+    require_upc_module(module_key)
+    try:
+        data = request.get_json(silent=True) or {}
+        order_number = (data.get("order_number") or "").strip()
+        new_branch_code = (data.get("branch_code") or "").strip()
+
+        if not order_number or not new_branch_code:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "order_number and branch_code are required",
+                    }
+                ),
+                400,
+            )
+
+        environment = get_active_environment(module)
+
+        # Re-check eligibility server-side; the client's resend_allowed flag
+        # (shown in the UI) is a UX convenience, not a security boundary.
+        current = module.get_order_details(order_number, env_key=environment.key)
+        if current is None:
+            return (
+                jsonify(
+                    {"success": False, "error": f"Order '{order_number}' not found"}
+                ),
+                404,
+            )
+        if not current["resend_allowed"]:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": (
+                            f"Order status '{current['status_label']}' cannot be "
+                            "resent to another branch."
+                        ),
+                    }
+                ),
+                400,
+            )
+
+        request_json = module.get_latest_request_json(
+            order_number, env_key=environment.key
+        )
+        if not request_json:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Original request payload not found for this order",
+                    }
+                ),
+                404,
+            )
+
+        try:
+            payload = json.loads(request_json)
+        except ValueError as e:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"Stored request payload is not valid JSON: {str(e)}",
+                    }
+                ),
+                500,
+            )
+
+        payload["branch_code"] = new_branch_code
+
+        url = environment.api_url
+        if not url:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "No API endpoint configured for this environment",
+                    }
+                ),
+                400,
+            )
+
+        response = APIManager.send_order(url, payload)
+        response["upc_validation"] = _upc_post_send_status(
+            module, environment, payload.get("order_code", "")
+        )
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Error resending order: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/modules/<module_key>/cancel-order", methods=["POST"])
@@ -1345,10 +1593,12 @@ def module_cancel_order(module_key):
 @app.route("/modules/<module_key>/test-database-connection", methods=["POST"])
 def module_test_database_connection(module_key):
     """Test database connection, using provided credentials or this module's own config."""
-    get_module_or_404(module_key)
+    module = get_module_or_404(module_key)
     try:
         data = request.get_json(silent=True) or {}
-        module_db_config = DB_CONFIGS.get(module_key, {})
+        # Fall back to the active environment's own db_config (matters for UPC,
+        # whose Production/Testing environments use different databases).
+        module_db_config = get_active_environment(module).db_config or {}
 
         server = data.get("server") or module_db_config.get("server", ".")
         database = data.get("database") or module_db_config.get(

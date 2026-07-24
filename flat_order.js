@@ -144,7 +144,7 @@ class FlatOrderTool {
         let vat = v > 1 ? v / 100 : v;
         const total = (q * p - d) + (q * p - d) * vat;
         const el = document.getElementById('estimatedTotal');
-        if (el) el.value = '$' + total.toFixed(2);
+        if (el) el.value = total.toFixed(2);
     }
 
     calculateEditEstimatedTotal() {
@@ -155,7 +155,7 @@ class FlatOrderTool {
         let vat = v > 1 ? v / 100 : v;
         const total = (q * p - d) + (q * p - d) * vat;
         const el = document.getElementById('editEstimatedTotal');
-        if (el) el.value = '$' + total.toFixed(2);
+        if (el) el.value = total.toFixed(2);
     }
 
     setupAutoCalculation() {
@@ -318,6 +318,51 @@ class FlatOrderTool {
             .finally(() => this.showLoadingState('addItemToOrder', false));
     }
 
+    // ----- UPC item lookup, inline in the Add Product modal -----
+    // (element only exists on the UPC template, so this is a no-op for GHC)
+    handleModalItemSearch() {
+        const input = document.getElementById('modalItemSearchNumber');
+        const status = document.getElementById('modalItemSearchStatus');
+        const raw = (input?.value || '').trim();
+
+        if (!/^\d{6}$/.test(raw) && !/^\d{18}$/.test(raw)) {
+            if (status) { status.textContent = 'Enter a 6-digit item number or the full 18-digit material number'; status.className = 'text-warning'; }
+            return;
+        }
+
+        const branchInput = document.querySelector('[data-field="branch_code"]');
+        const branchCode = (branchInput?.value || '').trim();
+        if (!branchCode) {
+            if (status) { status.textContent = 'Enter a Branch Code in Order Information first'; status.className = 'text-warning'; }
+            return;
+        }
+
+        if (status) { status.textContent = 'Searching…'; status.className = 'text-muted'; }
+
+        const params = new URLSearchParams({ material_number: raw, branch_code: branchCode });
+        fetch(this.url('/get-item-details?') + params)
+            .then(r => r.json().then(data => ({ ok: r.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok || data.error) throw new Error((data && data.error) || 'Item not found');
+                this.fillAddProductModal(data);
+                if (status) { status.textContent = `Found: ${data.item_EN_Name} (branch ${branchCode})`; status.className = 'text-success'; }
+            })
+            .catch(e => {
+                if (status) { status.textContent = e.message; status.className = 'text-danger'; }
+            });
+    }
+
+    fillAddProductModal(data) {
+        const modal = document.getElementById('addProductModal');
+        if (!modal) return;
+        const set = (name, val) => { const el = modal.querySelector(`[name="${name}"]`); if (el) el.value = val; };
+        set('item_code', data.item_code);
+        set('item_name', data.item_EN_Name);
+        set('unit_price', data.unit_price);
+        set('vat_percentage', data.vat_percentage);
+        this.calculateEstimatedTotal();
+    }
+
     // ----- Consumer lookup (by phone) -----
     handleConsumerLookup() {
         const input = document.getElementById('consumerLookupPhone');
@@ -359,8 +404,15 @@ class FlatOrderTool {
         set('clientGender', c.gender);
         if (c.birthdate) set('clientBirthdate', ('' + c.birthdate).slice(0, 10));
 
+        // Address has no id (it's shared with GHC's plain text field), so set
+        // it by data-field instead.
+        if (c.address !== undefined && c.address !== null && c.address !== '') {
+            const addressEl = document.querySelector('[data-field="address"]');
+            if (addressEl) addressEl.value = c.address;
+        }
+
         // Persist each prefilled field back to the draft
-        ['first_name', 'middle_name', 'last_name', 'email', 'phone', 'gender', 'birthdate'].forEach(f => {
+        ['first_name', 'middle_name', 'last_name', 'email', 'phone', 'gender', 'birthdate', 'address'].forEach(f => {
             const el = document.querySelector(`[data-field="${f}"]`);
             if (el) this.updateOrderField(f, el.value);
         });
@@ -501,6 +553,35 @@ class FlatOrderTool {
 
         if (responseData.success) this.showAlert(`Request sent! Status: ${responseData.status_code}`, 'success');
         else this.showAlert(`Request failed: ${responseData.status_code}`, 'danger');
+
+        // UPC-only: inline read-back of the order's landed DB status right
+        // after sending. Absent for every other module, so this is a no-op
+        // there (the panel element itself only exists on the UPC template).
+        this.displayUpcPostSendStatus(responseData.upc_validation);
+    }
+
+    displayUpcPostSendStatus(validation) {
+        const panel = document.getElementById('upcPostSendStatus');
+        if (!panel) return;
+
+        if (!validation || !validation.found) {
+            panel.className = 'alert alert-warning mt-3';
+            panel.innerHTML = 'Order sent. Status not available yet — check the ' +
+                '<a href="#validation-tab" data-bs-toggle="tab" class="alert-link">Order Validation</a> tab shortly.';
+            panel.classList.remove('d-none');
+            return;
+        }
+
+        const variant = { 5: 'danger', 6: 'danger', 7: 'danger' }[validation.status] || 'info';
+        panel.className = `alert alert-${variant} mt-3`;
+        panel.innerHTML =
+            `Order <strong>${validation.order_number}</strong> landed as ` +
+            `<strong>${validation.status_label}</strong> at branch ${validation.branch_code}. ` +
+            (validation.invoice_barcode
+                ? `Invoiced (barcode ${validation.invoice_barcode}). `
+                : '') +
+            '<a href="#validation-tab" data-bs-toggle="tab" class="alert-link">View in Order Validation</a>';
+        panel.classList.remove('d-none');
     }
 
     clearResponseDisplay() {
@@ -510,6 +591,8 @@ class FlatOrderTool {
         if (display) display.textContent = 'No response yet. Send a request to see the response here.';
         if (statusCode) { statusCode.value = ''; statusCode.className = 'form-control'; }
         if (requestUrl) requestUrl.value = '';
+        const upcPanel = document.getElementById('upcPostSendStatus');
+        if (upcPanel) upcPanel.classList.add('d-none');
     }
 
     copyResponseToClipboard() {
@@ -650,6 +733,16 @@ class FlatOrderTool {
 
         const lookupForm = document.getElementById('itemLookupForm');
         if (lookupForm) lookupForm.addEventListener('submit', e => { e.preventDefault(); this.handleItemLookup(); });
+
+        on('modalItemSearchBtn', 'click', () => this.handleModalItemSearch());
+        on('modalItemSearchNumber', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.handleModalItemSearch(); } });
+        const addProductModalEl = document.getElementById('addProductModal');
+        if (addProductModalEl) addProductModalEl.addEventListener('show.bs.modal', () => {
+            const searchInput = document.getElementById('modalItemSearchNumber');
+            const searchStatus = document.getElementById('modalItemSearchStatus');
+            if (searchInput) searchInput.value = '';
+            if (searchStatus) { searchStatus.textContent = ''; searchStatus.className = 'text-muted'; }
+        });
 
         on('testDatabase', 'click', () => this.testDatabaseConnection());
         on('testAllEndpoints', 'click', () => this.testAllEndpoints());

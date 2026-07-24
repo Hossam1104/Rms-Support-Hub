@@ -57,7 +57,9 @@ PAYMENT_OPTIONS = {
 
 # NOTE: the single global DB_CONFIG was removed in the module refactor. Each
 # module now has its own DB config in modules/db_config.py (env-var prefixed:
-# GHC_ECOM_DB_*, UPC_ECOM_DB_*, GHC_UNICOM_DB_*), exposed as DB_CONFIGS.
+# GHC_ECOM_DB_*, GHC_UNICOM_DB_*), exposed as DB_CONFIGS. UPC is the
+# exception: its Production/Testing environments use two separate databases
+# (UPC_ECOM_PROD_DB_* / UPC_ECOM_TEST_DB_*, see UPC_DB_CONFIGS).
 
 
 # Application Configuration
