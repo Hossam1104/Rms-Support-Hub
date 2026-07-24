@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ module.label }} — Online Order Tool</title>
+</head>
+<body>
+    <p><a href="{{ url_for('index') }}">&larr; back to module picker</a></p>
+    <h1>{{ module.label }}</h1>
+    <p><em>Placeholder order-builder view — the real UI lands in a later session
+        (templates/flat_order.html for GHC/UPC E-Commerce, templates/unicommerce.html
+        for GHC Uni-Commerce).</em></p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul>
+        {% for category, message in messages %}
+        <li>[{{ category }}] {{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <h2>Current draft state</h2>
+    <pre>{{ state | tojson(indent=2) }}</pre>
+
+    <p>
+        <a href="{{ url_for('module_export_json', module_key=module.key) }}" target="_blank">Export JSON</a>
+        |
+        <a href="{{ url_for('module_load_default', module_key=module.key) }}">Load default</a>
+        |
+        <a href="{{ url_for('module_clear_all', module_key=module.key) }}">Clear all</a>
+    </p>
+</body>
+</html>

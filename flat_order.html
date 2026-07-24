@@ -2,13 +2,18 @@
 <html lang="en" data-bs-theme="dark">
 
 <head>
+    {% set page_title = module.label + ' — Online Order Tool' %}
     {% include "partials/head.html" %}
     <script>
         // Make payment options available to JavaScript from backend config
         window.paymentOptions = JSON.parse('{{ payment_options | tojson }}');
     </script>
     <script>
-        // Initialize API URLs for JavaScript
+        // Base path for every module-scoped endpoint (used by flat_order.js)
+        window.MODULE_BASE = '/modules/{{ module.key }}';
+        window.MODULE_KEY = '{{ module.key }}';
+
+        // Initialize API URLs for JavaScript (env key -> api_url for this module)
         window.apiUrls = JSON.parse('{{ api_urls | tojson }}');
 
         // Pass response data to JavaScript if available
@@ -22,7 +27,7 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h4>Online Order Tool</h4>
+                <h4>{{ module.label }}</h4>
                 <p class="mb-0">Order Management System</p>
             </div>
 
@@ -37,6 +42,11 @@
 
                 <!-- Navigation -->
                 <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="bi bi-grid"></i> Module Picker
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link active" href="#order-tab" data-bs-toggle="tab">
                             <i class="bi bi-cart"></i> Order Dashboard
@@ -79,13 +89,16 @@
                 <div class="mt-4 px-3">
                     <h6 class="text-white mb-3"><i class="bi bi-lightning"></i> Quick Actions</h6>
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('load_default') }}" class="btn btn-outline-light">
+                        <a href="{{ url_for('module_load_default', module_key=module.key) }}"
+                            class="btn btn-outline-light">
                             <i class="bi bi-arrow-clockwise"></i> Load Default
                         </a>
-                        <a href="{{ url_for('clear_all') }}" class="btn btn-outline-light">
+                        <a href="{{ url_for('module_clear_all', module_key=module.key) }}"
+                            class="btn btn-outline-light">
                             <i class="bi bi-trash"></i> Clear All
                         </a>
-                        <a href="{{ url_for('export_json') }}" class="btn btn-outline-light" target="_blank">
+                        <a href="{{ url_for('module_export_json', module_key=module.key) }}"
+                            class="btn btn-outline-light" target="_blank">
                             <i class="bi bi-download"></i> Export JSON
                         </a>
                         <a href="#api-tab" class="btn btn-outline-light" data-bs-toggle="tab">
@@ -98,19 +111,7 @@
 
         <!-- Main Content -->
         <div class="main-content fade-in">
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                <i
-                    class="bi {% if category == 'success' %}bi-check-circle{% elif category == 'danger' %}bi-exclamation-triangle{% elif category == 'warning' %}bi-exclamation-circle{% else %}bi-info-circle{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+            {% include "partials/flash.html" %}
 
             <div class="tab-content">
                 <!-- Order Details Tab -->
@@ -121,7 +122,8 @@
                             <button class="btn btn-outline-primary" id="calculateTotals">
                                 <i class="bi bi-calculator"></i> Calculate Totals
                             </button>
-                            <a href="{{ url_for('export_json') }}" class="btn btn-success" target="_blank">
+                            <a href="{{ url_for('module_export_json', module_key=module.key) }}" class="btn btn-success"
+                                target="_blank">
                                 <i class="bi bi-download"></i> Export JSON
                             </a>
                             <a href="#api-tab" class="btn btn-primary" data-bs-toggle="tab">
@@ -148,7 +150,6 @@
                             <div class="quick-stat-number text-primary" id="finalTotal">0.00</div>
                             <div class="quick-stat-label">Final Total</div>
                         </div>
-                        <!-- NEW: Payment Summary -->
                         <div class="quick-stat">
                             <div class="quick-stat-number text-success" id="totalPaid">{{
                                 "%.2f"|format(payment_summary.total_paid) }}</div>
@@ -256,44 +257,63 @@
                                     <h5 class="mb-0"><i class="bi bi-person me-2"></i>Client Information</h5>
                                 </div>
                                 <div class="card-body">
+                                    <!-- Consumer lookup by phone -->
+                                    <div class="consumer-lookup mb-3">
+                                        <label class="form-label">Find Consumer by Phone</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="consumerLookupPhone"
+                                                placeholder="Enter phone number">
+                                            <button class="btn btn-outline-primary" type="button"
+                                                id="consumerLookupBtn">
+                                                <i class="bi bi-search"></i> Lookup
+                                            </button>
+                                        </div>
+                                        <small class="text-muted" id="consumerLookupStatus"></small>
+                                    </div>
+
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label class="form-label">First Name</label>
                                             <input type="text" class="form-control order-field" name="first_name"
-                                                value="{{ data.client_first_name }}" data-field="first_name">
+                                                id="clientFirstName" value="{{ data.client_first_name }}"
+                                                data-field="first_name">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Last Name</label>
                                             <input type="text" class="form-control order-field" name="last_name"
-                                                value="{{ data.client_last_name }}" data-field="last_name">
+                                                id="clientLastName" value="{{ data.client_last_name }}"
+                                                data-field="last_name">
                                         </div>
 
                                         <div class="col-md-6">
                                             <label class="form-label">Middle Name</label>
                                             <input type="text" class="form-control order-field" name="middle_name"
-                                                value="{{ data.client_middle_name }}" data-field="middle_name">
+                                                id="clientMiddleName" value="{{ data.client_middle_name }}"
+                                                data-field="middle_name">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Phone</label>
                                             <input type="text" class="form-control order-field" name="phone"
-                                                value="{{ data.client_phone }}" data-field="phone">
+                                                id="clientPhone" value="{{ data.client_phone }}" data-field="phone">
                                         </div>
 
                                         <div class="col-md-6">
                                             <label class="form-label">Email</label>
                                             <input type="email" class="form-control order-field" name="email"
-                                                value="{{ data.client_email }}" data-field="email">
+                                                id="clientEmail" value="{{ data.client_email }}" data-field="email">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Birthdate</label>
                                             <input type="date" class="form-control order-field" name="birthdate"
+                                                id="clientBirthdate"
                                                 value="{{ data.client_birthdate[:10] if data.client_birthdate }}"
                                                 data-field="birthdate">
                                         </div>
 
                                         <div class="col-md-6">
                                             <label class="form-label">Gender</label>
-                                            <select class="form-select order-field" name="gender" data-field="gender">
+                                            <select class="form-select order-field" name="gender" id="clientGender"
+                                                data-field="gender">
                                                 <option value="Male" {% if data.client_gender=='Male' %}selected{% endif
                                                     %}>Male</option>
                                                 <option value="Female" {% if data.client_gender=='Female' %}selected{%
@@ -389,8 +409,8 @@
                                                 {% if product.offer_code %}
                                                 <div class="text-info small mt-1">
                                                     <i class="bi bi-tag"></i> {{ product.offer_code }}
-                                                    {% if product.offer_message %} - {{ product.offer_message }}{% endif
-                                                    %}
+                                                    {% if product.offer_message %} - {{ product.offer_message }}{%
+                                                    endif %}
                                                 </div>
                                                 {% endif %}
                                             </td>
@@ -405,7 +425,7 @@
                                                         data-index="{{ loop.index0 }}">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <a href="{{ url_for('remove_product', index=loop.index0) }}"
+                                                    <a href="{{ url_for('module_remove_product', module_key=module.key, index=loop.index0) }}"
                                                         class="btn btn-sm btn-outline-danger">
                                                         <i class="bi bi-trash"></i>
                                                     </a>
@@ -428,8 +448,8 @@
                     <!-- Payment Methods Card -->
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Methods ({{ payments|length
-                                }})</h5>
+                            <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Methods ({{
+                                payments|length }})</h5>
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#addPaymentModal">
                                 <i class="bi bi-plus"></i> Add Payment
@@ -474,7 +494,7 @@
                                                         data-index="{{ loop.index0 }}">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <a href="{{ url_for('remove_payment', index=loop.index0) }}"
+                                                    <a href="{{ url_for('module_remove_payment', module_key=module.key, index=loop.index0) }}"
                                                         class="btn btn-sm btn-outline-danger">
                                                         <i class="bi bi-trash"></i>
                                                     </a>
@@ -494,10 +514,11 @@
                         </div>
                     </div>
                 </div>
+
                 <!-- API Configuration Tab -->
                 <div class="tab-pane fade" id="api-tab">
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="section-title">API Request & Response</h2>
+                        <h2 class="section-title">API Request &amp; Response</h2>
                     </div>
 
                     <!-- Request Configuration Card -->
@@ -506,7 +527,8 @@
                             <h5 class="mb-0"><i class="bi bi-send me-2"></i>Send Order Request</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ url_for('send_request') }}" id="apiRequestForm">
+                            <form method="POST" action="{{ url_for('module_send_request', module_key=module.key) }}"
+                                id="apiRequestForm">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Select API Endpoint</label>
@@ -567,7 +589,6 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <!-- Response Status Bar -->
                             <div class="row mb-3">
                                 <div class="col-md-4">
                                     <div class="mb-3">
@@ -585,7 +606,6 @@
                                 </div>
                             </div>
 
-                            <!-- Response Body -->
                             <div class="mb-3">
                                 <label class="form-label">Response Body</label>
                                 <div class="response-container">
@@ -609,7 +629,7 @@
                             <h5 class="mb-0"><i class="bi bi-x-circle me-2"></i>Cancel Order</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ url_for('cancel_order') }}">
+                            <form method="POST" action="{{ url_for('module_cancel_order', module_key=module.key) }}">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Select API Endpoint</label>
@@ -661,21 +681,23 @@
                                         <div class="row g-3">
                                             <div class="col-12">
                                                 <label class="form-label">Server</label>
-                                                <input type="text" class="form-control" name="server" value=".">
+                                                <input type="text" class="form-control" name="server"
+                                                    value="{{ db_config.server }}">
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label">Database</label>
                                                 <input type="text" class="form-control" name="database"
-                                                    value="RMSCashierSrv">
+                                                    value="{{ db_config.database }}">
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Username</label>
-                                                <input type="text" class="form-control" name="username" value="sa">
+                                                <input type="text" class="form-control" name="username"
+                                                    value="{{ db_config.username }}">
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Password</label>
                                                 <input type="password" class="form-control" name="password"
-                                                    value="P@ssw0rd">
+                                                    value="{{ db_config.password }}">
                                             </div>
                                             <div class="col-12">
                                                 <button type="button" id="testDatabase" class="btn btn-primary w-100">
@@ -729,7 +751,6 @@
                                         <div class="table-responsive">
                                             <table class="table table-striped">
                                                 <tbody id="itemDetails">
-                                                    <!-- Item details will be populated here -->
                                                 </tbody>
                                             </table>
                                         </div>
@@ -791,10 +812,9 @@
         </div>
     </div>
 
-    <!-- Bootstrap & Vanilla JS -->
+    <!-- Bootstrap & Custom JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='flat_order.js') }}"></script>
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
@@ -804,7 +824,7 @@
                     <h5 class="modal-title">Add Product</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="POST" action="{{ url_for('add_product') }}">
+                <form method="POST" action="{{ url_for('module_add_product', module_key=module.key) }}">
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -862,7 +882,7 @@
                     <h5 class="modal-title">Add Payment Method</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="POST" action="{{ url_for('add_payment') }}">
+                <form method="POST" action="{{ url_for('module_add_payment', module_key=module.key) }}">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
@@ -874,8 +894,8 @@
                                         <option value="{{ method }}">{{ method }}</option>
                                         {% endfor %}
                                     </select>
-                                    <div id="addPaymentError" class="text-danger mt-2 small" style="display:none"></div>
-                                    <div id="addPaymentError" class="text-danger mt-2 small"></div>
+                                    <div id="addPaymentError" class="text-danger mt-2 small" style="display:none">
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -913,7 +933,6 @@
                                     <label class="form-label">Payment Option</label>
                                     <select class="form-select" name="payment_option" id="paymentOption">
                                         <option value="">Select Option</option>
-                                        <!-- Options will be populated by JavaScript -->
                                     </select>
                                 </div>
                             </div>
@@ -926,7 +945,6 @@
                             </div>
                         </div>
 
-                        <!-- Customer Info (shown for COD, Visa, PostToCredit) -->
                         <div id="creditCustomerInfo" style="display: none;">
                             <h6 class="mb-3">Customer Information</h6>
                             <div class="row">
@@ -1033,7 +1051,6 @@
                                     </select>
                                     <div id="editPaymentError" class="text-danger mt-2 small" style="display:none">
                                     </div>
-                                    <div id="editPaymentError" class="text-danger mt-2 small"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -1072,7 +1089,6 @@
                                     <label class="form-label">Payment Option</label>
                                     <select class="form-select" name="payment_option" id="editPaymentOption">
                                         <option value="">Select Option</option>
-                                        <!-- Options will be populated by JavaScript -->
                                     </select>
                                 </div>
                             </div>
@@ -1085,7 +1101,6 @@
                             </div>
                         </div>
 
-                        <!-- Customer Info (shown for COD, Visa, PostToCredit) -->
                         <div id="editCreditCustomerInfo" style="display: none;">
                             <h6 class="mb-3">Customer Information</h6>
                             <div class="row">

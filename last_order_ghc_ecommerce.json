@@ -1,0 +1,80 @@
+{
+  "order_data": {
+    "branch_code": "",
+    "client_birthdate": "1989-04-11T12:00:00.000Z",
+    "client_country_code": "966",
+    "client_email": "",
+    "client_first_name": "",
+    "client_gender": "Male",
+    "client_last_name": "",
+    "client_middle_name": "",
+    "client_phone": "",
+    "delivery_date": "2026-07-22",
+    "delivery_from_time": "17:07:12",
+    "delivery_to_time": "20:07:12",
+    "fullfilment_plant": "MAIN",
+    "is_delivery": 1,
+    "order_address": "",
+    "order_code": "",
+    "order_delivery_cost": 10.0,
+    "order_notes": "Don't Ring the bell",
+    "order_payment_status": "not_payment",
+    "order_products": [
+      {
+        "item_code": "123456",
+        "item_name": "Sample Product",
+        "offer_code": "",
+        "offer_message": "",
+        "quantity": 2.0,
+        "row_net_total": 57.5,
+        "row_total_discount": 0.0,
+        "total_vat_amount": 7.5,
+        "unit_price": 25.0,
+        "unit_vat_amount": 3.75,
+        "vat_percentage": 15.0
+      }
+    ],
+    "order_status": "new",
+    "parent_order_code": "",
+    "payment_methods_with_options": [
+      {
+        "bank_code": "",
+        "card_name": "",
+        "credit_customer_info": null,
+        "option_commission": 0.0,
+        "payment_amount": 57.5,
+        "payment_method": "COD",
+        "payment_option": "COD",
+        "payment_status": "not_payment",
+        "transaction_id": ""
+      }
+    ],
+    "shipping_address_2": ""
+  },
+  "payments": [
+    {
+      "payment_method": "COD",
+      "payment_status": "not_payment",
+      "payment_amount": 33.0,
+      "transaction_id": "",
+      "payment_option": "COD",
+      "option_commission": 0.0,
+      "credit_customer_info": null
+    }
+  ],
+  "products": [
+    {
+      "item_code": "123456",
+      "item_name": "Panadol",
+      "offer_code": "",
+      "offer_message": "",
+      "quantity": 2.0,
+      "row_net_total": 23.0,
+      "row_total_discount": 0.0,
+      "total_vat_amount": 3.0,
+      "unit_price": 10.0,
+      "unit_vat_amount": 1.5,
+      "vat_percentage": 15.0
+    }
+  ]
+}

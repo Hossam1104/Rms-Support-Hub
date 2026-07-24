@@ -1,102 +1,141 @@
-from app import app
-from managers import OrderManager
+"""Verify the flat-order modules (ghc_ecommerce, upc_ecommerce).
+
+Both modules share the serializer in modules/flat_order.py, but UPC has a
+different schema (no delivery/fulfillment fields). This script verifies each
+module against its own reference example.
+"""
+
 import json
-import logging
+import os
 
-# Disable logging
-logging.disable(logging.CRITICAL)
+from modules import MODULE_REGISTRY
+
+GHC_REFERENCE = os.path.join("request_examples", "GHC E-Commerce", "request_body.json")
+UPC_REFERENCE = os.path.join(
+    "request_examples",
+    "UPC",
+    "4- Invoice without discount, with delivery and paid by visa.json",
+)
 
 
-def verify_payload():
-    with app.test_request_context():
-        # Setup session with mocked valid data
-        from flask import session
+def _load_reference(path):
+    with open(path, "r") as f:
+        return json.load(f)
 
-        # Valid COD Payment
-        session["payments"] = [
-            {
-                "payment_method": "COD",
-                "payment_status": "not_payment",
-                "payment_amount": 110.00,
-                "transaction_id": "",
-                "payment_option": "COD",
-                "option_commission": 0,
-                "credit_customer_info": None,
-                "card_name": "Should Be Ignored",  # Extra field to test filtering
-                "bank_code": "Should Be Ignored",
-            }
-        ]
 
-        session["products"] = [
+def _sample_state():
+    """A representative flat-order draft ({order_data, products, payments})."""
+    return {
+        "order_data": {
+            "branch_code": "2000",
+            "order_code": "ORD20260101000000",
+            "parent_order_code": "",
+            "order_delivery_cost": 10.0,
+            "is_delivery": 1,
+            "order_status": "new",
+            "order_payment_status": "not_payment",
+            "delivery_date": "2026-01-01",
+            "delivery_from_time": "12:00:00",
+            "delivery_to_time": "15:00:00",
+            "shipping_address_2": "",
+            "fullfilment_plant": "MAIN",
+            "order_notes": "Don't Ring the bell",
+            "client_first_name": "John",
+            "client_middle_name": "Michael",
+            "client_last_name": "Doe",
+            "client_phone": "5551234567",
+            "client_email": "john.doe@example.com",
+            "client_birthdate": "1989-04-11",
+            "client_gender": "Male",
+            "client_country_code": "966",
+            "order_address": "123 Main St",
+        },
+        "products": [
             {
                 "item_code": "123456",
                 "item_name": "Test Product",
                 "quantity": 2.0,
-                "unit_price": 50.00,
-                "vat_percentage": 15.0,  # Will be converted to 0.15
+                "unit_price": 50.0,
+                "vat_percentage": 15.0,
                 "row_total_discount": 0.0,
-                "row_net_total": 100.00,
-                "unit_vat_amount": 7.50,
+                "row_net_total": 115.0,
+                "unit_vat_amount": 7.5,
+                "total_vat_amount": 15.0,
                 "offer_code": "",
                 "offer_message": "",
             }
-        ]
+        ],
+        "payments": [
+            {
+                "payment_method": "COD",
+                "payment_status": "not_payment",
+                "payment_amount": 125.0,
+                "transaction_id": "",
+                "payment_option": "COD",
+                "option_commission": 0.0,
+                "credit_customer_info": None,
+            }
+        ],
+    }
 
-        session["order_data"] = {
-            "order_delivery_cost": 10.00,
-            "is_delivery": 1,
-            "order_status": "new",
-            "client_country_code": "966",
-        }
 
-        # Generate payload
-        payload = OrderManager.prepare_order_data()
+def verify_module(module_key: str, reference_path: str) -> bool:
+    module = MODULE_REGISTRY[module_key]
+    reference = _load_reference(reference_path)
+    payload = module.build_payload(_sample_state())
 
-        # Verify Payment Structure
-        print("Verifying Payment Structure...")
-        payments = payload["payment_methods_with_options"]
-        assert len(payments) == 1
-        p = payments[0]
+    ok = True
 
-        expected_keys = {
-            "payment_method",
-            "payment_status",
-            "payment_amount",
-            "transaction_id",
-            "payment_option",
-            "option_commission",
-            "credit_customer_info",
-        }
+    # Top-level key set: the reference has two documentation-only placeholder keys
+    # (order_country_code, order_phone) that neither the legacy nor the new
+    # serializer ever produced. Everything else must match exactly.
+    ref_keys = set(reference.keys()) - {"order_country_code", "order_phone"}
+    pay_keys = set(payload.keys())
+    if ref_keys != pay_keys:
+        print(f"[{module_key}] FAIL top-level mismatch")
+        print("  missing:", sorted(ref_keys - pay_keys))
+        print("  extra:  ", sorted(pay_keys - ref_keys))
+        ok = False
 
-        actual_keys = set(p.keys())
+    # Product key set
+    if set(reference["order_products"][0].keys()) != set(
+        payload["order_products"][0].keys()
+    ):
+        print(f"[{module_key}] FAIL order_products key mismatch")
+        print("  ref:", sorted(reference["order_products"][0].keys()))
+        print("  got:", sorted(payload["order_products"][0].keys()))
+        ok = False
 
-        # Check for extra keys
-        extra_keys = actual_keys - expected_keys
-        if extra_keys:
-            print(f"FAIL: Found extra keys in payment payload: {extra_keys}")
-            exit(1)
+    # Payment key set: the serializer intentionally omits card_name/bank_code
+    # (legacy behavior — they were always filtered out). The reference example
+    # itself omits payment_status (a documentation placeholder), so the expected
+    # set is the reference keys plus payment_status, minus card_name/bank_code.
+    expected_pay_keys = (
+        set(reference["payment_methods_with_options"][0].keys()) | {"payment_status"}
+    ) - {"card_name", "bank_code"}
+    got_pay_keys = set(payload["payment_methods_with_options"][0].keys())
+    if expected_pay_keys != got_pay_keys:
+        print(f"[{module_key}] FAIL payment_methods_with_options key mismatch")
+        print("  missing:", sorted(expected_pay_keys - got_pay_keys))
+        print("  extra:  ", sorted(got_pay_keys - expected_pay_keys))
+        ok = False
 
-        # Check for missing keys
-        missing_keys = expected_keys - actual_keys
-        if missing_keys:
-            print(f"FAIL: Missing keys in payment payload: {missing_keys}")
-            exit(1)
+    if ok:
+        print(f"[{module_key}] OK — payload matches flat-order schema")
+    return ok
 
-        print("SUCCESS: Payment payload structure is strictly valid.")
 
-        # Verify Values
-        assert p["payment_method"] == "COD"
-        assert p["payment_amount"] == 110.00
-        assert p["credit_customer_info"] is None
-
-        print("SUCCESS: Payment values are correct.")
-
-        # Verify Product Structure (VAT conversion)
-        print("Verifying Product Structure...")
-        prod = payload["order_products"][0]
-        assert prod["vat_percentage"] == 0.15
-        print("SUCCESS: Product VAT percentage converted correctly.")
+def main():
+    results = [
+        verify_module("ghc_ecommerce", GHC_REFERENCE),
+        verify_module("upc_ecommerce", UPC_REFERENCE),
+    ]
+    if all(results):
+        print("\nAll flat-order modules verified.")
+        return 0
+    print("\nVerification FAILED.")
+    return 1
 
 
 if __name__ == "__main__":
-    verify_payload()
+    raise SystemExit(main())

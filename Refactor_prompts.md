@@ -52,6 +52,9 @@ Implement modules/ghc_unicommerce.py fully:
 6. Verify: write a script asserting a payload built by your serializer against representative input matches the key set/shape of request_examples/GHC Uni-Commerce/AMAZON_AMZ-00011.json (non-return) AND request_examples/GHC Uni-Commerce/AMAZON_PARTIAL_RETURN_AMZ-RET-003.json (return case). Delete any throwaway scripts when done; don't leave scratch files in the repo root — a small dedicated test file is fine if placed sensibly.
 
 Report the exact schema/validation decisions you made and flag anything ambiguous in the examples that you had to guess on.
+
+------------------------------
+
 Session 4 — Routing, session model, and app.py rewiring
 
 
@@ -69,6 +72,9 @@ Rewire app.py and managers.py:
 8. Verify with curl/requests against the running app (python app.py) that: selecting a module via /select-client persists session['active_module']; /modules/ghc_ecommerce/get-item-details and /modules/ghc_unicommerce/get-item-details both work and return module-appropriate data (or the expected DB-connection-failed error, since real DB creds aren't wired yet); /modules/<key>/get-consumer-details is routable.
 
 Report exactly which routes changed shape/URL so the frontend sessions know what to call.
+
+------------------------------
+
 Session 5 — Landing page + shared partials
 
 
@@ -81,6 +87,9 @@ Build:
 3. Verify manually: run python app.py, load "/", confirm all 5 cards render with correct enabled/disabled states, click into each of the 3 available modules and confirm you land on /modules/<key>/ with the module correctly persisted in session (check via a subsequent request or dev tools).
 
 Report what partials you extracted and their include paths, since sessions 6-7 need to reference them.
+
+------------------------------
+
 Session 6 — Flat-order view (GHC/UPC E-Commerce frontend)
 
 
@@ -94,6 +103,9 @@ Build templates/flat_order.html + a corresponding flat_order.js, served by /modu
 4. Verify manually: run python app.py, pick GHC E-Commerce from the landing page, build a full order (add products via lookup, add payments, fill customer info, use consumer lookup), export JSON and confirm it matches the flat schema from request_examples/GHC E-Commerce/request_body.json. Repeat quickly for UPC E-Commerce to confirm branding swaps but behavior is identical.
 
 Report any UI behavior from the old script.js you couldn't port 1:1 and why.
+
+------------------------------
+
 Session 7 — GHC Uni-Commerce view
 
 
@@ -110,6 +122,9 @@ Build templates/unicommerce.html + unicommerce.js, served by /modules/ghc_unicom
 7. Verify manually: run python app.py, pick GHC Uni-Commerce from the landing page, build a non-return order and a return order (with ParentReferenceNumber), export/preview JSON for both and confirm the shape matches request_examples/GHC Uni-Commerce/AMAZON_AMZ-00011.json and .../AMAZON_PARTIAL_RETURN_AMZ-RET-003.json respectively.
 
 Report any field from the example JSONs you couldn't confidently map to a UI control and why.
+
+------------------------------
+
 Session 8 — Cleanup & verification pass
 
 
@@ -122,8 +137,3 @@ This is the final session (8 of 8) of this refactor. All 3 modules (ghc_ecommerc
 4. Update README.md to describe the new module-based architecture (replace the outdated single-schema description) and note that DB credentials per module are pending and where to configure them (env vars per modules/db config).
 
 Report a final summary: what's fully done, what's explicitly still pending on the user (real DB credentials, real Uni-Commerce API URL, OMS/Call Center specs), and any test/verification gaps.
-A few notes on using these:
-
-Session 1 is safe to run without confirmation — pure additive scaffolding.
-Sessions 4, 6, 7 touch app.py/templates in ways that can temporarily break the running app mid-refactor — expected, since later sessions fix it.
-You'll need to supply real DB connection strings and the actual GHC Uni-Commerce API URL before send-request/DB-lookup features work end-to-end; every session above scaffolds around that gap with TODO(db-creds) markers rather than blocking on it.

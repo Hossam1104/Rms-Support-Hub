@@ -280,11 +280,25 @@ body {
     transform: scale(1.1);
 }
 
-.theme-color.blue { background-color: #0d6efd; }
-.theme-color.purple { background-color: #6f42c1; }
-.theme-color.green { background-color: #198754; }
-.theme-color.orange { background-color: #fd7e14; }
-.theme-color.red { background-color: #dc3545; }
+.theme-color.blue {
+    background-color: #0d6efd;
+}
+
+.theme-color.purple {
+    background-color: #6f42c1;
+}
+
+.theme-color.green {
+    background-color: #198754;
+}
+
+.theme-color.orange {
+    background-color: #fd7e14;
+}
+
+.theme-color.red {
+    background-color: #dc3545;
+}
 
 /* Navigation */
 .sidebar .nav {
@@ -666,6 +680,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -838,6 +853,7 @@ pre {
 
 /* Print styles */
 @media print {
+
     .sidebar,
     .theme-switcher,
     .theme-selector,
@@ -853,5 +869,258 @@ pre {
     .card {
         box-shadow: none;
         border: 1px solid #dee2e6;
+    }
+}
+
+/* ------------------------------------------------------------------
+   Landing page (module / environment picker) — session 5
+   ------------------------------------------------------------------ */
+.landing-body {
+    min-height: 100vh;
+}
+
+.landing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+.landing-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.landing-title {
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.landing-subtitle {
+    color: var(--bs-secondary-color);
+    margin-bottom: 0;
+}
+
+.landing-header .theme-toggle-btn {
+    width: auto;
+    background: transparent;
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+.landing-header .theme-toggle-btn:hover {
+    background: var(--bs-dark-bg-subtle);
+}
+
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.module-card {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+[data-bs-theme="dark"] .module-card {
+    background: #212529;
+    border-color: #2c3034;
+}
+
+.module-card:not(.module-card--disabled):hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.module-card--disabled {
+    opacity: 0.65;
+}
+
+.module-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.module-card__identity {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.module-card__logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 0.5rem;
+}
+
+.module-card__label {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.1rem;
+}
+
+.module-card__client {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+
+.module-card__envs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.module-card__enter {
+    align-self: flex-start;
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.module-card__enter:hover {
+    text-decoration: underline;
+}
+
+.module-card__soon-text {
+    color: var(--bs-secondary-color);
+    margin-bottom: 0;
+}
+
+/* Environment selection button */
+.env-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    width: 100%;
+    text-align: left;
+    background: var(--bs-dark-bg-subtle);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.6rem;
+    padding: 0.85rem 1rem;
+    color: var(--bs-body-color);
+    transition: border-color var(--transition-speed), background var(--transition-speed),
+        transform var(--transition-speed);
+}
+
+.env-btn:not(.env-btn--disabled):hover {
+    transform: translateY(-1px);
+    border-color: var(--primary-color);
+}
+
+.env-btn--disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.env-btn--busy {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.env-btn__icon {
+    font-size: 1.4rem;
+    color: var(--primary-color);
+}
+
+.env-btn__meta {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.env-btn__key {
+    font-weight: 600;
+}
+
+.env-btn__desc {
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+}
+
+.env-btn__status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.env-btn__cue {
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+}
+
+/* Status pills */
+.status-pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.status-pill--live {
+    background: rgba(25, 135, 84, 0.15);
+    color: var(--success-color);
+}
+
+.status-pill--test {
+    background: rgba(13, 202, 240, 0.15);
+    color: var(--info-color);
+}
+
+.status-pill--soon {
+    background: rgba(108, 117, 125, 0.15);
+    color: var(--secondary-color);
+}
+
+.status-pill--pending {
+    background: rgba(255, 193, 7, 0.15);
+    color: var(--warning-color);
+}
+
+/* Per-environment accent colors (matches modules/*.py `accent` fields) */
+.accent-ember {
+    --primary-color: #fd7e14;
+}
+
+.accent-ocean {
+    --primary-color: #0d6efd;
+}
+
+.accent-aurora {
+    --primary-color: #198754;
+}
+
+.accent-violet {
+    --primary-color: #6f42c1;
+}
+
+@media (max-width: 576px) {
+    .landing-header {
+        flex-direction: column;
+    }
+
+    .module-grid {
+        grid-template-columns: 1fr;
     }
 }

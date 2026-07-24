@@ -1,0 +1,44 @@
+{
+  "consumer": {
+    "birth_date": "",
+    "consumer_code": "",
+    "email": "",
+    "first_name": "",
+    "gender": "",
+    "last_name": "",
+    "middle_name": "",
+    "national_id": "",
+    "nationality": "",
+    "primary_phone_number": ""
+  },
+  "customer_name": "AMAZON",
+  "delivery": {
+    "delivery_address": "",
+    "delivery_fees": 0.0,
+    "delivery_location_url": "",
+    "delivery_notes": "",
+    "delivery_phone_number": ""
+  },
+  "is_return": true,
+  "online_order_number": "",
+  "order_creation_date": "",
+  "paid_online_amount": 0.0,
+  "paid_with_points_amount": 0.0,
+  "parent_reference_number": "ORIG-1",
+  "reference_number": "RET-1",
+  "row_items": [
+    {
+      "quantity": 2.0,
+      "material_number": "21241",
+      "item_price": 90.0,
+      "item_discount": 45.0,
+      "vat_percentage": 15.0,
+      "barcode": "",
+      "batch_number": "",
+      "expire_date": "",
+      "serial_number": "",
+      "scanned_code": "",
+      "offer_identifier": ""
+    }
+  ]
+}
