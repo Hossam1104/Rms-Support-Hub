@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace OnlineOrderTool.Core.Services;
 
 public interface IUniCommerceValidator
@@ -5,6 +7,12 @@ public interface IUniCommerceValidator
     List<string> ValidatePayload(Dictionary<string, object?> payload);
 }
 
+/// <summary>Ported line-for-line from validate() in
+/// _legacy_flask/modules/ghc_unicommerce.py. Field names verified against
+/// all 20 examples in docs/request_examples/GHC Uni-Commerce/ -- unlike the
+/// flat-order schema, this one was never invented; no rule changes were
+/// needed here for R2, only the same decimal-parsing robustness fix applied
+/// to FlatOrderValidator/TotalsCalculator.</summary>
 public class UniCommerceValidator : IUniCommerceValidator
 {
     public List<string> ValidatePayload(Dictionary<string, object?> payload)
@@ -43,8 +51,11 @@ public class UniCommerceValidator : IUniCommerceValidator
 
     private static decimal GetDecimal(Dictionary<string, object?> dict, string key)
     {
-        if (dict.TryGetValue(key, out var val) && val != null && decimal.TryParse(val.ToString(), out var d))
+        if (dict.TryGetValue(key, out var val) && val != null
+            && decimal.TryParse(val.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        {
             return d;
+        }
         return 0m;
     }
 }

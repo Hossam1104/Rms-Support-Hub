@@ -137,7 +137,7 @@ public class OrderController : ControllerBase
 
         var validationErrors = key == "ghc_unicommerce"
             ? _uniValidator.ValidatePayload(payload)
-            : _flatValidator.ValidatePayload(payload, key);
+            : _flatValidator.ValidatePayload(payload, key, TotalsCalculator.Calculate(draft).TotalPaidAmount);
 
         if (validationErrors.Count > 0)
         {

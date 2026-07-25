@@ -119,7 +119,7 @@ public class PayloadAndValidationTests
         };
 
         var payload = _flatBuilder.BuildPayload(draft, FlatVariant.UpcVariant);
-        var errors = _flatValidator.ValidatePayload(payload, "upc_ecommerce");
+        var errors = _flatValidator.ValidatePayload(payload, "upc_ecommerce", totalPaid: 10m);
 
         Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for UPC"));
     }

@@ -1,35 +1,48 @@
-using OnlineOrderTool.Core.Models;
+using System.Globalization;
 
 namespace OnlineOrderTool.Core.Services;
 
 public interface IFlatOrderValidator
 {
-    List<string> ValidatePayload(Dictionary<string, object?> payload, string moduleKey);
+    /// <summary>
+    /// Validates a built flat-order payload (see FlatOrderPayloadBuilder).
+    /// totalPaid must be the REAL sum of payment amounts (e.g.
+    /// TotalsCalculator.Calculate(draft).TotalPaidAmount) — the legacy Python
+    /// validator compared against a "total_paid" payload key that was never
+    /// emitted by build_payload, so its "must cover full amount" rules always
+    /// compared against 0 and never correctly passed a real order. Passing the
+    /// real total here is the fix; do not read total_paid from the payload.
+    /// </summary>
+    List<string> ValidatePayload(Dictionary<string, object?> payload, string moduleKey, decimal totalPaid);
 }
 
 public class FlatOrderValidator : IFlatOrderValidator
 {
-    public List<string> ValidatePayload(Dictionary<string, object?> payload, string moduleKey)
+    /// <summary>From config.PAYMENT_METHODS in _legacy_flask/config.py, plus
+    /// PostToCredit (checked separately throughout flat_order.py but never
+    /// listed in PAYMENT_METHODS itself).</summary>
+    private static readonly string[] AllowedPaymentMethods =
+    {
+        "COD", "Visa", "RajhiPoints", "Tamara", "Tabby", "NeqatyPoints",
+        "QitafPoints", "MisPay", "Emkan", "YouGotaGift", "OgMoney", "PostToCredit"
+    };
+
+    private static readonly string[] DigitalWallets = { "Tamara", "Tabby", "MisPay", "Emkan", "Visa" };
+
+    private static readonly string[] RequiredFields =
+    {
+        "branch_code", "order_code", "client_phone", "client_first_name", "order_address"
+    };
+
+    public List<string> ValidatePayload(Dictionary<string, object?> payload, string moduleKey, decimal totalPaid)
     {
         var errors = new List<string>();
 
-        if (!payload.TryGetValue("branch_code", out var b) || string.IsNullOrWhiteSpace(b?.ToString()))
-            errors.Add("Missing required field: branch_code");
-
-        if (!payload.TryGetValue("order_code", out var o) || string.IsNullOrWhiteSpace(o?.ToString()))
-            errors.Add("Missing required field: order_code");
-
-        if (!payload.TryGetValue("client_name", out var cn) || string.IsNullOrWhiteSpace(cn?.ToString()))
-            errors.Add("Missing required field: client_name");
-
-        if (!payload.TryGetValue("client_code", out var cc) || string.IsNullOrWhiteSpace(cc?.ToString()))
-            errors.Add("Missing required field: client_code");
-
-        if (!payload.TryGetValue("client_mobile", out var cm) || string.IsNullOrWhiteSpace(cm?.ToString()))
-            errors.Add("Missing required field: client_mobile");
-
-        if (!payload.TryGetValue("shipping_address", out var sa) || string.IsNullOrWhiteSpace(sa?.ToString()))
-            errors.Add("Missing required field: shipping_address");
+        foreach (var field in RequiredFields)
+        {
+            if (!payload.TryGetValue(field, out var v) || string.IsNullOrWhiteSpace(v?.ToString()))
+                errors.Add($"Missing required field: {field}");
+        }
 
         if (!payload.TryGetValue("order_products", out var prodsObj) || prodsObj is not List<Dictionary<string, object?>> prods || prods.Count == 0)
             errors.Add("Order must contain at least one product.");
@@ -37,47 +50,87 @@ public class FlatOrderValidator : IFlatOrderValidator
         if (!payload.TryGetValue("payment_methods_with_options", out var paysObj) || paysObj is not List<Dictionary<string, object?>> payments || payments.Count == 0)
         {
             errors.Add("Order must contain at least one payment method.");
+            return errors;
         }
-        else
+
+        var orderFinalTotal = GetDecimal(payload, "order_final_total_value");
+        // order_payment_method is a comma-joined string (see
+        // FlatOrderPayloadBuilder.GetPaymentMethodString) -- substring
+        // containment here mirrors legacy's `method in payment_method` checks,
+        // which operate on that same joined string.
+        var paymentMethodString = payload.GetValueOrDefault("order_payment_method")?.ToString() ?? "";
+
+        foreach (var p in payments)
         {
-            foreach (var p in payments)
+            var method = p.GetValueOrDefault("payment_method")?.ToString() ?? "";
+
+            if (!string.IsNullOrEmpty(method) && !AllowedPaymentMethods.Contains(method))
             {
-                var method = p.GetValueOrDefault("payment_method")?.ToString() ?? "";
-                var status = p.GetValueOrDefault("payment_status")?.ToString() ?? "";
-
-                if (moduleKey == "upc_ecommerce" && method == "PostToCredit")
-                {
-                    errors.Add("PostToCredit payment method is not allowed for UPC E-Commerce.");
-                }
-
-                if (method == "CashOnDelivery" && status != "not_payment")
-                {
-                    errors.Add("CashOnDelivery payment status must be 'not_payment'.");
-                }
-
-                if ((method is "Visa" or "Tamara" or "Tabby") && status != "done_payment")
-                {
-                    errors.Add($"{method} payment status must be 'done_payment'.");
-                }
-
-                if (method == "PostToCredit" && moduleKey == "ghc_ecommerce")
-                {
-                    var custName = p.GetValueOrDefault("customer_name")?.ToString();
-                    var custNum = p.GetValueOrDefault("customer_number")?.ToString();
-                    if (string.IsNullOrWhiteSpace(custName) || string.IsNullOrWhiteSpace(custNum))
-                    {
-                        errors.Add("PostToCredit requires customer_name and customer_number.");
-                    }
-                }
+                errors.Add($"Unknown payment method '{method}'. Use one of: {string.Join(", ", AllowedPaymentMethods)}.");
             }
 
-            var tamaraCount = payments.Count(p => p.GetValueOrDefault("payment_method")?.ToString() == "Tamara");
-            var tabbyCount = payments.Count(p => p.GetValueOrDefault("payment_method")?.ToString() == "Tabby");
+            if (method == "PostToCredit" && moduleKey == "upc_ecommerce")
+            {
+                errors.Add("PostToCredit payment method is not allowed for UPC E-Commerce.");
+            }
 
-            if (tamaraCount > 1) errors.Add("Only one Tamara payment method is allowed.");
-            if (tabbyCount > 1) errors.Add("Only one Tabby payment method is allowed.");
+            // payment_status is only present on UPC payments (FlatVariant.UpcVariant) --
+            // GHC's reference payload has no such field, so these status-shaped
+            // checks are skipped for GHC rather than treated as a missing/blank status.
+            if (p.TryGetValue("payment_status", out var statusRaw))
+            {
+                var status = statusRaw?.ToString() ?? "";
+
+                if (method == "COD" && status != "not_payment")
+                    errors.Add("COD payments must have 'not_payment' status.");
+
+                if (DigitalWallets.Contains(method) && status != "done_payment")
+                    errors.Add($"{method} payment status must be 'done_payment'.");
+
+                if (method == "PostToCredit" && status != "not_payment")
+                    errors.Add("PostToCredit payments must have 'not_payment' status.");
+            }
+
+            if (method == "PostToCredit" && moduleKey == "ghc_ecommerce")
+            {
+                var creditInfo = p.GetValueOrDefault("credit_customer_info") as Dictionary<string, object?>;
+                var custName = creditInfo?.GetValueOrDefault("customer_name")?.ToString();
+                var custNumber = creditInfo?.GetValueOrDefault("customer_number")?.ToString();
+                if (string.IsNullOrWhiteSpace(custName) || string.IsNullOrWhiteSpace(custNumber))
+                    errors.Add("PostToCredit requires customer_name and customer_number in credit_customer_info.");
+            }
         }
 
+        // "Must cover full amount" rules, ported from legacy's validate() but
+        // fixed to compare against the real totalPaid parameter instead of an
+        // always-zero payload["total_paid"] (see the interface doc comment).
+        if (paymentMethodString.Contains("PostToCredit") && Math.Abs(totalPaid - orderFinalTotal) > 0.01m)
+        {
+            errors.Add($"Credit payments must cover full order amount. Current: {totalPaid}, Required: {orderFinalTotal}");
+        }
+
+        if (DigitalWallets.Any(m => paymentMethodString.Contains(m))
+            && (payload.GetValueOrDefault("order_payment_status")?.ToString() == "done_payment")
+            && Math.Abs(totalPaid - orderFinalTotal) > 0.01m)
+        {
+            errors.Add($"Digital wallet 'done_payment' must equal order total. Current: {totalPaid}, Required: {orderFinalTotal}");
+        }
+
+        var tamaraCount = payments.Count(p => p.GetValueOrDefault("payment_method")?.ToString() == "Tamara");
+        var tabbyCount = payments.Count(p => p.GetValueOrDefault("payment_method")?.ToString() == "Tabby");
+        if (tamaraCount > 1) errors.Add("Only one Tamara payment method is allowed.");
+        if (tabbyCount > 1) errors.Add("Only one Tabby payment method is allowed.");
+
         return errors;
+    }
+
+    private static decimal GetDecimal(Dictionary<string, object?> dict, string key)
+    {
+        if (dict.TryGetValue(key, out var val) && val != null
+            && decimal.TryParse(val.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        {
+            return d;
+        }
+        return 0m;
     }
 }
