@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OnlineOrderTool.Api.Middleware;
 using OnlineOrderTool.Core.Models;
 using OnlineOrderTool.Core.Modules;
 using OnlineOrderTool.Core.Services;
@@ -26,7 +27,7 @@ public class PaymentController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
 
         if (key == "upc_ecommerce" && payment.PaymentMethod == "PostToCredit")
         {
@@ -34,7 +35,7 @@ public class PaymentController : ControllerBase
         }
 
         draft.Payments.Add(payment);
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, payments = draft.Payments, totals = TotalsCalculator.Calculate(draft) });
     }
@@ -45,7 +46,7 @@ public class PaymentController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         if (index < 0 || index >= draft.Payments.Count)
             return BadRequest(new { error = "Invalid payment index." });
 
@@ -55,7 +56,7 @@ public class PaymentController : ControllerBase
         }
 
         draft.Payments[index] = payment;
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, payments = draft.Payments, totals = TotalsCalculator.Calculate(draft) });
     }
@@ -66,12 +67,12 @@ public class PaymentController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         if (index < 0 || index >= draft.Payments.Count)
             return BadRequest(new { error = "Invalid payment index." });
 
         draft.Payments.RemoveAt(index);
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, payments = draft.Payments, totals = TotalsCalculator.Calculate(draft) });
     }

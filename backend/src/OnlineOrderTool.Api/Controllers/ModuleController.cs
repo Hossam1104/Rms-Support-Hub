@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OnlineOrderTool.Api.Middleware;
 using OnlineOrderTool.Core.DTOs;
 using OnlineOrderTool.Core.Modules;
 using OnlineOrderTool.Core.Services;
@@ -38,7 +39,8 @@ public class ModuleController : ControllerBase
                 VisualAlt: e.VisualAlt,
                 Available: e.Available,
                 StatusLabel: e.StatusLabel,
-                ApiUrl: e.ApiUrl
+                HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
+                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl)
             )).ToList()
         ));
 
@@ -51,7 +53,7 @@ public class ModuleController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
 
         var dto = new ModuleDto(
             Key: module.Key,
@@ -70,7 +72,8 @@ public class ModuleController : ControllerBase
                 VisualAlt: e.VisualAlt,
                 Available: e.Available,
                 StatusLabel: e.StatusLabel,
-                ApiUrl: e.ApiUrl
+                HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
+                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl)
             )).ToList()
         );
 

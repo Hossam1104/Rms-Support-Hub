@@ -1,5 +1,9 @@
 namespace OnlineOrderTool.Core.DTOs;
 
+/// <summary>Never carries the real ApiUrl/CancelUrl -- internal RMS endpoint
+/// topology should not be published to the browser (see
+/// remediation_plan.md B16). HasApiUrl/HasCancelUrl are enough for the UI to
+/// know whether an environment can send/cancel.</summary>
 public record EnvironmentDto(
     string Key,
     string Environment,
@@ -12,7 +16,8 @@ public record EnvironmentDto(
     string VisualAlt,
     bool Available,
     string StatusLabel,
-    string? ApiUrl
+    bool HasApiUrl,
+    bool HasCancelUrl
 );
 
 public record ModuleDto(

@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -24,20 +23,6 @@ public class ApiClient : IApiClient
     public ApiClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
-    }
-
-    public static HttpClient CreateHttpClientWithSslBypass()
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
-        };
-        var client = new HttpClient(handler)
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        return client;
     }
 
     public async Task<ApiResponseResult> SendOrderAsync(string url, object payload)

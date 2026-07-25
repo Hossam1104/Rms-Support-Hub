@@ -34,7 +34,13 @@ builder.Services.AddOpenApi();
 
 // Register Core & Data Services
 builder.Services.AddSingleton<IModuleRegistry, ModuleRegistry>();
-builder.Services.AddSingleton<IDraftManager, DraftManager>();
+
+// Drafts live under <content root>/var/drafts/, not the process's working
+// directory (see remediation_plan.md B20), keyed by (sessionId, moduleKey)
+// via SessionIdMiddleware (see B19).
+var draftsRoot = Path.Combine(builder.Environment.ContentRootPath, "var", "drafts");
+builder.Services.AddSingleton<IDraftManager>(_ => new DraftManager(draftsRoot));
+
 builder.Services.AddSingleton<IFlatOrderPayloadBuilder, FlatOrderPayloadBuilder>();
 builder.Services.AddSingleton<IUniCommercePayloadBuilder, UniCommercePayloadBuilder>();
 builder.Services.AddSingleton<IFlatOrderValidator, FlatOrderValidator>();
@@ -47,17 +53,35 @@ builder.Services.AddSingleton<IGhcConsumerRepository, GhcConsumerRepository>();
 builder.Services.AddSingleton<IUpcConsumerRepository, UpcConsumerRepository>();
 builder.Services.AddSingleton<IOrderRequestRepository, OrderRequestRepository>();
 
+// Outbound TLS certificate validation is bypassed by default because the
+// internal RMS hosts (10.10.x.x) present self-signed certificates -- but
+// that bypass is now an explicit, logged config decision (Outbound:VerifyTls)
+// rather than an unconditional `=> true` with no opt-out (see
+// remediation_plan.md B17).
+var verifyTls = builder.Configuration.GetValue("Outbound:VerifyTls", defaultValue: false);
+
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
-    ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+    ServerCertificateCustomValidationCallback = verifyTls
+        ? null
+        : (sender, cert, chain, sslPolicyErrors) => true
 });
 
 var app = builder.Build();
 
+if (!verifyTls)
+{
+    app.Logger.LogWarning(
+        "Outbound TLS certificate validation is DISABLED (Outbound:VerifyTls=false). " +
+        "This bypasses certificate checks for all outbound HTTP calls made by IApiClient -- " +
+        "intended only for the self-signed internal RMS hosts. Set Outbound:VerifyTls=true to enable validation.");
+}
+
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<SessionIdMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OnlineOrderTool.Api.Exceptions;
 using OnlineOrderTool.Core.Modules;
 
 namespace OnlineOrderTool.Api.Controllers;
@@ -42,9 +43,9 @@ public class LookupController : ControllerBase
 
             return Ok(new { success = true, data = product });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ApiException)
         {
-            return Ok(new { success = false, message = $"Database connection error: {ex.Message}" });
+            throw new UpstreamException($"Database connection error: {ex.Message}");
         }
     }
 
@@ -69,16 +70,16 @@ public class LookupController : ControllerBase
 
             return Ok(new { success = true, data = consumer });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ApiException)
         {
-            return Ok(new { success = false, message = $"SQL Server database connection error: {ex.Message}" });
+            throw new UpstreamException($"SQL Server database connection error: {ex.Message}");
         }
     }
 
     private string GetConnectionString(Core.Models.ModuleEnvironment env)
     {
         var name = env.ConnectionStringName
-            ?? throw new InvalidOperationException($"Environment '{env.Key}' has no ConnectionStringName configured.");
+            ?? throw new ConfigurationException($"Environment '{env.Key}' has no ConnectionStringName configured.");
         var connStr = ConnectionStringResolver.Require(_configuration, name);
 
         if (!connStr.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))

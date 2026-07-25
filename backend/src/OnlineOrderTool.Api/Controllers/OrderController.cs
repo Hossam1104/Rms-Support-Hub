@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OnlineOrderTool.Api.Middleware;
 using OnlineOrderTool.Core.DTOs;
 using OnlineOrderTool.Core.Modules;
 using OnlineOrderTool.Core.Services;
@@ -33,7 +34,7 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         return Ok(draft);
     }
 
@@ -43,9 +44,9 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         draft.OrderData[request.FieldName] = request.Value;
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, state = draft });
     }
@@ -56,7 +57,7 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         var totals = TotalsCalculator.Calculate(draft);
 
         return Ok(totals);
@@ -68,7 +69,7 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         return Ok(module.BuildPayload(draft));
     }
 
@@ -79,7 +80,7 @@ public class OrderController : ControllerBase
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
         var defaultDraft = module.DefaultState();
-        await _draftManager.SaveDraftAsync(key, defaultDraft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, defaultDraft);
 
         return Ok(new { success = true, state = defaultDraft });
     }
@@ -91,7 +92,7 @@ public class OrderController : ControllerBase
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
         var emptyDraft = module.DefaultState();
-        await _draftManager.SaveDraftAsync(key, emptyDraft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, emptyDraft);
 
         return Ok(new { success = true, state = emptyDraft });
     }
@@ -114,7 +115,7 @@ public class OrderController : ControllerBase
             return BadRequest(new { error = $"No API URL available for environment '{env.Key}' in module '{key}'." });
         }
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         var validationErrors = module.Validate(draft);
 
         if (validationErrors.Count > 0)

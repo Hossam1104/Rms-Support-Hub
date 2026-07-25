@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OnlineOrderTool.Api.Middleware;
 using OnlineOrderTool.Core.Models;
 using OnlineOrderTool.Core.Modules;
 using OnlineOrderTool.Core.Services;
@@ -24,9 +25,9 @@ public class ProductController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         draft.Products.Add(product);
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, products = draft.Products, totals = TotalsCalculator.Calculate(draft) });
     }
@@ -37,12 +38,12 @@ public class ProductController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         if (index < 0 || index >= draft.Products.Count)
             return BadRequest(new { error = "Invalid product index." });
 
         draft.Products[index] = product;
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, products = draft.Products, totals = TotalsCalculator.Calculate(draft) });
     }
@@ -53,12 +54,12 @@ public class ProductController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(key) ?? module.DefaultState();
+        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         if (index < 0 || index >= draft.Products.Count)
             return BadRequest(new { error = "Invalid product index." });
 
         draft.Products.RemoveAt(index);
-        await _draftManager.SaveDraftAsync(key, draft);
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
 
         return Ok(new { success = true, products = draft.Products, totals = TotalsCalculator.Calculate(draft) });
     }

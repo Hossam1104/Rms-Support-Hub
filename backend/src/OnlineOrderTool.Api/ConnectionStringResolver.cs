@@ -1,14 +1,6 @@
-namespace OnlineOrderTool.Api;
+using OnlineOrderTool.Api.Exceptions;
 
-/// <summary>
-/// Thrown when a required piece of configuration (e.g. a connection string) is
-/// missing, so the failure is explicit and named at the API boundary instead of
-/// surfacing as an opaque SqlException/NullReferenceException inside Dapper.
-/// </summary>
-public class ConfigurationException : Exception
-{
-    public ConfigurationException(string message) : base(message) { }
-}
+namespace OnlineOrderTool.Api;
 
 /// <summary>
 /// Single choke point for resolving named connection strings from configuration.
