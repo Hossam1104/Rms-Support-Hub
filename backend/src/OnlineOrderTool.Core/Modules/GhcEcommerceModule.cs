@@ -1,13 +1,45 @@
 using OnlineOrderTool.Core.Models;
+using OnlineOrderTool.Core.Repositories;
+using OnlineOrderTool.Core.Services;
 
 namespace OnlineOrderTool.Core.Modules;
 
 public class GhcEcommerceModule : IOrderModule
 {
+    private readonly IFlatOrderPayloadBuilder _payloadBuilder;
+    private readonly IFlatOrderValidator _validator;
+    private readonly IItemRepository _itemRepository;
+    private readonly IConsumerRepository _consumerRepository;
+
+    public GhcEcommerceModule(
+        IFlatOrderPayloadBuilder payloadBuilder,
+        IFlatOrderValidator validator,
+        IItemRepository itemRepository,
+        IConsumerRepository consumerRepository)
+    {
+        _payloadBuilder = payloadBuilder;
+        _validator = validator;
+        _itemRepository = itemRepository;
+        _consumerRepository = consumerRepository;
+    }
+
     public string Key => "ghc_ecommerce";
     public string Label => "GHC E-Commerce";
     public string Client => "GHC";
     public bool Available => true;
+
+    /// <summary>OrderRequests is false pending confirmed GHC database
+    /// credentials -- flip to true once GHC's OrderRequests table has been
+    /// verified live the same way UPC's was (see docs/database-schema.md).
+    /// That one flip is all OrderRequestsController needs; nothing else
+    /// keys off module identity. // TODO(db-creds)</summary>
+    public ModuleCapabilities Capabilities { get; } = new(
+        DraftKind: "flat",
+        ItemLookup: true,
+        ConsumerLookup: true,
+        OrderRequests: false,
+        Cancel: true,
+        Resend: true);
 
     // Real credentials are never hardcoded here. The connection string for this
     // module is resolved at request time via IConfiguration.GetConnectionString("GhcEcommerce"),
@@ -28,7 +60,8 @@ public class GhcEcommerceModule : IOrderModule
             VisualAlt = "GHC logo",
             Available = true,
             ApiUrl = "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CancelOrder"
+            CancelUrl = "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CancelOrder",
+            ConnectionStringName = "GhcEcommerce"
         },
         ["GHC Testing"] = new ModuleEnvironment
         {
@@ -43,7 +76,8 @@ public class GhcEcommerceModule : IOrderModule
             VisualAlt = "GHC logo",
             Available = true,
             ApiUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder"
+            CancelUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder",
+            ConnectionStringName = "GhcEcommerce"
         }
     };
 
@@ -95,15 +129,19 @@ public class GhcEcommerceModule : IOrderModule
         };
     }
 
-    public Dictionary<string, object?> BuildPayload(OrderDraft draft)
+    public Dictionary<string, object?> BuildPayload(OrderDraft draft) =>
+        _payloadBuilder.BuildPayload(draft, FlatVariant.GhcVariant);
+
+    public List<string> Validate(OrderDraft draft)
     {
-        // Will delegate to FlatOrderPayloadBuilder in Session 4
-        return new Dictionary<string, object?>();
+        var payload = BuildPayload(draft);
+        var totalPaid = TotalsCalculator.Calculate(draft).TotalPaidAmount;
+        return _validator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid);
     }
 
-    public List<string> Validate(Dictionary<string, object?> payload)
-    {
-        // Will delegate to FlatOrderValidator in Session 4
-        return new List<string>();
-    }
+    public Task<Product?> LookupItemAsync(string connectionString, string code, string? branchCode = null) =>
+        _itemRepository.LookupItemAsync(connectionString, code, branchCode);
+
+    public Task<Consumer?> LookupConsumerByPhoneAsync(string connectionString, string phone) =>
+        _consumerRepository.LookupConsumerByPhoneAsync(connectionString, phone);
 }

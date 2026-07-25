@@ -1,10 +1,11 @@
 using Dapper;
 using OnlineOrderTool.Core;
 using OnlineOrderTool.Core.Models;
+using OnlineOrderTool.Core.Repositories;
 
 namespace OnlineOrderTool.Data.Repositories;
 
-public class UpcItemRepository : IItemRepository
+public class UpcItemRepository : IUpcItemRepository
 {
     private readonly ISqlServerConnectionFactory _connectionFactory;
 

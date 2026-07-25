@@ -1,13 +1,40 @@
 using OnlineOrderTool.Core.Models;
+using OnlineOrderTool.Core.Repositories;
+using OnlineOrderTool.Core.Services;
 
 namespace OnlineOrderTool.Core.Modules;
 
 public class UpcEcommerceModule : IOrderModule
 {
+    private readonly IFlatOrderPayloadBuilder _payloadBuilder;
+    private readonly IFlatOrderValidator _validator;
+    private readonly IItemRepository _itemRepository;
+    private readonly IConsumerRepository _consumerRepository;
+
+    public UpcEcommerceModule(
+        IFlatOrderPayloadBuilder payloadBuilder,
+        IFlatOrderValidator validator,
+        IItemRepository itemRepository,
+        IConsumerRepository consumerRepository)
+    {
+        _payloadBuilder = payloadBuilder;
+        _validator = validator;
+        _itemRepository = itemRepository;
+        _consumerRepository = consumerRepository;
+    }
+
     public string Key => "upc_ecommerce";
     public string Label => "UPC E-Commerce";
     public string Client => "UPC";
     public bool Available => true;
+
+    public ModuleCapabilities Capabilities { get; } = new(
+        DraftKind: "flat",
+        ItemLookup: true,
+        ConsumerLookup: true,
+        OrderRequests: true,
+        Cancel: true,
+        Resend: true);
 
     // Real credentials are never hardcoded here. The connection string for each
     // environment is resolved at request time via IConfiguration.GetConnectionString(
@@ -29,7 +56,8 @@ public class UpcEcommerceModule : IOrderModule
             VisualAlt = "UPC logo",
             Available = true,
             ApiUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder"
+            CancelUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
+            ConnectionStringName = "UpcEcommerceProd"
         },
         ["UPC Testing"] = new ModuleEnvironment
         {
@@ -44,7 +72,8 @@ public class UpcEcommerceModule : IOrderModule
             VisualAlt = "UPC logo",
             Available = true,
             ApiUrl = "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder"
+            CancelUrl = "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder",
+            ConnectionStringName = "UpcEcommerceTest"
         }
     };
 
@@ -90,13 +119,19 @@ public class UpcEcommerceModule : IOrderModule
         };
     }
 
-    public Dictionary<string, object?> BuildPayload(OrderDraft draft)
+    public Dictionary<string, object?> BuildPayload(OrderDraft draft) =>
+        _payloadBuilder.BuildPayload(draft, FlatVariant.UpcVariant);
+
+    public List<string> Validate(OrderDraft draft)
     {
-        return new Dictionary<string, object?>();
+        var payload = BuildPayload(draft);
+        var totalPaid = TotalsCalculator.Calculate(draft).TotalPaidAmount;
+        return _validator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid);
     }
 
-    public List<string> Validate(Dictionary<string, object?> payload)
-    {
-        return new List<string>();
-    }
+    public Task<Product?> LookupItemAsync(string connectionString, string code, string? branchCode = null) =>
+        _itemRepository.LookupItemAsync(connectionString, code, branchCode);
+
+    public Task<Consumer?> LookupConsumerByPhoneAsync(string connectionString, string phone) =>
+        _consumerRepository.LookupConsumerByPhoneAsync(connectionString, phone);
 }

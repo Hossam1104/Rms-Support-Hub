@@ -24,6 +24,12 @@ public record ModuleEnvironment
     public string? CancelUrl { get; init; }
     public DbConnectionConfig? DbConfig { get; init; }
 
+    /// <summary>The ConnectionStrings:&lt;name&gt; key (see appsettings.json /
+    /// user-secrets) this environment's database lives under. Lets
+    /// LookupController/OrderRequestsController resolve a connection string
+    /// per environment without comparing module-key strings.</summary>
+    public string? ConnectionStringName { get; init; }
+
     public string StatusLabel => (Available, Environment) switch
     {
         (true, "Production") => "Live",

@@ -12,8 +12,13 @@ public interface IFlatOrderValidator
     /// emitted by build_payload, so its "must cover full amount" rules always
     /// compared against 0 and never correctly passed a real order. Passing the
     /// real total here is the fix; do not read total_paid from the payload.
+    ///
+    /// variant replaces a module-key string comparison (see
+    /// remediation_plan.md B21): PostToCredit's rules key off
+    /// variant.IncludeCreditInfo (true only for FlatVariant.GhcVariant)
+    /// rather than comparing "moduleKey == ...".
     /// </summary>
-    List<string> ValidatePayload(Dictionary<string, object?> payload, string moduleKey, decimal totalPaid);
+    List<string> ValidatePayload(Dictionary<string, object?> payload, FlatVariant variant, decimal totalPaid);
 }
 
 public class FlatOrderValidator : IFlatOrderValidator
@@ -34,7 +39,7 @@ public class FlatOrderValidator : IFlatOrderValidator
         "branch_code", "order_code", "client_phone", "client_first_name", "order_address"
     };
 
-    public List<string> ValidatePayload(Dictionary<string, object?> payload, string moduleKey, decimal totalPaid)
+    public List<string> ValidatePayload(Dictionary<string, object?> payload, FlatVariant variant, decimal totalPaid)
     {
         var errors = new List<string>();
 
@@ -69,9 +74,9 @@ public class FlatOrderValidator : IFlatOrderValidator
                 errors.Add($"Unknown payment method '{method}'. Use one of: {string.Join(", ", AllowedPaymentMethods)}.");
             }
 
-            if (method == "PostToCredit" && moduleKey == "upc_ecommerce")
+            if (method == "PostToCredit" && !variant.IncludeCreditInfo)
             {
-                errors.Add("PostToCredit payment method is not allowed for UPC E-Commerce.");
+                errors.Add("PostToCredit payment method is not allowed for this module.");
             }
 
             // payment_status is only present on UPC payments (FlatVariant.UpcVariant) --
@@ -91,7 +96,7 @@ public class FlatOrderValidator : IFlatOrderValidator
                     errors.Add("PostToCredit payments must have 'not_payment' status.");
             }
 
-            if (method == "PostToCredit" && moduleKey == "ghc_ecommerce")
+            if (method == "PostToCredit" && variant.IncludeCreditInfo)
             {
                 var creditInfo = p.GetValueOrDefault("credit_customer_info") as Dictionary<string, object?>;
                 var custName = creditInfo?.GetValueOrDefault("customer_name")?.ToString();

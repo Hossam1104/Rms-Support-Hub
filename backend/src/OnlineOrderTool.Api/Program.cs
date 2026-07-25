@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using OnlineOrderTool.Api.Middleware;
 using OnlineOrderTool.Core.Modules;
+using OnlineOrderTool.Core.Repositories;
 using OnlineOrderTool.Core.Services;
 using OnlineOrderTool.Data;
 using OnlineOrderTool.Data.Repositories;
@@ -38,14 +39,13 @@ builder.Services.AddSingleton<IFlatOrderPayloadBuilder, FlatOrderPayloadBuilder>
 builder.Services.AddSingleton<IUniCommercePayloadBuilder, UniCommercePayloadBuilder>();
 builder.Services.AddSingleton<IFlatOrderValidator, FlatOrderValidator>();
 builder.Services.AddSingleton<IUniCommerceValidator, UniCommerceValidator>();
-builder.Services.AddSingleton<IOrderHistoryService, OrderHistoryService>();
 
 builder.Services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
-builder.Services.AddSingleton<FlatOrderItemRepository>();
-builder.Services.AddSingleton<UpcItemRepository>();
-builder.Services.AddSingleton<GhcConsumerRepository>();
-builder.Services.AddSingleton<UpcConsumerRepository>();
-builder.Services.AddSingleton<IOrderValidationRepository, UpcOrderValidationRepository>();
+builder.Services.AddSingleton<IGhcItemRepository, FlatOrderItemRepository>();
+builder.Services.AddSingleton<IUpcItemRepository, UpcItemRepository>();
+builder.Services.AddSingleton<IGhcConsumerRepository, GhcConsumerRepository>();
+builder.Services.AddSingleton<IUpcConsumerRepository, UpcConsumerRepository>();
+builder.Services.AddSingleton<IOrderRequestRepository, OrderRequestRepository>();
 
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {

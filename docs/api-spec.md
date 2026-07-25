@@ -1,6 +1,17 @@
 # Online Order Tool — REST API Specification
 
-Base URL: `http://localhost:5000/api`
+Base URL: `http://localhost:5000/api` (dev; see `backend/src/OnlineOrderTool.Api/appsettings*.json` for the real port/host).
+
+This document describes the actual routes implemented in
+`backend/src/OnlineOrderTool.Api/Controllers/*.cs` as of Session R5. It is the
+contract R7 (Angular scaffold) generates HTTP models from — keep it in sync
+with the controllers, not the other way around.
+
+Every `{key}` path segment is a module key: `ghc_ecommerce`, `upc_ecommerce`,
+`ghc_unicommerce`, `oms`, `call_center`. Most action endpoints accept an
+optional `envKey` query parameter selecting a named environment (e.g.
+`"UPC Testing"`, `"UPC Production"`); when omitted, each module falls back to
+its first `Available` environment.
 
 ---
 
@@ -8,9 +19,9 @@ Base URL: `http://localhost:5000/api`
 
 ### List All Modules
 - **`GET /api/modules`**
-- **Response `200 OK`**: List of module objects with available environments.
+- **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, and the module's environments (no `password`/`db_config`/raw credentials are ever emitted).
 
-### Get Module Details
+### Get Module Details + Current Draft
 - **`GET /api/modules/{key}`**
 - **Response `200 OK`**: `{ module: ModuleDto, state: OrderDraft }`
 
@@ -33,7 +44,7 @@ Base URL: `http://localhost:5000/api`
 
 ### Export Compiled JSON Payload
 - **`GET /api/modules/{key}/export-json`**
-- **Response `200 OK`**: Exact JSON structure expected by external API.
+- **Response `200 OK`**: The exact JSON structure `module.BuildPayload(draft)` would send to the external API — built by the module itself, never assembled by the controller (see `IOrderModule.BuildPayload`).
 
 ### Reset Draft State
 - **`POST /api/modules/{key}/load-default`**
@@ -43,42 +54,105 @@ Base URL: `http://localhost:5000/api`
 
 ## 3. Product & Payment CRUD
 
-### Add Product
-- **`POST /api/modules/{key}/products`**
-- **Request Body**: `Product` object.
-
-### Delete Product
+### Add / Update / Delete Product
+- **`POST /api/modules/{key}/products`** — body: `Product`
+- **`PUT /api/modules/{key}/products/{index}`** — body: `Product`
 - **`DELETE /api/modules/{key}/products/{index}`**
+- **Response `200 OK`** (all three): `{ success: true, products: Product[], totals: TotalsSummary }`
 
-### Add Payment
-- **`POST /api/modules/{key}/payments`**
-- **Request Body**: `Payment` object. Enforces payment status & method restrictions (blocks `PostToCredit` for UPC).
-
-### Delete Payment
+### Add / Update / Delete Payment
+- **`POST /api/modules/{key}/payments`** — body: `Payment`. Enforces payment status & method restrictions (e.g. blocks `PostToCredit` for UPC — see `PaymentController`).
+- **`PUT /api/modules/{key}/payments/{index}`** — body: `Payment`
 - **`DELETE /api/modules/{key}/payments/{index}`**
+- **Response `200 OK`** (all three): `{ success: true, payments: Payment[], totals: TotalsSummary }`
 
 ---
 
-## 4. Lookups & Execution
+## 4. Lookups & Dispatch
 
 ### Item Lookup (SQL Server DB)
-- **`GET /api/modules/{key}/lookup/item?code={materialNumber}&branchCode={branchCode}`**
+- **`GET /api/modules/{key}/lookup/item?code={materialNumber}&branchCode={branchCode}&envKey={envKey}`**
+- **Response `200 OK`**: `{ success: boolean, message?: string, data?: Product }`
+- **`501 Not Implemented`** if the module's `Capabilities.ItemLookup` is `false` (e.g. `ghc_unicommerce`).
 
 ### Consumer Lookup (SQL Server DB)
-- **`GET /api/modules/{key}/lookup/consumer?phone={phone}`**
+- **`GET /api/modules/{key}/lookup/consumer?phone={phone}&envKey={envKey}`**
+- **Response `200 OK`**: `{ success: boolean, message?: string, data?: Consumer }`
+- **`501 Not Implemented`** if `Capabilities.ConsumerLookup` is `false`.
 
 ### Send Order Request
 - **`POST /api/modules/{key}/send-request`**
 - **Request Body**: `{ environmentKey?: string, customApiUrl?: string }`
-- **Response `200 OK`**: `{ success: boolean, statusCode: int, responseText: string, urlSent: string, historyEntryId: Guid }`
+- **Response `200 OK`**: `{ success: boolean, statusCode: int, responseText: string, urlSent: string }`
+- **`400 Bad Request`**: `{ success: false, errors: string[] }` when `module.Validate(draft)` fails — the request is never sent.
+- The sent request/response is **not** persisted locally; it is already recorded server-side by the upstream API into the `OrderRequests` table, which section 5 below reads from. There is no local `order-history` store or `historyEntryId` — that JSON-file feature was retired in R5.
 
-### Order History & Cancellation
-- **`GET /api/modules/{key}/order-history`**: Returns list of all sent orders.
-- **`POST /api/modules/{key}/order-history/{id}/cancel`**: Cancels order and updates history status.
+### Cancel (ad hoc, draft-independent)
+- **`POST /api/modules/{key}/cancel-order`**
+- **Request Body**: `{ orderNumber: string, cancelReason: string }`
+- **Response `200 OK`**: `{ success: boolean, statusCode: int, responseText: string }`
+- Posts to the active environment's `CancelUrl` (never `ApiUrl`). Prefer **section 5's** `POST /order-requests/{id}/cancel` when cancelling a specific recorded request — it additionally re-checks `CancelBlockedStatuses` server-side and returns the refreshed request detail.
+
+### Diagnostics
+- **`POST /api/modules/{key}/test-endpoint?url={url}`** → `{ status: "Online"|"Offline", url }`
+- **`POST /api/modules/{key}/test-db?connectionString={connectionString}`** → `{ status: "Online"|"Offline", database?, error? }`
 
 ---
 
-## 5. UPC Order Validation (Database Query)
+## 5. Order Requests (R4/R5 — the `OrderRequests` table as source of truth)
 
-- **`POST /api/modules/upc_ecommerce/validation/search`**: Search DB order requests.
-- **`GET /api/modules/upc_ecommerce/validation/order/{orderNumber}`**: Get headers, line items, transactions, and invoice info.
+Every route below is gated by `Capabilities.OrderRequests`. As of R5 this is
+`true` only for `upc_ecommerce`; GHC returns:
+
+```
+501 Not Implemented
+{ "error": "'order-requests' is not available for module 'ghc_ecommerce'." }
+```
+
+(`GhcEcommerceModule.Capabilities.OrderRequests` carries a `// TODO(db-creds)`
+naming the one-line flip once GHC's live database credentials are confirmed.)
+
+All routes accept `?envKey={envKey}` to pick the environment (and therefore
+the connection string) to query.
+
+### List
+- **`GET /api/modules/{key}/order-requests`**
+- **Query**: `q` (alias for `orderNumber`), `orderNumber`, `phone`, `branchCode`, `status` (1–9), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC`).
+- **Response `200 OK`**: `{ items: OrderRequestListItemDto[], page, pageSize, total, totalPages, stats: OrderRequestStatsDto }`.
+- The list query never selects `RequestJson`/`ResponseJson` — only `DATALENGTH(RequestJson) AS requestBytes` and a `hasResponse` flag, so the grid stays fast regardless of blob size.
+
+### Detail
+- **`GET /api/modules/{key}/order-requests/{id}`**
+- **Response `200 OK`**: `{ request: OrderRequestDetailDto, attempts: OrderRequestAttemptDto[], lineage: OrderRequestLineageDto }`. `request` is the only shape carrying `requestJson`/`responseJson`/`exceptionMessage`.
+- **`404 Not Found`** if the id doesn't exist.
+
+### Latest attempt by order number
+- **`GET /api/modules/{key}/order-requests/by-order/{orderNumber}`**
+- Same response shape as detail, resolved to that order's most recent (`MAX(Id)`) attempt. Used for post-send readback and deep links.
+
+### Branch filter options
+- **`GET /api/modules/{key}/order-requests/branches`**
+- **Response `200 OK`**: `BranchSummaryDto[]` — `{ branchCode, branchName, count }`, for the filter dropdown.
+
+### Cancel
+- **`POST /api/modules/{key}/order-requests/{id}/cancel`**
+- **Request Body**: `{ reason: string, endpointKey?: string, customUrl?: string }`
+- URL resolution order: `customUrl` → `endpointKey` → `environment.CancelUrl` — **never** `environment.ApiUrl` (the historical bug this endpoint replaces silently posted cancellations to the create-order URL because the endpoint-picker field name was never wired up).
+- Server re-checks `OrderRequestStatus.CancelBlockedStatuses` (`{5,6,7,9}` — Rejected/CanceledByClient/CanceledByAdmin/Done) even if the client's button was enabled; a client-side check is not a trust boundary.
+- **`409 Conflict`**: `{ error: string, cancelBlockedReason: string }` if blocked — the upstream API is never called.
+- **`200 OK`** otherwise: `{ success, statusCode, responseText, urlSent, request: OrderRequestDetailDto }` — the detail is re-read after the call so the UI can show the refreshed status without a second round trip.
+
+### Resend
+- **`POST /api/modules/{key}/order-requests/{id}/resend`**
+- **Request Body**: `{ branchCode: string, endpointKey?: string }`
+- Rebuilds the payload from **that specific request's own stored `RequestJson`** (not the live in-progress draft), overrides only `branch_code`, and re-checks `OrderRequestStatus.ResendBlockedStatuses` (`{4,8,9}` — With_Delegate/Processing/Done).
+- **`409 Conflict`**: `{ error: string, resendBlockedReason: string }` if blocked.
+- **`200 OK`** otherwise: `{ success, statusCode, responseText, urlSent }`.
+- Posts to `environment.ApiUrl` (a resend is a new order attempt, not a cancellation).
+
+---
+
+## Retired in R5
+
+- `GET /api/modules/{key}/order-history` and `POST /api/modules/{key}/order-history/{id}/cancel` — the local JSON-file order-history store (`OrderHistoryService`/`OrderHistoryEntry`) is gone; section 5 above, reading the real `OrderRequests` table, is its replacement. No `order_history_*.json` files existed on disk at the time of removal (confirmed via a repo-wide search), so there was nothing to archive.
+- `POST /api/modules/upc_ecommerce/validation/search` and `GET /api/modules/upc_ecommerce/validation/order/{orderNumber}` (`ValidationController`/`IOrderValidationRepository`/`UpcOrderValidationRepository`) — this path read `RequestOrderHeaders` first and never surfaced `ResponseJson`/`ExceptionMessage`; superseded by section 5.

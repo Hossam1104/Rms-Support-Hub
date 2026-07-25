@@ -34,24 +34,3 @@ public record LookupResultDto(
     string? Message,
     object? Data
 );
-
-public record OrderSearchRequest(
-    string? OrderNumber,
-    string? Phone,
-    string? BranchCode,
-    int? Status,
-    DateTime? DateFrom,
-    DateTime? DateTo
-);
-
-public record OrderSearchResultDto(
-    long HeaderId,
-    string OrderNumber,
-    string BranchCode,
-    int Status,
-    string StatusLabel,
-    DateTime CreationDate,
-    string? InvoiceBarcode,
-    DateTime? InvoiceDate,
-    bool CanResend
-);

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using OnlineOrderTool.Core.Modules;
-using OnlineOrderTool.Data.Repositories;
 
 namespace OnlineOrderTool.Api.Controllers;
 
@@ -9,44 +8,34 @@ namespace OnlineOrderTool.Api.Controllers;
 public class LookupController : ControllerBase
 {
     private readonly IModuleRegistry _moduleRegistry;
-    private readonly FlatOrderItemRepository _flatItemRepo;
-    private readonly UpcItemRepository _upcItemRepo;
-    private readonly GhcConsumerRepository _ghcConsumerRepo;
-    private readonly UpcConsumerRepository _upcConsumerRepo;
     private readonly IConfiguration _configuration;
 
-    public LookupController(
-        IModuleRegistry moduleRegistry,
-        FlatOrderItemRepository flatItemRepo,
-        UpcItemRepository upcItemRepo,
-        GhcConsumerRepository ghcConsumerRepo,
-        UpcConsumerRepository upcConsumerRepo,
-        IConfiguration configuration)
+    public LookupController(IModuleRegistry moduleRegistry, IConfiguration configuration)
     {
         _moduleRegistry = moduleRegistry;
-        _flatItemRepo = flatItemRepo;
-        _upcItemRepo = upcItemRepo;
-        _ghcConsumerRepo = ghcConsumerRepo;
-        _upcConsumerRepo = upcConsumerRepo;
         _configuration = configuration;
     }
 
+    /// <summary>No more moduleKey == "upc_ecommerce" branching to pick a
+    /// repository (see remediation_plan.md B21) -- module.LookupItemAsync
+    /// dispatches to whichever repository that module was constructed with,
+    /// and the connection string is resolved from the active environment's
+    /// own ConnectionStringName, not a module-key switch.</summary>
     [HttpGet("item")]
     public async Task<ActionResult> LookupItem(string key, [FromQuery] string code, [FromQuery] string? branchCode = null, [FromQuery] string? envKey = null)
     {
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { success = false, message = $"Unknown module '{key}'" });
 
+        var guard = CapabilityGuard.Require(module, c => c.ItemLookup, "item-lookup");
+        if (guard != null) return guard;
+
         var env = module.GetEnvironment(envKey);
-        var connStr = GetConnectionString(key, env.Key);
+        var connStr = GetConnectionString(env);
 
         try
         {
-            var product = key switch
-            {
-                "upc_ecommerce" => await _upcItemRepo.LookupItemAsync(connStr, code, branchCode),
-                _ => await _flatItemRepo.LookupItemAsync(connStr, code, branchCode)
-            };
+            var product = await module.LookupItemAsync(connStr, code, branchCode);
 
             if (product == null)
                 return Ok(new { success = false, message = $"No item found for code '{code}' in database." });
@@ -65,16 +54,15 @@ public class LookupController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { success = false, message = $"Unknown module '{key}'" });
 
+        var guard = CapabilityGuard.Require(module, c => c.ConsumerLookup, "consumer-lookup");
+        if (guard != null) return guard;
+
         var env = module.GetEnvironment(envKey);
-        var connStr = GetConnectionString(key, env.Key);
+        var connStr = GetConnectionString(env);
 
         try
         {
-            var consumer = key switch
-            {
-                "upc_ecommerce" => await _upcConsumerRepo.LookupConsumerByPhoneAsync(connStr, phone),
-                _ => await _ghcConsumerRepo.LookupConsumerByPhoneAsync(connStr, phone)
-            };
+            var consumer = await module.LookupConsumerByPhoneAsync(connStr, phone);
 
             if (consumer == null)
                 return Ok(new { success = false, message = $"No consumer found in database for phone '{phone}'." });
@@ -87,25 +75,16 @@ public class LookupController : ControllerBase
         }
     }
 
-    private string GetConnectionString(string moduleKey, string envKey)
+    private string GetConnectionString(Core.Models.ModuleEnvironment env)
     {
-        if (moduleKey == "upc_ecommerce")
-        {
-            var name = envKey == "UPC Production" ? "UpcEcommerceProd" : "UpcEcommerceTest";
-            var baseConnStr = ConnectionStringResolver.Require(_configuration, name);
+        var name = env.ConnectionStringName
+            ?? throw new InvalidOperationException($"Environment '{env.Key}' has no ConnectionStringName configured.");
+        var connStr = ConnectionStringResolver.Require(_configuration, name);
 
-            if (!baseConnStr.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))
-            {
-                baseConnStr += ";Connect Timeout=5;";
-            }
-            return baseConnStr;
-        }
-
-        var ghcConnStr = ConnectionStringResolver.Require(_configuration, "GhcEcommerce");
-        if (!ghcConnStr.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))
+        if (!connStr.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))
         {
-            ghcConnStr += ";Connect Timeout=5;";
+            connStr += ";Connect Timeout=5;";
         }
-        return ghcConnStr;
+        return connStr;
     }
 }

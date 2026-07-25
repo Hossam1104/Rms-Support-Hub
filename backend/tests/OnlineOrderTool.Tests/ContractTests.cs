@@ -154,19 +154,25 @@ public class ContractTests
         return dir.FullName;
     }
 
+    /// <summary>UpcOrderValidationRepository.cs (which read RequestOrderHeaders-
+    /// first and referenced invented columns) was deleted in R5;
+    /// OrderRequestRepository.cs (R4) is now the sole reader of OrderRequests /
+    /// RequestOrderHeaders / RequestOrderDetails / RequestOrderTransactions /
+    /// Invoices, so it is the file this guard must protect.</summary>
     [Fact]
-    public void UpcOrderValidationRepository_DoesNotReferenceInventedColumns()
+    public void OrderRequestRepository_DoesNotReferenceInventedColumns()
     {
         var repoRoot = GetRepoRoot();
         var sourcePath = Path.Combine(
-            repoRoot, "backend", "src", "OnlineOrderTool.Data", "Repositories", "UpcOrderValidationRepository.cs");
+            repoRoot, "backend", "src", "OnlineOrderTool.Data", "Repositories", "OrderRequestRepository.cs");
 
         Assert.True(File.Exists(sourcePath), $"Expected to find {sourcePath}");
         var source = File.ReadAllText(sourcePath);
 
         // These column/table references do not exist in the verified schema
         // (docs/Prompts/UPC_Enhancments_Plan.md "Schema discovery"). Every one of
-        // them causes a live "Invalid column name" SqlException today.
+        // them caused a live "Invalid column name" SqlException in the pre-R4
+        // UpcOrderValidationRepository this file replaced.
         var invented = new[]
         {
             "H.Status", "CreatedDateTime", "CustomerMobile", "CustomerName",
@@ -177,7 +183,7 @@ public class ContractTests
         var found = invented.Where(token => source.Contains(token, StringComparison.Ordinal)).ToList();
 
         Assert.True(found.Count == 0,
-            "UpcOrderValidationRepository.cs still references invented column names that do not exist " +
+            "OrderRequestRepository.cs references invented column names that do not exist " +
             "in the verified schema: " + string.Join(", ", found) +
             ". See docs/database-schema.md and docs/Prompts/UPC_Enhancments_Plan.md \"Schema discovery\".");
     }

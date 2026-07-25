@@ -62,21 +62,36 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>The order-history JSON-file feature (OrderHistoryService,
+    /// HistoryController, order_history_*.json) was retired in R5 in favor of
+    /// OrderRequestsController reading the real OrderRequests table -- the
+    /// route must be gone, not just empty.</summary>
     [Fact]
-    public async Task HistoryEndpoints_ReturnsOkAndStoresEntries()
+    public async Task OldHistoryRoute_NoLongerExists()
     {
-        var historyResponse = await _client.GetAsync("/api/modules/ghc_ecommerce/order-history");
-        Assert.Equal(HttpStatusCode.OK, historyResponse.StatusCode);
-
-        var history = await historyResponse.Content.ReadFromJsonAsync<List<OrderHistoryEntry>>();
-        Assert.NotNull(history);
+        var response = await _client.GetAsync("/api/modules/ghc_ecommerce/order-history");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>ValidationController/IOrderValidationRepository/
+    /// UpcOrderValidationRepository (which read RequestOrderHeaders-first and
+    /// never surfaced ResponseJson/ExceptionMessage) were deleted in R5 in
+    /// favor of OrderRequestsController.</summary>
     [Fact]
-    public async Task ValidationSearch_GhcEcommerce_ReturnsBadRequest()
+    public async Task OldValidationSearchRoute_NoLongerExists()
     {
-        var searchReq = new OrderSearchRequest("ORD-123", null, null, null, null, null);
-        var response = await _client.PostAsJsonAsync("/api/modules/ghc_ecommerce/validation/search", searchReq);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var response = await _client.PostAsJsonAsync("/api/modules/ghc_ecommerce/validation/search", new { orderNumber = "ORD-123" });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>GHC has Capabilities.OrderRequests = false (database
+    /// credentials pending, see GhcEcommerceModule's TODO(db-creds)), so the
+    /// new order-requests surface must 501, not silently return empty/wrong
+    /// data for a module it isn't wired up for.</summary>
+    [Fact]
+    public async Task OrderRequests_GhcEcommerce_Returns501()
+    {
+        var response = await _client.GetAsync("/api/modules/ghc_ecommerce/order-requests");
+        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
     }
 }

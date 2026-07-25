@@ -1,11 +1,22 @@
 using OnlineOrderTool.Core.Modules;
+using OnlineOrderTool.Core.Services;
+using OnlineOrderTool.Data;
+using OnlineOrderTool.Data.Repositories;
 using Xunit;
 
 namespace OnlineOrderTool.Tests;
 
 public class ModuleRegistryTests
 {
-    private readonly ModuleRegistry _registry = new();
+    private readonly ModuleRegistry _registry = new(
+        new FlatOrderPayloadBuilder(),
+        new FlatOrderValidator(),
+        new UniCommercePayloadBuilder(),
+        new UniCommerceValidator(),
+        new FlatOrderItemRepository(new SqlServerConnectionFactory()),
+        new GhcConsumerRepository(new SqlServerConnectionFactory()),
+        new UpcItemRepository(new SqlServerConnectionFactory()),
+        new UpcConsumerRepository(new SqlServerConnectionFactory()));
 
     [Fact]
     public void GetAllModules_ReturnsAllFiveModules()

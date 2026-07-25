@@ -112,7 +112,7 @@ public class ValidatorFixtureTests
         var payload = MergeRequiredDefaults((Dictionary<string, object?>)ConvertJsonElement(payloadElement)!);
         var totalPaid = SumPaymentAmounts(payload);
 
-        var errors = _flatValidator.ValidatePayload(payload, "upc_ecommerce", totalPaid);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid);
 
         Assert.True(errors.Count == 0, $"[{description}] expected zero errors, got: {string.Join(" | ", errors)}");
     }
@@ -148,7 +148,7 @@ public class ValidatorFixtureTests
         var payload = MergeRequiredDefaults((Dictionary<string, object?>)ConvertJsonElement(payloadElement)!);
         var totalPaid = SumPaymentAmounts(payload);
 
-        var errors = _flatValidator.ValidatePayload(payload, "ghc_ecommerce", totalPaid);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid);
 
         Assert.True(errors.Count > 0, $"[{description}] expected at least one error for violation '{violation}'.");
         Assert.True(

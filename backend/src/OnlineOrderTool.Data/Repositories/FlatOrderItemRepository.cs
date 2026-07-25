@@ -1,9 +1,10 @@
 using Dapper;
 using OnlineOrderTool.Core.Models;
+using OnlineOrderTool.Core.Repositories;
 
 namespace OnlineOrderTool.Data.Repositories;
 
-public class FlatOrderItemRepository : IItemRepository
+public class FlatOrderItemRepository : IGhcItemRepository
 {
     private readonly ISqlServerConnectionFactory _connectionFactory;
 
