@@ -76,10 +76,10 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     .client-title { font-size: 0.75rem; color: var(--text-muted); }
     .btn-toggle { background: var(--bg-tertiary); border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: var(--radius-sm); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding: 16px 8px; flex: 1; }
-    .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: var(--text-secondary); text-decoration: none; border-radius: var(--radius-md); transition: all var(--transition-fast); }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: var(--text-secondary); text-decoration: none; border-radius: var(--radius-md); transition: background var(--transition-fast), color var(--transition-fast), transform var(--d) var(--ease-spring); }
     .nav-item i { font-size: 1.1rem; }
-    .nav-item:hover { background: var(--glass-hover-bg); color: var(--text-primary); }
-    .nav-item.active { background: var(--primary-gradient); color: #ffffff; font-weight: 600; box-shadow: var(--shadow-sm); }
+    .nav-item:hover { background: var(--glass-hover-bg); color: var(--text-primary); transform: translateX(3px); }
+    .nav-item.active { background: var(--grad-brand); color: var(--on-gradient); font-weight: 600; box-shadow: var(--shadow-sm); transform: translateX(0); }
     .sidebar-footer { padding: 16px; border-top: 1px solid var(--glass-border); }
     .back-link { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
     .back-link:hover { color: var(--primary); }

@@ -1,0 +1,132 @@
+/**
+ * Design tokens -- bold gradient / vibrant (remediation_plan.md B24, R8).
+ * Every raw color/shadow/radius/motion value in the app must live here (or
+ * in _gradients.css, which builds the status-pill gradient map on top of
+ * these). See docs/design-system.md for the binding rule and the full
+ * token catalogue.
+ *
+ * data-theme is set on <html> by ThemeService (core/services/theme.service.ts),
+ * unchanged by this session -- dark is the default (:root), light overrides
+ * under [data-theme="light"].
+ */
+:root {
+  /* ---- Brand gradient stops ---- */
+  --brand-500: #7C3AED;
+  --brand-600: #6D28D9;
+  --accent-500: #DB2777;
+  --hot-500: #F97316;
+  --accent-amber: #F59E0B;
+  --accent-violet: #A855F7;
+  --accent-indigo: #6366F1;
+  /* Text color for anything painted on a gradient/solid brand surface --
+     brand gradients are vivid enough in both themes that this never flips. */
+  --on-gradient: #ffffff;
+
+  /* ---- Gradients ---- */
+  --grad-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--accent-500) 55%, var(--hot-500) 100%);
+  --grad-success: linear-gradient(135deg, #059669 0%, #34D399 100%);
+  --grad-danger: linear-gradient(135deg, #DC2626 0%, #F97316 100%);
+  --grad-info: linear-gradient(135deg, #2563EB 0%, #22D3EE 100%);
+  --grad-muted: linear-gradient(135deg, #475569 0%, #94A3B8 100%);
+  --grad-indigo: linear-gradient(135deg, #4F46E5 0%, #818CF8 100%);
+  --grad-teal: linear-gradient(135deg, #0D9488 0%, #2DD4BF 100%);
+  --grad-amber: linear-gradient(135deg, #D97706 0%, #FBBF24 100%);
+  --grad-rose: linear-gradient(135deg, #E11D48 0%, #FB7185 100%);
+  --grad-rose-slate: linear-gradient(135deg, #64748B 0%, #FB7185 100%);
+  --grad-mesh:
+    radial-gradient(60% 60% at 15% 10%, rgba(124, 58, 237, .35), transparent 60%),
+    radial-gradient(50% 50% at 85% 20%, rgba(219, 39, 119, .30), transparent 60%),
+    radial-gradient(60% 60% at 50% 100%, rgba(249, 115, 22, .22), transparent 60%);
+
+  /* ---- Back-compat single-color aliases ----
+     Existing component styles across the app (not all restyled this
+     session -- see docs/design-system.md "Rollout") read these names
+     directly; keeping them as aliases onto the new palette means those
+     components stay visually coherent without every file needing a
+     same-session edit. */
+  --primary: var(--brand-500);
+  --primary-hover: #8B5CF6;
+  --primary-gradient: var(--grad-brand);
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, .15);
+  --warning: var(--accent-amber);
+  --warning-bg: rgba(245, 158, 11, .15);
+  --danger: #EF4444;
+  --danger-bg: rgba(239, 68, 68, .15);
+
+  /* ---- Surfaces (dark, default) ---- */
+  --bg-primary: #0B0F19;
+  --bg-main: #0B0F19;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1F2937;
+  --glass-bg: rgba(17, 24, 39, .75);
+  --glass-border: rgba(255, 255, 255, .12);
+  --glass-hover-bg: rgba(31, 41, 55, .85);
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+
+  /* ---- json-tree type colors (shared/ui/json-tree) ---- */
+  --code-string: #34D399;
+  --code-number: #60A5FA;
+  --code-boolean: var(--accent-amber);
+  --code-null: var(--text-muted);
+  --on-amber: #1F2937;
+
+  /* ---- Layout ---- */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 72px;
+  --navbar-height: 64px;
+
+  /* ---- Radius scale ---- */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-xl: 34px;
+  --radius-pill: 999px;
+
+  /* ---- Shadow scale ---- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .06);
+  --shadow-md: 0 12px 32px -10px rgba(15, 23, 42, .22);
+  --shadow-lg: 0 24px 48px -14px rgba(15, 23, 42, .32);
+  --shadow-glow: 0 18px 45px -12px rgba(124, 58, 237, .55);
+
+  /* ---- Motion ---- */
+  --d-fast: 140ms;
+  --d: 240ms;
+  --d-slow: 420ms;
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  /* Back-compat duration+easing aliases -- most existing component styles
+     already write `transition: ... var(--transition-fast)`. */
+  --transition-fast: var(--d-fast) var(--ease-out);
+  --transition-normal: var(--d) var(--ease-out);
+}
+
+[data-theme="light"] {
+  --bg-primary: #F8FAFC;
+  --bg-main: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F1F5F9;
+  --glass-bg: rgba(255, 255, 255, .85);
+  --glass-border: rgba(15, 23, 42, .08);
+  --glass-hover-bg: rgba(241, 245, 249, .95);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+  --shadow-md: 0 12px 32px -10px rgba(15, 23, 42, .12);
+  --shadow-lg: 0 24px 48px -14px rgba(15, 23, 42, .18);
+}
+
+/* Every duration collapses to effectively-instant; components that animate
+ * via JS (e.g. the stat-tile count-up directive) must also check this media
+ * query directly and skip to the final value -- see
+ * shared/ui/stat-tile/stat-tile.component.ts. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --d-fast: 0.01ms;
+    --d: 0.01ms;
+    --d-slow: 0.01ms;
+  }
+}

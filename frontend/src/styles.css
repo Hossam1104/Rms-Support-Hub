@@ -1,7 +1,7 @@
 @import 'bootstrap-icons/font/bootstrap-icons.css';
-@import './styles/_variables.css';
+@import './styles/_tokens.css';
+@import './styles/_gradients.css';
 @import './styles/_typography.css';
-@import './styles/_glassmorphism.css';
 @import './styles/_animations.css';
 
 /* Global Reset & Container Utility */

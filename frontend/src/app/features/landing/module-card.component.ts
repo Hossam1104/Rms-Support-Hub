@@ -44,8 +44,8 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
     </div>
   `,
   styles: [`
-    .module-card { padding: 24px; display: flex; flex-direction: column; gap: 20px; border-left: 4px solid var(--primary); transition: all var(--transition-normal); }
-    .module-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg), var(--shadow-glow); }
+    .module-card { padding: 24px; display: flex; flex-direction: column; gap: 20px; border-left: 4px solid var(--primary); transition: transform var(--d-slow) var(--ease-spring), box-shadow var(--transition-normal); }
+    .module-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg), var(--shadow-glow); }
     .module-card.disabled { opacity: 0.5; pointer-events: none; }
     .card-head { display: flex; justify-content: space-between; align-items: center; }
     .identity { display: flex; align-items: center; gap: 16px; }
@@ -85,9 +85,9 @@ export class ModuleCardComponent {
 
   getAccentColor(key: string): string {
     switch (key) {
-      case 'upc_ecommerce': return '#f59e0b';
-      case 'ghc_unicommerce': return '#a855f7';
-      default: return '#6366f1';
+      case 'upc_ecommerce': return 'var(--accent-amber)';
+      case 'ghc_unicommerce': return 'var(--accent-violet)';
+      default: return 'var(--accent-indigo)';
     }
   }
 }

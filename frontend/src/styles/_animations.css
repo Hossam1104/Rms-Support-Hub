@@ -52,9 +52,23 @@
 }
 
 .fade-in-up {
-  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeInUp var(--d-slow) var(--ease-out) forwards;
 }
 
 .slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: slideUp var(--d-slow) var(--ease-out) forwards;
+}
+
+/* Global reduced-motion catch-all -- collapses every CSS animation/transition
+ * to effectively-instant, including ones (like the two above) that don't
+ * read a duration token directly. JS-driven motion (the stat-tile count-up
+ * directive) checks this media query itself and short-circuits to the
+ * final value -- see shared/ui/stat-tile. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

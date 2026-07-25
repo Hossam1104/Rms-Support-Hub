@@ -1,47 +1,24 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { StatTileComponent } from '../../../shared/ui';
 
+/** Restyled onto the R8 token system (remediation_plan.md B24): now backed
+ * by shared/ui's stat-tile (gradient icon + count-up), same @Input()
+ * contract as before so the parent (flat-order.component.ts) needs no
+ * changes. */
 @Component({
   selector: 'app-quick-stats',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, StatTileComponent],
   template: `
     <div class="quick-stats-grid">
-      <div class="stat-card glass-card">
-        <div class="stat-icon icon-primary"><i class="bi bi-cart-check"></i></div>
-        <div class="stat-meta">
-          <span class="stat-label">Total Amount</span>
-          <span class="stat-value">{{ totalAmount | number:'1.2-2' }} <small>SAR</small></span>
-        </div>
-      </div>
-      <div class="stat-card glass-card">
-        <div class="stat-icon icon-success"><i class="bi bi-wallet2"></i></div>
-        <div class="stat-meta">
-          <span class="stat-label">Paid Amount</span>
-          <span class="stat-value">{{ paidAmount | number:'1.2-2' }} <small>SAR</small></span>
-        </div>
-      </div>
-      <div class="stat-card glass-card" [class.negative]="remainingBalance > 0">
-        <div class="stat-icon icon-warning"><i class="bi bi-calculator"></i></div>
-        <div class="stat-meta">
-          <span class="stat-label">Remaining Balance</span>
-          <span class="stat-value">{{ remainingBalance | number:'1.2-2' }} <small>SAR</small></span>
-        </div>
-      </div>
+      <app-stat-tile label="Total Amount" [value]="totalAmount" [decimals]="2" icon="bi-cart-check" variant="brand"></app-stat-tile>
+      <app-stat-tile label="Paid Amount" [value]="paidAmount" [decimals]="2" icon="bi-wallet2" variant="success"></app-stat-tile>
+      <app-stat-tile label="Remaining Balance" [value]="remainingBalance" [decimals]="2" [variant]="remainingBalance > 0 ? 'muted' : 'success'" icon="bi-calculator"></app-stat-tile>
     </div>
   `,
   styles: [`
     .quick-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
-    .stat-card { display: flex; align-items: center; gap: 16px; padding: 20px; }
-    .stat-card.negative .stat-value { color: var(--warning); }
-    .stat-icon { width: 48px; height: 48px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
-    .icon-primary { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
-    .icon-success { background: var(--success-bg); color: var(--success); }
-    .icon-warning { background: var(--warning-bg); color: var(--warning); }
-    .stat-meta { display: flex; flex-direction: column; }
-    .stat-label { font-size: 0.8rem; color: var(--text-muted); }
-    .stat-value { font-size: 1.3rem; font-weight: 700; color: var(--text-primary); }
-    .stat-value small { font-size: 0.8rem; font-weight: 400; color: var(--text-secondary); }
   `]
 })
 export class QuickStatsComponent {
