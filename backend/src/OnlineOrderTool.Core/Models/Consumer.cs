@@ -12,4 +12,9 @@ public class Consumer
     public string? Email { get; set; }
     public string? NationalId { get; set; }
     public string? Nationality { get; set; }
+
+    /// <summary>UPC-only: resolved from LoyaltyConsumerAddresses (FullAddress,
+    /// falling back to composed StreetName/Building/Floor/Landmark/Area).</summary>
+    public string? Address { get; set; }
+    public string? AddressCode { get; set; }
 }

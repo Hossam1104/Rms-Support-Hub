@@ -4,6 +4,13 @@ public class Product
 {
     public string ItemCode { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
+
+    /// <summary>Arabic item name (I.NativeName). Populated by both item
+    /// repositories; GHC also populates ItemBarcode, UPC never does (its
+    /// verified lookup has no barcode source, matching legacy exactly).</summary>
+    public string? ItemNameAr { get; set; }
+    public string? ItemBarcode { get; set; }
+
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal VatPercentage { get; set; }
@@ -26,4 +33,8 @@ public class Product
 
     /// <summary>row_net_total: subtotal - discount + VAT.</summary>
     public decimal EstimatedTotal => Math.Round(RowSubtotal - Discount + TotalVat, 2);
+
+    /// <summary>Unit price including VAT, for display in item lookup results
+    /// (net_price in the legacy lookup_item/lookup_upc_item return shape).</summary>
+    public decimal NetUnitPrice => Math.Round(UnitPrice + (UnitPrice * VatPercentage / 100m), 2);
 }

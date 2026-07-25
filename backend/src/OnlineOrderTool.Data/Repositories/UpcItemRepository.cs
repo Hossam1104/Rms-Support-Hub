@@ -1,4 +1,5 @@
 using Dapper;
+using OnlineOrderTool.Core;
 using OnlineOrderTool.Core.Models;
 
 namespace OnlineOrderTool.Data.Repositories;
@@ -12,43 +13,67 @@ public class UpcItemRepository : IItemRepository
         _connectionFactory = connectionFactory;
     }
 
+    /// <summary>Branch-specific item pricing lookup. Verified live against
+    /// Items / BranchItemUnitOfMeasures / ItemUnitOfMeasurePrices / Branches
+    /// on RmsMainTest2 -- see docs/database-schema.md §3.2. Unlike GHC's
+    /// still-unverified lookup, price here is branch-specific
+    /// (BranchItemUnitOfMeasures joins Items to Branches), so branchCode is
+    /// required, not optional. When an item has more than one unit-of-
+    /// measure/price row for the same branch, the base unit of measure wins,
+    /// then the highest price (mirrors the query's own ROW_NUMBER ordering).
+    /// Has no barcode source -- matches legacy, which always returns "" for
+    /// UPC's item_Barcode.</summary>
     public async Task<Product?> LookupItemAsync(string connectionString, string materialNumber, string? branchCode = null)
     {
-        var cleanCode = (materialNumber ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(cleanCode))
-        {
-            throw new ArgumentException("Item search term cannot be empty.", nameof(materialNumber));
-        }
+        var padded = Normalizers.NormalizeUpcMaterialNumber(materialNumber);
 
         var cleanBranch = (branchCode ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(cleanBranch))
+        {
+            throw new ArgumentException("Branch code is required to look up UPC item pricing.", nameof(branchCode));
+        }
 
         const string sql = @"
+            WITH ItemPricesRanked AS (
+                SELECT
+                    B.BranchCode AS Branch_Code,
+                    I.MaterialNumber AS Full_Material_Number,
+                    I.Name AS Item_Name_EN,
+                    I.NativeName AS Item_Name_AR,
+                    IUOMP.Price AS Item_Price,
+                    BIUOM.IsBase AS IsBase,
+                    TT.Rate AS Tax_Rate,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY I.Id, B.Id
+                        ORDER BY BIUOM.IsBase DESC, IUOMP.Price DESC
+                    ) AS rn
+                FROM dbo.Items AS I
+                    JOIN dbo.BranchItemUnitOfMeasures AS BIUOM ON BIUOM.ItemId = I.Id
+                    JOIN dbo.ItemUnitOfMeasurePrices AS IUOMP ON IUOMP.BranchItemUnitOfMeasureId = BIUOM.Id
+                    JOIN dbo.Branches AS B ON B.Id = BIUOM.BranchId
+                    LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
+                WHERE I.MaterialNumber = @MaterialNumber AND B.BranchCode = @BranchCode
+            )
             SELECT TOP 1
-                I.MaterialNumber AS ItemCode,
-                I.Name AS ItemName,
-                IP.Price AS UnitPrice,
-                TT.Rate AS VatPercentage,
-                CASE WHEN B.Code = @BranchCode THEN 1 ELSE 0 END AS BranchMatchRank
-            FROM dbo.Items AS I
-            LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
-            INNER JOIN dbo.ItemUnitOfMeasures AS IUM ON I.Id = IUM.ItemId
-            LEFT JOIN dbo.ItemPrices AS IP ON IUM.Id = IP.ItemUnitOfMeasureId
-            LEFT JOIN dbo.Branches AS B ON IP.BranchId = B.Id
-            WHERE (RIGHT(I.MaterialNumber, 6) = @Code OR I.MaterialNumber = @Code)
-              AND IP.IsActive = 1
-              AND IP.Price IS NOT NULL
-              AND IP.ToDate > GETDATE()
-            ORDER BY BranchMatchRank DESC, IP.Id DESC";
+                Full_Material_Number AS ItemCode,
+                Item_Name_EN AS ItemNameEn,
+                Item_Name_AR AS ItemNameAr,
+                Item_Price AS UnitPrice,
+                Tax_Rate AS VatPercentage
+            FROM ItemPricesRanked
+            WHERE rn = 1";
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var row = await connection.QueryFirstOrDefaultAsync<UpcItemQueryResult>(sql, new { Code = cleanCode, BranchCode = cleanBranch });
+        var row = await connection.QueryFirstOrDefaultAsync<UpcItemQueryResult>(
+            sql, new { MaterialNumber = padded, BranchCode = cleanBranch });
 
         if (row == null) return null;
 
         return new Product
         {
-            ItemCode = row.ItemCode ?? cleanCode,
-            ItemName = row.ItemName ?? $"Item {cleanCode}",
+            ItemCode = row.ItemCode ?? padded,
+            ItemName = row.ItemNameEn ?? "",
+            ItemNameAr = row.ItemNameAr,
             UnitPrice = row.UnitPrice ?? 0m,
             VatPercentage = row.VatPercentage ?? 0m,
             Quantity = 1m,
@@ -59,7 +84,8 @@ public class UpcItemRepository : IItemRepository
     private class UpcItemQueryResult
     {
         public string? ItemCode { get; set; }
-        public string? ItemName { get; set; }
+        public string? ItemNameEn { get; set; }
+        public string? ItemNameAr { get; set; }
         public decimal? UnitPrice { get; set; }
         public decimal? VatPercentage { get; set; }
     }

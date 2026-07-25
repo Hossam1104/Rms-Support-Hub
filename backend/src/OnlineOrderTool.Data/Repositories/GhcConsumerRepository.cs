@@ -12,6 +12,13 @@ public class GhcConsumerRepository : IConsumerRepository
         _connectionFactory = connectionFactory;
     }
 
+    // TODO(db-creds): confirm the real table/column names once real GHC
+    // database credentials/schema are supplied. This guesses a dbo.Customers
+    // shape consistent with the customer_number EXISTS-filter already used in
+    // FlatOrderItemRepository (ported from lookup_consumer_by_phone in
+    // _legacy_flask/modules/flat_order.py, which carries the same TODO).
+    // Unlike UPC's Consumers/LoyaltyConsumerAddresses lookup, this has never
+    // been verified live -- left unchanged this session pending GHC creds.
     public async Task<Consumer?> LookupConsumerByPhoneAsync(string connectionString, string phone)
     {
         var rawPhone = (phone ?? "").Trim();
