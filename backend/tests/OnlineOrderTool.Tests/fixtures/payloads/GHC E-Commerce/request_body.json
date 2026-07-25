@@ -1,0 +1,65 @@
+{
+  "branch_code": "string",
+  "order_code": "string",
+  "parent_order_code": "string",
+  "order_creation_date": "2026-04-12T18:57:34.571Z",
+  "order_notes": "string",
+  "order_product_total_value": 0,
+  "is_delivery": 0,
+  "order_delivery_cost": 0,
+  "order_total_discount": 0,
+  "order_final_total_value": 0,
+  "order_payment_method": "string",
+  "order_status": "string",
+  "client_country_code": "string",
+  "client_phone": "string",
+  "client_first_name": "string",
+  "client_middle_name": "string",
+  "client_last_name": "string",
+  "client_email": "string",
+  "client_birthdate": "2026-04-12T18:57:34.571Z",
+  "client_gender": "string",
+  "order_address": "string",
+  "address_code": "string",
+  "order_country_code": "string",
+  "order_phone": "string",
+  "order_payment_status": "string",
+  "order_gps": [
+    0
+  ],
+  "order_products": [
+    {
+      "item_code": "string",
+      "item_name": "string",
+      "quantity": 0,
+      "unit_price": 0,
+      "unit_vat_amount": 0,
+      "total_vat_amount": 0,
+      "vat_percentage": 0,
+      "offer_code": "string",
+      "offer_message": "string",
+      "row_total_discount": 0,
+      "row_net_total": 0
+    }
+  ],
+  "payment_methods_with_options": [
+    {
+      "payment_method": "string",
+      "payment_amount": 0,
+      "transaction_id": "string",
+      "payment_option": "string",
+      "card_name": "string",
+      "bank_code": "string",
+      "option_commission": 0,
+      "credit_customer_info": {
+        "customer_number": "string",
+        "customer_name": "string"
+      }
+    }
+  ],
+  "delivery_date": "2026-04-12",
+  "delivery_from_time": "string",
+  "delivery_to_time": "string",
+  "shipping_address_2": "string",
+  "fullfilment_plant": "string"
+}

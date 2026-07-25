@@ -1,0 +1,54 @@
+{
+  "ReferenceNumber": "TMR-00006",
+  "OnlineOrderNumber": "TMR-ORD-00006",
+  "IsReturn": false,
+  "ParentReferenceNumber": null,
+  "OrderCreationDate": "2026-01-06T14:20:25.997",
+  "TotalDiscount": 45.000,
+  "TotalVat": 6.750,
+  "GrossAmount": 90.000,
+  "NetAmount": 51.750,
+  "CustomerName": "TAMARA",
+  "CustomerCreditAmount": 51.750,
+  "PaidOnlineAmount": 0,
+  "PaidWithPointsAmount": 0,
+  "InvoiceConsumer": {
+    "FirstName": "Lama",
+    "MiddleName": null,
+    "LastName": "Fahad",
+    "ConsumerCode": "TMR-2233",
+    "Gender": "Female",
+    "BirthDate": "1995-05-05T00:00:00",
+    "PrimaryPhoneNumber": "966533221100",
+    "Email": "lama@tamara.com",
+    "NationalId": null,
+    "Nationality": null
+  },
+  "DeliveryDetails": {
+    "DeliveryPhoneNumber": "966533221100",
+    "DeliveryAddress": "Riyadh",
+    "DeliveryLocationUrl": null,
+    "DeliveryNotes": null,
+    "DeliveryFees": 0.000
+  },
+  "RowItems": [
+    {
+      "Quantity": 1.000,
+      "MaterialNumber": "000000000000021241",
+      "ItemPrice": 90.000,
+      "ItemDiscount": 45.000,
+      "RowTotalDiscount": 45.000,
+      "ItemVat": 6.750,
+      "RowTotalVat": 6.750,
+      "BatchNumber": null,
+      "ExpireDate": null,
+      "SerialNumber": null,
+      "Barcode": "681619810619",
+      "ScannedCode": null,
+      "GrossAmount": 90.000,
+      "NetAmount": 51.750,
+      "VatPercentage": 0.15,
+      "OfferIdentifier": "000000000011"
+    }
+  ]
+}

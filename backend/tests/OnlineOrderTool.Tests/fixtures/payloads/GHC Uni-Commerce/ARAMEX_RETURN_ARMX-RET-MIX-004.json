@@ -1,0 +1,54 @@
+{
+  "ReferenceNumber": "ARMX-RET-MIX-004",
+  "OnlineOrderNumber": "ARMX-ORD-MIX-002-RET",
+  "IsReturn": true,
+  "ParentReferenceNumber": "ARMX-MIX-002",
+  "OrderCreationDate": "2026-01-08T13:30:00.000",
+  "TotalDiscount": 0.000,
+  "TotalVat": 13.500,
+  "GrossAmount": 90.000,
+  "NetAmount": 113.500,
+  "CustomerName": "ARAMEX",
+  "CustomerCreditAmount": 0,
+  "PaidOnlineAmount": 60.000,
+  "PaidWithPointsAmount": 53.500,
+  "InvoiceConsumer": {
+    "FirstName": "Ali",
+    "MiddleName": "Ahmed",
+    "LastName": "Saleh",
+    "ConsumerCode": "ARMX-RET-MIX-04",
+    "Gender": "Male",
+    "BirthDate": "1990-01-01T00:00:00",
+    "PrimaryPhoneNumber": "966512345678",
+    "Email": "ali@aramex.com",
+    "NationalId": null,
+    "Nationality": null
+  },
+  "DeliveryDetails": {
+    "DeliveryPhoneNumber": "966512345678",
+    "DeliveryAddress": "Jeddah",
+    "DeliveryLocationUrl": null,
+    "DeliveryNotes": "Full return with mixed payment",
+    "DeliveryFees": 10.000
+  },
+  "RowItems": [
+    {
+      "Quantity": 1.000,
+      "MaterialNumber": "000000000000021241",
+      "ItemPrice": 90.000,
+      "ItemDiscount": 0.000,
+      "RowTotalDiscount": 0.000,
+      "ItemVat": 13.500,
+      "RowTotalVat": 13.500,
+      "BatchNumber": null,
+      "ExpireDate": null,
+      "SerialNumber": null,
+      "Barcode": "681619810619",
+      "ScannedCode": null,
+      "GrossAmount": 90.000,
+      "NetAmount": 103.500,
+      "VatPercentage": 0.15,
+      "OfferIdentifier": null
+    }
+  ]
+}

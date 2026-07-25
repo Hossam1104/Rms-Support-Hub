@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OnlineOrderTool.Api/OnlineOrderTool.Api.csproj" />
+    <Project Path="src/OnlineOrderTool.Core/OnlineOrderTool.Core.csproj" />
+    <Project Path="src/OnlineOrderTool.Data/OnlineOrderTool.Data.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OnlineOrderTool.Tests/OnlineOrderTool.Tests.csproj" />
+  </Folder>
+</Solution>

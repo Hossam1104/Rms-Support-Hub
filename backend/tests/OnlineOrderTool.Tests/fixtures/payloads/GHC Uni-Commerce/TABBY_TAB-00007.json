@@ -1,0 +1,54 @@
+{
+  "ReferenceNumber": "TAB-00007",
+  "OnlineOrderNumber": "TAB-ORD-00007",
+  "IsReturn": false,
+  "ParentReferenceNumber": null,
+  "OrderCreationDate": "2026-01-06T15:00:00.000",
+  "TotalDiscount": 45.000,
+  "TotalVat": 6.750,
+  "GrossAmount": 90.000,
+  "NetAmount": 51.750,
+  "CustomerName": "TABBY",
+  "CustomerCreditAmount": 51.750,
+  "PaidOnlineAmount": 0,
+  "PaidWithPointsAmount": 0,
+  "InvoiceConsumer": {
+    "FirstName": "Sara",
+    "MiddleName": null,
+    "LastName": "Omar",
+    "ConsumerCode": "TAB-7788",
+    "Gender": "Female",
+    "BirthDate": "1996-07-07T00:00:00",
+    "PrimaryPhoneNumber": "966544332211",
+    "Email": "sara@tabby.com",
+    "NationalId": null,
+    "Nationality": null
+  },
+  "DeliveryDetails": {
+    "DeliveryPhoneNumber": "966544332211",
+    "DeliveryAddress": "Riyadh",
+    "DeliveryLocationUrl": null,
+    "DeliveryNotes": null,
+    "DeliveryFees": 0.000
+  },
+  "RowItems": [
+    {
+      "Quantity": 1.000,
+      "MaterialNumber": "000000000000021241",
+      "ItemPrice": 90.000,
+      "ItemDiscount": 45.000,
+      "RowTotalDiscount": 45.000,
+      "ItemVat": 6.750,
+      "RowTotalVat": 6.750,
+      "BatchNumber": null,
+      "ExpireDate": null,
+      "SerialNumber": null,
+      "Barcode": "681619810619",
+      "ScannedCode": null,
+      "GrossAmount": 90.000,
+      "NetAmount": 51.750,
+      "VatPercentage": 0.15,
+      "OfferIdentifier": "000000000011"
+    }
+  ]
+}
