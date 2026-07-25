@@ -38,3 +38,6 @@ var/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local AI-assistant session transcripts -- never committed
+.cc-history/

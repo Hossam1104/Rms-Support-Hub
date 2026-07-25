@@ -1,0 +1,117 @@
+using OnlineOrderTool.Core.DTOs;
+using OnlineOrderTool.Data.Repositories;
+using Xunit;
+
+namespace OnlineOrderTool.Tests;
+
+/// <summary>Asserts on the SQL shape OrderRequestRepository builds, without a
+/// live database -- BuildListSql/BuildFilters are internal, exposed to this
+/// assembly via InternalsVisibleTo in OnlineOrderTool.Data.csproj.</summary>
+public class OrderRequestRepositoryTests
+{
+    [Fact]
+    public void ListSql_UsesOuterApply_NotPlainJoin()
+    {
+        var sql = OrderRequestRepository.BuildListSql("", null);
+        Assert.Contains("OUTER APPLY", sql);
+        Assert.DoesNotContain(" JOIN dbo.RequestOrderHeaders", sql);
+        Assert.DoesNotContain(" JOIN dbo.Invoices", sql);
+    }
+
+    [Fact]
+    public void ListSql_IsBasedOnOrderRequests()
+    {
+        var sql = OrderRequestRepository.BuildListSql("", null);
+        Assert.Contains("FROM dbo.OrderRequests AS R", sql);
+    }
+
+    [Fact]
+    public void ListSql_NeverSelectsTheRawBlobs_OnlyLengthAndExistence()
+    {
+        var sql = OrderRequestRepository.BuildListSql("", null);
+
+        Assert.Contains("DATALENGTH(R.RequestJson)", sql);
+        Assert.Contains("CASE WHEN R.ResponseJson IS NULL", sql);
+
+        // Strip the two sanctioned usages (length check, null check) and
+        // confirm neither blob column name appears anywhere else in the
+        // query -- i.e. it is never selected as a raw output column.
+        var remainder = sql
+            .Replace("DATALENGTH(R.RequestJson)", "")
+            .Replace("CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END", "");
+
+        Assert.DoesNotContain("RequestJson", remainder);
+        Assert.DoesNotContain("ResponseJson", remainder);
+    }
+
+    [Fact]
+    public void ListSql_PagesWithBoundParameters_NotInterpolatedLiterals()
+    {
+        var sql = OrderRequestRepository.BuildListSql("", null);
+
+        Assert.Contains("OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY", sql);
+        // No literal "OFFSET <number> ROWS" -- proves paging is bound as
+        // parameters, not string-substituted into the SQL text.
+        Assert.DoesNotMatch(@"OFFSET\s+\d+\s+ROWS", sql);
+    }
+
+    [Fact]
+    public void ListSql_OrdersByIdAsStableTieBreaker()
+    {
+        var sql = OrderRequestRepository.BuildListSql("", null);
+        Assert.Contains("R.Id DESC", sql);
+        // The tie-breaker must be the last thing before OFFSET, i.e. applied
+        // regardless of which column sorts first.
+        var orderByIndex = sql.IndexOf("ORDER BY", StringComparison.Ordinal);
+        var offsetIndex = sql.IndexOf("OFFSET", StringComparison.Ordinal);
+        var idDescIndex = sql.IndexOf("R.Id DESC", StringComparison.Ordinal);
+        Assert.InRange(idDescIndex, orderByIndex, offsetIndex);
+    }
+
+    [Fact]
+    public void BuildFilters_EmptyFilters_ProducesNoWhereClauseAndNoParams()
+    {
+        var (whereSql, p) = OrderRequestRepository.BuildFilters(new OrderRequestFilters());
+        Assert.Equal("", whereSql);
+        Assert.Empty(p.ParameterNames);
+    }
+
+    [Fact]
+    public void BuildFilters_BindsEveryValueAsAParameter_NeverInterpolatesIt()
+    {
+        var filters = new OrderRequestFilters(
+            OrderNumber: "ORD-1; DROP TABLE OrderRequests;--",
+            Phone: "0556028080",
+            BranchCode: "P001",
+            Status: 5,
+            Succeeded: true,
+            HasException: true,
+            DateFrom: new DateTime(2026, 1, 1),
+            DateTo: new DateTime(2026, 1, 31));
+
+        var (whereSql, p) = OrderRequestRepository.BuildFilters(filters);
+
+        Assert.Contains("@OrderNumber", whereSql);
+        Assert.Contains("@Phone9", whereSql);
+        Assert.Contains("@BranchCode", whereSql);
+        Assert.Contains("@Status", whereSql);
+        Assert.Contains("@Succeeded", whereSql);
+        Assert.Contains("@DateFrom", whereSql);
+        Assert.Contains("@DateTo", whereSql);
+
+        // The malicious order-number value must never appear literally in
+        // the SQL text -- only ever as a bound parameter value.
+        Assert.DoesNotContain("DROP TABLE", whereSql);
+        Assert.Equal("ORD-1; DROP TABLE OrderRequests;--", (string)p.Get<object>("OrderNumber"));
+
+        // Phone is normalized to its last 9 digits before binding.
+        Assert.Equal("556028080", (string)p.Get<object>("Phone9"));
+    }
+
+    [Fact]
+    public void BuildFilters_HasExceptionFalse_FiltersOnIsNullNotAParameter()
+    {
+        var (whereSql, _) = OrderRequestRepository.BuildFilters(new OrderRequestFilters(HasException: false));
+        Assert.Contains("R.ExceptionMessage IS NULL", whereSql);
+    }
+}

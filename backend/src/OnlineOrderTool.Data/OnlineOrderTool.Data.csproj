@@ -5,6 +5,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Lets OrderRequestRepositoryTests assert on the internal SQL-building
+         helpers directly (e.g. that the list query never selects the
+         RequestJson/ResponseJson blobs) without a live database. -->
+    <InternalsVisibleTo Include="OnlineOrderTool.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
   </ItemGroup>
