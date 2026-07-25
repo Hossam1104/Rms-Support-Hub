@@ -2,6 +2,13 @@ import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+export interface OrderSearchFilters {
+  orderNumber: string;
+  phone: string;
+  branchCode: string;
+  status: number | null;
+}
+
 @Component({
   selector: 'app-search-form',
   standalone: true,
@@ -63,9 +70,9 @@ import { FormsModule } from '@angular/forms';
   `]
 })
 export class SearchFormComponent {
-  @Output() search = new EventEmitter<any>();
+  @Output() search = new EventEmitter<OrderSearchFilters>();
 
-  filters = {
+  filters: OrderSearchFilters = {
     orderNumber: '',
     phone: '',
     branchCode: '',

@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
+import { OrderDraft, Product, Payment, Consumer, SendOrderResult, LookupResult } from '../../core/models';
 import { QuickStatsComponent } from './components/quick-stats.component';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
@@ -13,6 +14,25 @@ import { PaymentsTableComponent } from './components/payments-table.component';
 import { ApiConfigComponent } from './components/api-config.component';
 import { AddProductDialogComponent } from './components/add-product-dialog.component';
 import { AddPaymentDialogComponent } from './components/add-payment-dialog.component';
+
+/** Client-side preview total -- NOT the backend's full TotalsSummary (which
+ * also reports totalProductAmount/totalProductVat/orderDiscount). Kept
+ * local rather than reusing TotalsSummary because this is a UI-only preview
+ * computed ahead of any server round trip; it is never sent anywhere. */
+interface FlatOrderPreviewTotals {
+  totalOrderAmount: number;
+  totalPaidAmount: number;
+  remainingBalance: number;
+}
+
+function asString(value: unknown, fallback = ''): string {
+  return value == null ? fallback : String(value);
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 @Component({
   selector: 'app-flat-order',
@@ -68,7 +88,6 @@ import { AddPaymentDialogComponent } from './components/add-payment-dialog.compo
       </app-payments-table>
 
       <app-api-config
-        [targetUrl]="moduleService.activeEnvironment()?.apiUrl || ''"
         [compiledJson]="compiledJson()"
         [apiResponse]="apiResponse()"
         (sendRequest)="onSendOrder($event)">
@@ -78,7 +97,7 @@ import { AddPaymentDialogComponent } from './components/add-payment-dialog.compo
     <app-add-product-dialog
       *ngIf="showAddProductDialog()"
       [moduleKey]="moduleKey()"
-      [branchCode]="draft().orderData['branch_code'] || ''"
+      [branchCode]="branchCode()"
       (close)="showAddProductDialog.set(false)"
       (add)="onAddProduct($event)"
       (lookupItem)="onLookupItem($event)">
@@ -102,7 +121,7 @@ export class FlatOrderComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   moduleKey = signal<string>('ghc_ecommerce');
-  draft = signal<any>({
+  draft = signal<OrderDraft>({
     orderData: {
       branch_code: '101',
       order_code: 'ORD-1002',
@@ -114,11 +133,14 @@ export class FlatOrderComponent implements OnInit {
       order_delivery_cost: 15
     },
     products: [],
-    payments: []
+    payments: [],
+    consumer: {},
+    delivery: { deliveryFees: 0 },
+    rowItems: []
   });
-  totals = signal<any>({ totalOrderAmount: 0, totalPaidAmount: 0, remainingBalance: 0 });
-  compiledJson = signal<any>(null);
-  apiResponse = signal<any>(null);
+  totals = signal<FlatOrderPreviewTotals>({ totalOrderAmount: 0, totalPaidAmount: 0, remainingBalance: 0 });
+  compiledJson = signal<Record<string, unknown> | null>(null);
+  apiResponse = signal<SendOrderResult | null>(null);
 
   showAddProductDialog = signal<boolean>(false);
   showAddPaymentDialog = signal<boolean>(false);
@@ -131,15 +153,20 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  branchCode(): string {
+    return asString(this.draft().orderData['branch_code']);
+  }
+
   loadState() {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.get<any>(`modules/${key}/state`, { envKey }).subscribe({
+    this.api.get<OrderDraft>(`modules/${key}/state`, { envKey }).subscribe({
       next: state => {
         if (state) this.draft.set(state);
         this.recalculate();
         this.refreshCompiledJson();
       },
+      // errorEnvelopeInterceptor already surfaces the failure via a toast.
       error: () => {
         this.recalculate();
         this.refreshCompiledJson();
@@ -147,78 +174,64 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
-  onFieldChange(event: { fieldName: string, value: any }) {
-    this.draft.update(d => {
-      d.orderData[event.fieldName] = event.value;
-      return { ...d };
-    });
+  onFieldChange(event: { fieldName: string, value: unknown }) {
+    this.draft.update(d => ({ ...d, orderData: { ...d.orderData, [event.fieldName]: event.value } }));
     this.recalculate();
     this.refreshCompiledJson();
 
     const key = this.moduleKey();
-    this.api.put<any>(`modules/${key}/order-field`, event).subscribe({
-      next: res => { if (res?.state) this.draft.set(res.state); }
+    this.api.put<{ success: boolean, state: OrderDraft }>(`modules/${key}/order-field`, event).subscribe({
+      next: res => { if (res?.state) this.draft.set(res.state); },
+      error: () => {}
     });
   }
 
-  onAddProduct(product: any) {
-    this.draft.update(d => {
-      d.products.push(product);
-      return { ...d };
-    });
+  onAddProduct(product: Product) {
+    this.draft.update(d => ({ ...d, products: [...d.products, product] }));
     this.recalculate();
     this.refreshCompiledJson();
     this.showAddProductDialog.set(false);
     this.toast.showSuccess('Product added successfully.');
 
     const key = this.moduleKey();
-    this.api.post<any>(`modules/${key}/products`, product).subscribe();
+    this.api.post(`modules/${key}/products`, product).subscribe({ error: () => {} });
   }
 
   onDeleteProduct(index: number) {
-    this.draft.update(d => {
-      d.products.splice(index, 1);
-      return { ...d };
-    });
+    this.draft.update(d => ({ ...d, products: d.products.filter((_, i) => i !== index) }));
     this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Product removed.');
 
     const key = this.moduleKey();
-    this.api.delete<any>(`modules/${key}/products/${index}`).subscribe();
+    this.api.delete(`modules/${key}/products/${index}`).subscribe({ error: () => {} });
   }
 
-  onAddPayment(payment: any) {
-    this.draft.update(d => {
-      d.payments.push(payment);
-      return { ...d };
-    });
+  onAddPayment(payment: Payment) {
+    this.draft.update(d => ({ ...d, payments: [...d.payments, payment] }));
     this.recalculate();
     this.refreshCompiledJson();
     this.showAddPaymentDialog.set(false);
     this.toast.showSuccess('Payment method added.');
 
     const key = this.moduleKey();
-    this.api.post<any>(`modules/${key}/payments`, payment).subscribe();
+    this.api.post(`modules/${key}/payments`, payment).subscribe({ error: () => {} });
   }
 
   onDeletePayment(index: number) {
-    this.draft.update(d => {
-      d.payments.splice(index, 1);
-      return { ...d };
-    });
+    this.draft.update(d => ({ ...d, payments: d.payments.filter((_, i) => i !== index) }));
     this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Payment method removed.');
 
     const key = this.moduleKey();
-    this.api.delete<any>(`modules/${key}/payments/${index}`).subscribe();
+    this.api.delete(`modules/${key}/payments/${index}`).subscribe({ error: () => {} });
   }
 
   onLookupItem(event: { code: string, branchCode: string }) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.get<any>(`modules/${key}/lookup/item`, { code: event.code, branchCode: event.branchCode, envKey }).subscribe({
+    this.api.get<LookupResult<Product>>(`modules/${key}/lookup/item`, { code: event.code, branchCode: event.branchCode, envKey }).subscribe({
       next: res => {
         if (res.success && res.data) {
           this.toast.showSuccess(`Found item: ${res.data.itemName}`);
@@ -226,20 +239,19 @@ export class FlatOrderComponent implements OnInit {
           this.toast.showInfo(`Item ${event.code} not found in database.`);
         }
       },
-      error: err => {
-        const msg = err.error?.message || `Item ${event.code} not found in database.`;
-        this.toast.showInfo(msg);
-      }
+      // A genuine HTTP failure (DB unreachable, etc.) is already toasted by
+      // errorEnvelopeInterceptor -- this only covers the 200 "not found" path above.
+      error: () => {}
     });
   }
 
   onLookupConsumer(phone: string) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.get<any>(`modules/${key}/lookup/consumer`, { phone, envKey }).subscribe({
+    this.api.get<LookupResult<Consumer>>(`modules/${key}/lookup/consumer`, { phone, envKey }).subscribe({
       next: res => {
-        if (res.success && res.data) {
-          const c = res.data;
+        const c = res.data;
+        if (res.success && c) {
           this.onFieldChange({ fieldName: 'client_name', value: c.firstName || '' });
           this.onFieldChange({ fieldName: 'client_code', value: c.consumerCode || '' });
           this.onFieldChange({ fieldName: 'client_mobile', value: c.primaryPhoneNumber || phone });
@@ -251,17 +263,14 @@ export class FlatOrderComponent implements OnInit {
           this.toast.showInfo(`No consumer record found for phone ${phone}.`);
         }
       },
-      error: err => {
-        const msg = err.error?.message || `No consumer record found for phone ${phone}.`;
-        this.toast.showInfo(msg);
-      }
+      error: () => {}
     });
   }
 
   onSendOrder(event: { url: string }) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.post<any>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url }).subscribe({
+    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined }).subscribe({
       next: res => {
         this.apiResponse.set(res);
         if (res.success) {
@@ -271,31 +280,29 @@ export class FlatOrderComponent implements OnInit {
         }
       },
       error: () => {
-        this.apiResponse.set({ success: false, statusCode: 500, responseText: 'Backend API server (http://localhost:5200) is offline.' });
-        this.toast.showError('Start backend API to send live HTTP requests.');
+        this.apiResponse.set({ success: false, statusCode: 0, responseText: 'The request could not be completed.', urlSent: event.url });
       }
     });
   }
 
   recalculate() {
-    const products = this.draft().products || [];
+    const products = this.draft().products;
     let prodTotal = 0;
-    products.forEach((p: any) => {
-      const q = p.quantity || 0;
+    products.forEach(p => {
       const price = p.unitPrice || 0;
       const disc = p.discount || 0;
       const vat = (p.vatPercentage || 0) / 100;
-      prodTotal += (price - disc + (price - disc) * vat) * q;
+      prodTotal += (price - disc + (price - disc) * vat) * (p.quantity || 0);
     });
 
-    const deliveryCost = Number(this.draft().orderData?.order_delivery_cost || 0);
+    const deliveryCost = asNumber(this.draft().orderData['order_delivery_cost']);
     const totalOrderAmount = prodTotal + deliveryCost;
 
-    const payments = this.draft().payments || [];
+    const payments = this.draft().payments;
     let paid = 0;
-    payments.forEach((py: any) => {
+    payments.forEach(py => {
       if (py.paymentStatus === 'done_payment' || py.paymentMethod === 'CashOnDelivery') {
-        paid += Number(py.paymentAmount || 0);
+        paid += py.paymentAmount || 0;
       }
     });
 
@@ -307,20 +314,20 @@ export class FlatOrderComponent implements OnInit {
   }
 
   refreshCompiledJson() {
-    const data = this.draft().orderData || {};
-    const prods = this.draft().products || [];
-    const pays = this.draft().payments || [];
+    const data = this.draft().orderData;
+    const prods = this.draft().products;
+    const pays = this.draft().payments;
 
-    const json = {
+    this.compiledJson.set({
       Header: {
-        BranchCode: data.branch_code || '101',
-        OrderCode: data.order_code || '',
-        ClientName: data.client_name || '',
-        ClientMobile: data.client_mobile || '',
-        ShippingAddress: data.shipping_address || '',
+        BranchCode: asString(data['branch_code'], '101'),
+        OrderCode: asString(data['order_code']),
+        ClientName: asString(data['client_name']),
+        ClientMobile: asString(data['client_mobile']),
+        ShippingAddress: asString(data['shipping_address']),
         TotalAmount: this.totals().totalOrderAmount
       },
-      Items: prods.map((p: any) => ({
+      Items: prods.map(p => ({
         ItemCode: p.itemCode,
         ItemName: p.itemName,
         Quantity: p.quantity,
@@ -328,13 +335,11 @@ export class FlatOrderComponent implements OnInit {
         VatPercentage: p.vatPercentage,
         Discount: p.discount
       })),
-      Payments: pays.map((py: any) => ({
+      Payments: pays.map(py => ({
         PaymentMethod: py.paymentMethod,
         PaymentStatus: py.paymentStatus,
         Amount: py.paymentAmount
       }))
-    };
-
-    this.compiledJson.set(json);
+    });
   }
 }

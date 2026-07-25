@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Payment } from '../../../core/models';
 
 @Component({
   selector: 'app-add-payment-dialog',
@@ -80,9 +81,9 @@ import { FormsModule } from '@angular/forms';
 export class AddPaymentDialogComponent {
   @Input() moduleKey: string = '';
   @Output() close = new EventEmitter<void>();
-  @Output() add = new EventEmitter<any>();
+  @Output() add = new EventEmitter<Payment>();
 
-  payment = {
+  payment: Payment = {
     paymentMethod: 'CashOnDelivery',
     paymentStatus: 'not_payment',
     paymentAmount: 0,

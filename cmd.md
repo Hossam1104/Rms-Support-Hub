@@ -26,8 +26,8 @@ Ensure you have the required runtimes installed before running the project:
 cd backend
 dotnet run --project src/OnlineOrderTool.Api
 ```
-> 📍 **API Endpoint**: `http://localhost:5000/api`  
-> 📖 **OpenAPI Specs**: `http://localhost:5000/openapi/v1.json`
+> 📍 **API Endpoint**: `http://localhost:5200/api` (see `Properties/launchSettings.json`)
+> 📖 **OpenAPI Specs**: `http://localhost:5200/openapi/v1.json`
 
 #### Terminal 2 — Frontend (Angular 22)
 ```bash
@@ -36,6 +36,7 @@ npm install
 npx ng serve --open
 ```
 > 🌐 **App URL**: `http://localhost:4200`
+> 🔀 `ng serve` proxies `/api` to `http://localhost:5200` via `proxy.conf.json` — no CORS needed in development.
 
 ---
 
@@ -90,7 +91,7 @@ npx ng build --configuration production
 | **Clean .NET Build Artifacts** | `cd backend && dotnet clean` |
 | **Install Frontend Packages** | `cd frontend && npm install` |
 | **Audit Frontend Vulnerabilities** | `cd frontend && npm audit` |
-| **Check Port 5000 Usage (Windows)** | `netstat -ano \| findstr :5000` |
+| **Check Port 5200 Usage (Windows)** | `netstat -ano \| findstr :5200` |
 | **Check Port 4200 Usage (Windows)** | `netstat -ano \| findstr :4200` |
 
 ---

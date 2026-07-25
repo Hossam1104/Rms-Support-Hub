@@ -1,11 +1,11 @@
 # Online Order Tool — REST API Specification
 
-Base URL: `http://localhost:5000/api` (dev; see `backend/src/OnlineOrderTool.Api/appsettings*.json` for the real port/host).
+Base URL: `http://localhost:5200/api` (dev; see `backend/src/OnlineOrderTool.Api/Properties/launchSettings.json`). The Angular dev server proxies `/api` to this host via `frontend/proxy.conf.json`.
 
 This document describes the actual routes implemented in
-`backend/src/OnlineOrderTool.Api/Controllers/*.cs` as of Session R5. It is the
-contract R7 (Angular scaffold) generates HTTP models from — keep it in sync
-with the controllers, not the other way around.
+`backend/src/OnlineOrderTool.Api/Controllers/*.cs` as of Session R7. It is the
+contract the Angular app's `core/models/*.ts` are typed against — keep it in
+sync with the controllers, not the other way around.
 
 Every `{key}` path segment is a module key: `ghc_ecommerce`, `upc_ecommerce`,
 `ghc_unicommerce`, `oms`, `call_center`. Most action endpoints accept an
@@ -19,7 +19,7 @@ its first `Available` environment.
 
 ### List All Modules
 - **`GET /api/modules`**
-- **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, and the module's environments (no `password`/`db_config`/raw credentials are ever emitted).
+- **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, the module's environments, and its `capabilities` (mirrors `ModuleCapabilities`: `draftKind`, `itemLookup`, `consumerLookup`, `orderRequests`, `cancel`, `resend` — added in R7 so the frontend can gate routes/UI on real capability data instead of hardcoded module-key checks). No `password`/`db_config`/raw credentials are ever emitted.
 
 ### Get Module Details + Current Draft
 - **`GET /api/modules/{key}`**

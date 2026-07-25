@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Product } from '../../../core/models';
 
 @Component({
   selector: 'app-products-table',
@@ -77,11 +78,11 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class ProductsTableComponent {
-  @Input() products: any[] = [];
+  @Input() products: Product[] = [];
   @Output() openAddDialog = new EventEmitter<void>();
   @Output() deleteProduct = new EventEmitter<number>();
 
-  getProductTotal(prod: any): number {
+  getProductTotal(prod: Product): number {
     const qty = prod.quantity || 0;
     const price = prod.unitPrice || 0;
     const discount = prod.discount || 0;

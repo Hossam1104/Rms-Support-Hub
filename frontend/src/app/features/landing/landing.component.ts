@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { ModuleService, EnvironmentDto } from '../../core/services/module.service';
+import { ModuleService } from '../../core/services/module.service';
+import { EnvironmentDto } from '../../core/models';
 import { ModuleCardComponent } from './module-card.component';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
 
@@ -39,13 +40,11 @@ import { NavbarComponent } from '../../layout/navbar/navbar.component';
     .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 28px; }
   `]
 })
-export class LandingComponent implements OnInit {
+export class LandingComponent {
+  // ModuleService.modules() is already populated by the provideAppInitializer
+  // in app.config.ts before this component (or any route) can render.
   moduleService = inject(ModuleService);
   private router = inject(Router);
-
-  ngOnInit() {
-    this.moduleService.loadModules().subscribe();
-  }
 
   onEnvironmentSelected(moduleKey: string, env: EnvironmentDto) {
     this.moduleService.selectEnvironment(env);

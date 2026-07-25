@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { JsonViewerComponent } from '../../../shared/components/json-viewer/json-viewer.component';
+import { OrderRequestDetailResponse } from '../../../core/models';
 
 @Component({
   selector: 'app-order-details-modal',
@@ -14,30 +15,36 @@ import { JsonViewerComponent } from '../../../shared/components/json-viewer/json
           <button type="button" class="btn-close" (click)="close.emit()">&times;</button>
         </div>
 
-        <div class="modal-body" *ngIf="details; else loading">
+        <div class="modal-body" *ngIf="details as d; else loading">
           <div class="details-section mb-4">
             <h4 class="section-heading">Header Summary</h4>
             <div class="info-grid">
-              <div><strong>Branch Code:</strong> {{ details.header?.branchCode }}</div>
-              <div><strong>Customer Name:</strong> {{ details.header?.customerName }}</div>
-              <div><strong>Mobile:</strong> {{ details.header?.customerMobile }}</div>
-              <div><strong>Delivery Fees:</strong> {{ details.header?.deliveryFees | number:'1.2-2' }} SAR</div>
-              <div><strong>Created:</strong> {{ details.header?.createdDateTime | date:'medium' }}</div>
-              <div><strong>Status:</strong> Status {{ details.header?.status }}</div>
+              <div><strong>Branch Code:</strong> {{ d.request.header?.branchCode }}</div>
+              <div><strong>Address:</strong> {{ d.request.header?.address }}</div>
+              <div><strong>Mobile:</strong> {{ d.request.header?.consumerMobile }}</div>
+              <div><strong>Payment Method:</strong> {{ d.request.header?.orderPaymentMethod }}</div>
+              <div><strong>Order Date:</strong> {{ d.request.header?.orderDate | date:'medium' }}</div>
+              <div><strong>Status:</strong> {{ d.request.header?.orderStatusLabel }}</div>
             </div>
           </div>
 
-          <div class="details-section mb-4" *ngIf="details.invoice">
+          <div class="details-section mb-4" *ngIf="d.request.exceptionMessage">
+            <h4 class="section-heading">Exception</h4>
+            <p class="exception-text">{{ d.request.exceptionMessage }}</p>
+          </div>
+
+          <div class="details-section mb-4" *ngIf="d.request.invoice">
             <h4 class="section-heading">Invoice Details</h4>
             <div class="info-grid">
-              <div><strong>Barcode:</strong> {{ details.invoice.barcode }}</div>
-              <div><strong>Net Amount:</strong> {{ details.invoice.netAmount | number:'1.2-2' }} SAR</div>
-              <div><strong>Invoice Date:</strong> {{ details.invoice.createdDateTime | date:'medium' }}</div>
+              <div><strong>Barcode:</strong> {{ d.request.invoice.barcode }}</div>
+              <div><strong>Net Amount:</strong> {{ d.request.invoice.netAmount | number:'1.2-2' }} SAR</div>
+              <div><strong>Invoice Date:</strong> {{ d.request.invoice.closeDateLocalTime | date:'medium' }}</div>
             </div>
           </div>
 
-          <div class="json-sections" *ngIf="details.latestRequestJson">
-            <app-json-viewer [data]="details.latestRequestJson" title="Original Order Request JSON"></app-json-viewer>
+          <div class="json-sections" *ngIf="d.request.requestJson">
+            <app-json-viewer [data]="d.request.requestJson" title="Original Order Request JSON"></app-json-viewer>
+            <app-json-viewer *ngIf="d.request.responseJson" [data]="d.request.responseJson" title="Response JSON"></app-json-viewer>
           </div>
         </div>
 
@@ -61,6 +68,7 @@ import { JsonViewerComponent } from '../../../shared/components/json-viewer/json
     .btn-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
     .section-heading { font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; border-bottom: 1px solid var(--glass-border); padding-bottom: 4px; }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem; }
+    .exception-text { background: var(--danger-bg); color: var(--danger); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: pre-wrap; }
     .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
     .spin { animation: spin 1s infinite linear; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -69,6 +77,6 @@ import { JsonViewerComponent } from '../../../shared/components/json-viewer/json
 })
 export class OrderDetailsModalComponent {
   @Input() orderNumber: string = '';
-  @Input() details: any;
+  @Input() details: OrderRequestDetailResponse | null = null;
   @Output() close = new EventEmitter<void>();
 }

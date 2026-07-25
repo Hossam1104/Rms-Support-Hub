@@ -70,11 +70,11 @@ import { FormsModule } from '@angular/forms';
   `]
 })
 export class OrderInfoComponent {
-  @Input() orderData: Record<string, any> = {};
+  @Input() orderData: Record<string, unknown> = {};
   @Input() moduleKey: string = '';
-  @Output() fieldChange = new EventEmitter<{ fieldName: string, value: any }>();
+  @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
 
-  onFieldChange(fieldName: string, value: any) {
+  onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });
   }
 }

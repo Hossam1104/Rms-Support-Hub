@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RowItem } from '../../../core/models';
 
 @Component({
   selector: 'app-row-items-table',
@@ -79,22 +80,22 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class RowItemsTableComponent {
-  @Input() rowItems: any[] = [];
+  @Input() rowItems: RowItem[] = [];
   @Output() openAddDialog = new EventEmitter<void>();
   @Output() deleteRowItem = new EventEmitter<number>();
 
-  getGrossAmount(item: any): number {
+  getGrossAmount(item: RowItem): number {
     return (item.quantity || 0) * (item.itemPrice || 0);
   }
 
-  getRowVat(item: any): number {
+  getRowVat(item: RowItem): number {
     const price = item.itemPrice || 0;
     const disc = item.itemDiscount || 0;
     const vatPct = (item.vatPercentage || 0) / 100;
     return (price - disc) * vatPct * (item.quantity || 0);
   }
 
-  getRowNet(item: any): number {
+  getRowNet(item: RowItem): number {
     const gross = this.getGrossAmount(item);
     const discTotal = (item.itemDiscount || 0) * (item.quantity || 0);
     const vatTotal = this.getRowVat(item);

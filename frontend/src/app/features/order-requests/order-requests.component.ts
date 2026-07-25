@@ -4,10 +4,19 @@ import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
+import { OrderRequestListItem, OrderRequestListResponse, OrderRequestCancelResponse } from '../../core/models';
 import { FilterBarComponent } from './components/filter-bar.component';
 import { OrderCardComponent } from './components/order-card.component';
 import { CancelDialogComponent } from './components/cancel-dialog.component';
 
+/**
+ * Reads the real OrderRequests table via OrderRequestsController (R5),
+ * replacing the pre-R5 OrderHistoryService JSON-file store this component
+ * used to call (`.../order-history`, deleted -- see remediation_plan.md
+ * B10). The full stat-tile / server-side-filter / route-driven-drawer
+ * rebuild is R9's job (remediation_plan.md session table); this session
+ * only re-points the existing list+expand UI at the real, typed contract.
+ */
 @Component({
   selector: 'app-order-requests',
   standalone: true,
@@ -19,10 +28,11 @@ import { CancelDialogComponent } from './components/cancel-dialog.component';
         (filterChange)="onFilterChange($event)">
       </app-filter-bar>
 
-      <div class="orders-list" *ngIf="filteredHistory().length > 0; else emptyState">
-        @for (entry of filteredHistory(); track entry.id) {
+      <div class="orders-list" *ngIf="filteredItems().length > 0; else emptyState">
+        @for (entry of filteredItems(); track entry.id) {
           <app-order-card
             [entry]="entry"
+            [moduleKey]="moduleKey()"
             (resend)="onResendOrder($event)"
             (openCancelModal)="selectedEntryForCancel.set($event)">
           </app-order-card>
@@ -40,7 +50,7 @@ import { CancelDialogComponent } from './components/cancel-dialog.component';
 
     <app-cancel-dialog
       *ngIf="selectedEntryForCancel()"
-      [orderCode]="selectedEntryForCancel()?.orderCode || ''"
+      [orderCode]="selectedEntryForCancel()?.orderNumber || ''"
       (close)="selectedEntryForCancel.set(null)"
       (confirmCancel)="onConfirmCancel($event)">
     </app-cancel-dialog>
@@ -59,18 +69,20 @@ export class OrderRequestsComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   moduleKey = signal<string>('');
-  history = signal<any[]>([]);
-  filteredHistory = signal<any[]>([]);
+  items = signal<OrderRequestListItem[]>([]);
+  filteredItems = signal<OrderRequestListItem[]>([]);
   environmentKeys = signal<string[]>([]);
 
-  selectedEntryForCancel = signal<any>(null);
+  selectedEntryForCancel = signal<OrderRequestListItem | null>(null);
+
+  private currentFilter = { query: '', status: 'all', env: 'all' };
 
   ngOnInit() {
     this.route.parent?.paramMap.subscribe(params => {
       const key = params.get('key') || '';
       this.moduleKey.set(key);
       if (key) {
-        this.loadHistory();
+        this.loadRequests();
       }
     });
 
@@ -80,56 +92,77 @@ export class OrderRequestsComponent implements OnInit {
     }
   }
 
-  loadHistory() {
+  loadRequests() {
     const key = this.moduleKey();
-    this.api.get<any[]>(`modules/${key}/order-history`).subscribe({
-      next: items => {
-        this.history.set(items || []);
-        this.filteredHistory.set(items || []);
+    const envKey = this.currentFilter.env !== 'all' ? this.currentFilter.env : undefined;
+    this.api.get<OrderRequestListResponse>(`modules/${key}/order-requests`, { pageSize: 100, envKey }).subscribe({
+      next: res => {
+        this.items.set(res.items);
+        this.applyFilter();
       },
-      error: () => this.toast.showError('Failed to load order history.')
+      // errorEnvelopeInterceptor already surfaces the failure via a toast
+      // (e.g. 501 for a module without Capabilities.OrderRequests yet).
+      error: () => {
+        this.items.set([]);
+        this.filteredItems.set([]);
+      }
     });
   }
 
   onFilterChange(filter: { query: string, status: string, env: string }) {
-    let result = [...this.history()];
+    const envChanged = filter.env !== this.currentFilter.env;
+    this.currentFilter = filter;
 
-    if (filter.query.trim()) {
-      const q = filter.query.trim().toLowerCase();
-      result = result.filter(item => item.orderCode.toLowerCase().includes(q));
+    if (envChanged) {
+      // env selects which database/connection the server queries -- it is
+      // not a client-side row filter, so it requires a re-fetch.
+      this.loadRequests();
+      return;
     }
 
-    if (filter.status !== 'all') {
-      if (filter.status === 'success') {
-        result = result.filter(item => item.responseStatusCode >= 200 && item.responseStatusCode < 300);
-      } else if (filter.status === 'failed') {
-        result = result.filter(item => item.responseStatusCode < 200 || item.responseStatusCode >= 300);
-      } else if (filter.status === 'cancelled') {
-        result = result.filter(item => item.isCancelled);
-      }
-    }
-
-    if (filter.env !== 'all') {
-      result = result.filter(item => item.environmentKey === filter.env);
-    }
-
-    this.filteredHistory.set(result);
+    this.applyFilter();
   }
 
-  onResendOrder(entry: any) {
-    const key = this.moduleKey();
-    const envKey = entry.environmentKey;
+  private applyFilter() {
+    let result = [...this.items()];
+    const { query, status } = this.currentFilter;
 
-    this.api.post<any>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: entry.apiUrl }).subscribe({
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      result = result.filter(item => item.orderNumber.toLowerCase().includes(q));
+    }
+
+    if (status === 'success') {
+      result = result.filter(item => item.isSucceeded === true);
+    } else if (status === 'failed') {
+      result = result.filter(item => item.isSucceeded === false);
+    } else if (status === 'cancelled') {
+      result = result.filter(item => item.orderStatus === 6 || item.orderStatus === 7);
+    }
+
+    this.filteredItems.set(result);
+  }
+
+  onResendOrder(entry: OrderRequestListItem) {
+    if (!entry.branchCode) {
+      this.toast.showError('This request has no branch on record; use the order builder to resend it manually.');
+      return;
+    }
+
+    const key = this.moduleKey();
+    this.api.post<{ success: boolean, statusCode: number }>(
+      `modules/${key}/order-requests/${entry.id}/resend`,
+      { branchCode: entry.branchCode }
+    ).subscribe({
       next: res => {
         if (res.success) {
-          this.toast.showSuccess(`Order ${entry.orderCode} re-sent successfully!`);
-          this.loadHistory();
+          this.toast.showSuccess(`Order ${entry.orderNumber} re-sent successfully!`);
         } else {
           this.toast.showError(`Re-send failed. Status: ${res.statusCode}`);
         }
+        this.loadRequests();
       },
-      error: () => this.toast.showError('Failed to execute order re-send.')
+      error: () => {}
     });
   }
 
@@ -138,13 +171,15 @@ export class OrderRequestsComponent implements OnInit {
     if (!entry) return;
 
     const key = this.moduleKey();
-    this.api.post<any>(`modules/${key}/order-history/${entry.id}/cancel`, { orderNumber: entry.orderCode, cancelReason: reason }).subscribe({
+    this.api.post<OrderRequestCancelResponse>(`modules/${key}/order-requests/${entry.id}/cancel`, { reason }).subscribe({
       next: res => {
-        this.toast.showSuccess(`Order ${entry.orderCode} cancelled successfully.`);
+        this.toast.showSuccess(res.success
+          ? `Order ${entry.orderNumber} cancelled successfully.`
+          : `Cancellation sent, upstream returned status ${res.statusCode}.`);
         this.selectedEntryForCancel.set(null);
-        this.loadHistory();
+        this.loadRequests();
       },
-      error: () => this.toast.showError('Failed to process order cancellation.')
+      error: () => this.selectedEntryForCancel.set(null)
     });
   }
 }

@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Consumer } from '../../../core/models';
 
 @Component({
   selector: 'app-consumer-section',
@@ -68,13 +69,13 @@ import { FormsModule } from '@angular/forms';
   `]
 })
 export class ConsumerSectionComponent {
-  @Input() consumer: any = {};
-  @Output() fieldChange = new EventEmitter<{ fieldName: string, value: any }>();
+  @Input() consumer: Consumer = {};
+  @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
   @Output() lookupConsumer = new EventEmitter<string>();
 
   lookupPhone: string = '';
 
-  onFieldChange(fieldName: string, value: any) {
+  onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });
   }
 

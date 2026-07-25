@@ -33,7 +33,7 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class JsonViewerComponent {
-  @Input() data: any;
+  @Input() data: unknown;
   @Input() title?: string;
 
   collapsed = signal<boolean>(false);

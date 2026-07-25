@@ -1,25 +1,34 @@
 import { Routes } from '@angular/router';
-import { LandingComponent } from './features/landing/landing.component';
-import { ModuleShellComponent } from './features/module-shell/module-shell.component';
-import { FlatOrderComponent } from './features/flat-order/flat-order.component';
-import { UnicommerceComponent } from './features/unicommerce/unicommerce.component';
-import { OrderRequestsComponent } from './features/order-requests/order-requests.component';
-import { OrderValidationComponent } from './features/order-validation/order-validation.component';
+import { capabilityGuard } from './core/guards/capability.guard';
 
 export const routes: Routes = [
-  { path: '', component: LandingComponent },
+  {
+    path: '',
+    loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent)
+  },
   {
     path: 'modules/:key',
-    component: ModuleShellComponent,
+    loadComponent: () => import('./features/module-shell/module-shell.component').then(m => m.ModuleShellComponent),
     children: [
       { path: '', redirectTo: 'order', pathMatch: 'full' },
-      { path: 'order', component: FlatOrderComponent },
-      { path: 'unicommerce', component: UnicommerceComponent },
-      { path: 'api', component: FlatOrderComponent },
-      { path: 'database', component: FlatOrderComponent },
-      { path: 'test', component: FlatOrderComponent },
-      { path: 'requests', component: OrderRequestsComponent },
-      { path: 'validation', component: OrderValidationComponent }
+      {
+        path: 'order',
+        loadComponent: () => import('./features/flat-order/flat-order.component').then(m => m.FlatOrderComponent)
+      },
+      {
+        path: 'unicommerce',
+        loadComponent: () => import('./features/unicommerce/unicommerce.component').then(m => m.UnicommerceComponent)
+      },
+      {
+        path: 'requests',
+        canActivate: [capabilityGuard('orderRequests')],
+        loadComponent: () => import('./features/order-requests/order-requests.component').then(m => m.OrderRequestsComponent)
+      },
+      {
+        path: 'validation',
+        canActivate: [capabilityGuard('orderRequests')],
+        loadComponent: () => import('./features/order-validation/order-validation.component').then(m => m.OrderValidationComponent)
+      }
     ]
   },
   { path: '**', redirectTo: '' }

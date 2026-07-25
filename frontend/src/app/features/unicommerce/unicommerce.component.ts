@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
+import { OrderDraft, RowItem, Consumer, SendOrderResult, LookupResult } from '../../core/models';
 import { InvoiceSummaryComponent } from './components/invoice-summary.component';
 import { OrderFieldsComponent } from './components/order-fields.component';
 import { ConsumerSectionComponent } from './components/consumer-section.component';
@@ -10,6 +11,11 @@ import { DeliverySectionComponent } from './components/delivery-section.componen
 import { RowItemsTableComponent } from './components/row-items-table.component';
 import { AddRowItemDialogComponent } from './components/add-row-item-dialog.component';
 import { ApiConfigComponent } from '../flat-order/components/api-config.component';
+
+function asNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 @Component({
   selector: 'app-unicommerce',
@@ -57,7 +63,6 @@ import { ApiConfigComponent } from '../flat-order/components/api-config.componen
       </app-row-items-table>
 
       <app-api-config
-        [targetUrl]="moduleService.activeEnvironment()?.apiUrl || ''"
         [compiledJson]="compiledJson()"
         [apiResponse]="apiResponse()"
         (sendRequest)="onSendOrder($event)">
@@ -80,9 +85,16 @@ export class UnicommerceComponent implements OnInit {
   private toast = inject(ToastService);
 
   moduleKey = signal<string>('ghc_unicommerce');
-  draft = signal<any>({ orderData: {}, consumer: {}, delivery: {}, rowItems: [] });
-  compiledJson = signal<any>(null);
-  apiResponse = signal<any>(null);
+  draft = signal<OrderDraft>({
+    orderData: {},
+    products: [],
+    payments: [],
+    consumer: {},
+    delivery: { deliveryFees: 0 },
+    rowItems: []
+  });
+  compiledJson = signal<Record<string, unknown> | null>(null);
+  apiResponse = signal<SendOrderResult | null>(null);
 
   showAddRowItemDialog = signal<boolean>(false);
 
@@ -99,49 +111,42 @@ export class UnicommerceComponent implements OnInit {
 
   loadState() {
     const key = this.moduleKey();
-    this.api.get<any>(`modules/${key}/state`).subscribe({
+    this.api.get<OrderDraft>(`modules/${key}/state`).subscribe({
       next: state => {
         this.draft.set(state);
         this.recalculate();
         this.refreshCompiledJson();
       },
-      error: () => this.toast.showError('Failed to load Uni-Commerce invoice draft state.')
+      // errorEnvelopeInterceptor already surfaces the failure via a toast.
+      error: () => {}
     });
   }
 
-  onFieldChange(event: { fieldName: string, value: any }) {
+  onFieldChange(event: { fieldName: string, value: unknown }) {
     const key = this.moduleKey();
-    this.api.put<any>(`modules/${key}/order-field`, event).subscribe({
+    this.api.put<{ success: boolean, state: OrderDraft }>(`modules/${key}/order-field`, event).subscribe({
       next: res => {
         this.draft.set(res.state);
         this.recalculate();
         this.refreshCompiledJson();
-      }
+      },
+      error: () => {}
     });
   }
 
-  onConsumerFieldChange(event: { fieldName: string, value: any }) {
-    this.draft.update(d => {
-      d.consumer[event.fieldName] = event.value;
-      return { ...d };
-    });
+  onConsumerFieldChange(event: { fieldName: string, value: unknown }) {
+    this.draft.update(d => ({ ...d, consumer: { ...d.consumer, [event.fieldName]: event.value } }));
     this.refreshCompiledJson();
   }
 
-  onDeliveryFieldChange(event: { fieldName: string, value: any }) {
-    this.draft.update(d => {
-      d.delivery[event.fieldName] = event.value;
-      return { ...d };
-    });
+  onDeliveryFieldChange(event: { fieldName: string, value: unknown }) {
+    this.draft.update(d => ({ ...d, delivery: { ...d.delivery, [event.fieldName]: event.value } }));
     this.recalculate();
     this.refreshCompiledJson();
   }
 
-  onAddRowItem(item: any) {
-    this.draft.update(d => {
-      d.rowItems.push(item);
-      return { ...d };
-    });
+  onAddRowItem(item: RowItem) {
+    this.draft.update(d => ({ ...d, rowItems: [...d.rowItems, item] }));
     this.recalculate();
     this.refreshCompiledJson();
     this.showAddRowItemDialog.set(false);
@@ -149,10 +154,7 @@ export class UnicommerceComponent implements OnInit {
   }
 
   onDeleteRowItem(index: number) {
-    this.draft.update(d => {
-      d.rowItems.splice(index, 1);
-      return { ...d };
-    });
+    this.draft.update(d => ({ ...d, rowItems: d.rowItems.filter((_, i) => i !== index) }));
     this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Row item removed.');
@@ -160,10 +162,10 @@ export class UnicommerceComponent implements OnInit {
 
   onLookupConsumer(phone: string) {
     const key = this.moduleKey();
-    this.api.get<any>(`modules/${key}/lookup/consumer`, { phone }).subscribe({
+    this.api.get<LookupResult<Consumer>>(`modules/${key}/lookup/consumer`, { phone }).subscribe({
       next: res => {
-        if (res.success && res.data) {
-          const c = res.data;
+        const c = res.data;
+        if (res.success && c) {
           this.draft.update(d => ({
             ...d,
             consumer: {
@@ -176,16 +178,18 @@ export class UnicommerceComponent implements OnInit {
           }));
           this.toast.showSuccess('Consumer details populated from DB.');
           this.refreshCompiledJson();
+        } else {
+          this.toast.showInfo(`No consumer record found for phone ${phone}.`);
         }
       },
-      error: () => this.toast.showError('Consumer not found.')
+      error: () => {}
     });
   }
 
   onSendOrder(event: { url: string }) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.post<any>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url }).subscribe({
+    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined }).subscribe({
       next: res => {
         this.apiResponse.set(res);
         if (res.success) {
@@ -194,15 +198,17 @@ export class UnicommerceComponent implements OnInit {
           this.toast.showError(`Invoice submission failed. Status: ${res.statusCode}`);
         }
       },
-      error: () => this.toast.showError('Invoice request execution failed.')
+      error: () => {
+        this.apiResponse.set({ success: false, statusCode: 0, responseText: 'The request could not be completed.', urlSent: event.url });
+      }
     });
   }
 
   recalculate() {
-    const items = this.draft().rowItems || [];
+    const items = this.draft().rowItems;
     let gross = 0, disc = 0, vat = 0;
 
-    items.forEach((item: any) => {
+    items.forEach(item => {
       const q = item.quantity || 0;
       const p = item.itemPrice || 0;
       const d = item.itemDiscount || 0;
@@ -213,10 +219,10 @@ export class UnicommerceComponent implements OnInit {
       vat += (p - d) * vPct * q;
     });
 
-    const deliveryFees = this.draft().delivery?.deliveryFees || 0;
+    const deliveryFees = this.draft().delivery.deliveryFees || 0;
     const net = gross - disc + vat + deliveryFees;
-    const paidOnline = this.draft().orderData?.paid_online_amount || 0;
-    const paidPoints = this.draft().orderData?.paid_with_points_amount || 0;
+    const paidOnline = asNumber(this.draft().orderData['paid_online_amount']);
+    const paidPoints = asNumber(this.draft().orderData['paid_with_points_amount']);
     const customerCredit = net - paidOnline - paidPoints;
 
     this.grossAmount.set(Math.round(gross * 100) / 100);
@@ -228,8 +234,9 @@ export class UnicommerceComponent implements OnInit {
 
   refreshCompiledJson() {
     const key = this.moduleKey();
-    this.api.get<any>(`modules/${key}/export-json`).subscribe({
-      next: json => this.compiledJson.set(json)
+    this.api.get<Record<string, unknown>>(`modules/${key}/export-json`).subscribe({
+      next: json => this.compiledJson.set(json),
+      error: () => {}
     });
   }
 }

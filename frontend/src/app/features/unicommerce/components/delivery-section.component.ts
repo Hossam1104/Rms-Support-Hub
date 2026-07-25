@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DeliveryDetails } from '../../../core/models';
 
 @Component({
   selector: 'app-delivery-section',
@@ -48,10 +49,10 @@ import { FormsModule } from '@angular/forms';
   `]
 })
 export class DeliverySectionComponent {
-  @Input() delivery: any = {};
-  @Output() fieldChange = new EventEmitter<{ fieldName: string, value: any }>();
+  @Input() delivery: DeliveryDetails = { deliveryFees: 0 };
+  @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
 
-  onFieldChange(fieldName: string, value: any) {
+  onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });
   }
 }

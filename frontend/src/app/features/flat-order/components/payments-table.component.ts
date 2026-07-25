@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Payment } from '../../../core/models';
 
 @Component({
   selector: 'app-payments-table',
@@ -74,7 +75,7 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class PaymentsTableComponent {
-  @Input() payments: any[] = [];
+  @Input() payments: Payment[] = [];
   @Output() openAddDialog = new EventEmitter<void>();
   @Output() deletePayment = new EventEmitter<number>();
 }

@@ -49,7 +49,10 @@ export class ModuleShellComponent implements OnInit {
       const key = params.get('key') || '';
       this.moduleKey.set(key);
       if (key) {
-        this.moduleService.loadModuleDetails(key).subscribe();
+        // errorEnvelopeInterceptor already surfaces failures via a toast;
+        // activeModule/activeEnvironment fall back to the summary already
+        // loaded by ModuleService.initialize() (see loadModuleDetails).
+        this.moduleService.loadModuleDetails(key).subscribe({ error: () => {} });
       }
     });
   }

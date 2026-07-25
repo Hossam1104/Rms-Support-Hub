@@ -1,6 +1,7 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RowItem } from '../../../core/models';
 
 @Component({
   selector: 'app-add-row-item-dialog',
@@ -63,9 +64,9 @@ import { FormsModule } from '@angular/forms';
 })
 export class AddRowItemDialogComponent {
   @Output() close = new EventEmitter<void>();
-  @Output() add = new EventEmitter<any>();
+  @Output() add = new EventEmitter<RowItem>();
 
-  item = {
+  item: RowItem = {
     materialNumber: '',
     barcode: '',
     quantity: 1,

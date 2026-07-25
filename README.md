@@ -94,7 +94,7 @@ repository can undo by deleting the file.
 cd backend
 dotnet run --project src/OnlineOrderTool.Api
 ```
-The API server will launch on `http://localhost:5000` (or `https://localhost:5001`).
+The API server will launch on `http://localhost:5200` (see `backend/src/OnlineOrderTool.Api/Properties/launchSettings.json`).
 
 ### 4. Run Backend Unit & Integration Tests
 ```bash

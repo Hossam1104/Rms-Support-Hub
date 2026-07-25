@@ -41,11 +41,21 @@ public class ModuleController : ControllerBase
                 StatusLabel: e.StatusLabel,
                 HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
                 HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl)
-            )).ToList()
+            )).ToList(),
+            Capabilities: ToDto(m.Capabilities)
         ));
 
         return Ok(modules);
     }
+
+    private static ModuleCapabilitiesDto ToDto(ModuleCapabilities c) => new(
+        DraftKind: c.DraftKind,
+        ItemLookup: c.ItemLookup,
+        ConsumerLookup: c.ConsumerLookup,
+        OrderRequests: c.OrderRequests,
+        Cancel: c.Cancel,
+        Resend: c.Resend
+    );
 
     [HttpGet("{key}")]
     public async Task<ActionResult<object>> GetModule(string key)
@@ -74,7 +84,8 @@ public class ModuleController : ControllerBase
                 StatusLabel: e.StatusLabel,
                 HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
                 HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl)
-            )).ToList()
+            )).ToList(),
+            Capabilities: ToDto(module.Capabilities)
         );
 
         return Ok(new { module = dto, state = draft });

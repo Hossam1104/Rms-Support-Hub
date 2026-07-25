@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JsonViewerComponent } from '../../../shared/components/json-viewer/json-viewer.component';
+import { SendOrderResult } from '../../../core/models';
 
 @Component({
   selector: 'app-api-config',
@@ -56,8 +57,8 @@ import { JsonViewerComponent } from '../../../shared/components/json-viewer/json
 })
 export class ApiConfigComponent {
   @Input() targetUrl: string = '';
-  @Input() compiledJson: any;
-  @Input() apiResponse: any;
+  @Input() compiledJson: Record<string, unknown> | null = null;
+  @Input() apiResponse: SendOrderResult | null = null;
   @Output() sendRequest = new EventEmitter<{ url: string }>();
 
   loading = signal<boolean>(false);

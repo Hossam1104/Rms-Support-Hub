@@ -20,12 +20,27 @@ public record EnvironmentDto(
     bool HasCancelUrl
 );
 
+/// <summary>Mirrors OnlineOrderTool.Core.Modules.ModuleCapabilities -- exposed
+/// on ModuleDto so the frontend can gate routes/UI on real capability data
+/// (e.g. a route guard for Capabilities.OrderRequests) instead of hardcoding
+/// module-key checks that would drift from the backend (see
+/// remediation_plan.md B21, R7).</summary>
+public record ModuleCapabilitiesDto(
+    string? DraftKind,
+    bool ItemLookup,
+    bool ConsumerLookup,
+    bool OrderRequests,
+    bool Cancel,
+    bool Resend
+);
+
 public record ModuleDto(
     string Key,
     string Label,
     string Client,
     bool Available,
-    List<EnvironmentDto> Environments
+    List<EnvironmentDto> Environments,
+    ModuleCapabilitiesDto Capabilities
 );
 
 public record UpdateOrderFieldRequest(string FieldName, object? Value);

@@ -1,5 +1,10 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { OrderRequestListItem } from '../../../core/models';
+
+/** OrderRequestStatus.ResendBlockedStatuses -- see docs/api-spec.md §5 and
+ * backend/src/OnlineOrderTool.Core/OrderRequestStatus.cs. */
+const RESEND_BLOCKED_STATUSES = new Set([4, 8, 9]);
 
 @Component({
   selector: 'app-results-grid',
@@ -27,17 +32,17 @@ import { CommonModule } from '@angular/common';
             </tr>
           </thead>
           <tbody>
-            @for (row of results; track row.headerId) {
+            @for (row of results; track row.id) {
               <tr>
                 <td><strong>{{ row.orderNumber }}</strong></td>
                 <td>{{ row.branchCode }}</td>
-                <td><span class="badge" [class]="getStatusClass(row.status)">{{ row.statusLabel }}</span></td>
-                <td>{{ row.creationDate | date:'short' }}</td>
+                <td><span class="badge" [class]="getStatusClass(row.orderStatus)">{{ row.orderStatusLabel }}</span></td>
+                <td>{{ row.orderDate | date:'short' }}</td>
                 <td>{{ row.invoiceBarcode || '-' }}</td>
                 <td>{{ (row.invoiceDate | date:'short') || '-' }}</td>
                 <td>
-                  <span class="eligibility-pill" [class.eligible]="row.canResend" [class.blocked]="!row.canResend">
-                    {{ row.canResend ? 'Eligible' : 'Blocked (' + row.statusLabel + ')' }}
+                  <span class="eligibility-pill" [class.eligible]="canResend(row)" [class.blocked]="!canResend(row)">
+                    {{ canResend(row) ? 'Eligible' : 'Blocked (' + row.orderStatusLabel + ')' }}
                   </span>
                 </td>
                 <td>
@@ -82,10 +87,14 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class ResultsGridComponent {
-  @Input() results: any[] = [];
+  @Input() results: OrderRequestListItem[] = [];
   @Output() viewDetails = new EventEmitter<string>();
 
-  getStatusClass(status: number): string {
+  canResend(row: OrderRequestListItem): boolean {
+    return row.orderStatus != null && !RESEND_BLOCKED_STATUSES.has(row.orderStatus);
+  }
+
+  getStatusClass(status: number | null): string {
     switch (status) {
       case 9: return 'badge-success';
       case 4: return 'badge-warning';

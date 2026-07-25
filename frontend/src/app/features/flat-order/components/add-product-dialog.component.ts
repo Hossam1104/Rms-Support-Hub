@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Product } from '../../../core/models';
 
 @Component({
   selector: 'app-add-product-dialog',
@@ -74,11 +75,11 @@ export class AddProductDialogComponent {
   @Input() moduleKey: string = '';
   @Input() branchCode: string = '';
   @Output() close = new EventEmitter<void>();
-  @Output() add = new EventEmitter<any>();
+  @Output() add = new EventEmitter<Product>();
   @Output() lookupItem = new EventEmitter<{ code: string, branchCode: string }>();
 
   searchCode: string = '';
-  product = {
+  product: Product = {
     itemCode: '',
     itemName: '',
     quantity: 1,
