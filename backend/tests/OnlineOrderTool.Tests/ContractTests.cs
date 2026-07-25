@@ -102,7 +102,7 @@ public class ContractTests
     {
         var reference = LoadFixture(Path.Combine("GHC E-Commerce", "request_body.json"));
         var builder = new FlatOrderPayloadBuilder();
-        var payload = builder.BuildGhcPayload(BuildRepresentativeFlatDraft());
+        var payload = builder.BuildPayload(BuildRepresentativeFlatDraft(), FlatVariant.GhcVariant);
 
         AssertKeysMatch("GHC top-level", ObjectKeys(reference), DictKeys(payload));
 
@@ -120,7 +120,7 @@ public class ContractTests
     {
         var reference = LoadFixture(Path.Combine("UPC", "4- Invoice without discount, with delivery and paid by visa.json"));
         var builder = new FlatOrderPayloadBuilder();
-        var payload = builder.BuildUpcPayload(BuildRepresentativeFlatDraft());
+        var payload = builder.BuildPayload(BuildRepresentativeFlatDraft(), FlatVariant.UpcVariant);
 
         AssertKeysMatch("UPC top-level", ObjectKeys(reference), DictKeys(payload));
 

@@ -243,7 +243,7 @@ public class OrderController : ControllerBase
     {
         return moduleKey switch
         {
-            "upc_ecommerce" => _flatPayloadBuilder.BuildUpcPayload(draft),
+            "upc_ecommerce" => _flatPayloadBuilder.BuildPayload(draft, FlatVariant.UpcVariant),
             "ghc_unicommerce" => _uniPayloadBuilder.BuildInvoicePayload(new OnlineOrderTool.Core.Models.UniCommerceInvoice
             {
                 ReferenceNumber = draft.OrderData.GetValueOrDefault("reference_number")?.ToString() ?? "",
@@ -257,7 +257,7 @@ public class OrderController : ControllerBase
                 Delivery = draft.Delivery,
                 RowItems = draft.RowItems
             }),
-            _ => _flatPayloadBuilder.BuildGhcPayload(draft)
+            _ => _flatPayloadBuilder.BuildPayload(draft, FlatVariant.GhcVariant)
         };
     }
 }

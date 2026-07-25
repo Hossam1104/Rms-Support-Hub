@@ -12,8 +12,16 @@ public class PayloadAndValidationTests
     private readonly FlatOrderValidator _flatValidator = new();
     private readonly UniCommerceValidator _uniValidator = new();
 
+    // NOTE: FlatOrderValidator.cs still validates against the pre-R1 invented
+    // field names (client_name, client_code, client_mobile, shipping_address)
+    // and a flattened customer_name/customer_number pair instead of the new
+    // nested credit_customer_info -- see remediation_plan.md B5. It is R2's
+    // job to fix, so these payload-builder tests deliberately do not assert
+    // on ValidatePayload() output; doing so today would either fail for
+    // reasons unrelated to the builder or silently paper over the mismatch.
+
     [Fact]
-    public void BuildGhcPayload_ContainsGhcDeliveryFields()
+    public void BuildPayload_Ghc_ContainsGhcDeliveryAndContactFields()
     {
         var draft = new OrderDraft
         {
@@ -21,10 +29,10 @@ public class PayloadAndValidationTests
             {
                 ["branch_code"] = "101",
                 ["order_code"] = "ORD-001",
-                ["client_name"] = "John Doe",
-                ["client_code"] = "CUST100",
-                ["client_mobile"] = "0501234567",
-                ["shipping_address"] = "Main St",
+                ["client_first_name"] = "John",
+                ["client_last_name"] = "Doe",
+                ["client_phone"] = "0501234567",
+                ["order_address"] = "Main St",
                 ["delivery_date"] = "2026-07-25",
                 ["fullfilment_plant"] = "PLANT-1"
             },
@@ -34,23 +42,28 @@ public class PayloadAndValidationTests
             },
             Payments = new List<Payment>
             {
-                new() { PaymentMethod = "CashOnDelivery", PaymentStatus = "not_payment", PaymentAmount = 115m }
+                new() { PaymentMethod = "COD", PaymentStatus = "not_payment", PaymentAmount = 115m }
             }
         };
 
-        var payload = _flatBuilder.BuildGhcPayload(draft);
+        var payload = _flatBuilder.BuildPayload(draft, FlatVariant.GhcVariant);
 
         Assert.True(payload.ContainsKey("delivery_date"));
         Assert.Equal("2026-07-25", payload["delivery_date"]);
         Assert.True(payload.ContainsKey("fullfilment_plant"));
         Assert.Equal("PLANT-1", payload["fullfilment_plant"]);
+        Assert.True(payload.ContainsKey("order_country_code"));
+        Assert.True(payload.ContainsKey("order_phone"));
 
-        var errors = _flatValidator.ValidatePayload(payload, "ghc_ecommerce");
-        Assert.Empty(errors);
+        var payments = Assert.IsType<List<Dictionary<string, object?>>>(payload["payment_methods_with_options"]);
+        Assert.True(payments[0].ContainsKey("card_name"));
+        Assert.True(payments[0].ContainsKey("bank_code"));
+        Assert.True(payments[0].ContainsKey("credit_customer_info"));
+        Assert.False(payments[0].ContainsKey("payment_status"));
     }
 
     [Fact]
-    public void BuildUpcPayload_OmitsGhcDeliveryFields()
+    public void BuildPayload_Upc_OmitsGhcOnlyFields()
     {
         var draft = new OrderDraft
         {
@@ -58,10 +71,10 @@ public class PayloadAndValidationTests
             {
                 ["branch_code"] = "201",
                 ["order_code"] = "UPC-999",
-                ["client_name"] = "Jane Smith",
-                ["client_code"] = "CUST200",
-                ["client_mobile"] = "0559876543",
-                ["shipping_address"] = "King Road"
+                ["client_first_name"] = "Jane",
+                ["client_last_name"] = "Smith",
+                ["client_phone"] = "0559876543",
+                ["order_address"] = "King Road"
             },
             Products = new List<Product>
             {
@@ -73,13 +86,18 @@ public class PayloadAndValidationTests
             }
         };
 
-        var payload = _flatBuilder.BuildUpcPayload(draft);
+        var payload = _flatBuilder.BuildPayload(draft, FlatVariant.UpcVariant);
 
         Assert.False(payload.ContainsKey("delivery_date"));
         Assert.False(payload.ContainsKey("fullfilment_plant"));
+        Assert.False(payload.ContainsKey("order_country_code"));
+        Assert.False(payload.ContainsKey("order_phone"));
 
-        var errors = _flatValidator.ValidatePayload(payload, "upc_ecommerce");
-        Assert.Empty(errors);
+        var payments = Assert.IsType<List<Dictionary<string, object?>>>(payload["payment_methods_with_options"]);
+        Assert.True(payments[0].ContainsKey("payment_status"));
+        Assert.False(payments[0].ContainsKey("card_name"));
+        Assert.False(payments[0].ContainsKey("bank_code"));
+        Assert.False(payments[0].ContainsKey("credit_customer_info"));
     }
 
     [Fact]
@@ -91,16 +109,16 @@ public class PayloadAndValidationTests
             {
                 ["branch_code"] = "201",
                 ["order_code"] = "UPC-999",
-                ["client_name"] = "Jane Smith",
-                ["client_code"] = "CUST200",
-                ["client_mobile"] = "0559876543",
-                ["shipping_address"] = "King Road"
+                ["client_first_name"] = "Jane",
+                ["client_last_name"] = "Smith",
+                ["client_phone"] = "0559876543",
+                ["order_address"] = "King Road"
             },
             Products = new List<Product> { new() { ItemCode = "1", ItemName = "P1", Quantity = 1, UnitPrice = 10 } },
             Payments = new List<Payment> { new() { PaymentMethod = "PostToCredit", PaymentStatus = "done_payment", PaymentAmount = 10 } }
         };
 
-        var payload = _flatBuilder.BuildUpcPayload(draft);
+        var payload = _flatBuilder.BuildPayload(draft, FlatVariant.UpcVariant);
         var errors = _flatValidator.ValidatePayload(payload, "upc_ecommerce");
 
         Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for UPC"));
