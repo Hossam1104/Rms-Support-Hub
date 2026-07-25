@@ -54,32 +54,43 @@ public class GhcEcommerceModule : IOrderModule
         return Environments.Values.First(e => e.Available);
     }
 
+    /// <summary>Keys match the corrected contract FlatOrderPayloadBuilder reads
+    /// (see R1) -- not the pre-R1 invented client_name/client_code/client_mobile/
+    /// shipping_address/district_name/city_name, which the builder no longer
+    /// reads at all. order_payment_status is intentionally not seeded here:
+    /// build_payload always computes it from the payments list, it never reads
+    /// it from OrderData. Default values otherwise mirror get_default_data()
+    /// in _legacy_flask/config.py.</summary>
     public OrderDraft DefaultState()
     {
         return new OrderDraft
         {
             OrderData = new Dictionary<string, object?>
             {
-                ["branch_code"] = "",
-                ["order_code"] = "",
+                ["branch_code"] = "2000",
+                ["order_code"] = $"ORD{DateTime.UtcNow:yyyyMMddHHmmss}",
                 ["parent_order_code"] = "",
-                ["order_delivery_cost"] = 0m,
+                ["order_delivery_cost"] = 10.0m,
                 ["is_delivery"] = true,
-                ["order_status"] = "1",
-                ["order_payment_status"] = "1",
+                ["order_status"] = "new",
                 ["delivery_date"] = "",
                 ["delivery_from_time"] = "",
                 ["delivery_to_time"] = "",
                 ["shipping_address_2"] = "",
-                ["fullfilment_plant"] = "",
-                ["order_notes"] = "",
-                ["client_name"] = "",
-                ["client_code"] = "",
-                ["client_mobile"] = "",
-                ["client_national_id"] = "",
-                ["shipping_address"] = "",
-                ["district_name"] = "",
-                ["city_name"] = ""
+                ["fullfilment_plant"] = "MAIN",
+                ["order_notes"] = "Don't Ring the bell",
+                ["client_country_code"] = "966",
+                ["client_phone"] = "",
+                ["client_first_name"] = "",
+                ["client_middle_name"] = "",
+                ["client_last_name"] = "",
+                ["client_email"] = "",
+                ["client_birthdate"] = "",
+                ["client_gender"] = "Male",
+                ["order_address"] = "",
+                ["address_code"] = "",
+                ["order_country_code"] = "",
+                ["order_phone"] = ""
             }
         };
     }
