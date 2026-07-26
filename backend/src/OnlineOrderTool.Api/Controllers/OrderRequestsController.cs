@@ -48,6 +48,7 @@ public class OrderRequestsController : ControllerBase
             Phone: query.Phone,
             BranchCode: query.BranchCode,
             Status: query.Status,
+            Statuses: query.Statuses,
             Succeeded: query.Succeeded,
             HasException: query.HasException,
             DateFrom: query.DateFrom,

@@ -117,13 +117,14 @@ the connection string) to query.
 
 ### List
 - **`GET /api/modules/{key}/order-requests`**
-- **Query**: `q` (alias for `orderNumber`), `orderNumber`, `phone`, `branchCode`, `status` (1–9), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC`).
+- **Query**: `q` (alias for `orderNumber`), `orderNumber`, `phone`, `branchCode`, `status` (single value, 1–9), `statuses` (repeated, e.g. `?statuses=6&statuses=7` — R9 multi-select status chips; takes precedence over `status` when both are given), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC`).
 - **Response `200 OK`**: `{ items: OrderRequestListItemDto[], page, pageSize, total, totalPages, stats: OrderRequestStatsDto }`.
 - The list query never selects `RequestJson`/`ResponseJson` — only `DATALENGTH(RequestJson) AS requestBytes` and a `hasResponse` flag, so the grid stays fast regardless of blob size.
+- `statuses`/`status` both filter on `H.OrderStatus` (the `OUTER APPLY`'d header), same as every other header-derived filter (`branchCode`, `dateFrom`/`dateTo`) — these hit the missing-index gap on `RequestOrderHeaders`/`Invoices` documented since R4 (not a new regression); only `orderNumber` is a fast, indexed lookup today.
 
 ### Detail
 - **`GET /api/modules/{key}/order-requests/{id}`**
-- **Response `200 OK`**: `{ request: OrderRequestDetailDto, attempts: OrderRequestAttemptDto[], lineage: OrderRequestLineageDto }`. `request` is the only shape carrying `requestJson`/`responseJson`/`exceptionMessage`.
+- **Response `200 OK`**: `{ request: OrderRequestDetailDto, attempts: OrderRequestAttemptDto[], lineage: OrderRequestLineageDto }`. `request` is the only shape carrying `requestJson`/`responseJson`/`exceptionMessage`. `request.header.rejectionMessage` (R9) surfaces `RequestOrderHeaders.RejectionMessage` — a verified real column that R4 never selected.
 - **`404 Not Found`** if the id doesn't exist.
 
 ### Latest attempt by order number

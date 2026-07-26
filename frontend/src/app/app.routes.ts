@@ -34,7 +34,13 @@ export const routes: Routes = [
       {
         path: 'requests',
         canActivate: [capabilityGuard('orderRequests')],
-        loadComponent: () => import('./features/order-requests/order-requests.component').then(m => m.OrderRequestsComponent)
+        loadComponent: () => import('./features/order-requests/order-requests.component').then(m => m.OrderRequestsComponent),
+        children: [
+          {
+            path: ':requestId',
+            loadComponent: () => import('./features/order-requests/components/order-request-drawer.component').then(m => m.OrderRequestDrawerComponent)
+          }
+        ]
       },
       {
         path: 'validation',

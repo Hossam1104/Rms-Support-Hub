@@ -1,185 +1,185 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
-import { ApiService } from '../../core/services/api.service';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { OrderRequestsStore, OrderRequestsFilterState, EMPTY_FILTERS } from './order-requests.store';
 import { ModuleService } from '../../core/services/module.service';
-import { ToastService } from '../../core/services/toast.service';
-import { OrderRequestListItem, OrderRequestListResponse, OrderRequestCancelResponse } from '../../core/models';
+import { PageHeaderComponent, StatTileComponent, PaginationComponent } from '../../shared/ui';
 import { FilterBarComponent } from './components/filter-bar.component';
-import { OrderCardComponent } from './components/order-card.component';
-import { CancelDialogComponent } from './components/cancel-dialog.component';
+import { RequestsTableComponent } from './components/requests-table.component';
 
 /**
- * Reads the real OrderRequests table via OrderRequestsController (R5),
- * replacing the pre-R5 OrderHistoryService JSON-file store this component
- * used to call (`.../order-history`, deleted -- see remediation_plan.md
- * B10). The full stat-tile / server-side-filter / route-driven-drawer
- * rebuild is R9's job (remediation_plan.md session table); this session
- * only re-points the existing list+expand UI at the real, typed contract.
+ * Rebuilt on the R5 API and the R8 kit (remediation_plan.md B14, R9). The
+ * store is provided here (not root) so it resets whenever this route is
+ * left and re-entered, and so the routed :requestId drawer
+ * (order-request-drawer.component.ts, rendered through the <router-outlet>
+ * below) can inject the exact same instance.
  */
 @Component({
   selector: 'app-order-requests',
   standalone: true,
-  imports: [CommonModule, FilterBarComponent, OrderCardComponent, CancelDialogComponent],
+  providers: [OrderRequestsStore],
+  imports: [
+    CommonModule, FormsModule, RouterOutlet, PageHeaderComponent, StatTileComponent,
+    PaginationComponent, FilterBarComponent, RequestsTableComponent
+  ],
   template: `
-    <div class="order-requests-container">
-      <app-filter-bar
-        [environmentKeys]="environmentKeys()"
-        (filterChange)="onFilterChange($event)">
-      </app-filter-bar>
+    <app-page-header [title]="'Order Requests'" [subtitle]="moduleService.activeModule()?.label">
+      <span class="env-pill" [class.env-production]="isProduction()" [class.env-testing]="!isProduction()">
+        {{ activeEnvKey() || 'Default environment' }}
+      </span>
+      <button type="button" class="hero-btn" (click)="store.refresh()" [disabled]="store.status() === 'loading'">
+        <i class="bi bi-arrow-clockwise" [class.spin]="store.status() === 'loading'"></i> Refresh
+      </button>
+      <label class="auto-refresh-toggle">
+        <input type="checkbox" [(ngModel)]="autoRefresh" />
+        Auto-refresh 30s
+      </label>
+    </app-page-header>
 
-      <div class="orders-list" *ngIf="filteredItems().length > 0; else emptyState">
-        @for (entry of filteredItems(); track entry.id) {
-          <app-order-card
-            [entry]="entry"
-            [moduleKey]="moduleKey()"
-            (resend)="onResendOrder($event)"
-            (openCancelModal)="selectedEntryForCancel.set($event)">
-          </app-order-card>
-        }
-      </div>
-
-      <ng-template #emptyState>
-        <div class="empty-placeholder glass-card">
-          <i class="bi bi-clock-history"></i>
-          <h3>No Sent Orders Found</h3>
-          <p>Orders sent in this module will appear here automatically with full payload history.</p>
-        </div>
-      </ng-template>
+    <div class="stat-tiles">
+      <app-stat-tile
+        label="Requests" icon="bi-inbox" variant="brand"
+        [value]="store.stats()?.total || 0"
+        [active]="!store.hasActiveFilters()"
+        (clicked)="store.applyStatTile('requests')">
+      </app-stat-tile>
+      <app-stat-tile
+        label="Succeeded" icon="bi-check-circle" variant="success"
+        [value]="store.stats()?.succeeded || 0"
+        [active]="store.filters().outcome === 'succeeded'"
+        (clicked)="store.applyStatTile('succeeded')">
+      </app-stat-tile>
+      <app-stat-tile
+        label="Failed" icon="bi-x-circle" variant="danger"
+        [value]="store.stats()?.failed || 0"
+        [active]="store.filters().outcome === 'failed'"
+        (clicked)="store.applyStatTile('failed')">
+      </app-stat-tile>
+      <app-stat-tile
+        label="Cancelled" icon="bi-slash-circle" variant="muted"
+        [value]="store.stats()?.cancelled || 0"
+        [active]="isCancelledFilterActive()"
+        (clicked)="store.applyStatTile('cancelled')">
+      </app-stat-tile>
     </div>
 
-    <app-cancel-dialog
-      *ngIf="selectedEntryForCancel()"
-      [orderCode]="selectedEntryForCancel()?.orderNumber || ''"
-      (close)="selectedEntryForCancel.set(null)"
-      (confirmCancel)="onConfirmCancel($event)">
-    </app-cancel-dialog>
+    <app-filter-bar></app-filter-bar>
+
+    <app-requests-table></app-requests-table>
+
+    <app-pagination
+      [page]="store.page()"
+      [pageSize]="store.pageSize()"
+      [total]="store.total()"
+      (pageChange)="store.setPage($event)"
+      (pageSizeChange)="store.setPageSize($event)">
+    </app-pagination>
+
+    <router-outlet></router-outlet>
   `,
   styles: [`
-    .order-requests-container { display: flex; flex-direction: column; }
-    .empty-placeholder { text-align: center; padding: 60px 20px; color: var(--text-muted); margin-top: 20px; }
-    .empty-placeholder i { font-size: 3rem; margin-bottom: 12px; display: block; color: var(--text-secondary); }
-    .empty-placeholder h3 { font-size: 1.2rem; color: var(--text-primary); margin-bottom: 6px; }
+    :host { display: block; }
+    .env-pill { padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.78rem; font-weight: 700; color: var(--on-gradient); }
+    .env-production { background: var(--grad-amber); }
+    .env-testing { background: var(--grad-info); }
+    .hero-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: var(--text-primary);
+      border-radius: var(--radius-pill); padding: 8px 16px; cursor: pointer; font-size: 0.85rem;
+    }
+    .hero-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .auto-refresh-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; }
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
   `]
 })
-export class OrderRequestsComponent implements OnInit {
-  private api = inject(ApiService);
+export class OrderRequestsComponent implements OnInit, OnDestroy {
+  store = inject(OrderRequestsStore);
   moduleService = inject(ModuleService);
-  private toast = inject(ToastService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
-  moduleKey = signal<string>('');
-  items = signal<OrderRequestListItem[]>([]);
-  filteredItems = signal<OrderRequestListItem[]>([]);
-  environmentKeys = signal<string[]>([]);
+  autoRefresh = false;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private syncingFromUrl = false;
 
-  selectedEntryForCancel = signal<OrderRequestListItem | null>(null);
+  constructor() {
+    // Serialize filters/page/pageSize to query params so reload and
+    // back/forward preserve state (R9 step 4).
+    effect(() => {
+      const f = this.store.filters();
+      const page = this.store.page();
+      const pageSize = this.store.pageSize();
+      if (this.syncingFromUrl) return;
 
-  private currentFilter = { query: '', status: 'all', env: 'all' };
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: this.toQueryParams(f, page, pageSize),
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    });
+  }
 
   ngOnInit() {
-    this.route.parent?.paramMap.subscribe(params => {
-      const key = params.get('key') || '';
-      this.moduleKey.set(key);
-      if (key) {
-        this.loadRequests();
+    const parentKey = this.route.parent?.snapshot.paramMap.get('key') || '';
+    const qp = this.route.snapshot.queryParamMap;
+
+    this.syncingFromUrl = true;
+    const filters: OrderRequestsFilterState = {
+      ...EMPTY_FILTERS,
+      search: qp.get('search') || '',
+      phone: qp.get('phone') || '',
+      branchCode: qp.get('branchCode'),
+      statuses: qp.getAll('status').map(Number).filter(n => Number.isFinite(n)),
+      outcome: (qp.get('outcome') as OrderRequestsFilterState['outcome']) || 'all',
+      dateFrom: qp.get('dateFrom'),
+      dateTo: qp.get('dateTo')
+    };
+    const page = Number(qp.get('page')) || 1;
+    const pageSize = Number(qp.get('pageSize')) || 25;
+
+    const envKey = this.moduleService.activeEnvironment()?.key || null;
+    this.store.init(parentKey, envKey, filters, page, pageSize);
+    this.syncingFromUrl = false;
+
+    this.refreshTimer = setInterval(() => {
+      if (this.autoRefresh && this.store.selectedId() === null && !document.hidden) {
+        this.store.refresh();
       }
-    });
-
-    const activeMod = this.moduleService.activeModule();
-    if (activeMod?.environments) {
-      this.environmentKeys.set(activeMod.environments.map(e => e.key));
-    }
+    }, 30000);
   }
 
-  loadRequests() {
-    const key = this.moduleKey();
-    const envKey = this.currentFilter.env !== 'all' ? this.currentFilter.env : undefined;
-    this.api.get<OrderRequestListResponse>(`modules/${key}/order-requests`, { pageSize: 100, envKey }).subscribe({
-      next: res => {
-        this.items.set(res.items);
-        this.applyFilter();
-      },
-      // errorEnvelopeInterceptor already surfaces the failure via a toast
-      // (e.g. 501 for a module without Capabilities.OrderRequests yet).
-      error: () => {
-        this.items.set([]);
-        this.filteredItems.set([]);
-      }
-    });
+  ngOnDestroy() {
+    if (this.refreshTimer) clearInterval(this.refreshTimer);
   }
 
-  onFilterChange(filter: { query: string, status: string, env: string }) {
-    const envChanged = filter.env !== this.currentFilter.env;
-    this.currentFilter = filter;
-
-    if (envChanged) {
-      // env selects which database/connection the server queries -- it is
-      // not a client-side row filter, so it requires a re-fetch.
-      this.loadRequests();
-      return;
-    }
-
-    this.applyFilter();
+  isProduction(): boolean {
+    return (this.moduleService.activeEnvironment()?.environment || '') === 'Production';
   }
 
-  private applyFilter() {
-    let result = [...this.items()];
-    const { query, status } = this.currentFilter;
-
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      result = result.filter(item => item.orderNumber.toLowerCase().includes(q));
-    }
-
-    if (status === 'success') {
-      result = result.filter(item => item.isSucceeded === true);
-    } else if (status === 'failed') {
-      result = result.filter(item => item.isSucceeded === false);
-    } else if (status === 'cancelled') {
-      result = result.filter(item => item.orderStatus === 6 || item.orderStatus === 7);
-    }
-
-    this.filteredItems.set(result);
+  activeEnvKey(): string | undefined {
+    return this.moduleService.activeEnvironment()?.key;
   }
 
-  onResendOrder(entry: OrderRequestListItem) {
-    if (!entry.branchCode) {
-      this.toast.showError('This request has no branch on record; use the order builder to resend it manually.');
-      return;
-    }
-
-    const key = this.moduleKey();
-    this.api.post<{ success: boolean, statusCode: number }>(
-      `modules/${key}/order-requests/${entry.id}/resend`,
-      { branchCode: entry.branchCode }
-    ).subscribe({
-      next: res => {
-        if (res.success) {
-          this.toast.showSuccess(`Order ${entry.orderNumber} re-sent successfully!`);
-        } else {
-          this.toast.showError(`Re-send failed. Status: ${res.statusCode}`);
-        }
-        this.loadRequests();
-      },
-      error: () => {}
-    });
+  isCancelledFilterActive(): boolean {
+    const s = this.store.filters().statuses;
+    return s.length === 2 && s.includes(6) && s.includes(7);
   }
 
-  onConfirmCancel(reason: string) {
-    const entry = this.selectedEntryForCancel();
-    if (!entry) return;
-
-    const key = this.moduleKey();
-    this.api.post<OrderRequestCancelResponse>(`modules/${key}/order-requests/${entry.id}/cancel`, { reason }).subscribe({
-      next: res => {
-        this.toast.showSuccess(res.success
-          ? `Order ${entry.orderNumber} cancelled successfully.`
-          : `Cancellation sent, upstream returned status ${res.statusCode}.`);
-        this.selectedEntryForCancel.set(null);
-        this.loadRequests();
-      },
-      error: () => this.selectedEntryForCancel.set(null)
-    });
+  private toQueryParams(f: OrderRequestsFilterState, page: number, pageSize: number): Record<string, string | string[] | null> {
+    return {
+      search: f.search || null,
+      phone: f.phone || null,
+      branchCode: f.branchCode || null,
+      status: f.statuses.length ? f.statuses.map(String) : null,
+      outcome: f.outcome !== 'all' ? f.outcome : null,
+      dateFrom: f.dateFrom || null,
+      dateTo: f.dateTo || null,
+      page: page > 1 ? String(page) : null,
+      pageSize: pageSize !== 25 ? String(pageSize) : null
+    };
   }
 }

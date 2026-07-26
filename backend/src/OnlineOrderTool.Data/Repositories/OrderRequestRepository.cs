@@ -72,7 +72,14 @@ public class OrderRequestRepository : IOrderRequestRepository
             clauses.Add("H.BranchCode = @BranchCode");
             p.Add("BranchCode", filters.BranchCode.Trim());
         }
-        if (filters.Status.HasValue)
+        if (filters.Statuses is { Count: > 0 })
+        {
+            // Dapper expands a list parameter into IN (@Statuses1, @Statuses2, ...)
+            // automatically -- still fully parameterized, never string-built.
+            clauses.Add("H.OrderStatus IN @Statuses");
+            p.Add("Statuses", filters.Statuses);
+        }
+        else if (filters.Status.HasValue)
         {
             clauses.Add("H.OrderStatus = @Status");
             p.Add("Status", filters.Status.Value);
@@ -209,7 +216,7 @@ public class OrderRequestRepository : IOrderRequestRepository
             SELECT TOP 1
                 H.Id, H.OrderNumber, H.BranchCode, H.BranchName, H.OrderStatus, H.OrderDate,
                 H.ConsumerMobile, H.Address, H.GrossTotal, H.NetTotal, H.TotalVat, H.TotalDiscount,
-                H.OrderPaymentMethod, H.OrderNote, H.ParentOrderNumber
+                H.OrderPaymentMethod, H.OrderNote, H.ParentOrderNumber, H.RejectionMessage
             FROM dbo.RequestOrderHeaders AS H
             WHERE H.OrderNumber = @OrderNumber
             ORDER BY H.Id DESC",
@@ -227,7 +234,7 @@ public class OrderRequestRepository : IOrderRequestRepository
                 headerRow.OrderDate, headerRow.ConsumerMobile, headerRow.Address,
                 headerRow.GrossTotal ?? 0m, headerRow.NetTotal ?? 0m, headerRow.TotalVat ?? 0m,
                 headerRow.TotalDiscount ?? 0m, headerRow.OrderPaymentMethod, headerRow.OrderNote,
-                headerRow.ParentOrderNumber,
+                headerRow.ParentOrderNumber, headerRow.RejectionMessage,
                 OrderRequestStatus.IsResendAllowed(headerRow.OrderStatus),
                 OrderRequestStatus.IsCancelAllowed(headerRow.OrderStatus));
 
@@ -407,6 +414,7 @@ public class OrderRequestRepository : IOrderRequestRepository
         public string? OrderPaymentMethod { get; set; }
         public string? OrderNote { get; set; }
         public string? ParentOrderNumber { get; set; }
+        public string? RejectionMessage { get; set; }
     }
 
     private class DetailLineRow

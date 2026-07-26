@@ -58,6 +58,7 @@ export interface OrderRequestHeader {
   orderPaymentMethod: string | null;
   orderNote: string | null;
   parentOrderNumber: string | null;
+  rejectionMessage: string | null;
   canResend: boolean;
   canCancel: boolean;
 }

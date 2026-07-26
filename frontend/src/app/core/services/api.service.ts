@@ -4,14 +4,24 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /** Query-string values HttpParams accepts natively; undefined/null entries
- * are dropped rather than serialized as the literal string "undefined". */
-export type ApiParams = Record<string, string | number | boolean | undefined | null>;
+ * are dropped rather than serialized as the literal string "undefined".
+ * Array values are sent as repeated `key=a&key=b` params -- how ASP.NET
+ * Core model-binds an `int[]`/`string[]` query parameter (e.g.
+ * OrderRequestListQuery.Statuses for R9's multi-select status chips). */
+export type ApiParamValue = string | number | boolean | undefined | null;
+export type ApiParams = Record<string, ApiParamValue | ApiParamValue[]>;
 
 function toHttpParams(params?: ApiParams): HttpParams {
   let httpParams = new HttpParams();
   if (!params) return httpParams;
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        if (entry !== undefined && entry !== null) {
+          httpParams = httpParams.append(key, entry);
+        }
+      }
+    } else if (value !== undefined && value !== null) {
       httpParams = httpParams.set(key, value);
     }
   }

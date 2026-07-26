@@ -1,12 +1,15 @@
 namespace OnlineOrderTool.Core.DTOs;
 
 /// <summary>Filters for OrderRequestRepository.ListAsync/CountAsync/StatsAsync.
-/// All optional -- an empty filter set returns everything.</summary>
+/// All optional -- an empty filter set returns everything. Statuses (R9,
+/// multi-select status chips) takes precedence over the single-value Status
+/// when both are supplied; Status is kept for any other/older caller.</summary>
 public record OrderRequestFilters(
     string? OrderNumber = null,
     string? Phone = null,
     string? BranchCode = null,
     int? Status = null,
+    IReadOnlyList<int>? Statuses = null,
     bool? Succeeded = null,
     bool? HasException = null,
     DateTime? DateFrom = null,
@@ -59,6 +62,10 @@ public record OrderRequestHeaderDto(
     string? OrderPaymentMethod,
     string? OrderNote,
     string? ParentOrderNumber,
+    /// <summary>RequestOrderHeaders.RejectionMessage -- verified real column
+    /// (docs/database-schema.md §"RequestOrderHeaders"), added in R9 for the
+    /// Overview tab's amber callout; not selected before this session.</summary>
+    string? RejectionMessage,
     bool CanResend,
     bool CanCancel
 );

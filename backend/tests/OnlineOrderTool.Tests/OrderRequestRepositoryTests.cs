@@ -109,6 +109,29 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
+    public void BuildFilters_Statuses_ProducesInClauseAndTakesPrecedenceOverSingleStatus()
+    {
+        var filters = new OrderRequestFilters(Status: 9, Statuses: new[] { 6, 7 });
+
+        var (whereSql, p) = OrderRequestRepository.BuildFilters(filters);
+
+        Assert.Contains("H.OrderStatus IN @Statuses", whereSql);
+        Assert.DoesNotContain("@Status ", whereSql); // the single-value form must not also be bound
+        Assert.Equal(new[] { 6, 7 }, (IEnumerable<int>)p.Get<object>("Statuses"));
+    }
+
+    [Fact]
+    public void BuildFilters_SingleStatus_UsedWhenStatusesIsAbsent()
+    {
+        var filters = new OrderRequestFilters(Status: 9);
+
+        var (whereSql, p) = OrderRequestRepository.BuildFilters(filters);
+
+        Assert.Contains("H.OrderStatus = @Status", whereSql);
+        Assert.Equal(9, p.Get<object>("Status"));
+    }
+
+    [Fact]
     public void BuildFilters_HasExceptionFalse_FiltersOnIsNullNotAParameter()
     {
         var (whereSql, _) = OrderRequestRepository.BuildFilters(new OrderRequestFilters(HasException: false));

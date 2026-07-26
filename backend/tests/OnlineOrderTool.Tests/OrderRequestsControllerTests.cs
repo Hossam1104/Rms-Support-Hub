@@ -61,6 +61,7 @@ public class OrderRequestsControllerTests
             OrderPaymentMethod: "COD",
             OrderNote: null,
             ParentOrderNumber: null,
+            RejectionMessage: null,
             CanResend: true,
             CanCancel: true),
         Details: new List<OrderRequestDetailLineDto>(),
