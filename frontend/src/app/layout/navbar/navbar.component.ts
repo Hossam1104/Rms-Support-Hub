@@ -1,11 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
+import { ModuleService } from '../../core/services/module.service';
+import { EnvBadgeComponent } from '../../shared/ui';
+import { EnvironmentDto } from '../../core/models';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, EnvBadgeComponent],
   template: `
     <header class="navbar glass-panel">
       <div class="navbar-brand">
@@ -13,6 +16,12 @@ import { ThemeService } from '../../core/services/theme.service';
         <span class="brand-subtitle">Multi-Client Order System</span>
       </div>
       <div class="navbar-actions">
+        <app-env-badge
+          *ngIf="moduleService.activeModule() as m"
+          [environment]="moduleService.activeEnvironment()"
+          [options]="m.environments"
+          (select)="onSelectEnvironment($event)">
+        </app-env-badge>
         <button type="button" class="btn-action glass-card" (click)="toggleDocs()">
           <i class="bi bi-book"></i>
           <span>Docs</span>
@@ -71,8 +80,13 @@ import { ThemeService } from '../../core/services/theme.service';
 })
 export class NavbarComponent {
   themeService = inject(ThemeService);
+  moduleService = inject(ModuleService);
 
   toggleDocs() {
     alert('Project Documentation available in docs/ folder');
+  }
+
+  onSelectEnvironment(env: EnvironmentDto) {
+    this.moduleService.selectEnvironment(env);
   }
 }

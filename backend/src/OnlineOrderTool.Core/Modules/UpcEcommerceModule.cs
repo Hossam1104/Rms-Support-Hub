@@ -72,18 +72,14 @@ public class UpcEcommerceModule : IOrderModule
             VisualUrl = "static/assets/upc_logo.svg",
             VisualAlt = "UPC logo",
             Available = true,
+            IsDefault = true,
             ApiUrl = "http://10.10.10.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
             CancelUrl = "http://10.10.10.181:8080/RmsMainServerApi/api/Order/CancelOrder",
             ConnectionStringName = "UpcEcommerceTest"
         }
     };
 
-    public ModuleEnvironment GetEnvironment(string? envKey)
-    {
-        if (!string.IsNullOrEmpty(envKey) && Environments.TryGetValue(envKey, out var env))
-            return env;
-        return Environments.Values.First(e => e.Available);
-    }
+    public ModuleEnvironment GetEnvironment(string? envKey) => ModuleEnvironmentResolver.Resolve(Environments, envKey);
 
     /// <summary>Keys match the corrected contract FlatOrderPayloadBuilder reads
     /// (see R1) -- not the pre-R1 invented client_name/client_code/client_mobile/

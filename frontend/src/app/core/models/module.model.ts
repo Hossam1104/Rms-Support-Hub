@@ -18,6 +18,7 @@ export interface EnvironmentDto {
   statusLabel: string;
   hasApiUrl: boolean;
   hasCancelUrl: boolean;
+  isDefault: boolean;
 }
 
 /** Mirrors OnlineOrderTool.Core.Modules.ModuleCapabilities, exposed on

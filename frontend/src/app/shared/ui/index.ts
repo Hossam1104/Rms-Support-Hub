@@ -13,3 +13,4 @@ export * from './riyal/riyal.component';
 export * from './copy-button/copy-button.component';
 export * from './filter-chip/filter-chip.component';
 export * from './page-header/page-header.component';
+export * from './env-badge/env-badge.component';

@@ -5,9 +5,10 @@ import { OrderRequestsStore } from '../order-requests.store';
 import { OrderRequestDetail, OrderRequestCancelResponse, SendOrderResult, ApiError } from '../../../core/models';
 import { ToastService } from '../../../core/services/toast.service';
 import { ApiService } from '../../../core/services/api.service';
+import { ModuleService } from '../../../core/services/module.service';
 import {
   DrawerComponent, StatusPillComponent, JsonTreeComponent, RiyalComponent,
-  CopyButtonComponent, EmptyStateComponent, SkeletonComponent
+  CopyButtonComponent, EmptyStateComponent, SkeletonComponent, ConfirmDialogComponent
 } from '../../../shared/ui';
 import { CancelRequestDialogComponent, CancelDialogResult, CancelErrorState } from './cancel-request-dialog.component';
 import { ResendRequestDialogComponent } from './resend-request-dialog.component';
@@ -34,7 +35,8 @@ function materialNumberViews(m: string | null): { full: string; short: string } 
   standalone: true,
   imports: [
     CommonModule, DrawerComponent, StatusPillComponent, JsonTreeComponent, RiyalComponent,
-    CopyButtonComponent, EmptyStateComponent, SkeletonComponent, CancelRequestDialogComponent, ResendRequestDialogComponent
+    CopyButtonComponent, EmptyStateComponent, SkeletonComponent, CancelRequestDialogComponent, ResendRequestDialogComponent,
+    ConfirmDialogComponent
   ],
   template: `
     <app-drawer [title]="store.selected()?.request?.orderNumber || 'Loading...'" (close)="onClose()">
@@ -281,6 +283,20 @@ function materialNumberViews(m: string | null): { full: string; short: string } 
       (close)="showResend.set(false); resendError.set(null)"
       (confirm)="onResendConfirm($event)">
     </app-resend-request-dialog>
+
+    <app-confirm-dialog
+      *ngIf="showProdCancelConfirm()"
+      variant="danger"
+      title="Cancel on Production?"
+      [message]="'This will send a real cancellation to the live RMS API on ' + (moduleService.activeEnvironment()?.key) + '.'"
+      [requireReason]="true"
+      [requiredTypedValue]="moduleService.activeEnvironment()?.key || ''"
+      reasonLabel="Type the environment name to confirm"
+      [reasonPlaceholder]="moduleService.activeEnvironment()?.key || ''"
+      confirmLabel="Cancel order on Production"
+      (cancel)="showProdCancelConfirm.set(false); pendingCancelResult = null"
+      (confirm)="onConfirmProdCancel()">
+    </app-confirm-dialog>
   `,
   styles: [`
     .detail-skeleton { display: flex; flex-direction: column; gap: 16px; }
@@ -354,6 +370,7 @@ function materialNumberViews(m: string | null): { full: string; short: string } 
 })
 export class OrderRequestDrawerComponent implements OnInit, OnDestroy {
   store = inject(OrderRequestsStore);
+  moduleService = inject(ModuleService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private toast = inject(ToastService);
@@ -372,6 +389,9 @@ export class OrderRequestDrawerComponent implements OnInit, OnDestroy {
   showCancel = signal(false);
   cancelSubmitting = signal(false);
   cancelError = signal<CancelErrorState | null>(null);
+
+  showProdCancelConfirm = signal(false);
+  pendingCancelResult: CancelDialogResult | null = null;
 
   showResend = signal(false);
   resendSubmitting = signal(false);
@@ -442,7 +462,28 @@ export class OrderRequestDrawerComponent implements OnInit, OnDestroy {
     return Math.abs(this.sumPayments(detail) - h.netTotal) < 0.5;
   }
 
+  /** Gates the actual cancel POST behind a typed confirmation when the
+   * active lane is Production (U1, UI_Rework_Plan.md §3 decision 4) -- the
+   * reason captured by app-cancel-request-dialog is preserved and reused
+   * once the operator types the environment name to confirm. */
   onCancelConfirm(result: CancelDialogResult) {
+    if (this.moduleService.activeEnvironment()?.environment === 'Production') {
+      this.pendingCancelResult = result;
+      this.showProdCancelConfirm.set(true);
+      return;
+    }
+    this.performCancel(result);
+  }
+
+  onConfirmProdCancel() {
+    this.showProdCancelConfirm.set(false);
+    if (this.pendingCancelResult) {
+      this.performCancel(this.pendingCancelResult);
+      this.pendingCancelResult = null;
+    }
+  }
+
+  private performCancel(result: CancelDialogResult) {
     const detail = this.store.selected();
     if (!detail) return;
     const key = this.store.moduleKey();
@@ -452,7 +493,8 @@ export class OrderRequestDrawerComponent implements OnInit, OnDestroy {
 
     this.api.post<OrderRequestCancelResponse>(
       `modules/${key}/order-requests/${detail.request.id}/cancel`,
-      { reason: result.reason, customUrl: result.customUrl }
+      { reason: result.reason, customUrl: result.customUrl },
+      { envKey: this.store.envKey() || undefined }
     ).subscribe({
       next: res => {
         this.cancelSubmitting.set(false);
@@ -484,7 +526,11 @@ export class OrderRequestDrawerComponent implements OnInit, OnDestroy {
     this.resendSubmitting.set(true);
     this.resendError.set(null);
 
-    this.api.post<SendOrderResult>(`modules/${key}/order-requests/${detail.request.id}/resend`, { branchCode }).subscribe({
+    this.api.post<SendOrderResult>(
+      `modules/${key}/order-requests/${detail.request.id}/resend`,
+      { branchCode },
+      { envKey: this.store.envKey() || undefined }
+    ).subscribe({
       next: res => {
         this.resendSubmitting.set(false);
         this.showResend.set(false);

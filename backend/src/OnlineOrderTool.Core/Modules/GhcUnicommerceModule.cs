@@ -64,18 +64,14 @@ public class GhcUnicommerceModule : IOrderModule
             VisualUrl = "static/assets/whites_logo.svg",
             VisualAlt = "GHC Uni-Commerce logo",
             Available = false,
+            IsDefault = true,
             ApiUrl = null,
             CancelUrl = null,
             ConnectionStringName = "GhcUnicommerce"
         }
     };
 
-    public ModuleEnvironment GetEnvironment(string? envKey)
-    {
-        if (!string.IsNullOrEmpty(envKey) && Environments.TryGetValue(envKey, out var env))
-            return env;
-        return Environments.Values.First();
-    }
+    public ModuleEnvironment GetEnvironment(string? envKey) => ModuleEnvironmentResolver.Resolve(Environments, envKey);
 
     public OrderDraft DefaultState()
     {

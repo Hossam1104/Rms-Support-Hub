@@ -28,7 +28,7 @@ export type ConfirmVariant = 'danger' | 'brand';
 
       <div class="confirm-actions">
         <button type="button" class="btn-secondary" (click)="cancel.emit()">{{ cancelLabel }}</button>
-        <button type="button" class="btn-confirm" [disabled]="requireReason && !reason.trim()" (click)="confirm.emit(reason.trim())">
+        <button type="button" class="btn-confirm" [disabled]="isConfirmDisabled()" (click)="confirm.emit(reason.trim())">
           {{ confirmLabel }}
         </button>
       </div>
@@ -88,10 +88,21 @@ export class ConfirmDialogComponent {
   @Input() confirmLabel: string = 'Confirm';
   @Input() cancelLabel: string = 'Cancel';
 
+  /** U1 (UI_Rework_Plan.md §3 decision 4): when set, the operator must type
+   * this exact value (typically the environment's Key, e.g. "UPC Production")
+   * into the reason field before Confirm enables -- gates Production sends
+   * and cancels behind a real typed confirmation instead of a single click. */
+  @Input() requiredTypedValue?: string;
+
   @Output() confirm = new EventEmitter<string>();
   @Output() cancel = new EventEmitter<void>();
 
   reason: string = '';
+
+  isConfirmDisabled(): boolean {
+    if (this.requiredTypedValue) return this.reason.trim() !== this.requiredTypedValue;
+    return this.requireReason && !this.reason.trim();
+  }
 
   @HostListener('document:keydown.escape')
   onEscape() {

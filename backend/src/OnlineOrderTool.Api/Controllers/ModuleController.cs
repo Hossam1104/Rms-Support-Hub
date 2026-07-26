@@ -40,7 +40,8 @@ public class ModuleController : ControllerBase
                 Available: e.Available,
                 StatusLabel: e.StatusLabel,
                 HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
-                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl)
+                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl),
+                IsDefault: e.IsDefault
             )).ToList(),
             Capabilities: ToDto(m.Capabilities)
         ));
@@ -84,7 +85,8 @@ public class ModuleController : ControllerBase
                 Available: e.Available,
                 StatusLabel: e.StatusLabel,
                 HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
-                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl)
+                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl),
+                IsDefault: e.IsDefault
             )).ToList(),
             Capabilities: ToDto(module.Capabilities)
         );

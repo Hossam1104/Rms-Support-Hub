@@ -24,6 +24,14 @@ public record ModuleEnvironment
     public string? CancelUrl { get; init; }
     public DbConnectionConfig? DbConfig { get; init; }
 
+    /// <summary>U1 (UI_Rework_Plan.md D3/D4): the environment every module's
+    /// GetEnvironment(null) resolves to, so the default is an explicit flag
+    /// rather than positional dictionary order (which silently resolved to
+    /// Production because it happened to be inserted first). Exactly one
+    /// environment per module should be flagged true, and it should never be
+    /// the Production one.</summary>
+    public bool IsDefault { get; init; }
+
     /// <summary>The ConnectionStrings:&lt;name&gt; key (see appsettings.json /
     /// user-secrets) this environment's database lives under. Lets
     /// LookupController/OrderRequestsController resolve a connection string

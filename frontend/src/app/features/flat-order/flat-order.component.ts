@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
@@ -14,6 +14,7 @@ import { PaymentsTableComponent } from './components/payments-table.component';
 import { ApiConfigComponent } from './components/api-config.component';
 import { AddProductDialogComponent } from './components/add-product-dialog.component';
 import { AddPaymentDialogComponent } from './components/add-payment-dialog.component';
+import { ConfirmDialogComponent } from '../../shared/ui';
 
 /** Client-side preview total -- NOT the backend's full TotalsSummary (which
  * also reports totalProductAmount/totalProductVat/orderDiscount). Kept
@@ -52,7 +53,8 @@ function asNumber(value: unknown, fallback = 0): number {
     PaymentsTableComponent,
     ApiConfigComponent,
     AddProductDialogComponent,
-    AddPaymentDialogComponent
+    AddPaymentDialogComponent,
+    ConfirmDialogComponent
   ],
   template: `
     <div class="flat-order-container">
@@ -107,6 +109,20 @@ function asNumber(value: unknown, fallback = 0): number {
       </div>
     </div>
 
+    <app-confirm-dialog
+      *ngIf="showProdSendConfirm()"
+      variant="danger"
+      title="Send to Production?"
+      [message]="'This will send a real order to the live RMS API on ' + (moduleService.activeEnvironment()?.key) + '.'"
+      [requireReason]="true"
+      [requiredTypedValue]="moduleService.activeEnvironment()?.key || ''"
+      reasonLabel="Type the environment name to confirm"
+      [reasonPlaceholder]="moduleService.activeEnvironment()?.key || ''"
+      confirmLabel="Send to Production"
+      (cancel)="showProdSendConfirm.set(false); pendingSendEvent = null"
+      (confirm)="onConfirmProdSend()">
+    </app-confirm-dialog>
+
     <app-add-product-dialog
       *ngIf="showAddProductDialog()"
       [moduleKey]="moduleKey()"
@@ -156,6 +172,28 @@ export class FlatOrderComponent implements OnInit {
 
   showAddProductDialog = signal<boolean>(false);
   showAddPaymentDialog = signal<boolean>(false);
+
+  showProdSendConfirm = signal<boolean>(false);
+  pendingSendEvent: { url: string } | null = null;
+
+  /** undefined until the first environment is known, so the effect below
+   * never re-fetches on the initial load -- only on an actual switch. */
+  private lastEnvKey: string | undefined = undefined;
+
+  constructor() {
+    // U1 (UI_Rework_Plan.md D4 step 5): switching environments must clear
+    // any environment-scoped cached state and re-fetch the draft, not keep
+    // showing whatever was loaded under the previous lane.
+    effect(() => {
+      const envKey = this.moduleService.activeEnvironment()?.key;
+      if (envKey === undefined) return;
+
+      if (this.lastEnvKey !== undefined && this.lastEnvKey !== envKey && this.moduleKey()) {
+        this.loadState();
+      }
+      this.lastEnvKey = envKey;
+    });
+  }
 
   ngOnInit() {
     this.route.parent?.paramMap.subscribe(params => {
@@ -291,7 +329,27 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  /** Gates the send behind a typed confirmation when the active lane is
+   * Production (U1, UI_Rework_Plan.md §3 decision 4) -- Testing sends
+   * proceed immediately. */
   onSendOrder(event: { url: string }) {
+    if (this.moduleService.activeEnvironment()?.environment === 'Production') {
+      this.pendingSendEvent = event;
+      this.showProdSendConfirm.set(true);
+      return;
+    }
+    this.performSend(event);
+  }
+
+  onConfirmProdSend() {
+    this.showProdSendConfirm.set(false);
+    if (this.pendingSendEvent) {
+      this.performSend(this.pendingSendEvent);
+      this.pendingSendEvent = null;
+    }
+  }
+
+  private performSend(event: { url: string }) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.landedRequestId.set(null);

@@ -145,7 +145,7 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var env = module.GetEnvironment(null);
+        var env = module.GetEnvironment(request.EnvironmentKey);
         if (string.IsNullOrWhiteSpace(env.CancelUrl))
         {
             return BadRequest(new { error = $"Cancellation URL is not configured for environment '{env.Key}'." });

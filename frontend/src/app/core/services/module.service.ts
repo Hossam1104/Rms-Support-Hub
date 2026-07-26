@@ -9,6 +9,8 @@ export interface ModuleDetailResponse {
   state: OrderDraft;
 }
 
+const ENV_STORAGE_PREFIX = 'onlineOrderTool.activeEnvironment.';
+
 /**
  * The module list used to be ~90 lines of hardcoded environments, logos and
  * URLs duplicating the backend's own module registry (remediation_plan.md
@@ -41,24 +43,39 @@ export class ModuleService {
     const foundLocal = this.modules().find(m => m.key === key);
     if (foundLocal) {
       this.activeModule.set(foundLocal);
-      if (foundLocal.environments.length > 0 && !this.activeEnvironment()) {
-        this.activeEnvironment.set(foundLocal.environments[0]);
-      }
+      this.restoreEnvironment(foundLocal);
     }
 
     return this.api.get<ModuleDetailResponse>(`modules/${key}`).pipe(
       tap(res => {
         if (res?.module) {
           this.activeModule.set(res.module);
-          if (res.module.environments.length > 0 && !this.activeEnvironment()) {
-            this.activeEnvironment.set(res.module.environments[0]);
-          }
+          this.restoreEnvironment(res.module);
         }
       })
     );
   }
 
+  /** Persists per module (U1, UI_Rework_Plan.md D4) so a Testing choice on
+   * one module never leaks into another module's default. */
   selectEnvironment(env: EnvironmentDto) {
     this.activeEnvironment.set(env);
+    const moduleKey = this.activeModule()?.key;
+    if (moduleKey) {
+      localStorage.setItem(ENV_STORAGE_PREFIX + moduleKey, env.key);
+    }
+  }
+
+  /** The default lane is the module's flagged IsDefault environment --
+   * never environments[0], which used to resolve to Production purely
+   * because of dictionary insertion order (D4). The operator's own choice,
+   * persisted per module in localStorage, wins as long as it still names a
+   * real environment on this module -- otherwise it's discarded rather than
+   * silently applied to the wrong module. */
+  private restoreEnvironment(module: ModuleDto) {
+    const storedKey = localStorage.getItem(ENV_STORAGE_PREFIX + module.key);
+    const stored = storedKey ? module.environments.find(e => e.key === storedKey) : undefined;
+    const fallbackDefault = module.environments.find(e => e.isDefault);
+    this.activeEnvironment.set(stored ?? fallbackDefault ?? module.environments[0] ?? null);
   }
 }

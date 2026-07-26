@@ -17,7 +17,8 @@ public record EnvironmentDto(
     bool Available,
     string StatusLabel,
     bool HasApiUrl,
-    bool HasCancelUrl
+    bool HasCancelUrl,
+    bool IsDefault
 );
 
 /// <summary>Mirrors OnlineOrderTool.Core.Modules.ModuleCapabilities -- exposed
@@ -48,7 +49,7 @@ public record UpdateOrderFieldRequest(string FieldName, object? Value);
 
 public record SendOrderRequest(string? EnvironmentKey, string? CustomApiUrl);
 
-public record CancelOrderRequest(string OrderNumber, string CancelReason);
+public record CancelOrderRequest(string OrderNumber, string CancelReason, string? EnvironmentKey);
 
 public record LookupResultDto(
     bool Success,

@@ -76,18 +76,14 @@ public class GhcEcommerceModule : IOrderModule
             VisualUrl = "static/assets/whites_logo.svg",
             VisualAlt = "GHC logo",
             Available = true,
+            IsDefault = true,
             ApiUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CreateAndAssignOrder",
             CancelUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder",
             ConnectionStringName = "GhcEcommerce"
         }
     };
 
-    public ModuleEnvironment GetEnvironment(string? envKey)
-    {
-        if (!string.IsNullOrEmpty(envKey) && Environments.TryGetValue(envKey, out var env))
-            return env;
-        return Environments.Values.First(e => e.Available);
-    }
+    public ModuleEnvironment GetEnvironment(string? envKey) => ModuleEnvironmentResolver.Resolve(Environments, envKey);
 
     /// <summary>Keys match the corrected contract FlatOrderPayloadBuilder reads
     /// (see R1) -- not the pre-R1 invented client_name/client_code/client_mobile/
