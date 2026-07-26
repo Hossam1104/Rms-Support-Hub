@@ -54,7 +54,8 @@ public class ModuleController : ControllerBase
         ConsumerLookup: c.ConsumerLookup,
         OrderRequests: c.OrderRequests,
         Cancel: c.Cancel,
-        Resend: c.Resend
+        Resend: c.Resend,
+        HasDeliveryFields: c.HasDeliveryFields
     );
 
     [HttpGet("{key}")]

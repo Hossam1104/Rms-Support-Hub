@@ -30,6 +30,7 @@ export interface ModuleCapabilities {
   orderRequests: boolean;
   cancel: boolean;
   resend: boolean;
+  hasDeliveryFields: boolean;
 }
 
 /** Mirrors OnlineOrderTool.Core.DTOs.ModuleDto. */

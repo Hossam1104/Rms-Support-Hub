@@ -1,12 +1,9 @@
 # Online Order Tool — SQL Server Database Query Schema (the SQL contract)
 
-> **This file is the SQL contract.** No repository query may reference a table
-> or column name that is not either (a) verified live below, in the "Schema
+> **This file is the SQL contract.** No repository query may reference a
+> table or column name that is not verified live below, in the "Schema
 > discovery" table lifted verbatim from
-> [`Prompts/UPC_Enhancments_Plan.md`](Prompts/UPC_Enhancments_Plan.md), or
-> (b) one of the four real queries below, ported line-for-line from the
-> known-good Python reference at
-> [`_legacy_flask/modules/flat_order.py`](../_legacy_flask/modules/flat_order.py).
+> [`Prompts/UPC_Enhancments_Plan.md`](Prompts/UPC_Enhancments_Plan.md).
 >
 > A previous version of this document presented **invented** table/column
 > names (`H.Status`, `H.CreatedDateTime`, `H.CustomerMobile`, `C.Name`,
@@ -17,10 +14,14 @@
 > defect list and [`ContractTests.cs`](../backend/tests/OnlineOrderTool.Tests/ContractTests.cs)
 > for the automated guard against regressing this again.
 >
-> GHC's `lookup_item` query below is carried over from the legacy code
-> **unverified** (its comment says "still-guessed") — treat it as the best
-> available reference, not as confirmed, until GHC database credentials are
-> supplied and it can be checked live the same way the UPC queries were.
+> The queries below were originally ported line-for-line from the
+> now-removed Python reference (`_legacy_flask/modules/flat_order.py`, part
+> of R10's decommission — see git history before this commit if you need
+> the original source) and have since been superseded in places by the
+> actual C# implementation; where they differ, **the C# source under
+> `backend/src/OnlineOrderTool.Data/Repositories/` is authoritative**, not
+> this document. GHC's `lookup_item` query (§3.1) is still carried over
+> **unverified** — GHC database credentials have never been confirmed live.
 
 ---
 
@@ -177,58 +178,64 @@ below) — never an exact string match, since the stored format varies. When
 `FullAddress` is blank, compose from `StreetName`, `Building`, `Floor`,
 `Landmark`, `Area` (join non-empty parts with `", "`).
 
-### 3.4 UPC order search (`UpcOrderValidationRepository` / Order Requests list) — **verified live**
+### 3.4 Order Requests list/detail (`OrderRequestRepository`) — **verified live, implemented in R4/R5/R9**
 
-Base table for search is `RequestOrderHeaders`; `OrderRequests` and
-`Invoices` are joined via `OUTER APPLY TOP 1` for the reason in §1.
+The instruction behind this whole feature: *"The request and its response
+are already saved in table `OrderRequests`, so no need to save them
+locally."* **`OrderRequests` is the base table**, not `RequestOrderHeaders`
+— an earlier draft of this repository (`UpcOrderValidationRepository`,
+deleted in R5) queried `RequestOrderHeaders` first, which meant orders that
+never produced a header (most failures) were invisible. `RequestOrderHeaders`
+and `Invoices` are joined via `OUTER APPLY TOP 1` for the reason in §1.
 
 ```sql
-SELECT TOP 200
-    H.Id, H.OrderNumber, H.BranchCode, H.BranchName, H.OrderStatus,
-    H.OrderDate, H.ConsumerMobile, H.NetTotal, H.ParentOrderNumber,
-    OR2.IsSucceeded,
-    I.Barcode, I.CloseDateLocalTime
-FROM RequestOrderHeaders AS H
+-- List (OnlineOrderTool.Data/Repositories/OrderRequestRepository.cs::BuildListSql)
+-- RequestJson/ResponseJson are never selected here -- only DATALENGTH/existence,
+-- so the list stays fast regardless of blob size. Paginated with OFFSET/FETCH.
+SELECT
+    R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
+    DATALENGTH(R.RequestJson) AS RequestBytes,
+    CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse,
+    H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber,
+    I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
+FROM dbo.OrderRequests AS R
     OUTER APPLY (
-        SELECT TOP 1 IsSucceeded
-        FROM OrderRequests
-        WHERE OrderNumber = H.OrderNumber
+        SELECT TOP 1 Id, BranchCode, BranchName, OrderStatus, ParentOrderNumber
+        FROM dbo.RequestOrderHeaders
+        WHERE OrderNumber = R.OrderNumber
         ORDER BY Id DESC
-    ) AS OR2
+    ) AS H
     OUTER APPLY (
         SELECT TOP 1 Barcode, CloseDateLocalTime
-        FROM Invoices
-        WHERE OnlineOrderNumber = H.OrderNumber
+        FROM dbo.Invoices
+        WHERE OnlineOrderNumber = R.OrderNumber
         ORDER BY Id DESC
     ) AS I
 WHERE 1 = 1
-  -- AND H.OrderNumber = @OrderNumber
+  -- AND R.OrderNumber = @OrderNumber                      -- the only filter that hits an index today (see §6)
   -- AND RIGHT(H.ConsumerMobile, 9) = @Phone9
   -- AND H.BranchCode = @BranchCode
-  -- AND H.OrderStatus = @Status
-  -- AND H.OrderDate >= @DateFrom
-  -- AND H.OrderDate < DATEADD(day, 1, @DateTo)
-ORDER BY H.OrderDate DESC;
+  -- AND H.OrderStatus = @Status                            -- or: AND H.OrderStatus IN @Statuses (R9 multi-select)
+  -- AND R.IsSucceeded = @Succeeded
+  -- AND R.ExceptionMessage IS [NOT] NULL
+  -- AND R.OrderDate >= @DateFrom
+  -- AND R.OrderDate < DATEADD(day, 1, @DateTo)
+ORDER BY R.OrderDate DESC, R.Id DESC
+OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
 ```
 
-The detail view (`get_upc_order_details` in the legacy source) follows the
-same `OUTER APPLY` pattern keyed by `H.Id` (preferred) or `H.OrderNumber`,
-and additionally reads `RequestOrderDetails` and `RequestOrderTransactions`
-filtered by `RequestOrderHeaderId`. The latest raw payload for a resend
-(`get_latest_request_json`) is:
+**Detail** (`GetDetailAsync`) is the only query that reads the blobs, keyed
+by `OrderRequests.Id`: `RequestJson`, `ResponseJson`, `ExceptionMessage`
+from `OrderRequests`, then a single most-recent `RequestOrderHeaders` row by
+`OrderNumber` (now including `RejectionMessage`, added in R9 — a real,
+verified column that R4 never selected), its `RequestOrderDetails` /
+`RequestOrderTransactions` filtered by `RequestOrderHeaderId`, and the most
+recent `Invoices` row by `OnlineOrderNumber`.
 
-```sql
-SELECT TOP 1 RequestJson
-FROM OrderRequests
-WHERE OrderNumber = @OrderNumber
-ORDER BY Id DESC;
-```
-
-**The Order Requests feature (see `remediation_plan.md` §2.3, B10/B11) must
-additionally select `ResponseJson` and `ExceptionMessage` in its single-row
-detail query** — the query above and the legacy source only ever needed
-`RequestJson` for resend, so those two columns were never read anywhere in
-either codebase. They are the reason the feature exists.
+**Resend** rebuilds the payload from that specific attempt's own stored
+`RequestJson` (never the live in-progress draft) — the read is simply
+`SELECT RequestJson FROM OrderRequests WHERE Id = @Id`, with only
+`branch_code` overridden before re-sending.
 
 ---
 
@@ -257,3 +264,30 @@ recently successful driver tried first and cached for the life of the
 connection factory. Driver 18 has been observed to time out against
 `10.10.8.181`; keep a short `Connect Timeout` (5s) so the fallback to 17
 settles quickly rather than hanging.
+
+---
+
+## 6. Known performance gap — missing indexes on the OUTER APPLY join columns
+
+Diagnosed in R4 via `sys.indexes`/`sys.index_columns` and reproduced
+consistently through R5/R9: `RequestOrderHeaders.OrderNumber` and
+`Invoices.OnlineOrderNumber` have **no index** on this database, unlike
+`OrderRequests.OrderNumber`. Any §3.4 list/count/stats query filtered on a
+header-derived column (`branchCode`, `status`/`statuses`, `dateFrom`/`dateTo`,
+`phone`) times out ("Execution Timeout Expired") once the table has enough
+rows, because SQL Server cannot push the filter below the correlated
+`OUTER APPLY` — it must evaluate the join for every `OrderRequests` row
+before it can filter. **Filtering by `orderNumber` alone is unaffected**
+(it filters the base table directly, before any join). This is an
+infrastructure gap, not a query defect — confirmed by the exact same query
+shape succeeding instantly when scoped by `orderNumber`. Creating the
+indexes below is a DDL decision on a shared production database, out of
+scope for any single remediation session; whoever owns that SQL Server
+instance should run:
+
+```sql
+CREATE NONCLUSTERED INDEX IX_RequestOrderHeaders_OrderNumber
+    ON dbo.RequestOrderHeaders (OrderNumber);
+CREATE NONCLUSTERED INDEX IX_Invoices_OnlineOrderNumber
+    ON dbo.Invoices (OnlineOrderNumber);
+```

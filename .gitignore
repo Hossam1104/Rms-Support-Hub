@@ -17,20 +17,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Python / Flask (Legacy)
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-.venv/
-.venv-1/
-last_order_*.json
-order_history_*.json
-
 # Runtime data (drafts, logs) — never committed
 var/
 

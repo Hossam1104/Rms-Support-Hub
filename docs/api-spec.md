@@ -19,7 +19,7 @@ its first `Available` environment.
 
 ### List All Modules
 - **`GET /api/modules`**
-- **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, the module's environments, and its `capabilities` (mirrors `ModuleCapabilities`: `draftKind`, `itemLookup`, `consumerLookup`, `orderRequests`, `cancel`, `resend` — added in R7 so the frontend can gate routes/UI on real capability data instead of hardcoded module-key checks). No `password`/`db_config`/raw credentials are ever emitted.
+- **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, the module's environments, and its `capabilities` (mirrors `ModuleCapabilities`: `draftKind`, `itemLookup`, `consumerLookup`, `orderRequests`, `cancel`, `resend`, `hasDeliveryFields` — added in R7 so the frontend can gate routes/UI on real capability data instead of hardcoded module-key checks; `hasDeliveryFields` added in R10 so the flat-order builder can show/hide the Delivery card without comparing module-key strings — `true` only for `ghc_ecommerce`). No `password`/`db_config`/raw credentials are ever emitted.
 
 ### Get Module Details + Current Draft
 - **`GET /api/modules/{key}`**

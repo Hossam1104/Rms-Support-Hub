@@ -31,30 +31,19 @@ import { FormsModule } from '@angular/forms';
         </div>
         <div class="form-group">
           <label class="form-label">Order Status</label>
-          <select class="glass-input" [ngModel]="orderData['order_status']" (ngModelChange)="onFieldChange('order_status', $event)">
-            <option value="1">1 - New</option>
-            <option value="2">2 - Confirmed</option>
-            <option value="3">3 - Ready</option>
-            <option value="4">4 - With Delegate</option>
-            <option value="5">5 - Rejected</option>
-            <option value="6">6 - Canceled Client</option>
-            <option value="7">7 - Canceled Admin</option>
-            <option value="8">8 - Processing</option>
-            <option value="9">9 - Done</option>
-          </select>
-        </div>
-        <div class="form-group" *ngIf="moduleKey === 'upc_ecommerce'">
-          <label class="form-label">Order Payment Status</label>
-          <select class="glass-input" [ngModel]="orderData['order_payment_status']" (ngModelChange)="onFieldChange('order_payment_status', $event)">
-            <option value="1">1 - Pending</option>
-            <option value="2">2 - Paid</option>
-            <option value="3">3 - Failed</option>
-            <option value="4">4 - Refunded</option>
-          </select>
+          <input type="text" class="glass-input" [ngModel]="orderData['order_status']" (ngModelChange)="onFieldChange('order_status', $event)" placeholder="new" />
         </div>
         <div class="form-group full-width">
           <label class="form-label">Order Notes</label>
           <input type="text" class="glass-input" [ngModel]="orderData['order_notes']" (ngModelChange)="onFieldChange('order_notes', $event)" placeholder="Special delivery instructions..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">GPS Latitude</label>
+          <input type="number" step="any" class="glass-input" [ngModel]="gpsLat()" (ngModelChange)="onGpsChange($event, gpsLng())" placeholder="21.5433" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">GPS Longitude</label>
+          <input type="number" step="any" class="glass-input" [ngModel]="gpsLng()" (ngModelChange)="onGpsChange(gpsLat(), $event)" placeholder="39.1728" />
         </div>
       </div>
     </div>
@@ -76,5 +65,20 @@ export class OrderInfoComponent {
 
   onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });
+  }
+
+  /** order_gps is a [lat, lng] pair (see FlatOrderPayloadBuilder.GetGps) --
+   * defaults to the reference payload's default coordinates server-side
+   * when absent, so these two inputs only need to emit a value once the
+   * operator actually edits one of them. */
+  private gps(): number[] {
+    const raw = this.orderData['order_gps'];
+    return Array.isArray(raw) && raw.length === 2 ? raw as number[] : [21.779006345949554, 39.08578576461103];
+  }
+  gpsLat(): number { return this.gps()[0]; }
+  gpsLng(): number { return this.gps()[1]; }
+
+  onGpsChange(lat: unknown, lng: unknown) {
+    this.onFieldChange('order_gps', [Number(lat) || 0, Number(lng) || 0]);
   }
 }

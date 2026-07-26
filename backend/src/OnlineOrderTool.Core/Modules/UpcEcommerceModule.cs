@@ -34,7 +34,8 @@ public class UpcEcommerceModule : IOrderModule
         ConsumerLookup: true,
         OrderRequests: true,
         Cancel: true,
-        Resend: true);
+        Resend: true,
+        HasDeliveryFields: false);
 
     // Real credentials are never hardcoded here. The connection string for each
     // environment is resolved at request time via IConfiguration.GetConnectionString(

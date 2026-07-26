@@ -13,7 +13,12 @@ public record ModuleCapabilities(
     bool ConsumerLookup,
     bool OrderRequests,
     bool Cancel,
-    bool Resend
+    bool Resend,
+    /// <summary>Mirrors FlatVariant.IncludeDeliveryFields (Services/FlatOrderPayloadBuilder.cs)
+    /// -- true only for ghc_ecommerce. Lets the builder UI show/hide the
+    /// Delivery card without comparing module-key strings (R10,
+    /// remediation_plan.md B21).</summary>
+    bool HasDeliveryFields = false
 );
 
 public interface IOrderModule

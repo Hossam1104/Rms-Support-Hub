@@ -31,7 +31,8 @@ public record ModuleCapabilitiesDto(
     bool ConsumerLookup,
     bool OrderRequests,
     bool Cancel,
-    bool Resend
+    bool Resend,
+    bool HasDeliveryFields
 );
 
 public record ModuleDto(

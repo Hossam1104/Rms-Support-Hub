@@ -39,7 +39,8 @@ public class GhcEcommerceModule : IOrderModule
         ConsumerLookup: true,
         OrderRequests: false,
         Cancel: true,
-        Resend: true);
+        Resend: true,
+        HasDeliveryFields: true);
 
     // Real credentials are never hardcoded here. The connection string for this
     // module is resolved at request time via IConfiguration.GetConnectionString("GhcEcommerce"),

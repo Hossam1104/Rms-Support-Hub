@@ -1,4 +1,0 @@
-Flask==3.0.3
-pyodbc==5.2.0
-requests==2.31.0
-python-dotenv==1.0.1

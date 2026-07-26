@@ -16,11 +16,12 @@ import { Product } from '../../../core/models';
         </div>
 
         <div class="modal-body">
-          <div class="search-bar mb-3" *ngIf="moduleKey === 'upc_ecommerce'">
+          <div class="search-bar mb-3">
             <div class="input-group">
-              <input type="text" class="glass-input" [(ngModel)]="searchCode" placeholder="Enter 6-digit item number..." maxlength="18" />
-              <button type="button" class="glass-button" (click)="onItemLookup()"><i class="bi bi-search"></i> Find Item</button>
+              <input type="text" class="glass-input" [(ngModel)]="searchCode" placeholder="Enter item/material number..." maxlength="18" [disabled]="!branchCode.trim()" />
+              <button type="button" class="glass-button" [disabled]="!branchCode.trim()" (click)="onItemLookup()"><i class="bi bi-search"></i> Find Item</button>
             </div>
+            <p class="branch-hint" *ngIf="!branchCode.trim()">Set a branch code in Order Header Information first -- item pricing is branch-specific.</p>
           </div>
 
           <div class="form-grid">
@@ -66,6 +67,7 @@ import { Product } from '../../../core/models';
     .btn-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
     .input-group { display: flex; gap: 8px; }
     .input-group input { flex: 1; }
+    .branch-hint { font-size: 0.78rem; color: var(--warning); margin: 8px 0 0; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }

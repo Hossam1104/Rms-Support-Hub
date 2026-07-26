@@ -1,13 +1,13 @@
 import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { JsonViewerComponent } from '../../../shared/components/json-viewer/json-viewer.component';
+import { JsonTreeComponent } from '../../../shared/ui';
 import { SendOrderResult } from '../../../core/models';
 
 @Component({
   selector: 'app-api-config',
   standalone: true,
-  imports: [CommonModule, FormsModule, JsonViewerComponent],
+  imports: [CommonModule, FormsModule, JsonTreeComponent],
   template: `
     <div class="card-section glass-card">
       <div class="card-title">
@@ -27,7 +27,7 @@ import { SendOrderResult } from '../../../core/models';
       </div>
 
       <div class="json-preview mb-4">
-        <app-json-viewer [data]="compiledJson" title="Compiled JSON Payload"></app-json-viewer>
+        <app-json-tree [data]="compiledJson" title="Compiled JSON Payload"></app-json-tree>
       </div>
 
       <div class="response-section" *ngIf="apiResponse">
@@ -37,7 +37,7 @@ import { SendOrderResult } from '../../../core/models';
             Status: {{ apiResponse.statusCode }}
           </span>
         </div>
-        <app-json-viewer [data]="apiResponse.responseText" title="Raw Response Body"></app-json-viewer>
+        <app-json-tree [data]="apiResponse.responseText" title="Raw Response Body"></app-json-tree>
       </div>
     </div>
   `,

@@ -1,10 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
-import { OrderDraft, Product, Payment, Consumer, SendOrderResult, LookupResult } from '../../core/models';
+import { OrderDraft, Product, Payment, Consumer, SendOrderResult, LookupResult, OrderRequestDetailResponse } from '../../core/models';
 import { QuickStatsComponent } from './components/quick-stats.component';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
@@ -25,20 +25,25 @@ interface FlatOrderPreviewTotals {
   remainingBalance: number;
 }
 
-function asString(value: unknown, fallback = ''): string {
-  return value == null ? fallback : String(value);
-}
-
 function asNumber(value: unknown, fallback = 0): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
 
+/**
+ * Rebound (R10, remediation_plan.md B1/B5/B21) to the corrected schema
+ * FlatOrderPayloadBuilder.cs actually reads -- see client-info.component.ts
+ * and order-info.component.ts for the field-level detail. The Delivery
+ * card and the compiled-JSON preview are both driven by real server data
+ * (Capabilities.HasDeliveryFields and GET .../export-json respectively)
+ * instead of a hand-rolled approximation or a module-key string comparison.
+ */
 @Component({
   selector: 'app-flat-order',
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     QuickStatsComponent,
     OrderInfoComponent,
     ClientInfoComponent,
@@ -70,7 +75,7 @@ function asNumber(value: unknown, fallback = 0): number {
       </app-client-info>
 
       <app-delivery-info
-        *ngIf="moduleKey() === 'ghc_ecommerce'"
+        *ngIf="hasDeliveryFields()"
         [orderData]="draft().orderData"
         (fieldChange)="onFieldChange($event)">
       </app-delivery-info>
@@ -92,6 +97,14 @@ function asNumber(value: unknown, fallback = 0): number {
         [apiResponse]="apiResponse()"
         (sendRequest)="onSendOrder($event)">
       </app-api-config>
+
+      <div class="landed-card glass-card" *ngIf="landedRequestId() as id">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>Order recorded as request #{{ id }} in the OrderRequests table.</span>
+        <a [routerLink]="['/modules', moduleKey(), 'requests', id]" class="landed-link">
+          Open in Order Requests <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
     </div>
 
     <app-add-product-dialog
@@ -112,6 +125,13 @@ function asNumber(value: unknown, fallback = 0): number {
   `,
   styles: [`
     .flat-order-container { display: flex; flex-direction: column; }
+    .landed-card {
+      display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+      background: var(--success-bg); color: var(--success); font-weight: 600;
+      animation: fadeInUp var(--d-slow) var(--ease-spring);
+    }
+    .landed-card i.bi-check-circle-fill { font-size: 1.3rem; }
+    .landed-link { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--success); text-decoration: underline; font-weight: 700; white-space: nowrap; }
   `]
 })
 export class FlatOrderComponent implements OnInit {
@@ -122,16 +142,7 @@ export class FlatOrderComponent implements OnInit {
 
   moduleKey = signal<string>('ghc_ecommerce');
   draft = signal<OrderDraft>({
-    orderData: {
-      branch_code: '101',
-      order_code: 'ORD-1002',
-      client_name: 'Walk-in Customer',
-      client_code: 'CUST-01',
-      client_mobile: '0501234567',
-      shipping_address: 'Riyadh Main Street 1',
-      order_status: '1',
-      order_delivery_cost: 15
-    },
+    orderData: {},
     products: [],
     payments: [],
     consumer: {},
@@ -141,6 +152,7 @@ export class FlatOrderComponent implements OnInit {
   totals = signal<FlatOrderPreviewTotals>({ totalOrderAmount: 0, totalPaidAmount: 0, remainingBalance: 0 });
   compiledJson = signal<Record<string, unknown> | null>(null);
   apiResponse = signal<SendOrderResult | null>(null);
+  landedRequestId = signal<number | null>(null);
 
   showAddProductDialog = signal<boolean>(false);
   showAddPaymentDialog = signal<boolean>(false);
@@ -153,8 +165,13 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  hasDeliveryFields(): boolean {
+    return this.moduleService.activeModule()?.capabilities?.hasDeliveryFields ?? false;
+  }
+
   branchCode(): string {
-    return asString(this.draft().orderData['branch_code']);
+    const v = this.draft().orderData['branch_code'];
+    return v == null ? '' : String(v);
   }
 
   loadState() {
@@ -245,6 +262,10 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  /** Prefills name AND address from the lookup (R10 step 2) -- order_address/
+   * address_code come from Consumer.Address/AddressCode, resolved server-side
+   * from LoyaltyConsumerAddresses (UPC) with a preference for the row
+   * flagged IsMaster -- see UpcConsumerRepository. */
   onLookupConsumer(phone: string) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
@@ -252,13 +273,16 @@ export class FlatOrderComponent implements OnInit {
       next: res => {
         const c = res.data;
         if (res.success && c) {
-          this.onFieldChange({ fieldName: 'client_name', value: c.firstName || '' });
-          this.onFieldChange({ fieldName: 'client_code', value: c.consumerCode || '' });
-          this.onFieldChange({ fieldName: 'client_mobile', value: c.primaryPhoneNumber || phone });
-          if (c.nationalId) this.onFieldChange({ fieldName: 'shipping_address', value: c.nationalId });
-          if (c.nationality) this.onFieldChange({ fieldName: 'district_name', value: c.nationality });
-          if (c.gender) this.onFieldChange({ fieldName: 'city_name', value: c.gender });
-          this.toast.showSuccess(`Found consumer: ${c.firstName} (${c.consumerCode || phone})`);
+          this.onFieldChange({ fieldName: 'client_first_name', value: c.firstName || '' });
+          this.onFieldChange({ fieldName: 'client_middle_name', value: c.middleName || '' });
+          this.onFieldChange({ fieldName: 'client_last_name', value: c.lastName || '' });
+          this.onFieldChange({ fieldName: 'client_phone', value: c.primaryPhoneNumber || phone });
+          if (c.email) this.onFieldChange({ fieldName: 'client_email', value: c.email });
+          if (c.birthDate) this.onFieldChange({ fieldName: 'client_birthdate', value: c.birthDate });
+          if (c.gender) this.onFieldChange({ fieldName: 'client_gender', value: c.gender });
+          if (c.address) this.onFieldChange({ fieldName: 'order_address', value: c.address });
+          if (c.addressCode) this.onFieldChange({ fieldName: 'address_code', value: c.addressCode });
+          this.toast.showSuccess(`Found consumer: ${c.firstName} ${c.lastName || ''}`.trim());
         } else {
           this.toast.showInfo(`No consumer record found for phone ${phone}.`);
         }
@@ -270,11 +294,14 @@ export class FlatOrderComponent implements OnInit {
   onSendOrder(event: { url: string }) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
+    this.landedRequestId.set(null);
+
     this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined }).subscribe({
       next: res => {
         this.apiResponse.set(res);
         if (res.success) {
           this.toast.showSuccess(`Order sent successfully! Status: ${res.statusCode}`);
+          this.lookupLandedRequest();
         } else {
           this.toast.showError(`Order request failed. Status: ${res.statusCode}`);
         }
@@ -282,6 +309,25 @@ export class FlatOrderComponent implements OnInit {
       error: () => {
         this.apiResponse.set({ success: false, statusCode: 0, responseText: 'The request could not be completed.', urlSent: event.url });
       }
+    });
+  }
+
+  /** OrderRequests is written by the upstream API itself (see
+   * OrderController.SendRequest), not this call -- so the landed row is
+   * looked up by order number just after send, only for modules with
+   * Capabilities.OrderRequests (UPC today; GHC 501s here pending db-creds). */
+  private lookupLandedRequest() {
+    if (!this.moduleService.activeModule()?.capabilities?.orderRequests) return;
+
+    const key = this.moduleKey();
+    const orderNumber = String(this.draft().orderData['order_code'] ?? '');
+    if (!orderNumber) return;
+
+    this.api.get<OrderRequestDetailResponse>(`modules/${key}/order-requests/by-order/${orderNumber}`, {
+      envKey: this.moduleService.activeEnvironment()?.key
+    }).subscribe({
+      next: res => this.landedRequestId.set(res.request.id),
+      error: () => {} // Not fatal -- the OrderRequests row may take a moment to land, or this send failed upstream before ever reaching it.
     });
   }
 
@@ -313,33 +359,14 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  /** The compiled-payload preview is the real server-built payload
+   * (module.BuildPayload(draft) via GET export-json) -- not a hand-rolled
+   * approximation, so it always matches what Send actually posts. */
   refreshCompiledJson() {
-    const data = this.draft().orderData;
-    const prods = this.draft().products;
-    const pays = this.draft().payments;
-
-    this.compiledJson.set({
-      Header: {
-        BranchCode: asString(data['branch_code'], '101'),
-        OrderCode: asString(data['order_code']),
-        ClientName: asString(data['client_name']),
-        ClientMobile: asString(data['client_mobile']),
-        ShippingAddress: asString(data['shipping_address']),
-        TotalAmount: this.totals().totalOrderAmount
-      },
-      Items: prods.map(p => ({
-        ItemCode: p.itemCode,
-        ItemName: p.itemName,
-        Quantity: p.quantity,
-        UnitPrice: p.unitPrice,
-        VatPercentage: p.vatPercentage,
-        Discount: p.discount
-      })),
-      Payments: pays.map(py => ({
-        PaymentMethod: py.paymentMethod,
-        PaymentStatus: py.paymentStatus,
-        Amount: py.paymentAmount
-      }))
+    const key = this.moduleKey();
+    this.api.get<Record<string, unknown>>(`modules/${key}/export-json`).subscribe({
+      next: json => this.compiledJson.set(json),
+      error: () => {}
     });
   }
 }
