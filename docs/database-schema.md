@@ -32,6 +32,19 @@ Confirmed live against server `10.10.8.181`, database `RmsMainTest2`, via
 keep 17 first, or keep both in a fallback list with 18 first and a short
 `Connect Timeout`).
 
+> **U0 re-verification (2026-07-26): the SQL host stays `10.10.8.181`, it is
+> not `10.10.10.181`.** `UI_Rework_Plan.md` assumed Testing and Production
+> share the single host `10.10.10.181` for both the RMS HTTP API and the SQL
+> Server. Only the API half of that is confirmed: `10.10.10.181:8080` answers
+> (`HTTP 405` on a bare `GET` to the order endpoint), matching the corrected
+> `UpcEcommerceModule.cs` / `appsettings.json` literals. The SQL half does
+> not: TCP port 1433 on `10.10.10.181` is closed (connection refused), while
+> `10.10.8.181:1433` accepts the `UpcEcommerceTest` credentials and returned
+> the live `dbo.Branches` data below. Per `UI_Rework_Plan.md` §5 risk 5, this
+> document is not rewritten onto an unverified host — `10.10.8.181` remains
+> correct for `ConnectionStrings:UpcEcommerceTest`/`UpcEcommerceProd` until
+> someone confirms otherwise against a real login on `10.10.10.181`.
+
 | Table | Columns | Notes |
 |---|---|---|
 | `Consumers` | `Id, FirstName, MiddleName, LastName, PhoneNumber, Gender, BirthDate, Note, IsLoyality, Email, NationalID, Nationality, ConsumerCode, FullName, LastModificationDate, TenantId, Source, CreationDate` | Lookup key: `PhoneNumber`. PK: `Id`. |
@@ -41,6 +54,7 @@ keep 17 first, or keep both in a fallback list with 18 first and a short
 | `RequestOrderDetails` | `Id, RequestOrderHeaderId, Quantity, TotalPrice, TotalOfferDiscount, OfferMessage, ItemName, MaterialNumber, UnitPriceBeforeDiscount, OfferCode, UnitOfferDiscount, UnitPrice, TotalDiscount, TotalItemDiscount, UnitItemDiscount, UnitTotalDiscount, ItemTotalVat, ItemVat, ItemVatPercentage, BbyDiscount, CustomerDiscount, PriceCutDiscount` | FK: `RequestOrderHeaderId` → `RequestOrderHeaders.Id`. **There is no `ItemCode`, `DiscountAmount`, `VatAmount`, or `LineTotal` column** — those were invented; the real names are `MaterialNumber`, `TotalDiscount`, `ItemVat`, `TotalPrice`. |
 | `RequestOrderTransactions` | `Id, RequestOrderHeaderId, PaymentAmount, PaymentMethodId, BankCardId, ECommercePaymentMethod, ECommercePaymentOption, OptionCommission, PaymentStatus, TransactionCode, BankCode, CardName` | FK: `RequestOrderHeaderId` → `RequestOrderHeaders.Id`. **There is no `PaymentMethod`, `Amount`, or `TransactionId` column** — the real names are `ECommercePaymentMethod`, `PaymentAmount`, `TransactionCode`. |
 | `Invoices` | `Id, Barcode, OpenDate, CloseDate, Discount, OfferDiscount, BbyCode, ManualDiscount, CustomDiscount, TotalDiscount, Tax, GrossAmount, NetAmount, PaidAmount, ChangeAmount, ShiftId, InvoiceTypeId, ParentInvoiceId, ConsumerId, PosMachineId, BranchId, ModifiedBy, LastModifiedOn, TotalBeneficiaryShare, TotalCoverage, UsedPointsDocNo, CouponCode, CouponDiscount, DeliveryFees, CourierId, MinOrderFees, OnlineOrderNumber, IsSaudi, WasfatyPrescripionId, AttachmentIdentifier, ReferenceNumber, Notes, MedicalCardId, TreatmentRecordId, BrokerId, CloseDateLocalTime, …` | Join: `Invoices.OnlineOrderNumber = RequestOrderHeaders.OrderNumber` (and = `OrderRequests.OrderNumber`). Barcode column: `Barcode`. Invoice date for creation-vs-invoice comparisons: `CloseDateLocalTime`. **There is no `Invoices.OrderNumber` or `Invoices.CreatedDateTime` column** — the real names are `OnlineOrderNumber` and `CloseDateLocalTime`. |
+| `Branches` | `Id, Name, NativeName, BranchCode, IsActive, Address, VatNumber, LATIDUTE, Description, InternalDeliveryDistance, MaximumDeliveryDistance, Email, OpeningTimes, Phone1, Phone2, LONGITUDE, Area, Fax, RegionId, SalesDistrictId, SalesOfficeId, NationalSalesManagerId, StoreManagerId, RegionManagerId, ASS_StoreManagerId, StoreManager2Id, StoreManager3Id, Labour1Id, Labour2Id, Labour3Id, PhyscianId, ClinicpharmacistId, NutrionanestId, RasdGlnNumber, RasdUserName, RasdPassword, IsRasdEnable, LastOnline, MonthlyTarget, DeliveryFees, BranchInstallStatus, CreatedBy, CreatedOn, ModifiedBy, LastModifiedOn, IsDeleted, DeletedBy, WasfatyPassword, WasfatySenderId, WasfatyUserName, WasfatyDivision, LocationCityId, BranchGroupId, InstallationGuid, ReleaseNumber, MachinesAdminUserName, MachinesAdminEncryptedPassword, CommercialRegistration, IsEnableUploadCashClearanceToERP, IsEnableUploadInvoicesToERP, IsTestingBranch, QitafBranchCode, TenantId, UploadInvoicesToErpType, UploadTillTime, IsZatcaEnable, CloseTime, OpenTime, IsOnline, DefaultCurrencyId, DefaultBranchCurrencyId` | PK: `Id`. Human-readable name: `Name` (English), `NativeName` (Arabic). `BranchCode` is nullable and is what `BranchItemUnitOfMeasures`/`RequestOrderHeaders` join on. Active flag: **`IsActive`** (bit, `NOT NULL`) — filter a branch picker on this; also note `IsDeleted` (bit, `NOT NULL`) and `IsTestingBranch` (bit, `NOT NULL`), which a picker should likely also exclude/flag but which U3 must decide on explicitly rather than assume. Confirmed live against server `10.10.8.181`, database `RmsMainTest2`, via `sqlcmd`/ODBC Driver 18, 2026-07-26 — see §5 note below on why this host, not `10.10.10.181`, is used for the database connection. |
 
 **Neither `OrderRequests` nor `Invoices` is 1:1 with `OrderNumber`** — retries
 and re-invoicing both create extra rows for the same order number. Every join

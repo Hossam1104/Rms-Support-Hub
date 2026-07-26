@@ -72,8 +72,8 @@ public class UpcEcommerceModule : IOrderModule
             VisualUrl = "static/assets/upc_logo.svg",
             VisualAlt = "UPC logo",
             Available = true,
-            ApiUrl = "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.9.181:8080/RmsMainServerApi/api/Order/CancelOrder",
+            ApiUrl = "http://10.10.10.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+            CancelUrl = "http://10.10.10.181:8080/RmsMainServerApi/api/Order/CancelOrder",
             ConnectionStringName = "UpcEcommerceTest"
         }
     };

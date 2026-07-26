@@ -1,6 +1,9 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Moq;
 using OnlineOrderTool.Core.Models;
+using OnlineOrderTool.Core.Modules;
+using OnlineOrderTool.Core.Repositories;
 using OnlineOrderTool.Core.Services;
 using Xunit;
 
@@ -186,5 +189,90 @@ public class ContractTests
             "OrderRequestRepository.cs references invented column names that do not exist " +
             "in the verified schema: " + string.Join(", ", found) +
             ". See docs/database-schema.md and docs/Prompts/UPC_Enhancments_Plan.md \"Schema discovery\".");
+    }
+
+    /// <summary>
+    /// U0 (UI_Rework_Plan.md D5): the UPC Testing API host was wrong (the
+    /// third octet was 9 instead of 10), and this repository's own SQL
+    /// contract doc had documented the SQL Server host with the fourth octet
+    /// wrong too (8 instead of 10), under the mistaken belief that host was
+    /// stale. Live re-verification during U0 proved the corrected host only
+    /// answers on the RMS HTTP API port (8080) -- the SQL Server itself has
+    /// nothing listening on port 1433 there, while the original "8" host
+    /// answers a real login and returned live <c>dbo.Branches</c> data. So
+    /// this guard only scans source under <c>backend/src/**</c> and
+    /// <c>backend/tests/**</c> (never <c>docs/database-schema.md</c> or
+    /// <c>README.md</c>, where the original "8" host is the correct,
+    /// currently-verified SQL host) for the two stale-host tokens. This test's
+    /// own file is excluded from the scan since it necessarily holds those
+    /// tokens as literal data for the check below.
+    /// </summary>
+    [Fact]
+    public void BackendSource_DoesNotReferenceStaleRmsHost()
+    {
+        var repoRoot = GetRepoRoot();
+        var searchRoots = new[]
+        {
+            Path.Combine(repoRoot, "backend", "src"),
+            Path.Combine(repoRoot, "backend", "tests"),
+        };
+        var staleTokens = new[] { "10.10.9.181", "10.10.8.181" };
+        var selfPath = Path.Combine(repoRoot, "backend", "tests", "OnlineOrderTool.Tests", "ContractTests.cs");
+        var offenders = new List<string>();
+
+        foreach (var root in searchRoots)
+        {
+            if (!Directory.Exists(root)) continue;
+
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                if (string.Equals(file, selfPath, StringComparison.OrdinalIgnoreCase)) continue;
+
+                var relative = Path.GetRelativePath(repoRoot, file);
+                var segments = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (segments.Any(seg => seg is "bin" or "obj")) continue;
+
+                string content;
+                try
+                {
+                    content = File.ReadAllText(file);
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+
+                if (staleTokens.Any(token => content.Contains(token, StringComparison.Ordinal)))
+                {
+                    offenders.Add(relative);
+                }
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            "The following tracked backend files still reference a stale RMS host " +
+            "(10.10.9.181, or the mistakenly-flagged 10.10.8.181) and must use " +
+            "10.10.10.181 for API endpoints: " + string.Join(", ", offenders));
+    }
+
+    /// <summary>
+    /// U1 fixes D3/D4 by making the default explicit rather than positional
+    /// (<c>Environments.Values.First(e => e.Available)</c>, which is
+    /// currently "UPC Production" because dictionary insertion order puts it
+    /// first). U0 adds this test failing on purpose -- do not add [Skip] --
+    /// so U1 has a real green/red gate for the fix.
+    /// </summary>
+    [Fact]
+    public void UpcEcommerceModule_DefaultEnvironment_IsTesting()
+    {
+        var module = new UpcEcommerceModule(
+            new FlatOrderPayloadBuilder(),
+            new FlatOrderValidator(),
+            Mock.Of<IItemRepository>(),
+            Mock.Of<IConsumerRepository>());
+
+        var environment = module.GetEnvironment(null);
+
+        Assert.Equal("Testing", environment.Environment);
     }
 }
