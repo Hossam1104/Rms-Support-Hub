@@ -38,16 +38,37 @@ public class OrderController : ControllerBase
         return Ok(draft);
     }
 
+    /// <summary>Thin adapter over PatchOrderDataAsync kept for callers that
+    /// have not migrated to the batched PATCH order-data route (U2;
+    /// UI_Rework_Plan.md D1). Removed in U4.</summary>
     [HttpPut("order-field")]
     public async Task<ActionResult> UpdateOrderField(string key, [FromBody] UpdateOrderFieldRequest request)
     {
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
-        draft.OrderData[request.FieldName] = request.Value;
-        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
+        var fields = new Dictionary<string, object?> { [request.FieldName] = request.Value };
+        var draft = await _draftManager.PatchOrderDataAsync(HttpContext.GetSessionId(), key, fields, module.DefaultState);
 
+        return Ok(new { success = true, state = draft });
+    }
+
+    /// <summary>U2 (UI_Rework_Plan.md D1): applies every field in one
+    /// synchronised load-modify-write via DraftManager.PatchOrderDataAsync,
+    /// replacing the per-field PUT order-field race -- a consumer lookup
+    /// that used to fire eight separate requests now sends one.</summary>
+    [HttpPatch("order-data")]
+    public async Task<ActionResult> PatchOrderData(string key, [FromBody] PatchOrderDataRequest request)
+    {
+        var module = _moduleRegistry.GetModule(key);
+        if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
+
+        if (request.Fields == null || request.Fields.Count == 0)
+        {
+            return BadRequest(new { error = "At least one field is required." });
+        }
+
+        var draft = await _draftManager.PatchOrderDataAsync(HttpContext.GetSessionId(), key, request.Fields, module.DefaultState);
         return Ok(new { success = true, state = draft });
     }
 

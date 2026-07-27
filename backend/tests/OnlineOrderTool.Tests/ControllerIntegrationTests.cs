@@ -127,6 +127,60 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.DoesNotContain(stateB.Products, p => p.ItemCode == "SESSION-A-ITEM");
     }
 
+    /// <summary>U2 (UI_Rework_Plan.md D1): PATCH order-data is the batched
+    /// replacement for one-PUT-per-field -- a single call carrying several
+    /// fields must apply every one of them in one load-modify-write.</summary>
+    [Fact]
+    public async Task PatchOrderData_AppliesMultiFieldBodyInOneCall()
+    {
+        var body = new
+        {
+            fields = new Dictionary<string, object?>
+            {
+                ["client_first_name"] = "Mohamed",
+                ["client_last_name"] = "Elbanna",
+                ["client_phone"] = "0556028080",
+                ["order_address"] = "Test Address"
+            }
+        };
+
+        var response = await _client.PatchAsJsonAsync("/api/modules/upc_ecommerce/order-data", body);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var stateResponse = await _client.GetAsync("/api/modules/upc_ecommerce/state");
+        var draft = await stateResponse.Content.ReadFromJsonAsync<OrderDraft>();
+
+        Assert.NotNull(draft);
+        Assert.Equal("Mohamed", draft!.OrderData["client_first_name"]?.ToString());
+        Assert.Equal("Elbanna", draft.OrderData["client_last_name"]?.ToString());
+        Assert.Equal("0556028080", draft.OrderData["client_phone"]?.ToString());
+        Assert.Equal("Test Address", draft.OrderData["order_address"]?.ToString());
+    }
+
+    /// <summary>An empty field set is a caller error, not a silent no-op.</summary>
+    [Fact]
+    public async Task PatchOrderData_EmptyFields_ReturnsBadRequest()
+    {
+        var body = new { fields = new Dictionary<string, object?>() };
+        var response = await _client.PatchAsJsonAsync("/api/modules/upc_ecommerce/order-data", body);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>U2: PUT order-field is now a thin adapter over the same
+    /// synchronised PatchOrderDataAsync path -- it must still work
+    /// unchanged for callers that have not migrated (removed in U4).</summary>
+    [Fact]
+    public async Task UpdateOrderField_StillAppliesSingleField()
+    {
+        var body = new { fieldName = "branch_code", value = "101" };
+        var response = await _client.PutAsJsonAsync("/api/modules/upc_ecommerce/order-field", body);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var stateResponse = await _client.GetAsync("/api/modules/upc_ecommerce/state");
+        var draft = await stateResponse.Content.ReadFromJsonAsync<OrderDraft>();
+        Assert.Equal("101", draft!.OrderData["branch_code"]?.ToString());
+    }
+
     /// <summary>Proves the R6 fix for remediation_plan.md B16: internal RMS
     /// endpoint topology (ApiUrl/CancelUrl) is never published to the
     /// browser -- only the boolean availability of each.</summary>

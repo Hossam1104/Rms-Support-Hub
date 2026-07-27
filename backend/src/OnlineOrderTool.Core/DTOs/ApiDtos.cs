@@ -47,6 +47,12 @@ public record ModuleDto(
 
 public record UpdateOrderFieldRequest(string FieldName, object? Value);
 
+/// <summary>U2 (UI_Rework_Plan.md D1): the batched replacement for
+/// UpdateOrderFieldRequest -- every field in Fields is applied inside one
+/// synchronised DraftManager.PatchOrderDataAsync load-modify-write instead
+/// of one HTTP round trip per field.</summary>
+public record PatchOrderDataRequest(Dictionary<string, object?> Fields);
+
 public record SendOrderRequest(string? EnvironmentKey, string? CustomApiUrl);
 
 public record CancelOrderRequest(string OrderNumber, string CancelReason, string? EnvironmentKey);

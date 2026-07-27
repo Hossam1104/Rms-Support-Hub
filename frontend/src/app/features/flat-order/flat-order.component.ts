@@ -15,6 +15,7 @@ import { ApiConfigComponent } from './components/api-config.component';
 import { AddProductDialogComponent } from './components/add-product-dialog.component';
 import { AddPaymentDialogComponent } from './components/add-payment-dialog.component';
 import { ConfirmDialogComponent } from '../../shared/ui';
+import { DraftStore } from './draft.store';
 
 /** Client-side preview total -- NOT the backend's full TotalsSummary (which
  * also reports totalProductAmount/totalProductVat/orderDiscount). Kept
@@ -56,6 +57,7 @@ function asNumber(value: unknown, fallback = 0): number {
     AddPaymentDialogComponent,
     ConfirmDialogComponent
   ],
+  providers: [DraftStore],
   template: `
     <div class="flat-order-container">
       <app-quick-stats
@@ -65,31 +67,31 @@ function asNumber(value: unknown, fallback = 0): number {
       </app-quick-stats>
 
       <app-order-info
-        [orderData]="draft().orderData"
+        [orderData]="draftStore.draft().orderData"
         [moduleKey]="moduleKey()"
         (fieldChange)="onFieldChange($event)">
       </app-order-info>
 
       <app-client-info
-        [orderData]="draft().orderData"
+        [orderData]="draftStore.draft().orderData"
         (fieldChange)="onFieldChange($event)"
         (lookupConsumer)="onLookupConsumer($event)">
       </app-client-info>
 
       <app-delivery-info
         *ngIf="hasDeliveryFields()"
-        [orderData]="draft().orderData"
+        [orderData]="draftStore.draft().orderData"
         (fieldChange)="onFieldChange($event)">
       </app-delivery-info>
 
       <app-products-table
-        [products]="draft().products"
+        [products]="draftStore.draft().products"
         (openAddDialog)="showAddProductDialog.set(true)"
         (deleteProduct)="onDeleteProduct($event)">
       </app-products-table>
 
       <app-payments-table
-        [payments]="draft().payments"
+        [payments]="draftStore.draft().payments"
         (openAddDialog)="showAddPaymentDialog.set(true)"
         (deletePayment)="onDeletePayment($event)">
       </app-payments-table>
@@ -155,16 +157,9 @@ export class FlatOrderComponent implements OnInit {
   moduleService = inject(ModuleService);
   private toast = inject(ToastService);
   private route = inject(ActivatedRoute);
+  draftStore = inject(DraftStore);
 
   moduleKey = signal<string>('ghc_ecommerce');
-  draft = signal<OrderDraft>({
-    orderData: {},
-    products: [],
-    payments: [],
-    consumer: {},
-    delivery: { deliveryFees: 0 },
-    rowItems: []
-  });
   totals = signal<FlatOrderPreviewTotals>({ totalOrderAmount: 0, totalPaidAmount: 0, remainingBalance: 0 });
   compiledJson = signal<Record<string, unknown> | null>(null);
   apiResponse = signal<SendOrderResult | null>(null);
@@ -208,16 +203,17 @@ export class FlatOrderComponent implements OnInit {
   }
 
   branchCode(): string {
-    const v = this.draft().orderData['branch_code'];
+    const v = this.draftStore.draft().orderData['branch_code'];
     return v == null ? '' : String(v);
   }
 
   loadState() {
     const key = this.moduleKey();
+    this.draftStore.setModuleKey(key);
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.api.get<OrderDraft>(`modules/${key}/state`, { envKey }).subscribe({
       next: state => {
-        if (state) this.draft.set(state);
+        if (state) this.draftStore.setDraft(state);
         this.recalculate();
         this.refreshCompiledJson();
       },
@@ -229,20 +225,16 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  /** Applies immediately to local state and debounces the persisted write
+   * via DraftStore.patch (U2, UI_Rework_Plan.md D1) -- see draft.store.ts. */
   onFieldChange(event: { fieldName: string, value: unknown }) {
-    this.draft.update(d => ({ ...d, orderData: { ...d.orderData, [event.fieldName]: event.value } }));
+    this.draftStore.patch({ [event.fieldName]: event.value });
     this.recalculate();
     this.refreshCompiledJson();
-
-    const key = this.moduleKey();
-    this.api.put<{ success: boolean, state: OrderDraft }>(`modules/${key}/order-field`, event).subscribe({
-      next: res => { if (res?.state) this.draft.set(res.state); },
-      error: () => {}
-    });
   }
 
   onAddProduct(product: Product) {
-    this.draft.update(d => ({ ...d, products: [...d.products, product] }));
+    this.draftStore.updateLocal(d => ({ ...d, products: [...d.products, product] }));
     this.recalculate();
     this.refreshCompiledJson();
     this.showAddProductDialog.set(false);
@@ -253,7 +245,7 @@ export class FlatOrderComponent implements OnInit {
   }
 
   onDeleteProduct(index: number) {
-    this.draft.update(d => ({ ...d, products: d.products.filter((_, i) => i !== index) }));
+    this.draftStore.updateLocal(d => ({ ...d, products: d.products.filter((_, i) => i !== index) }));
     this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Product removed.');
@@ -263,7 +255,7 @@ export class FlatOrderComponent implements OnInit {
   }
 
   onAddPayment(payment: Payment) {
-    this.draft.update(d => ({ ...d, payments: [...d.payments, payment] }));
+    this.draftStore.updateLocal(d => ({ ...d, payments: [...d.payments, payment] }));
     this.recalculate();
     this.refreshCompiledJson();
     this.showAddPaymentDialog.set(false);
@@ -274,7 +266,7 @@ export class FlatOrderComponent implements OnInit {
   }
 
   onDeletePayment(index: number) {
-    this.draft.update(d => ({ ...d, payments: d.payments.filter((_, i) => i !== index) }));
+    this.draftStore.updateLocal(d => ({ ...d, payments: d.payments.filter((_, i) => i !== index) }));
     this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Payment method removed.');
@@ -303,7 +295,16 @@ export class FlatOrderComponent implements OnInit {
   /** Prefills name AND address from the lookup (R10 step 2) -- order_address/
    * address_code come from Consumer.Address/AddressCode, resolved server-side
    * from LoyaltyConsumerAddresses (UPC) with a preference for the row
-   * flagged IsMaster -- see UpcConsumerRepository. */
+   * flagged IsMaster -- see UpcConsumerRepository.
+   *
+   * U2 (UI_Rework_Plan.md D1): every prefilled field is sent as ONE
+   * DraftStore.patch call instead of the previous nine sequential
+   * onFieldChange/PUT order-field calls -- that was the exact race in the
+   * reported screenshot, where late responses built from stale reads
+   * clobbered fields a later request had already written. The toast now
+   * separately names which fields the lookup actually returned and which
+   * came back empty, so an empty Last Name reads as the data's fault, not
+   * a tool bug. */
   onLookupConsumer(phone: string) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
@@ -311,16 +312,49 @@ export class FlatOrderComponent implements OnInit {
       next: res => {
         const c = res.data;
         if (res.success && c) {
-          this.onFieldChange({ fieldName: 'client_first_name', value: c.firstName || '' });
-          this.onFieldChange({ fieldName: 'client_middle_name', value: c.middleName || '' });
-          this.onFieldChange({ fieldName: 'client_last_name', value: c.lastName || '' });
-          this.onFieldChange({ fieldName: 'client_phone', value: c.primaryPhoneNumber || phone });
-          if (c.email) this.onFieldChange({ fieldName: 'client_email', value: c.email });
-          if (c.birthDate) this.onFieldChange({ fieldName: 'client_birthdate', value: c.birthDate });
-          if (c.gender) this.onFieldChange({ fieldName: 'client_gender', value: c.gender });
-          if (c.address) this.onFieldChange({ fieldName: 'order_address', value: c.address });
-          if (c.addressCode) this.onFieldChange({ fieldName: 'address_code', value: c.addressCode });
-          this.toast.showSuccess(`Found consumer: ${c.firstName} ${c.lastName || ''}`.trim());
+          // First/middle/last/phone always reflect the lookup result (even
+          // blank), matching pre-U2 behaviour; the rest only overwrite the
+          // draft when the lookup actually returned a value.
+          const alwaysApplied: [string, string, unknown][] = [
+            ['First Name', 'client_first_name', c.firstName || ''],
+            ['Middle Name', 'client_middle_name', c.middleName || ''],
+            ['Last Name', 'client_last_name', c.lastName || ''],
+            ['Phone', 'client_phone', c.primaryPhoneNumber || phone]
+          ];
+          const conditional: [string, string, unknown][] = [
+            ['Email', 'client_email', c.email],
+            ['Birthdate', 'client_birthdate', c.birthDate],
+            ['Gender', 'client_gender', c.gender],
+            ['Address', 'order_address', c.address],
+            ['Address Code', 'address_code', c.addressCode]
+          ];
+
+          const fields: Record<string, unknown> = {};
+          const prefilled: string[] = [];
+          const empty: string[] = [];
+
+          for (const [label, fieldName, value] of alwaysApplied) {
+            fields[fieldName] = value;
+            (value ? prefilled : empty).push(label);
+          }
+          for (const [label, fieldName, value] of conditional) {
+            if (value) {
+              fields[fieldName] = value;
+              prefilled.push(label);
+            } else {
+              empty.push(label);
+            }
+          }
+
+          this.draftStore.patch(fields);
+          this.recalculate();
+          this.refreshCompiledJson();
+
+          const name = `${c.firstName || ''} ${c.lastName || ''}`.trim();
+          const message = empty.length === 0
+            ? `Found consumer: ${name}. All fields prefilled.`
+            : `Found consumer: ${name}. Prefilled: ${prefilled.join(', ')}. Empty from lookup: ${empty.join(', ')}.`;
+          this.toast.showSuccess(message);
         } else {
           this.toast.showInfo(`No consumer record found for phone ${phone}.`);
         }
@@ -353,6 +387,9 @@ export class FlatOrderComponent implements OnInit {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.landedRequestId.set(null);
+    // Any edit still sitting in the debounce window must reach the server
+    // draft before it is compiled into the payload.
+    this.draftStore.flushNow();
 
     this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined }).subscribe({
       next: res => {
@@ -378,7 +415,7 @@ export class FlatOrderComponent implements OnInit {
     if (!this.moduleService.activeModule()?.capabilities?.orderRequests) return;
 
     const key = this.moduleKey();
-    const orderNumber = String(this.draft().orderData['order_code'] ?? '');
+    const orderNumber = String(this.draftStore.draft().orderData['order_code'] ?? '');
     if (!orderNumber) return;
 
     this.api.get<OrderRequestDetailResponse>(`modules/${key}/order-requests/by-order/${orderNumber}`, {
@@ -390,7 +427,7 @@ export class FlatOrderComponent implements OnInit {
   }
 
   recalculate() {
-    const products = this.draft().products;
+    const products = this.draftStore.draft().products;
     let prodTotal = 0;
     products.forEach(p => {
       const price = p.unitPrice || 0;
@@ -399,10 +436,10 @@ export class FlatOrderComponent implements OnInit {
       prodTotal += (price - disc + (price - disc) * vat) * (p.quantity || 0);
     });
 
-    const deliveryCost = asNumber(this.draft().orderData['order_delivery_cost']);
+    const deliveryCost = asNumber(this.draftStore.draft().orderData['order_delivery_cost']);
     const totalOrderAmount = prodTotal + deliveryCost;
 
-    const payments = this.draft().payments;
+    const payments = this.draftStore.draft().payments;
     let paid = 0;
     payments.forEach(py => {
       if (py.paymentStatus === 'done_payment' || py.paymentMethod === 'CashOnDelivery') {
