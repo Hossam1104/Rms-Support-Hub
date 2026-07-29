@@ -140,7 +140,12 @@ public class LookupControllerTests
         var result = await controller.ListBranches("throwing_module");
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var json = JsonSerializer.Serialize(ok.Value);
+        // Direct controller tests bypass MVC's configured JSON options. The
+        // HTTP response is camelCase, so apply the same naming policy here.
+        var json = JsonSerializer.Serialize(ok.Value, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
         Assert.Contains("\"code\":\"101\"", json);
         Assert.Contains("\"name\":\"Main Branch\"", json);
         Assert.Contains("\"code\":\"P900\"", json);

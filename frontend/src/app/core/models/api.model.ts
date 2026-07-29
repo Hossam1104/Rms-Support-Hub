@@ -25,3 +25,10 @@ export interface LookupResult<T> {
   message?: string | null;
   data?: T | null;
 }
+
+/** GET /api/modules/{key}/branches option. The code is the only value sent
+ * back to the API; the name is display metadata from dbo.Branches. */
+export interface BranchOption {
+  code: string;
+  name: string;
+}

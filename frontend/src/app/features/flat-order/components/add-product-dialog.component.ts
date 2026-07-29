@@ -21,7 +21,8 @@ import { Product } from '../../../core/models';
               <input type="text" class="glass-input" [(ngModel)]="searchCode" placeholder="Enter item/material number..." maxlength="18" [disabled]="!branchCode.trim()" />
               <button type="button" class="glass-button" [disabled]="!branchCode.trim()" (click)="onItemLookup()"><i class="bi bi-search"></i> Find Item</button>
             </div>
-            <p class="branch-hint" *ngIf="!branchCode.trim()">Set a branch code in Order Header Information first -- item pricing is branch-specific.</p>
+            <p class="branch-hint" *ngIf="!branchCode.trim()">Choose a branch in Order Header Information first — item pricing is branch-specific.</p>
+            <p class="branch-selected" *ngIf="branchCode.trim()">Using branch: {{ branchName || branchCode }}</p>
           </div>
 
           <div class="form-grid">
@@ -68,6 +69,7 @@ import { Product } from '../../../core/models';
     .input-group { display: flex; gap: 8px; }
     .input-group input { flex: 1; }
     .branch-hint { font-size: 0.78rem; color: var(--warning); margin: 8px 0 0; }
+    .branch-selected { font-size: 0.78rem; color: var(--text-secondary); margin: 8px 0 0; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
@@ -76,6 +78,7 @@ import { Product } from '../../../core/models';
 export class AddProductDialogComponent {
   @Input() moduleKey: string = '';
   @Input() branchCode: string = '';
+  @Input() branchName: string = '';
   @Output() close = new EventEmitter<void>();
   @Output() add = new EventEmitter<Product>();
   @Output() lookupItem = new EventEmitter<{ code: string, branchCode: string }>();

@@ -138,12 +138,6 @@ export interface OrderRequestDetailResponse {
   lineage: OrderRequestLineage;
 }
 
-export interface BranchSummary {
-  branchCode: string;
-  branchName: string | null;
-  count: number;
-}
-
 export interface OrderRequestCancelRequest {
   reason: string;
   endpointKey?: string | null;

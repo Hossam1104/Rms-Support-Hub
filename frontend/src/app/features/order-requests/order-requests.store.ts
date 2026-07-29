@@ -1,8 +1,9 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { ApiService, ApiParams } from '../../core/services/api.service';
+import { BranchOptionsService } from '../../core/services/branch-options.service';
 import {
   OrderRequestListItem, OrderRequestListResponse, OrderRequestStats,
-  BranchSummary, OrderRequestDetailResponse
+  BranchOption, LookupResult, OrderRequestDetailResponse
 } from '../../core/models';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -33,6 +34,7 @@ export const EMPTY_FILTERS: OrderRequestsFilterState = {
 @Injectable()
 export class OrderRequestsStore {
   private api = inject(ApiService);
+  private branchOptions = inject(BranchOptionsService);
 
   moduleKey = signal('');
   envKey = signal<string | null>(null);
@@ -46,7 +48,9 @@ export class OrderRequestsStore {
   stats = signal<OrderRequestStats | null>(null);
   total = signal(0);
   status = signal<LoadStatus>('idle');
-  branches = signal<BranchSummary[]>([]);
+  branches = signal<BranchOption[]>([]);
+  branchStatus = signal<LoadStatus>('idle');
+  branchError = signal<string | null>(null);
 
   selectedId = signal<number | null>(null);
   selected = signal<OrderRequestDetailResponse | null>(null);
@@ -75,6 +79,7 @@ export class OrderRequestsStore {
 
   private requestToken = 0;
   private detailToken = 0;
+  private branchLoadToken = 0;
 
   init(moduleKey: string, envKey: string | null, filters: OrderRequestsFilterState, page: number, pageSize: number) {
     this.moduleKey.set(moduleKey);
@@ -176,12 +181,30 @@ export class OrderRequestsStore {
     });
   }
 
-  loadBranches() {
+  loadBranches(refresh = false) {
     const key = this.moduleKey();
     if (!key) return;
-    this.api.get<BranchSummary[]>(`modules/${key}/order-requests/branches`, { envKey: this.envKey() || undefined }).subscribe({
-      next: res => this.branches.set(res),
-      error: () => {}
+
+    const token = ++this.branchLoadToken;
+    this.branchStatus.set('loading');
+    this.branchError.set(null);
+    this.branchOptions.list(key, this.envKey(), refresh).subscribe({
+      next: response => {
+        if (token !== this.branchLoadToken) return;
+        if (response.success) {
+          const branches = response.data || [];
+          this.branches.set(branches);
+          this.branchStatus.set(branches.length ? 'ready' : 'empty');
+        } else {
+          this.branchStatus.set('error');
+          this.branchError.set(response.message || 'Branches could not be loaded.');
+        }
+      },
+      error: () => {
+        if (token !== this.branchLoadToken) return;
+        this.branchStatus.set('error');
+        this.branchError.set('Branches could not be loaded.');
+      }
     });
   }
 

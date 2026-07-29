@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { BranchOption, SearchableSelectComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-order-info',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelectComponent],
   template: `
     <div class="card-section glass-card">
       <div class="card-title">
@@ -14,8 +15,15 @@ import { FormsModule } from '@angular/forms';
       </div>
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label">Branch Code *</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['branch_code']" (ngModelChange)="onFieldChange('branch_code', $event)" placeholder="e.g. 101" required />
+          <app-searchable-select
+            label="Branch"
+            [options]="branches"
+            [value]="branchCode()"
+            [loading]="branchesLoading"
+            [error]="branchError"
+            (valueChange)="onBranchChange($event)"
+            (refresh)="branchRefresh.emit()">
+          </app-searchable-select>
         </div>
         <div class="form-group">
           <label class="form-label">Order Code *</label>
@@ -61,10 +69,24 @@ import { FormsModule } from '@angular/forms';
 export class OrderInfoComponent {
   @Input() orderData: Record<string, unknown> = {};
   @Input() moduleKey: string = '';
+  @Input() branches: BranchOption[] = [];
+  @Input() branchesLoading = false;
+  @Input() branchError: string | null = null;
   @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
+  @Output() branchRefresh = new EventEmitter<void>();
 
   onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });
+  }
+
+  /** The selector emits only the branch code; '' clears the draft field. */
+  onBranchChange(code: string | null) {
+    this.onFieldChange('branch_code', code ?? '');
+  }
+
+  branchCode(): string | null {
+    const value = this.orderData['branch_code'];
+    return value == null || value === '' ? null : String(value);
   }
 
   /** order_gps is a [lat, lng] pair (see FlatOrderPayloadBuilder.GetGps) --

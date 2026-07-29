@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OrderRequestsStore, QuickRange } from '../order-requests.store';
-import { FilterChipComponent } from '../../../shared/ui';
+import { FilterChipComponent, SearchableSelectComponent } from '../../../shared/ui';
 
 const STATUS_CHIPS = [
   { value: 1, label: 'New' }, { value: 2, label: 'Confirmed' }, { value: 3, label: 'Ready' },
@@ -13,8 +13,8 @@ const STATUS_CHIPS = [
 ];
 
 /**
- * Sticky filter bar -- search (debounced 300ms), phone, branch dropdown
- * (from GET .../order-requests/branches), 9 multi-select status chips, an
+ * Sticky filter bar -- search (debounced 300ms), phone, branch picker
+ * (from GET .../modules/{key}/branches), 9 multi-select status chips, an
  * outcome segmented control, date range + quick ranges, and Clear all.
  * Reads/writes OrderRequestsStore directly rather than @Input/@Output
  * plumbing -- this component only ever exists inside the store's provider
@@ -23,7 +23,7 @@ const STATUS_CHIPS = [
 @Component({
   selector: 'app-filter-bar',
   standalone: true,
-  imports: [CommonModule, FormsModule, FilterChipComponent],
+  imports: [CommonModule, FormsModule, FilterChipComponent, SearchableSelectComponent],
   template: `
     <div class="filter-bar">
       <div class="filter-row">
@@ -41,13 +41,16 @@ const STATUS_CHIPS = [
         </div>
 
         <div class="filter-group">
-          <label>Branch</label>
-          <select [ngModel]="store.filters().branchCode" (ngModelChange)="store.setFilters({ branchCode: $event || null })">
-            <option [ngValue]="null">All branches</option>
-            @for (b of store.branches(); track b.branchCode) {
-              <option [ngValue]="b.branchCode">{{ b.branchCode }} ({{ b.count }})</option>
-            }
-          </select>
+          <app-searchable-select
+            label="Branch"
+            placeholder="All branches"
+            [options]="store.branches()"
+            [value]="store.filters().branchCode"
+            [loading]="store.branchStatus() === 'loading'"
+            [error]="store.branchError()"
+            (valueChange)="store.setFilters({ branchCode: $event })"
+            (refresh)="store.loadBranches(true)">
+          </app-searchable-select>
         </div>
 
         <div class="filter-group">

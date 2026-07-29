@@ -1,13 +1,14 @@
 import { Component, Input, Output, EventEmitter, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+
 import { A11yModule } from '@angular/cdk/a11y';
-import { BranchSummary } from '../../../core/models';
+import { BranchOption } from '../../../core/models';
+import { SearchableSelectComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-resend-request-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, A11yModule],
+  imports: [CommonModule, A11yModule, SearchableSelectComponent],
   template: `
     <div class="dialog-backdrop" (click)="close.emit()"></div>
     <div class="dialog-panel" cdkTrapFocus cdkTrapFocusAutoCapture role="alertdialog" aria-modal="true">
@@ -25,13 +26,16 @@ import { BranchSummary } from '../../../core/models';
         <p class="dialog-desc">Rebuilds the payload from this request's own stored data and sends it to the selected branch. Currently recorded branch: <strong>{{ currentBranchCode || 'none' }}</strong>.</p>
 
         <div class="form-group">
-          <label>Target branch *</label>
-          <select [(ngModel)]="selectedBranch">
-            <option value="" disabled>Select a branch...</option>
-            @for (b of branches; track b.branchCode) {
-              <option [value]="b.branchCode">{{ b.branchCode }}{{ b.branchName ? ' - ' + b.branchName : '' }}</option>
-            }
-          </select>
+          <app-searchable-select
+            label="Target branch"
+            placeholder="Search branches"
+            [options]="branches"
+            [value]="selectedBranch || null"
+            [loading]="branchesLoading"
+            [error]="branchError"
+            (valueChange)="selectedBranch = $event || ''"
+            (refresh)="branchRefresh.emit()">
+          </app-searchable-select>
         </div>
 
         <p class="error-message" *ngIf="errorMessage">{{ errorMessage }}</p>
@@ -64,10 +68,6 @@ import { BranchSummary } from '../../../core/models';
     .blocked-banner { background: var(--danger-bg); color: var(--danger); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.88rem; }
     .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
     .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
-    .form-group select {
-      background: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-      color: var(--text-primary); padding: 8px 10px;
-    }
     .error-message { color: var(--danger); font-size: 0.82rem; margin: 0 0 12px; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
     .btn-secondary { background: var(--bg-tertiary); border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 16px; cursor: pointer; }
@@ -80,12 +80,15 @@ export class ResendRequestDialogComponent implements OnInit {
   @Input() currentBranchCode: string | null = null;
   @Input() canResend: boolean = true;
   @Input() blockedReason: string = '';
-  @Input() branches: BranchSummary[] = [];
+  @Input() branches: BranchOption[] = [];
+  @Input() branchesLoading = false;
+  @Input() branchError: string | null = null;
   @Input() submitting: boolean = false;
   @Input() errorMessage: string | null = null;
 
   @Output() close = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<string>();
+  @Output() branchRefresh = new EventEmitter<void>();
 
   selectedBranch = '';
 

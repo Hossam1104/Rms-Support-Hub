@@ -2,9 +2,10 @@ import { Component, OnInit, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
+import { BranchOptionsService } from '../../core/services/branch-options.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
-import { OrderDraft, Product, Payment, Consumer, SendOrderResult, LookupResult, OrderRequestDetailResponse } from '../../core/models';
+import { BranchOption, LookupResult, OrderDraft, Product, Payment, Consumer, SendOrderResult, OrderRequestDetailResponse } from '../../core/models';
 import { QuickStatsComponent } from './components/quick-stats.component';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
@@ -69,6 +70,10 @@ function asNumber(value: unknown, fallback = 0): number {
       <app-order-info
         [orderData]="draftStore.draft().orderData"
         [moduleKey]="moduleKey()"
+        [branches]="branches()"
+        [branchesLoading]="branchesLoading()"
+        [branchError]="branchError()"
+        (branchRefresh)="loadBranches(true)"
         (fieldChange)="onFieldChange($event)">
       </app-order-info>
 
@@ -129,6 +134,7 @@ function asNumber(value: unknown, fallback = 0): number {
       *ngIf="showAddProductDialog()"
       [moduleKey]="moduleKey()"
       [branchCode]="branchCode()"
+      [branchName]="selectedBranchName()"
       (close)="showAddProductDialog.set(false)"
       (add)="onAddProduct($event)"
       (lookupItem)="onLookupItem($event)">
@@ -154,6 +160,7 @@ function asNumber(value: unknown, fallback = 0): number {
 })
 export class FlatOrderComponent implements OnInit {
   private api = inject(ApiService);
+  private branchOptions = inject(BranchOptionsService);
   moduleService = inject(ModuleService);
   private toast = inject(ToastService);
   private route = inject(ActivatedRoute);
@@ -164,6 +171,10 @@ export class FlatOrderComponent implements OnInit {
   compiledJson = signal<Record<string, unknown> | null>(null);
   apiResponse = signal<SendOrderResult | null>(null);
   landedRequestId = signal<number | null>(null);
+  branches = signal<BranchOption[]>([]);
+  branchesLoading = signal(false);
+  branchError = signal<string | null>(null);
+
 
   showAddProductDialog = signal<boolean>(false);
   showAddPaymentDialog = signal<boolean>(false);
@@ -174,6 +185,7 @@ export class FlatOrderComponent implements OnInit {
   /** undefined until the first environment is known, so the effect below
    * never re-fetches on the initial load -- only on an actual switch. */
   private lastEnvKey: string | undefined = undefined;
+  private branchLoadToken = 0;
 
   constructor() {
     // U1 (UI_Rework_Plan.md D4 step 5): switching environments must clear
@@ -207,10 +219,41 @@ export class FlatOrderComponent implements OnInit {
     return v == null ? '' : String(v);
   }
 
+  selectedBranchName(): string {
+    const branch = this.branches().find(option => option.code === this.branchCode());
+    return branch ? `${branch.name} (${branch.code})` : '';
+  }
+
+  loadBranches(refresh = false) {
+    const key = this.moduleKey();
+    if (!key) return;
+
+    const token = ++this.branchLoadToken;
+    this.branchesLoading.set(true);
+    this.branchError.set(null);
+    this.branchOptions.list(key, this.moduleService.activeEnvironment()?.key, refresh).subscribe({
+      next: response => {
+        if (token !== this.branchLoadToken) return;
+        this.branchesLoading.set(false);
+        if (response.success) {
+          this.branches.set(response.data || []);
+        } else {
+          this.branchError.set(response.message || 'Branches could not be loaded.');
+        }
+      },
+      error: () => {
+        if (token !== this.branchLoadToken) return;
+        this.branchesLoading.set(false);
+        this.branchError.set('Branches could not be loaded.');
+      }
+    });
+  }
+
   loadState() {
     const key = this.moduleKey();
     this.draftStore.setModuleKey(key);
     const envKey = this.moduleService.activeEnvironment()?.key;
+    this.loadBranches();
     this.api.get<OrderDraft>(`modules/${key}/state`, { envKey }).subscribe({
       next: state => {
         if (state) this.draftStore.setDraft(state);
