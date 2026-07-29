@@ -2,16 +2,15 @@
 
 > **This file is the SQL contract.** No repository query may reference a
 > table or column name that is not verified live below, in the "Schema
-> discovery" table lifted verbatim from
-> [`Prompts/UPC_Enhancments_Plan.md`](Prompts/UPC_Enhancments_Plan.md).
+> discovery" table and the current repository SQL.
 >
 > A previous version of this document presented **invented** table/column
 > names (`H.Status`, `H.CreatedDateTime`, `H.CustomerMobile`, `C.Name`,
 > `A.AddressLine1`, `ItemPrices.BranchId`, …) as though they were verified.
 > None of them exist on the real schema; every query built against them
-> throws `Invalid column name` at runtime. See
-> [`remediation_plan.md`](../remediation_plan.md) §2.2 (B6–B9) for the full
-> defect list and [`ContractTests.cs`](../backend/tests/OnlineOrderTool.Tests/ContractTests.cs)
+> throws `Invalid column name` at runtime. The remediation milestone is indexed
+> in [`.ai/HISTORY.md`](../.ai/HISTORY.md); see
+> [`ContractTests.cs`](../backend/tests/OnlineOrderTool.Tests/ContractTests.cs)
 > for the automated guard against regressing this again.
 >
 > The queries below were originally ported line-for-line from the

@@ -8,8 +8,8 @@ table. **OMS** and **Call Center** are registered placeholder modules, not
 yet built.
 
 Originally a Flask app; rewritten as a .NET 10 Web API + Angular 22 SPA,
-then remediated across eleven sessions (see `remediation_plan.md` for the
-full defect register and session history) to fix an invented payload
+then remediated across eleven sessions (see `.ai/HISTORY.md`; the detailed
+audit plan is archived under `.ai/archive/`) to fix an invented payload
 schema, invented SQL columns, a per-user draft that was actually shared
 process-wide, and a design system that didn't match the approved
 direction. This README describes the tool as it exists **after** that
@@ -71,8 +71,9 @@ online_order_tool/
 │   ├── dev.ps1                          # Runs the API and `ng serve` together
 │   └── build.ps1                        # dotnet test + dotnet build (Release) + ng build (production)
 │
-├── remediation_plan.md                  # Defect register (B1-B36) and the R0-R10 session plan
-└── remediation_prompts.md               # The 11 session prompts executed against that plan
+├── docs/UI_Rework_Plan.md                # Active UI programme, U3-U8 only
+├── docs/UI_Rework_Prompts.md             # Active execution prompts, U3-U8 only
+└── .ai/HISTORY.md                        # Concise completed-milestone index
 ```
 
 ---

@@ -20,7 +20,7 @@
 
 ## Validation
 
-- Not run.
+- Not applicable; no interrupted implementation is being handed off.
 
 ## Blocker or Risk
 

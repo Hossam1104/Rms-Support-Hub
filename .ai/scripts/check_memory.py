@@ -12,6 +12,7 @@ LIMITS = {
     ".ai/STATE.md": (120, 10_000),
     ".ai/PROJECT.md": (160, 14_000),
     ".ai/DECISIONS.md": (160, 14_000),
+    ".ai/HISTORY.md": (160, 14_000),
     ".ai/HANDOFF.md": (40, 5_000),
 }
 

@@ -12,7 +12,7 @@ namespace OnlineOrderTool.Tests;
 /// <summary>
 /// These tests pin the API contract. The only sources of truth are the reference
 /// payloads under docs/request_examples/** (mirrored here as fixtures/payloads/**)
-/// and the verified SQL Server schema in docs/Prompts/UPC_Enhancments_Plan.md
+/// and the verified SQL Server schema in docs/database-schema.md
 /// "Schema discovery". Nothing about the current payload builders or repositories
 /// may be treated as correct just because it compiles or another test asserts it.
 ///
@@ -173,7 +173,7 @@ public class ContractTests
         var source = File.ReadAllText(sourcePath);
 
         // These column/table references do not exist in the verified schema
-        // (docs/Prompts/UPC_Enhancments_Plan.md "Schema discovery"). Every one of
+        // (docs/database-schema.md "Verified schema"). Every one of
         // them caused a live "Invalid column name" SqlException in the pre-R4
         // UpcOrderValidationRepository this file replaced.
         var invented = new[]
@@ -188,7 +188,7 @@ public class ContractTests
         Assert.True(found.Count == 0,
             "OrderRequestRepository.cs references invented column names that do not exist " +
             "in the verified schema: " + string.Join(", ", found) +
-            ". See docs/database-schema.md and docs/Prompts/UPC_Enhancments_Plan.md \"Schema discovery\".");
+            ". See docs/database-schema.md \"Verified schema\".");
     }
 
     /// <summary>

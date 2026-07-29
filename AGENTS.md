@@ -77,7 +77,32 @@ Small, well-scoped tasks should use one model only. Use multiple models only whe
 - Never claim a check passed unless it ran successfully.
 - Before completion, inspect the final task-related diff and remove temporary/debugging changes.
 
+## Repository-specific guardrails
+
+- Treat `docs/request_examples/**` and the mirrored backend test fixtures as the payload contract.
+- Treat current repository SQL plus `docs/database-schema.md` as the database contract; never guess a column or JSON key.
+- Keep backend dependencies flowing Core -> Data -> API, with API as the composition root.
+- Gate module behavior through `IOrderModule.Capabilities`; do not add module-key string comparisons.
+- Keep connection strings and credentials outside tracked files; use user-secrets or environment variables.
+- Use the Testing environment for agent-run live verification. Never send, cancel, or resend against Production.
+- Do not edit generated or runtime paths: `bin/`, `obj/`, `node_modules/`, `dist/`, `.angular/`, or `var/`.
+- Component styles must consume design tokens; raw color literals belong only in the designated token/gradient files.
+- For broad changes, run `.\scripts\build.ps1`; record any unavailable live dependency separately.
+
 ## Memory update policy
+
+### Plan and prompt lifecycle
+
+- `TASK.md` and at most one linked file under `.ai/plans/` define active work.
+- Keep programme documents and execution prompts limited to unfinished
+  sessions. Do not leave completed prompts in the active documentation tree.
+- Record completed milestones concisely in `.ai/HISTORY.md` with commit or
+  validation evidence.
+- Archive a completed plan under `.ai/archive/` only when it has lasting audit
+  value; otherwise delete it. Executed prompt runners normally belong only in
+  Git history.
+- After moving or deleting a plan, update live documentation links so current
+  contracts never depend on archived prompts.
 
 After completed work:
 

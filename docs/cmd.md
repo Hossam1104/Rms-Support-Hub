@@ -26,7 +26,7 @@ Ensure you have the required runtimes installed before running the project:
 cd backend
 dotnet run --project src/OnlineOrderTool.Api
 ```
-> 📍 **API Endpoint**: `http://localhost:5200/api` (see `Properties/launychSettings.json`)
+> 📍 **API Endpoint**: `http://localhost:5200/api` (see `backend/src/OnlineOrderTool.Api/Properties/launchSettings.json`)
 > 📖 **OpenAPI Specs**: `http://localhost:5200/openapi/v1.json`
 
 #### Terminal 2 — Frontend (Angular 22)
@@ -97,4 +97,4 @@ npx ng build --configuration production
 ---
 
 > 💡 **Need More Context?**  
-> Check the full documentation in [`docs/api-spec.md`](file:///d:/AI%20Tools/DBS/online_order_tool/docs/api-spec.md) and [`README.md`](file:///d:/AI%20Tools/DBS/online_order_tool/README.md).
+> Check the full documentation in [`api-spec.md`](api-spec.md) and [`README.md`](../README.md).

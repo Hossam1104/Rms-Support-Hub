@@ -2,7 +2,7 @@
 
 Replaces the dark-glassmorphism system from the original rewrite
 (`_glassmorphism.css` + the glass variables in the old `_variables.css`) —
-see `remediation_plan.md` B24. Session: R8.
+completed in remediation session R8; see [`.ai/HISTORY.md`](../.ai/HISTORY.md).
 
 ## The binding rule
 

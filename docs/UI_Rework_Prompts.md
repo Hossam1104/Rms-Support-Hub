@@ -1,8 +1,8 @@
-# UI Rework Execution Prompts — 9 Sessions (U0 → U8)
+# UI Rework Execution Prompts — Active Sessions U3-U8
 
-Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). One prompt per session,
-executed in order, **one conversation each**. Copy the whole section — rules
-block included — into a fresh session.
+Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U2 are complete and
+recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). Execute U3-U8 in order, one
+session at a time.
 
 ---
 
@@ -10,14 +10,11 @@ block included — into a fresh session.
 
 Repeat these verbatim if the agent drifts.
 
-- **Read [`UI_Rework_Plan.md`](UI_Rework_Plan.md) in full before touching
-  anything**, especially §2 (defect register D1–D14) and §3 (guiding
-  decisions). Read [`docs/Prompts/remediation_plan.md`](docs/Prompts/remediation_plan.md)
-  §3 for the constraints that still bind (no invented columns or keys, no
-  committed credentials, no module-key string comparisons).
+- Follow `AGENTS.md`, `TASK.md`, and the selected session's targeted read list.
+  Do not treat archived plans as current instructions.
 - **Never invent a SQL column name or a JSON key.** The two sources of truth
-  are [`docs/database-schema.md`](docs/database-schema.md) (SQL) and
-  `docs/request_examples/**` (payload). If something is in neither, introspect
+  are [`database-schema.md`](database-schema.md) (SQL) and
+  `request_examples/**` (payload). If something is in neither, introspect
   it live and write it down, or stop and ask. Do not guess a column because a
   similarly-named one exists on another table.
 - **Every live call goes to UPC Testing.** `RmsMainTest2`,
@@ -33,169 +30,21 @@ Repeat these verbatim if the agent drifts.
 - **Run the Verify block and paste its real output before declaring done.**
   A green build is not verification. If the database is unreachable, say so
   explicitly — do not report success.
-- **End every session with:** `dotnet build` clean, `dotnet test` green,
-  `ng build --configuration production` under budget with zero warnings, and
-  **one** clean commit using the message given.
+- **End every session with:** the required targeted checks and production
+  build green. Commit only when the user explicitly requests it.
 - Shell is **PowerShell on Windows**, repo root `d:\AI Tools\DBS\online_order_tool`.
   `.\scripts\dev.ps1` runs the API (`http://localhost:5200`) and `ng serve`
   (`http://localhost:4200`) together. `.\scripts\build.ps1` runs the full gate.
 
 ---
 
-## Session U0 — Ground truth: hosts and the `Branches` schema
-
-The order tool's Testing lane points at the wrong host, the documented SQL
-server is stale, and `dbo.Branches` — the table the next three sessions build
-on — has never been introspected. This session establishes ground truth and
-adds the guard tests that must **fail** so the following sessions have a real
-gate. It changes **no behaviour**.
-
-Read `UI_Rework_Plan.md` §2.1 (D5), §3.1 (the environment matrix) and §3
-decision 2. This is session 1 of 9.
-
-1. Correct the host literals. In
-   `backend/src/OnlineOrderTool.Core/Modules/UpcEcommerceModule.cs`, the
-   `UPC Testing` environment's `ApiUrl` and `CancelUrl` must be
-   `http://10.10.10.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder`
-   and `…/CancelOrder`. `UPC Production` already reads `http://10.10.10.181/…`
-   — confirm it, do not change it. Update
-   `backend/src/OnlineOrderTool.Api/appsettings.json` `ModuleEndpoints:UpcTesting`
-   to match.
-2. Introspect `dbo.Branches` live. Write a throwaway script **in the scratchpad
-   directory, not the repo**, that connects to `10.10.10.181` / `RmsMainTest2`
-   using the `UpcEcommerceTest` connection string from user-secrets, and runs
-   `SELECT TOP 1 * FROM dbo.Branches`. Print the full column list and one
-   sample row with values redacted where they look sensitive. **This is the
-   gate for U3** — report the exact column names, especially whichever column
-   holds the human-readable branch name, and whether the table has an
-   active/inactive flag worth filtering on.
-3. Record the result. Add a `dbo.Branches` row to the verified-schema table in
-   `docs/database-schema.md` §1, in the same format as the existing rows, with
-   the same "confirmed live against …" provenance note. Correct the two stale
-   `10.10.8.181` references in that file (§1 header and §5) to `10.10.10.181`,
-   and the one in `README.md:133`. **Leave `docs/Prompts/**` untouched** — those
-   are a historical record of what was true at the time.
-4. Add guard tests to `backend/tests/OnlineOrderTool.Tests/ContractTests.cs`:
-   - A test that reads the tracked source of `backend/src/**` and
-     `backend/tests/**` and asserts **no** file contains `10.10.9.181` or
-     `10.10.8.181`. Failure message must name the offending files.
-   - A test asserting `new UpcEcommerceModule(…).GetEnvironment(null).Environment == "Testing"`.
-     This is **expected to fail now** — U1 makes it pass. Do not add `Skip`.
-5. Do not change `GetEnvironment`, any controller, or any frontend file. Step 4's
-   second test failing is the correct end state for this session.
-
-**Verify** (paste real output):
-```powershell
-dotnet build backend/OnlineOrderTool.slnx --nologo
-dotnet test  backend/OnlineOrderTool.slnx --nologo
-# expect: the stale-host test PASSES, the Testing-default test FAILS
-
-git grep -n "10\.10\.9\.181" -- backend frontend docs/database-schema.md README.md   # expect empty
-git grep -n "10\.10\.8\.181" -- backend frontend docs/database-schema.md README.md   # expect empty
-```
-Then paste the full `dbo.Branches` column list from step 2. **U3 cannot start
-without it.** If `10.10.10.181` / `RmsMainTest2` is unreachable, stop and say
-so — do not rewrite `docs/database-schema.md` on an unverified host.
-
-**Commit:** `chore(u0): correct RMS host literals, introspect dbo.Branches, add environment guard tests`
-
----
-
-### Kimi K3-256K context rule for U1–U8
+### Compact-context rule for U3-U8
 
 For the compact prompts below, each session's targeted read list overrides the
 earlier instruction to read the full plan. Run every required check, but report
 successful commands as one-line results and include detailed output only for
 failures or requested live evidence. All safety, scope, Testing-only,
-credential, diff-review, state-update, and commit rules still apply.
-
----
-
-## Session U1 — Environment safety: Testing by default, Production on purpose
-
-Execute **U1 only** and follow `AGENTS.md`. To conserve context, read only
-`UI_Rework_Plan.md` D3, D4 and §3 decision 4; then inspect the current diff,
-the files named below, and their direct tests/dependencies. Do not load the
-full plan or repository. Use existing patterns and keep tool/final output
-concise (summaries plus failure details, never full successful logs).
-
-Required outcome:
-
-1. Add an explicit `IsDefault`-style flag to `ModuleEnvironment`; expose it on
-   `EnvironmentDto`; flag Testing for every module. Each `GetEnvironment`
-   resolves: requested available key → flagged default → first available
-   non-Production → first available.
-2. Add `EnvironmentKey` to `CancelOrderRequest`. `CancelOrder` must resolve
-   that environment and return a clear 400 when it has no `CancelUrl`.
-3. Audit `LookupController`, `OrderRequestsController`, `SendRequest`, and
-   `ExportJson`; thread the caller's environment key everywhere. Report only
-   actual fixes/findings.
-4. In `frontend/src/app/core/services/module.service.ts`, select the flagged
-   default, persist a validated choice per module in namespaced `localStorage`,
-   and restore it on deep link/refresh.
-5. Add standalone `shared/ui/env-badge` (`TEST` neutral, `PROD` danger) and a
-   navbar environment switcher. A switch clears environment-scoped cache and
-   reloads the draft.
-6. Gate Production send/cancel with the existing `confirm-dialog`; require the
-   typed environment name. Do not create another dialog.
-
-**Verify:**
-```powershell
-dotnet test backend/OnlineOrderTool.slnx --nologo
-.\scripts\build.ps1
-```
-
-The U0 default test must pass. Add a stubbed-`IApiClient` test proving
-`environmentKey = "UPC Testing"` cancels through the Testing `CancelOrder`
-URL, never Production/CreateAndAssignOrder. Browser-check direct deep link →
-`TEST`; refresh → `TEST`; switch/refresh → `PROD`; Send opens typed
-confirmation. Cancel it—never send to Production. Record concise results.
-
-Review only the task diff, update `.ai/CURRENT_STATE.md`, and commit once:
-
-**Commit:** `feat(u1): default to the Testing lane, persist and surface the environment, gate Production`
-
----
-
-## Session U2 — Draft state: end the write race
-
-Execute **U2 only** and follow `AGENTS.md`. Read only `UI_Rework_Plan.md` D1
-and §3 decision 3, the current diff/state, and direct implementation/tests for
-the draft write path. Do not reread unrelated project material. Keep command
-output to summaries and failures.
-
-Fix the concurrent draft lost-update/file-lock race:
-
-1. In `DraftManager`, guard the entire load-modify-write with a per
-   `(sessionId,moduleKey)` `SemaphoreSlim` stored in a
-   `ConcurrentDictionary`. Write `<file>.tmp`, then atomic overwrite-move.
-   Retry `IOException` briefly and finitely; preserve tolerant reads.
-2. Add `PATCH modules/{key}/order-data` accepting
-   `{ fields: Dictionary<string, object?> }` and applying the batch in one
-   transaction. Retain `PUT order-field` only as a one-entry adapter for U4.
-3. Add signal-backed `features/flat-order/draft.store.ts`: optimistic local
-   patches, ~300 ms debounce/coalescing, one PATCH, no response echo assigned
-   into local state. Only explicit full reloads replace state; overlapping
-   requests must preserve later field values.
-4. Rewire the flat-order UI. Consumer lookup sends one batch containing first,
-   middle, last, phone, email, birthdate, gender, address, and address code.
-   Its toast distinguishes populated from source-empty fields.
-5. Tests: 20 concurrent distinct-field patches retain all fields; controller
-   integration proves one multi-field PATCH.
-
-**Verify:**
-```powershell
-dotnet test backend/OnlineOrderTool.slnx --nologo
-.\scripts\build.ps1
-.\scripts\dev.ps1
-```
-
-In `TEST`, look up `0556028080`; all returned fields must appear with zero
-error toasts. Confirm the session draft JSON matches the UI. Report concise
-evidence (screenshot if available), inspect the task diff, update
-`.ai/CURRENT_STATE.md`, and commit once:
-
-**Commit:** `fix(u2): serialise and batch draft writes, stop the client clobbering its own state`
+credential, diff-review, and state-update rules still apply.
 
 ---
 
@@ -203,7 +52,7 @@ evidence (screenshot if available), inspect the task diff, update
 
 Execute **U3 only** and follow `AGENTS.md`. Read only `UI_Rework_Plan.md` D6,
 D7 and §3 decision 2, U0's verified `dbo.Branches` row in
-`docs/database-schema.md`, current state/diff, and direct files/tests. Never
+`database-schema.md`, current state/diff, and direct files/tests. Never
 guess schema: use U0's exact code/name columns and active flag only if verified.
 Keep successful tool output summarized.
 
@@ -238,9 +87,9 @@ curl.exe -s "http://localhost:5200/api/modules/upc_ecommerce/branches?envKey=UPC
 
 Report the real branch count and a short sanitized sample. In the browser,
 filter by name and code, keyboard-select, and confirm the draft stores the
-code. Review the task diff, update `.ai/CURRENT_STATE.md`, and commit once:
+code. Review the task diff and update `.ai/STATE.md`.
 
-**Commit:** `feat(u3): branch repository over dbo.Branches with a shared searchable picker`
+**Suggested commit (only when requested):** `feat(u3): branch repository over dbo.Branches with a shared searchable picker`
 
 ---
 
@@ -281,10 +130,9 @@ Compare the UI totals to:
 curl.exe -s "http://localhost:5200/api/modules/upc_ecommerce/calculate-totals"
 ```
 They must match to the cent. Clear a required field; Send must show its inline
-error. Report concise evidence, review the task diff, update
-`.ai/CURRENT_STATE.md`, and commit once:
+error. Report concise evidence, review the task diff, and update `.ai/STATE.md`.
 
-**Commit:** `fix(u4): populate the item lookup result, adopt server totals, real send lifecycle`
+**Suggested commit (only when requested):** `fix(u4): populate the item lookup result, adopt server totals, real send lifecycle`
 
 ---
 
@@ -326,9 +174,9 @@ Required outcome:
 Build must be under budget with zero warnings. Check kitchen sink in both
 themes, focus rings, four identical errors → one `×4` toast, reduced motion,
 and sidebar collapse/reflow. Record concise evidence, review the task diff,
-update `.ai/CURRENT_STATE.md`, and commit once:
+and update `.ai/STATE.md`.
 
-**Commit:** `feat(u5): dark-first token system, UI primitives, capped toast stack`
+**Suggested commit (only when requested):** `feat(u5): dark-first token system, UI primitives, capped toast stack`
 
 ---
 
@@ -367,9 +215,9 @@ Required outcome:
 In `TEST`, complete branch → item → consumer → payment at 1920/1280px; check
 rail, overlap, and scrolling. At 900/600px check bottom bar/clipping. Keyboard
 tab order must remain sensible. Capture concise evidence at 1920/1280/600,
-review the task diff, update `.ai/CURRENT_STATE.md`, and commit once:
+review the task diff, and update `.ai/STATE.md`.
 
-**Commit:** `feat(u6): two-column order builder workspace with a sticky summary rail`
+**Suggested commit (only when requested):** `feat(u6): two-column order builder workspace with a sticky summary rail`
 
 ---
 
@@ -409,9 +257,9 @@ git grep -n "glass-card\|glass-input\|glass-button\|glass-panel" -- frontend/src
 The grep must be empty and build warning-free/under budget. Check both themes
 on `/`, UPC order/requests/drawer/validation, GHC unicommerce, and kitchen
 sink; report only failures/unreachable routes plus concise evidence. Review
-the task diff, update `.ai/CURRENT_STATE.md`, and commit once:
+the task diff and update `.ai/STATE.md`.
 
-**Commit:** `refactor(u7): migrate every remaining feature to the new primitives, delete the legacy glass classes`
+**Suggested commit (only when requested):** `refactor(u7): migrate every remaining feature to the new primitives, delete the legacy glass classes`
 
 ---
 
@@ -455,7 +303,6 @@ git status --short
 
 All greps must be empty. Report a compact numbered E2E transcript including
 the real order number; name any blocked step exactly. A green build alone is
-not completion. Review the task diff, update `.ai/CURRENT_STATE.md`, and commit
-once:
+not completion. Review the task diff and update `.ai/STATE.md`.
 
-**Commit:** `docs(u8): verify the reworked tool end-to-end on UPC Testing and refresh the documentation`
+**Suggested commit (only when requested):** `docs(u8): verify the reworked tool end-to-end on UPC Testing and refresh the documentation`
