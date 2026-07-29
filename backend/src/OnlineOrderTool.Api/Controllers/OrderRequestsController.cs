@@ -93,16 +93,6 @@ public class OrderRequestsController : ControllerBase
         return Ok(new { request = detail, attempts, lineage });
     }
 
-    [HttpGet("branches")]
-    public async Task<ActionResult> GetBranches(string key, [FromQuery] string? envKey = null)
-    {
-        var (module, connStr, guard) = Resolve(key, envKey);
-        if (guard != null) return guard;
-
-        var branches = await _repository.ListBranchesAsync(connStr!);
-        return Ok(branches);
-    }
-
     /// <summary>Resolves the URL as customUrl -> endpointKey -> environment.CancelUrl
     /// (never ApiUrl -- that bug lived in the now-deleted HistoryController,
     /// see remediation_plan.md B12) and re-checks CancelBlockedStatuses

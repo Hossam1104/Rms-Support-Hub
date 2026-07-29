@@ -47,10 +47,12 @@ builder.Services.AddSingleton<IFlatOrderValidator, FlatOrderValidator>();
 builder.Services.AddSingleton<IUniCommerceValidator, UniCommerceValidator>();
 
 builder.Services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IGhcItemRepository, FlatOrderItemRepository>();
 builder.Services.AddSingleton<IUpcItemRepository, UpcItemRepository>();
 builder.Services.AddSingleton<IGhcConsumerRepository, GhcConsumerRepository>();
 builder.Services.AddSingleton<IUpcConsumerRepository, UpcConsumerRepository>();
+builder.Services.AddSingleton<IBranchRepository, BranchRepository>();
 builder.Services.AddSingleton<IOrderRequestRepository, OrderRequestRepository>();
 
 // Outbound TLS certificate validation is bypassed by default because the

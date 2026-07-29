@@ -88,9 +88,6 @@ public class OrderRequestsControllerTests
 
         public Task<OrderRequestLineageDto> GetLineageAsync(string connectionString, string orderNumber, string? parentOrderNumber)
             => Task.FromResult(new OrderRequestLineageDto(null, new List<OrderRequestLineageNodeDto>()));
-
-        public Task<List<BranchSummaryDto>> ListBranchesAsync(string connectionString)
-            => Task.FromResult(new List<BranchSummaryDto>());
     }
 
     private class FakeApiClient : IApiClient

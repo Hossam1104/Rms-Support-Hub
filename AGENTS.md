@@ -1,181 +1,110 @@
-# AI Agent Instructions
+# Shared AI Operating Contract
 
-This repository uses:
+This file is the canonical instruction source for Codex, Claude, and Kimi.
+Claude loads it through `CLAUDE.md`. Do not duplicate these instructions elsewhere.
 
-* `EXECUTE_TASK.md` for the current task
-* `.ai/CURRENT_STATE.md` for the latest project status
-* `.ai/CONTEXT.md` for stable project context
-* `.ai/DECISIONS.md` for important technical decisions
+## Shared-brain principle
 
-These instructions apply to any AI model working in this repository.
+The shared brain is the repository, Git, `TASK.md`, and the concise files under `.ai/`.
+Chat transcripts and hidden model reasoning are not project records.
+Never ask another model to reconstruct the project from previous conversations.
 
 ## Mandatory startup
 
-When asked to execute `EXECUTE_TASK.md`:
+For any task:
 
-1. Read `EXECUTE_TASK.md`.
-2. Read `.ai/CURRENT_STATE.md`.
-3. Inspect the current Git status and task-related diff.
-4. Read only the source and test files relevant to the task.
-5. Read `.ai/CONTEXT.md` only when project architecture, commands, modules, or integrations are unclear.
-6. Read `.ai/DECISIONS.md` only when the task may affect an existing technical decision.
+1. Read `TASK.md`.
+2. Read `.ai/STATE.md`.
+3. Run `python .ai/scripts/context.py`.
+4. Read `.ai/HANDOFF.md` only when its status is `In Progress` or `Blocked`.
+5. Read only the source, tests, and documentation named in `TASK.md`, plus task-related changed files.
+6. Read `.ai/PROJECT.md` only when non-obvious stable context is required.
+7. Read `.ai/DECISIONS.md` only when the task may affect an existing decision; open a detailed ADR only when its affected area matches the task.
 
-Do not read the complete repository unless the task requires broad analysis.
+Do not automatically read:
 
-Do not read Git history unless it is needed to understand the task.
+- `.ai/archive/`
+- every requirement or design document
+- the full repository
+- full Git history
+- full diffs unrelated to the task
+- old model transcripts or exported sessions
 
-Do not stop after summarizing or planning unless `EXECUTE_TASK.md` explicitly requests planning only.
+## One active owner
 
-## Execution
+Only one model owns implementation at a time.
+The next model continues from the repository state instead of repeating discovery, planning, or completed work.
 
-Determine the required role automatically from the task:
+Treat these sources in this order:
 
-* Plan when planning is requested.
-* Implement when code changes are requested.
-* Debug when an error investigation is requested.
-* Review when review is requested.
-* Test when validation is requested.
+1. Current code and tests
+2. Current Git status and task-related diff
+3. `TASK.md`
+4. `.ai/HANDOFF.md` for incomplete work
+5. `.ai/STATE.md`
+6. Stable project documentation and decisions
 
-Follow these rules:
+Challenge previous work only when there is concrete evidence of a defect, contradiction, security risk, or unmet acceptance criterion.
 
-* Work only within the requested scope.
-* Inspect existing patterns before changing code.
-* Avoid unrelated refactoring and formatting.
-* Reuse existing utilities and conventions.
-* Avoid unnecessary dependencies.
-* Preserve backward compatibility when required.
-* Do not expose credentials, secrets, tokens, or personal data.
-* Do not run destructive database or infrastructure commands.
-* Do not commit or push unless explicitly requested.
-* Do not ask the user to repeat information already available in the repository.
+## Roles
 
-For minor uncertainties, make the safest reasonable assumption and document it in `.ai/CURRENT_STATE.md`.
+The role is declared in `TASK.md`:
 
-Ask the user only when execution requires a material business decision, unavailable access, a destructive action, or clarification that cannot safely be inferred.
+- `Plan`: inspect only enough context to produce an executable plan; do not implement.
+- `Implement`: execute the accepted plan or objective; do not restart planning without a blocker.
+- `Debug`: reproduce, isolate, fix, and validate.
+- `Review`: inspect the task-related diff and tests only; do not modify unless requested.
+- `Test`: validate the changed scope and report evidence.
 
-## Validation
+Small, well-scoped tasks should use one model only. Use multiple models only when the task benefits from a separate planning, implementation, or review checkpoint.
 
-After implementation:
+## Execution rules
 
-1. Run only the validation relevant to the changed scope.
-2. Prefer targeted tests over the complete test suite.
-3. Run a full build or regression suite only when required by the task or when the change has broad impact.
-4. Fix failures introduced by the current changes.
-5. Clearly distinguish task-related failures from pre-existing failures.
-6. Never claim that a test passed unless it was executed successfully.
-
-Examples:
-
-* Small bug fix: affected unit tests plus compilation or type checking.
-* API change: affected API tests and contract validation.
-* UI change: affected component tests and build.
-* Shared-library change: broader dependent tests.
-* Configuration-only change: configuration validation and startup check where safe.
-
-## Final review
-
-Before completion:
-
-1. Inspect the final task-related Git diff.
-2. Confirm only intended files changed.
-3. Remove debugging code and temporary files.
-4. Check that no secrets were introduced.
-5. Confirm the result matches `EXECUTE_TASK.md`.
-
-## Project-memory update
-
-After every completed task, update only `.ai/CURRENT_STATE.md`.
-
-Keep it concise and replace outdated current-state information instead of continuously appending full historical logs.
-
-Use this structure:
-
-```markdown
-# Current State
-
-## Last Task
-
-- Task:
-- Result: Completed / Partial / Blocked
-- Date:
-
-## Changes
-
-- Concise list of meaningful changes
-- Maximum of approximately 10 entries
-
-## Files Changed
-
-- Relevant files only
+- Work only within the requested scope.
+- Prefer existing patterns and utilities.
+- Avoid unrelated refactoring, formatting, and dependency changes.
+- Do not paste large files into project-memory documents.
+- Do not store raw logs, complete diffs, test output, credentials, URLs with secrets, connection strings, or personal data in `.ai/`.
+- Do not commit, push, deploy, or run destructive commands unless explicitly requested.
+- For minor uncertainty, make the safest reversible assumption and record it in the handoff only if another model needs it.
+- Ask the user only for a material business decision, unavailable access, or unsafe/destructive action.
 
 ## Validation
 
-- Command: result
-- Command: result
-- Not run or blocked checks, when relevant
+- Run targeted checks for the changed scope first.
+- Run a broad build or regression suite only when the impact is broad or `TASK.md` requires it.
+- Distinguish new failures from pre-existing failures.
+- Never claim a check passed unless it ran successfully.
+- Before completion, inspect the final task-related diff and remove temporary/debugging changes.
 
-## Current Blockers
+## Memory update policy
 
-- None, or concise blocker details
+After completed work:
 
-## Known Risks
+- Update `.ai/STATE.md` only with durable current facts; replace outdated text rather than appending history.
+- Set `.ai/HANDOFF.md` to `Empty`.
+- Update `.ai/PROJECT.md` only when stable architecture, commands, integrations, or non-obvious conventions changed.
+- Update `.ai/DECISIONS.md` only for a lasting decision. Put detailed rationale in one ADR under `.ai/decisions/`.
+- Move a large completed plan to `.ai/archive/` only when it has audit value; otherwise delete it.
 
-- Current relevant risks only
+When stopping before completion:
 
-## Next Recommended Task
-
-- One specific next action
-```
-
-Keep `.ai/CURRENT_STATE.md` preferably below 100 lines.
-
-Do not add raw command output, long code samples, chat transcripts, or full Git diffs.
-
-Update `.ai/CONTEXT.md` only when stable project information changes, such as:
-
-* Technology stack
-* Main architecture
-* Module structure
-* Build or run commands
-* Database approach
-* Authentication model
-* External integrations
-
-Update `.ai/DECISIONS.md` only when a lasting technical decision is made or changed.
-
-Do not update project-memory files for trivial formatting-only changes unless they materially affect the current state.
+- Update `.ai/HANDOFF.md` with only the delta: completed work, exact next action, changed files, validation, blocker, and risks.
+- Keep the handoff below 40 lines.
+- Do not rewrite the full project state or implementation history.
 
 ## Completion response
 
-Return:
+Return only:
 
 ### Result
-
 Completed, Partially Completed, Blocked, Planning Completed, or Review Completed.
 
 ### Changes
-
-A concise summary of the work.
+Concise task-related changes.
 
 ### Validation
-
-Commands executed and their results.
+Commands executed and results.
 
 ### Remaining
-
-Only unresolved work, risks, or blockers.
-
-Do not provide a long narrative unless requested.
-
-## Final instruction
-
-When asked to execute `EXECUTE_TASK.md`:
-
-1. Read the task.
-2. Load only the minimum relevant context.
-3. Perform the work.
-4. Run targeted validation.
-5. Review the diff.
-6. Update `.ai/CURRENT_STATE.md`.
-7. Update context or decisions only when materially required.
-8. Report the result.
+Only unresolved work, blockers, or risks.

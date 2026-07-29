@@ -144,9 +144,3 @@ public record OrderRequestLineageDto(
     OrderRequestLineageNodeDto? Parent,
     List<OrderRequestLineageNodeDto> Children
 );
-
-public record BranchSummaryDto(
-    string BranchCode,
-    string? BranchName,
-    int Count
-);

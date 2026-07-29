@@ -340,19 +340,6 @@ public class OrderRequestRepository : IOrderRequestRepository
         return new OrderRequestLineageDto(parent, children);
     }
 
-    public async Task<List<BranchSummaryDto>> ListBranchesAsync(string connectionString)
-    {
-        using var connection = _connectionFactory.CreateConnection(connectionString);
-        var rows = await connection.QueryAsync<BranchRow>(@"
-            SELECT H.BranchCode, MAX(H.BranchName) AS BranchName, COUNT(*) AS Cnt
-            FROM dbo.RequestOrderHeaders AS H
-            WHERE H.BranchCode IS NOT NULL AND H.BranchCode <> ''
-            GROUP BY H.BranchCode
-            ORDER BY H.BranchCode");
-
-        return rows.Select(r => new BranchSummaryDto(r.BranchCode ?? "", r.BranchName, r.Cnt)).ToList();
-    }
-
     // -- Dapper row-mapping shapes. Nullable throughout to tolerate NULLs
     // even where the schema is expected non-null, matching the defensive
     // style already used across the item/consumer repositories. --
@@ -465,12 +452,5 @@ public class OrderRequestRepository : IOrderRequestRepository
         public DateTime OrderDate { get; set; }
         public int? OrderStatus { get; set; }
         public decimal? NetTotal { get; set; }
-    }
-
-    private class BranchRow
-    {
-        public string? BranchCode { get; set; }
-        public string? BranchName { get; set; }
-        public int Cnt { get; set; }
     }
 }

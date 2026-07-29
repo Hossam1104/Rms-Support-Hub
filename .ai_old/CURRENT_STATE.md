@@ -2,10 +2,10 @@
 
 ## Snapshot
 
-- Last updated: 2026-07-27
-- Updated by: Sol 5.6 High
+- Last updated: 2026-07-28
+- Updated by: Codex
 - Current branch: `main`
-- Repository status: Dirty only because the three project-memory files are modified.
+- Repository status: Dirty; U3 implementation is in progress and `UI_Rework_Prompts.md` has uncommitted prompt-only edits.
 - Overall project status: In Progress
 - Active workstream: U3 branch repository, API, and shared searchable selector.
 - Confidence level: High for local source/build/tests; live integrations remain unverified.
@@ -33,6 +33,7 @@ U2 is committed as `5ddc4de`: draft writes are serialized and atomic, order-data
 
 ## Recent Relevant Changes
 
+- `UI_Rework_Prompts.md`: U1–U8 were condensed for Kimi K3-256K, with targeted reads and concise validation reporting; U0 is unchanged.
 - `5ddc4de`: implements U2 atomic/serialized draft writes, batched patching, the debounced `DraftStore`, and concurrency coverage.
 - `6fd7f77`: defaults to Testing, persists/surfaces environments, and gates Production UI actions.
 - `ea66830` / `682fd55`: correct UPC endpoint/host information and add environment guards/schema evidence.
@@ -42,8 +43,8 @@ U2 is committed as `5ddc4de`: draft writes are serialized and atomic, order-data
 
 ## Current Uncommitted Changes
 
-- Modified: `.ai/CONTEXT.md`, `.ai/CURRENT_STATE.md`, and `.ai/DECISIONS.md`.
-- No production-code changes are currently uncommitted.
+- U3 branch repository/API work is in progress across its task-related backend files.
+- `UI_Rework_Prompts.md` has prompt-only Kimi context/quota reductions for U1–U8.
 
 ## Validation Status
 
@@ -56,6 +57,7 @@ U2 is committed as `5ddc4de`: draft writes are serialized and atomic, order-data
 | End-to-end tests | Not Run | No E2E framework is configured; live Testing workflow was not exercised. |
 | Type checking | Passed | Angular production/AOT build passed. |
 | Lint | Not Run | No lint script or Angular lint target is configured. |
+| Prompt document | Passed | `git diff --check -- UI_Rework_Prompts.md`; U0 exact-match check passed; U1–U8 word count reduced 47.2%. |
 
 ## Current Blockers
 

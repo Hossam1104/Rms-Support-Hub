@@ -1,8 +1,13 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using OnlineOrderTool.Api.Controllers;
 using OnlineOrderTool.Api.Exceptions;
+using OnlineOrderTool.Core.DTOs;
 using OnlineOrderTool.Core.Models;
 using OnlineOrderTool.Core.Modules;
+using OnlineOrderTool.Core.Repositories;
 using Xunit;
 
 namespace OnlineOrderTool.Tests;
@@ -16,13 +21,21 @@ public class LookupControllerTests
 {
     private class ThrowingModule : IOrderModule
     {
+        private readonly bool _branchLookup;
+
+        public ThrowingModule(bool branchLookup = false)
+        {
+            _branchLookup = branchLookup;
+        }
+
         public string Key => "throwing_module";
         public string Label => "Throwing Module";
         public string Client => "Test";
         public bool Available => true;
-        public ModuleCapabilities Capabilities { get; } = new(
+        public ModuleCapabilities Capabilities => new(
             DraftKind: "flat", ItemLookup: true, ConsumerLookup: true,
-            OrderRequests: false, Cancel: false, Resend: false);
+            OrderRequests: false, Cancel: false, Resend: false,
+            BranchLookup: _branchLookup);
 
         public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; } = new Dictionary<string, ModuleEnvironment>
         {
@@ -48,10 +61,27 @@ public class LookupControllerTests
 
     private class SingleModuleRegistry : IModuleRegistry
     {
-        private readonly IOrderModule _module = new ThrowingModule();
+        private readonly IOrderModule _module;
+        public SingleModuleRegistry(IOrderModule? module = null) => _module = module ?? new ThrowingModule();
         public IReadOnlyCollection<IOrderModule> GetAllModules() => new[] { _module };
         public IOrderModule? GetModule(string key) => key == _module.Key ? _module : null;
         public IOrderModule GetModuleOrThrow(string key) => GetModule(key) ?? throw new KeyNotFoundException(key);
+    }
+
+    private class FakeBranchRepository : IBranchRepository
+    {
+        public int CallCount;
+        public List<BranchOptionDto> Branches = new()
+        {
+            new BranchOptionDto("101", "Main Branch"),
+            new BranchOptionDto("P900", "Test Pharmacy")
+        };
+
+        public Task<List<BranchOptionDto>> ListBranchesAsync(string connectionString)
+        {
+            CallCount++;
+            return Task.FromResult(Branches);
+        }
     }
 
     private static IConfiguration BuildConfiguration() => new ConfigurationBuilder()
@@ -61,10 +91,13 @@ public class LookupControllerTests
         })
         .Build();
 
+    private static LookupController BuildController(IOrderModule module, IBranchRepository branches) =>
+        new(new SingleModuleRegistry(module), BuildConfiguration(), branches, new MemoryCache(new MemoryCacheOptions()));
+
     [Fact]
     public async Task LookupItem_DatabaseFailure_ThrowsUpstreamException_NotOk200()
     {
-        var controller = new LookupController(new SingleModuleRegistry(), BuildConfiguration());
+        var controller = BuildController(new ThrowingModule(), new FakeBranchRepository());
 
         var ex = await Assert.ThrowsAsync<UpstreamException>(() =>
             controller.LookupItem("throwing_module", code: "123"));
@@ -76,12 +109,84 @@ public class LookupControllerTests
     [Fact]
     public async Task LookupConsumer_DatabaseFailure_ThrowsUpstreamException_NotOk200()
     {
-        var controller = new LookupController(new SingleModuleRegistry(), BuildConfiguration());
+        var controller = BuildController(new ThrowingModule(), new FakeBranchRepository());
 
         var ex = await Assert.ThrowsAsync<UpstreamException>(() =>
             controller.LookupConsumer("throwing_module", phone: "0500000000"));
 
         Assert.Equal(502, ex.StatusCode);
         Assert.Contains("simulated database connection failure", ex.Message);
+    }
+
+    [Fact]
+    public async Task ListBranches_WithoutBranchLookupCapability_Returns501()
+    {
+        var repository = new FakeBranchRepository();
+        var controller = BuildController(new ThrowingModule(branchLookup: false), repository);
+
+        var result = await controller.ListBranches("throwing_module");
+
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(501, objectResult.StatusCode);
+        Assert.Equal(0, repository.CallCount);
+    }
+
+    [Fact]
+    public async Task ListBranches_WithCapability_ReturnsRepositoryData()
+    {
+        var repository = new FakeBranchRepository();
+        var controller = BuildController(new ThrowingModule(branchLookup: true), repository);
+
+        var result = await controller.ListBranches("throwing_module");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var json = JsonSerializer.Serialize(ok.Value);
+        Assert.Contains("\"code\":\"101\"", json);
+        Assert.Contains("\"name\":\"Main Branch\"", json);
+        Assert.Contains("\"code\":\"P900\"", json);
+        Assert.Equal(1, repository.CallCount);
+    }
+
+    [Fact]
+    public async Task ListBranches_SecondCall_ServedFromCache()
+    {
+        var repository = new FakeBranchRepository();
+        var controller = BuildController(new ThrowingModule(branchLookup: true), repository);
+
+        await controller.ListBranches("throwing_module");
+        var second = await controller.ListBranches("throwing_module");
+
+        Assert.IsType<OkObjectResult>(second);
+        Assert.Equal(1, repository.CallCount);
+    }
+
+    [Fact]
+    public async Task ListBranches_Refresh_BypassesCache()
+    {
+        var repository = new FakeBranchRepository();
+        var controller = BuildController(new ThrowingModule(branchLookup: true), repository);
+
+        await controller.ListBranches("throwing_module");
+        await controller.ListBranches("throwing_module", refresh: true);
+
+        Assert.Equal(2, repository.CallCount);
+    }
+
+    [Fact]
+    public async Task ListBranches_RepositoryFailure_ThrowsUpstreamException_NotOk200()
+    {
+        var controller = BuildController(new ThrowingModule(branchLookup: true), new ThrowingBranchRepository());
+
+        var ex = await Assert.ThrowsAsync<UpstreamException>(() =>
+            controller.ListBranches("throwing_module"));
+
+        Assert.Equal(502, ex.StatusCode);
+        Assert.Contains("simulated database connection failure", ex.Message);
+    }
+
+    private class ThrowingBranchRepository : IBranchRepository
+    {
+        public Task<List<BranchOptionDto>> ListBranchesAsync(string connectionString) =>
+            throw new InvalidOperationException("simulated database connection failure");
     }
 }

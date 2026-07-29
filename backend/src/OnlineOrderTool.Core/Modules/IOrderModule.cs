@@ -18,7 +18,12 @@ public record ModuleCapabilities(
     /// -- true only for ghc_ecommerce. Lets the builder UI show/hide the
     /// Delivery card without comparing module-key strings (R10,
     /// remediation_plan.md B21).</summary>
-    bool HasDeliveryFields = false
+    bool HasDeliveryFields = false,
+    /// <summary>True when the module's database has a readable branch table
+    /// backing GET /api/modules/{key}/branches (U3, UI_Rework_Plan.md D6/D7)
+    /// -- true only for upc_ecommerce today; GHC stays false pending
+    /// confirmed credentials/schema.</summary>
+    bool BranchLookup = false
 );
 
 public interface IOrderModule

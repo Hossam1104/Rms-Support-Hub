@@ -17,6 +17,4 @@ public interface IOrderRequestRepository
     Task<List<OrderRequestAttemptDto>> ListAttemptsAsync(string connectionString, string orderNumber);
 
     Task<OrderRequestLineageDto> GetLineageAsync(string connectionString, string orderNumber, string? parentOrderNumber);
-
-    Task<List<BranchSummaryDto>> ListBranchesAsync(string connectionString);
 }

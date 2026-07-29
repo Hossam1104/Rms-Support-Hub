@@ -56,7 +56,8 @@ public class ModuleController : ControllerBase
         OrderRequests: c.OrderRequests,
         Cancel: c.Cancel,
         Resend: c.Resend,
-        HasDeliveryFields: c.HasDeliveryFields
+        HasDeliveryFields: c.HasDeliveryFields,
+        BranchLookup: c.BranchLookup
     );
 
     [HttpGet("{key}")]

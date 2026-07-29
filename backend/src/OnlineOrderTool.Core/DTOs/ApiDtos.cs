@@ -33,7 +33,8 @@ public record ModuleCapabilitiesDto(
     bool OrderRequests,
     bool Cancel,
     bool Resend,
-    bool HasDeliveryFields
+    bool HasDeliveryFields,
+    bool BranchLookup
 );
 
 public record ModuleDto(

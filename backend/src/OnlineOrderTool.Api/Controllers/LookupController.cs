@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using OnlineOrderTool.Api.Exceptions;
 using OnlineOrderTool.Core.Modules;
+using OnlineOrderTool.Core.Repositories;
 
 namespace OnlineOrderTool.Api.Controllers;
 
@@ -8,13 +10,23 @@ namespace OnlineOrderTool.Api.Controllers;
 [Route("api/modules/{key}/lookup")]
 public class LookupController : ControllerBase
 {
+    private static readonly TimeSpan BranchCacheTtl = TimeSpan.FromMinutes(5);
+
     private readonly IModuleRegistry _moduleRegistry;
     private readonly IConfiguration _configuration;
+    private readonly IBranchRepository _branchRepository;
+    private readonly IMemoryCache _cache;
 
-    public LookupController(IModuleRegistry moduleRegistry, IConfiguration configuration)
+    public LookupController(
+        IModuleRegistry moduleRegistry,
+        IConfiguration configuration,
+        IBranchRepository branchRepository,
+        IMemoryCache cache)
     {
         _moduleRegistry = moduleRegistry;
         _configuration = configuration;
+        _branchRepository = branchRepository;
+        _cache = cache;
     }
 
     /// <summary>No more moduleKey == "upc_ecommerce" branching to pick a
@@ -73,6 +85,44 @@ public class LookupController : ControllerBase
         catch (Exception ex) when (ex is not ApiException)
         {
             throw new UpstreamException($"SQL Server database connection error: {ex.Message}");
+        }
+    }
+
+    /// <summary>U3 (UI_Rework_Plan.md D6/D7): the real branch list from
+    /// dbo.Branches (BranchRepository), replacing the order-history GROUP BY
+    /// that used to live on OrderRequestsController. Absolute route
+    /// (~/api/modules/{key}/branches) so the picker URL is not nested under
+    /// /lookup -- it serves the order builder and Order Requests alike.
+    /// Gated on Capabilities.BranchLookup, not a module-key comparison.
+    /// Cached per connection string for 5 minutes -- a branch list does not
+    /// change during a session; refresh=true bypasses the cache explicitly.</summary>
+    [HttpGet("~/api/modules/{key}/branches")]
+    public async Task<ActionResult> ListBranches(string key, [FromQuery] string? envKey = null, [FromQuery] bool refresh = false)
+    {
+        var module = _moduleRegistry.GetModule(key);
+        if (module == null) return NotFound(new { success = false, message = $"Unknown module '{key}'" });
+
+        var guard = CapabilityGuard.Require(module, c => c.BranchLookup, "branches");
+        if (guard != null) return guard;
+
+        var env = module.GetEnvironment(envKey);
+        var connStr = GetConnectionString(env);
+
+        var cacheKey = $"branches:{connStr}";
+        if (!refresh && _cache.TryGetValue(cacheKey, out List<Core.DTOs.BranchOptionDto>? cached) && cached != null)
+        {
+            return Ok(new { success = true, data = cached });
+        }
+
+        try
+        {
+            var branches = await _branchRepository.ListBranchesAsync(connStr);
+            _cache.Set(cacheKey, branches, BranchCacheTtl);
+            return Ok(new { success = true, data = branches });
+        }
+        catch (Exception ex) when (ex is not ApiException)
+        {
+            throw new UpstreamException($"Database connection error: {ex.Message}");
         }
     }
 
