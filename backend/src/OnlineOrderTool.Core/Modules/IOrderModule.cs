@@ -20,7 +20,7 @@ public record ModuleCapabilities(
     /// remediation_plan.md B21).</summary>
     bool HasDeliveryFields = false,
     /// <summary>True when the module's database has a readable branch table
-    /// backing GET /api/modules/{key}/branches (U3, UI_Rework_Plan.md D6/D7)
+    /// backing GET /api/modules/{key}/branches (U3 branch lookup contract)
     /// -- true only for upc_ecommerce today; GHC stays false pending
     /// confirmed credentials/schema.</summary>
     bool BranchLookup = false

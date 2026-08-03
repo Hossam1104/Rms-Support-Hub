@@ -1,8 +1,8 @@
-# UI Rework Execution Prompts — Active Sessions U3-U8
+# UI Rework Execution Prompts — Active Sessions U4-U8
 
-Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U2 are complete and
-recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). Execute U3-U8 in order, one
-session at a time.
+Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U3 are complete
+locally and recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). U3's live/browser
+gate is pending; execute U4-U8 in order, one session at a time.
 
 ---
 
@@ -38,58 +38,13 @@ Repeat these verbatim if the agent drifts.
 
 ---
 
-### Compact-context rule for U3-U8
+### Compact-context rule for U4-U8
 
 For the compact prompts below, each session's targeted read list overrides the
 earlier instruction to read the full plan. Run every required check, but report
 successful commands as one-line results and include detailed output only for
 failures or requested live evidence. All safety, scope, Testing-only,
 credential, diff-review, and state-update rules still apply.
-
----
-
-## Session U3 — Branches: real table, real endpoint, searchable picker
-
-Execute **U3 only** and follow `AGENTS.md`. Read only `UI_Rework_Plan.md` D6,
-D7 and §3 decision 2, U0's verified `dbo.Branches` row in
-`database-schema.md`, current state/diff, and direct files/tests. Never
-guess schema: use U0's exact code/name columns and active flag only if verified.
-Keep successful tool output summarized.
-
-Required outcome:
-
-1. Add `IBranchRepository`/`BranchRepository.ListBranchesAsync(connectionString)`
-   returning `BranchOptionDto(Code, Name)`, ordered by name, parameterized, and
-   optionally filtered only by a verified active column.
-2. Extend `LookupController` with
-   `GET /api/modules/{key}/branches?envKey=`. Reuse its environment/connection
-   handling; capability-gate it (no module-key comparison). Cache per
-   connection-string key for 5 minutes and support explicit bypass.
-3. Register the repository using existing DI lifetime conventions.
-4. Add standalone `shared/ui/searchable-select` using existing CDK
-   Overlay/scrolling patterns: label+code filtering, arrows/Enter/Escape/
-   type-ahead/focus return, correct combobox ARIA, virtual scrolling, and
-   loading/empty/error states in both themes. Export it and demo it in the
-   kitchen sink.
-5. Replace branch inputs in order info, add-product hint, request filter, and
-   resend dialog. Display `Name (Code)`, persist only code through U2's store,
-   and source all options from the new endpoint.
-6. When unused, remove the order-history branch repository method/route and
-   dead `BranchSummaryDto`.
-
-**Verify:**
-```powershell
-dotnet test backend/OnlineOrderTool.slnx --nologo
-.\scripts\build.ps1
-.\scripts\dev.ps1
-curl.exe -s "http://localhost:5200/api/modules/upc_ecommerce/branches?envKey=UPC%20Testing"
-```
-
-Report the real branch count and a short sanitized sample. In the browser,
-filter by name and code, keyboard-select, and confirm the draft stores the
-code. Review the task diff and update `.ai/STATE.md`.
-
-**Suggested commit (only when requested):** `feat(u3): branch repository over dbo.Branches with a shared searchable picker`
 
 ---
 

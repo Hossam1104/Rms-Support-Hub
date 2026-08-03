@@ -88,7 +88,7 @@ public class LookupController : ControllerBase
         }
     }
 
-    /// <summary>U3 (UI_Rework_Plan.md D6/D7): the real branch list from
+    /// <summary>U3: the real branch list from
     /// dbo.Branches (BranchRepository), replacing the order-history GROUP BY
     /// that used to live on OrderRequestsController. Absolute route
     /// (~/api/modules/{key}/branches) so the picker URL is not nested under

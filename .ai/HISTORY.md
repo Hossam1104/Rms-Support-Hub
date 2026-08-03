@@ -11,11 +11,10 @@ in Git; completed plans with lasting audit value live under `.ai/archive/`.
 | UI Rework U0 | Completed | `682fd55`, `ea66830` | Verified `dbo.Branches`, corrected API-host evidence, and retained the separately verified SQL host. |
 | UI Rework U1 | Completed | `6fd7f77` | Made Testing the explicit default, persisted and displayed the environment, and gated Production actions. |
 | UI Rework U2 | Completed | `5ddc4de` | Serialized and atomically persisted per-session draft patches; the frontend now batches and debounces edits. |
+| UI Rework U3 | Completed but live verification pending | `f4c5792` plus the current U3 build correction | Added the capability-gated `dbo.Branches` endpoint with cache refresh, the shared searchable selector, and branch-code-only integration across the current consumers. Backend tests and the production build pass; the safe Testing read returned HTTP 500 and browser evidence is still pending. |
 
 ## Active Continuation
 
-- UI Rework U3 is partially implemented at `4bf142b`: the backend branch
-  repository/endpoint exists, while the shared selector and frontend consumers
-  remain unfinished.
-- UI Rework U4-U8 have not started.
-
+- UI Rework U3 is locally complete at `f4c5792`; its live Testing/browser gate is
+  pending because the safe branch read returned HTTP 500.
+- UI Rework U4-U8 remain the active continuation, with U4 next.

@@ -44,7 +44,7 @@ online_order_tool/
 │   │   ├── OnlineOrderTool.Api/         # Controllers, DI composition, middleware, guards
 │   │   ├── OnlineOrderTool.Core/        # Domain models, modules/capabilities, payload builders, validators
 │   │   └── OnlineOrderTool.Data/        # Dapper SQL Server repositories
-│   └── tests/OnlineOrderTool.Tests/     # xUnit — 93 tests as of R10
+│   └── tests/OnlineOrderTool.Tests/     # xUnit backend tests
 │
 ├── frontend/                            # Angular 22 SPA
 │   └── src/app/
@@ -71,8 +71,8 @@ online_order_tool/
 │   ├── dev.ps1                          # Runs the API and `ng serve` together
 │   └── build.ps1                        # dotnet test + dotnet build (Release) + ng build (production)
 │
-├── docs/UI_Rework_Plan.md                # Active UI programme, U3-U8 only
-├── docs/UI_Rework_Prompts.md             # Active execution prompts, U3-U8 only
+├── docs/UI_Rework_Plan.md                # Active UI programme, U4-U8 only
+├── docs/UI_Rework_Prompts.md             # Active execution prompts, U4-U8 only
 └── .ai/HISTORY.md                        # Concise completed-milestone index
 ```
 
@@ -131,8 +131,8 @@ variable) once that's no longer the case.
 
 | Module | `Capabilities.OrderRequests` | Notes |
 |---|---|---|
-| `upc_ecommerce` | `true` | Live against `RmsMainTest2`/`RmsMainProd` at `10.10.8.181`. |
-| `ghc_ecommerce` | `false` | Item/consumer lookup and send/cancel work; the Order Requests page 501s pending confirmed GHC database credentials. |
+| `upc_ecommerce` | `true` | Configured for Testing/Production; current live database/API availability must be verified in the target environment. |
+| `ghc_ecommerce` | `false` | Item/consumer lookup and send/cancel are configured; the Order Requests page remains 501 pending confirmed GHC database credentials. |
 | `ghc_unicommerce` | `false` | No confirmed API URL or database credentials yet; the module is registered but not live. |
 | `oms`, `call_center` | — | Placeholder modules, not implemented. |
 

@@ -25,11 +25,11 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Build and Validation Entry Points
 
-- Full gate: `.\scripts\build.ps1` — discovered but not executed in the 2026-07-29 refresh.
-- Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` — executed; current result is recorded in `.ai/STATE.md`.
-- Targeted backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --filter FullyQualifiedName~<TestClass>` — discovered but not executed.
-- Frontend production build/type check: `cd frontend; npm run build -- --configuration production` — verified on 2026-07-29.
-- Frontend tests: `cd frontend; npm test -- --watch=false` — executed; current result is recorded in `.ai/STATE.md`.
+- Full gate: `.\scripts\build.ps1` — passed on 2026-08-03 (106 backend tests, Release build, and production Angular build).
+- Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` — passed 106/106 on 2026-08-03.
+- Targeted backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --filter FullyQualifiedName~<TestClass>` — branch controller slice passed 7/7 on 2026-08-03.
+- Frontend production build/type check: `cd frontend; npm run build -- --configuration production` — passed through the full gate on 2026-08-03.
+- Frontend tests: `cd frontend; npm test -- --watch=false` — one stale starter test fails because it expects the removed generated `<h1>`; current result is recorded in `.ai/STATE.md`.
 - Local run: `.\scripts\dev.ps1` — discovered but not executed; starts API on port 5200 and Angular on port 4200.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend; npm ci` — discovered but not executed.
 - Lint/format/E2E: no configured command.
@@ -37,6 +37,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 ## Integrations
 
 - SQL Server supports lookups and request history. Ownership: `OnlineOrderTool.Data`; schema contract: `docs/database-schema.md`; named configuration: `backend/src/OnlineOrderTool.Api/appsettings.json`. Tracked connection-string values stay empty.
+- Branch options use the capability-gated `/api/modules/{key}/branches` endpoint, the verified `dbo.Branches` contract, and a short in-memory cache; the frontend persists and submits only the branch code.
 - Client RMS HTTP APIs support send/cancel by module environment. Ownership: `IOrderModule` definitions plus `ApiClient`; configuration contract: module definitions and `appsettings.json`. Never record endpoint values in AI memory.
 - Development secrets use the API project's .NET user-secrets; deployed values use environment variables. See `README.md` without copying values.
 - Local draft persistence is owned by `SessionIdMiddleware` and `DraftManager`; `var/` is ignored and must not be treated as durable multi-instance storage.

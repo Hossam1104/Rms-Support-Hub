@@ -80,6 +80,16 @@ its first `Available` environment.
 - **Response `200 OK`**: `{ success: boolean, message?: string, data?: Consumer }`
 - **`501 Not Implemented`** if `Capabilities.ConsumerLookup` is `false`.
 
+### Branch Options (SQL Server DB)
+- **`GET /api/modules/{key}/branches?envKey={envKey}&refresh={true|false}`**
+- **Response `200 OK`**: `{ success: true, data: BranchOptionDto[] }`, where each
+  option is `{ code, name }` and is sourced from the verified active, non-deleted
+  `dbo.Branches` rows.
+- The route is gated by `Capabilities.BranchLookup`, cached for five minutes,
+  and refreshed from the database when `refresh=true`.
+- **`501 Not Implemented`** when branch lookup is disabled; upstream database
+  failures surface as **`502 Bad Gateway`**.
+
 ### Send Order Request
 - **`POST /api/modules/{key}/send-request`**
 - **Request Body**: `{ environmentKey?: string, customApiUrl?: string }`
@@ -130,10 +140,6 @@ the connection string) to query.
 ### Latest attempt by order number
 - **`GET /api/modules/{key}/order-requests/by-order/{orderNumber}`**
 - Same response shape as detail, resolved to that order's most recent (`MAX(Id)`) attempt. Used for post-send readback and deep links.
-
-### Branch filter options
-- **`GET /api/modules/{key}/order-requests/branches`**
-- **Response `200 OK`**: `BranchSummaryDto[]` — `{ branchCode, branchName, count }`, for the filter dropdown.
 
 ### Cancel
 - **`POST /api/modules/{key}/order-requests/{id}/cancel`**

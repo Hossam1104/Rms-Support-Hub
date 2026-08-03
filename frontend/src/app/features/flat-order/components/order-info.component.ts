@@ -1,7 +1,8 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BranchOption, SearchableSelectComponent } from '../../../shared/ui';
+import { BranchOption } from '../../../core/models';
+import { SearchableSelectComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-order-info',

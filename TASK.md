@@ -1,49 +1,60 @@
 # Current Task
 
-- **Task ID:** UI-U3
+- **Task ID:** UI-U4
 - **Status:** Ready
 - **Role:** Implement
 
 ## Objective
 
-Finish U3 so every branch workflow uses the verified `dbo.Branches` endpoint
-and one accessible searchable selector.
+Finish U4 so the flat-order builder uses the item lookup result, server-owned
+totals, real request lifecycle state, explicit endpoint configuration, and
+inline validation without changing the verified payload or validation layer.
 
 ## Done When
 
-- The capability-gated, five-minute-cached branch endpoint returns camelCase
-  `{ code, name }`; refresh bypasses the cache and backend tests pass.
-- `shared/ui/searchable-select` supports code/name filtering, keyboard
-  selection, focus return, combobox ARIA, virtual scrolling, and
-  loading/empty/error states.
-- Order header, Add Product, Order Requests filter, and resend use that
-  selector and persist/submit only the branch code.
-- The history-derived branch route, repository method, DTO, and frontend call
-  are removed.
-- Backend tests and `.\scripts\build.ps1` pass. Testing-only live/browser
-  verification reports a sanitized branch sample and confirms filtering,
-  keyboard selection, and draft persistence; unavailable infrastructure is
-  reported.
+- Item lookup populates the Add Product form with the available English and
+  Arabic names, code, unit price, VAT rate, and computed net price; a missing
+  branch blocks lookup with a picker-directed message.
+- The summary reads the typed `calculate-totals` response instead of a client
+  money-math reimplementation, and draft mutations refresh it through U2's
+  batched store.
+- Send loading follows the request lifecycle; the active environment URL is
+  read-only unless an explicit custom-endpoint toggle is enabled.
+- `{ success: false, errors: [...] }` validation maps to inline field errors,
+  and the temporary `PUT order-field` adapter and its callers are removed.
+- Targeted tests, `.\scripts\build.ps1`, and the required Testing-only
+  verification pass; unavailable live infrastructure is reported separately.
 
 ## Read First
 
-- `docs/UI_Rework_Prompts.md` section `Session U3`.
-- `docs/database-schema.md` verified `dbo.Branches` row.
-- `.ai/plans/UI-U3-branches.md`.
-- Current task-related diff and direct backend/frontend tests.
+- `docs/UI_Rework_Plan.md` defects D2, D8, and D13.
+- `docs/UI_Rework_Prompts.md` section `Session U4`.
+- `.ai/plans/UI-U4-builder.md`.
+- The `TotalsCalculator` response shape, current builder files, direct tests,
+  and the current task-related diff.
+
+## Scope
+
+- Flat-order item lookup, Add Product population, server totals, send state,
+  endpoint controls, inline validation, and removal of the U2 compatibility
+  adapter.
+- Preserve U0-U3 branch selection and U2's batched draft contract while
+  integrating the builder changes.
 
 ## Constraints
 
-- Use only verified branch columns; preserve capability routing and
-  Core -> Data -> API dependencies.
-- Preserve U2's batched draft flow. Persist the code, never the label.
+- Do not modify `FlatOrderPayloadBuilder`, `FlatOrderValidator`,
+  `TotalsCalculator`, verified SQL, payload fixtures, or module capability
+  routing.
+- Keep backend dependencies flowing Core -> Data -> API; do not add module-key
+  comparisons or invent payload keys.
 - Verification is UPC Testing only; never send, cancel, or resend against
   Production.
-- U4-U8, schema/payload changes, dependency upgrades, and unrelated redesign
-  are out of scope.
+- U5-U8, dependency upgrades, and unrelated redesign are out of scope.
 
 ## Checkpoint
 
-- **Baseline commit:** `4bf142bbd0adfd3265d9e009048e46193647c5ac`
-- Backend repository/endpoint/capability code exists. Fix its camelCase test,
-  then build the selector and migrate the four consumers.
+- **Baseline commit:** `f4c579291dcabcf011cd6c325f3d0aa871e1a3cc`
+- U3 implementation and local build gates are complete. The safe UPC Testing
+  branch read returned HTTP 500 and browser verification remains pending; do
+  not claim that live gate as passed.

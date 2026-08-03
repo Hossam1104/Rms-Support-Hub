@@ -1,9 +1,11 @@
-# UI Rework & Workflow Remediation Plan — Active U3-U8
+# UI Rework & Workflow Remediation Plan — Active U4-U8
 
 > Companion to [`UI_Rework_Prompts.md`](UI_Rework_Prompts.md) — active
-> sessions `U3` → `U8`.
+> sessions `U4` → `U8`.
 >
-> The .NET rewrite, remediation R0-R10, and UI sessions U0-U2 are complete.
+> The .NET rewrite, remediation R0-R10, and UI sessions U0-U3 are complete
+> locally. U3's safe UPC Testing read returned HTTP 500, so its live/browser
+> gate remains pending.
 > Their outcomes and commit evidence are indexed in
 > [`.ai/HISTORY.md`](../.ai/HISTORY.md); audit plans are under `.ai/archive/`.
 
@@ -24,8 +26,8 @@ The remaining operator-facing defects are:
 
 1. **Item lookup discards its own result** (D2) — the operator retypes the
    price, VAT and name by hand.
-2. **Branch is a free-text box** (D6) backed by a branch list derived from
-   order history rather than the `Branches` table (D7).
+2. **Client totals, loading, validation, and endpoint controls remain split**
+   between the builder and the server (D8, D13).
 3. **Two design systems coexist.** R8 built `shared/ui/**` on new tokens and
    migrated Order Requests; the entire order builder still renders through the
    `.glass-*` classes that `_gradients.css` itself labels *"legacy … superseded"*
@@ -33,18 +35,20 @@ The remaining operator-facing defects are:
 
 Three facts frame the active continuation:
 
-1. **`dbo.Branches` is verified.** U0 confirmed `BranchCode`, `Name`,
-   `NativeName`, `IsActive`, and `IsDeleted`; U3 may use only the columns
-   recorded in [`database-schema.md`](database-schema.md).
+1. **`dbo.Branches` is verified and U3 now consumes it.** U0 confirmed
+   `BranchCode`, `Name`, `NativeName`, `IsActive`, and `IsDeleted`; all future
+   changes must use only the columns recorded in
+   [`database-schema.md`](database-schema.md).
 2. **Testing is the default lane.** U1 made it explicit, persisted, visible,
    and threaded through operational calls. Production actions remain gated.
 3. **Draft writes are serialized and batched.** U2 removed the lost-update
    race. Its temporary `PUT order-field` adapter remains until U4 removes it.
 
-**Recommendation: repair in place.** The backend contract work is correct and
-tested. This programme changes state management, environment resolution, one
-new repository, and the whole frontend presentation layer. It does not reopen
-`FlatOrderPayloadBuilder`, `FlatOrderValidator`, or any existing verified query.
+**Recommendation: repair in place.** The backend contract work and U3 branch
+workflow are correct locally and tested. This continuation changes builder
+state management, environment resolution, and the frontend presentation layer.
+It does not reopen `FlatOrderPayloadBuilder`, `FlatOrderValidator`, or any
+existing verified query.
 
 ---
 
@@ -58,8 +62,6 @@ Severity: **S1** = the tool loses data or the feature does not function ·
 | # | Defect | Evidence |
 |---|---|---|
 | **D2** | **The item lookup result is thrown away.** `onLookupItem` toasts `Found item: {name}` and drops `res.data` on the floor. `AddProductDialogComponent` emits the lookup but has no input to receive a result, so `product.itemCode/itemName/unitPrice/vatPercentage` are never populated. Branch-specific pricing — the entire reason UPC lookups exist — never reaches the payload unless retyped by hand. | `flat-order.component.ts:248-263` vs `add-product-dialog.component.ts:76-97` |
-| **D6** | **Branch code is a free-text input.** `<input type="text" placeholder="e.g. 101">` for a value that must match `Branches.BranchCode` exactly, on which all UPC item pricing depends. A typo produces a silent "No item found for code …" that reads as a missing item rather than a wrong branch. | `order-info.component.ts:16-19` |
-| **D7** | **The only branch list in the application is derived from order history.** `ListBranchesAsync` runs `SELECT H.BranchCode, MAX(H.BranchName) … FROM dbo.RequestOrderHeaders GROUP BY H.BranchCode`. Branches that have never received an order do not appear, the name is a `MAX()` over whatever was denormalised into past orders, and it is scoped to the Order Requests filter bar — unusable as a branch picker for the builder. | `OrderRequestRepository.cs:343-353` |
 | **D8** | **Client totals and server totals are two different implementations.** `flat-order.component.ts::recalculate()` reimplements the money math in TypeScript while `GET modules/{key}/calculate-totals` — backed by the authoritative `TotalsCalculator` that the validator itself uses — exists and is never called. Two rounding paths for one number, and the summary the operator approves is not the one the server validates. | `flat-order.component.ts:334-360`; `OrderController.cs:54-64`; `TotalsCalculator.cs` |
 
 ### 2.2 Interface — S2
@@ -121,34 +123,31 @@ releases (splitting it is what produced D10).
 
 | # | Goal | Key files | Gate |
 |---|---|---|---|
-| **U3** | **Branches: repository, endpoint, shared searchable select (D6, D7).** `IBranchRepository` / `BranchRepository` over `dbo.Branches` using **only** the columns U0 verified. `GET /api/modules/{key}/branches?envKey=` returns `{ code, name }` with a short per-environment in-memory cache. A new `shared/ui/searchable-select` (CDK overlay, full a11y, keyboard navigation, filters on name **and** code, virtualised for long lists). Wired into the builder's `branch_code`, the Add Product dialog, the Order Requests filter bar and the resend dialog; the `RequestOrderHeaders`-derived branch list is retired. | new `BranchRepository.cs`, `LookupController.cs`, new `shared/ui/searchable-select/**`, `order-info.component.ts`, `add-product-dialog.component.ts`, `order-requests/components/filter-bar.component.ts`, `resend-request-dialog.component.ts` | A live call against Testing returns the real branch list; typing a branch **name** and a branch **code** both filter correctly; selection works keyboard-only |
 | **U4** | **Order builder workflow (D2, D8, D13).** The item lookup result populates the Add Product dialog — code, English and Arabic name, unit price, VAT rate, computed net — and a missing branch blocks the lookup with a pointer to the picker. The summary reads `GET calculate-totals`, replacing the client reimplementation. Real request-lifecycle loading state. `targetUrl` is bound to the active environment and read-only unless a "custom endpoint" toggle is on. `send-request` validation errors map to per-field inline errors instead of a toast dump. The U2 compatibility adapter is removed. | `flat-order.component.ts`, `add-product-dialog.component.ts`, `api-config.component.ts`, `quick-stats.component.ts` | Find Item on a real Testing item fills every field; the on-screen summary matches `calculate-totals` to the cent; sending an invalid draft highlights the offending fields rather than toasting a list |
 | **U5** | **Design system: dark-first rebuild (D9, D10, D12).** Rewrite `_tokens.css` around a dark-first neutral surface ramp, one accent and semantic colours; gradients are retained for status pills and hero accents only, not as the default surface treatment. New primitives in `shared/ui/`: `ui-card`, `ui-section`, `ui-field`, `ui-input`, `ui-select`, `ui-button` (variants and sizes), `ui-table`, `ui-toolbar`. The toast is rebuilt: at most 3 visible, identical messages collapsed with a `×N` counter, auto-dismiss, positioned clear of the action rail. Sidebar collapse drives `--sidebar-width` on the shell so the gutter follows. `docs/design-system.md` and the kitchen sink are refreshed. `.glass-*` survives only until U7. | `styles/_tokens.css`, `styles/_gradients.css`, `shared/ui/**`, `shared/components/toast/`, `module-shell.component.ts`, `docs/design-system.md`, `kitchen-sink.component.ts` | `/_kitchen-sink` renders every primitive in both themes and all nine status pills; `prefers-reduced-motion` disables every animation; collapsing the sidebar leaves no gutter |
 | **U6** | **Order builder layout rebuild (D11).** A two-column workspace. Left: collapsible sections — Order header · Customer · Products · Payments · Payload preview — each with a completion indicator, plus a sticky section nav. Right: a **sticky summary rail** carrying item count, subtotal, VAT, delivery, total, paid, balance, validation status, the environment badge and the Validate / Send actions. Products and payments become dense editable tables with inline edit and row totals. Below 1200px the rail collapses into a sticky bottom action bar. Skeletons on load, real empty states. | `features/flat-order/flat-order.component.ts` and every `features/flat-order/components/*`, new `order-summary-rail.component.ts` | A full build flow at 1280px and 1920px with no horizontal scroll and no overlap; the rail stays visible while scrolling; tab order runs top-to-bottom then into the rail |
 | **U7** | **Migrate the rest of the app off `.glass-*`.** Restyle landing, navbar, sidebar, breadcrumb, unicommerce, order-requests with its drawer and filter bar, and order-validation (kept, labelled superseded) onto the U5 primitives. Delete `.glass-card` / `.glass-panel` / `.glass-input` / `.glass-button` from `_gradients.css`. Replace the navbar `alert()` with a real link (D14). | `layout/**`, `features/landing/**`, `features/unicommerce/**`, `features/order-requests/**`, `features/order-validation/**`, `styles/_gradients.css` | `git grep "glass-" frontend/src` returns **nothing**; every route renders correctly in both themes |
 | **U8** | **End-to-end verification on Testing, docs, cleanup.** The full flow against **UPC Testing only**: pick a branch from the picker → look up an item → add it → look up a consumer → add a payment → validate → send → confirm the row lands in Order Requests with a matching `RequestJson` and a populated `ResponseJson` → open the drawer → cancel. Refresh `README.md`, `docs/api-spec.md`, `docs/design-system.md`, `docs/database-schema.md`. Confirm `var/` remains untracked. | docs, `scripts/build.ps1` | `.\scripts\build.ps1` fully green; the production bundle is under budget with zero warnings; the E2E transcript is pasted with the real order number |
 
-**Dependencies:** U0-U2 are complete · `U3 → U4` · `U5 → U6 → U7` ·
-`U8` needs U3-U7.
+**Dependencies:** U0-U3 are complete locally, with U3 live/browser evidence
+pending · `U4` is next · `U5 → U6 → U7` · `U8` needs U3-U7.
 
-Run U3-U8 in order so each session's manual verification exercises the
-completed data flow beneath the presentation work.
+Run U4-U8 in order so each session's verification exercises the completed data
+flow beneath the presentation work. U3's unresolved live gate is tracked
+separately and must not be reported as passed by a green build.
 
 ---
 
 ## 5. Risks
 
-1. **U3 must keep the branch source unified.** The verified table contains
-   `Name`, `NativeName`, `IsActive`, and `IsDeleted`; the picker persists only
-   `BranchCode`, and no history-derived fallback may remain.
-2. **U4 removes U2's compatibility adapter.** Existing draft JSON remains
+1. **U4 removes U2's compatibility adapter.** Existing draft JSON remains
    readable because the DTO did not change.
-3. **U5–U7 are a visual rewrite — every screen changes at once.** Splitting them
+2. **U5–U7 are a visual rewrite — every screen changes at once.** Splitting them
    further is precisely what left the app with two design systems. Do not
    split them.
-4. **Live database access to the configured UPC Testing SQL connection is
+3. **Live database access to the configured UPC Testing SQL connection is
    required** for U3, U4 and U8. If it is unreachable, report the unavailable
    live gate separately rather than claiming it passed from a green build.
-5. **Removing `.glass-*` in U7 breaks any screen not yet migrated.** The
+4. **Removing `.glass-*` in U7 breaks any screen not yet migrated.** The
    `git grep` gate in U7 is what catches it — run it before declaring the
    session complete.
