@@ -64,7 +64,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Build and Validation Entry Points
 
-- Full gate: `.\scripts\build.ps1` - passed for U7 on 2026-08-04 (110 backend
+- Full gate: `.\scripts\build.ps1` - passed for the U8 closeout on 2026-08-04 (110 backend
   tests, Release build, and production Angular build; initial bundle 427.19
   kB).
 - Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` - passed
@@ -72,9 +72,10 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Frontend production build/type check: `cd frontend; npm run build --
   --configuration production` - covered by the full gate on 2026-08-04.
 - Frontend tests: `cd frontend; npm test -- --watch=false` - passed 85/85
-  across seventeen spec files for U7 on 2026-08-04.
-- Local run: `.\scripts\dev.ps1` - discovered but not executed; starts API on
-  port 5200 and Angular on port 4200.
+  across seventeen spec files for the U8 closeout on 2026-08-04.
+- Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
+  4200; U8 verified the local API, frontend proxy, and route fallbacks without
+  running a state-changing workflow.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
   npm ci` - discovered but not executed.
 - Lint/format/E2E: no configured command.
@@ -118,3 +119,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   definitions, consumers, and unused compatibility aliases. The route-driven
   Order Requests drawer, six tabs, feature-specific behavior, and capability
   gates remain preserved.
+- U8 completed local regression, static/hygiene checks, documentation
+  reconciliation, and programme closeout. Browser visual verification and
+  full safe Testing order population/send/cancel/resend evidence remain
+  deferred; there is no active UI rework plan.

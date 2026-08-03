@@ -1,13 +1,13 @@
-# UI Rework Execution Prompts - Active Session U8
+# UI Rework Execution Prompts - Historical U0-U8
 
-Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U7 are complete
-locally and recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). U3 branch data
-and U4 item lookup still lack live evidence because the safe Testing dependency
-is unavailable; U8 is the remaining session.
+Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U8 are complete
+locally and recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). Browser visual
+verification and full safe Testing order acceptance remain deferred external
+evidence; there is no active execution session.
 
 ---
 
-## Rules for every active session
+## Historical safety rules
 
 - Follow `AGENTS.md`, `TASK.md`, and the selected session's targeted read list.
   Do not treat archived plans as current instructions.
@@ -51,30 +51,21 @@ the current API has no standalone validation endpoint. The existing
 
 ---
 
-## Session U8 - End-to-end verification, documentation, cleanup
+## U8 closeout record
 
-Execute **U8 only**. This is verification and cleanup; add no features.
+U8 completed the local regression/build gates, safe read-only Testing-lane
+checks, static and security hygiene checks, documentation reconciliation, and
+programme cleanup. The backend/frontend contracts, payload builders, totals,
+SQL, capabilities, and Production safety were not changed.
 
-Run the full build and the UPC Testing-only browser flow: open the order, choose
-a branch by name, look up/add a real item, look up consumer `0556028080`, add a
-valid payment, compare the summary with `GET calculate-totals`, send, locate the
-request in Order Requests, inspect Request/Response detail, cancel with a
-reason, and verify the Testing cancellation URL/status. Never use Production.
+The in-app browser was unavailable, so 1920/1280/900/600 viewport and theme
+checks were deferred. Safe synthetic item probes were inconsistent: one
+returned HTTP 200 with `success=false` and a repeat returned HTTP 502. No
+approved real Testing item was available for a safe order workflow.
+Consequently, item population, payment, send, Order Requests drawer
+inspection, Request/Response JSON inspection, cancellation, and resend remain
+external acceptance evidence rather than claimed passes.
 
-Refresh `README.md`, `docs/api-spec.md`, `docs/design-system.md`, and
-`docs/database-schema.md` only with verified facts. Confirm no credentials or
-generated files are tracked, `var/` remains ignored, and the following checks
-are clean:
-
-```powershell
-.\scripts\build.ps1
-git grep -n "10\.10\.9\.181\|10\.10\.8\.181" -- backend frontend README.md docs/api-spec.md docs/database-schema.md docs/design-system.md
-git grep -n "glass-card\|glass-input\|glass-button\|glass-panel" -- frontend/src
-git ls-files | Select-String "var/drafts"
-git status --short
-```
-
-Report a compact numbered E2E transcript. If any live step is unavailable, name
-that exact step and do not call the session complete without user direction.
-
-Suggested commit: `docs(u8): verify the reworked tool end-to-end on UPC Testing and refresh the documentation`
+The U8 verification plan was archived, active prompts were retired, project
+memory was updated, and the programme was closed locally. No Production action
+was attempted.

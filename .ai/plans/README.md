@@ -6,7 +6,5 @@ automatically read every plan.
 
 ## Current active plan
 
-- [`UI-U8-verification.md`](UI-U8-verification.md) - perform Testing-only
-  end-to-end verification, documentation reconciliation, and cleanup.
-
-Completed plans with lasting audit value belong under `.ai/archive/`.
+None. The U0-U8 UI rework programme is complete locally. The completed U8
+verification plan is archived under `.ai/archive/` for audit history.

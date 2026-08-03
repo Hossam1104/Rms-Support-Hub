@@ -16,12 +16,16 @@ in Git; completed plans with lasting audit value live under `.ai/archive/`.
 | UI Rework U5 | Completed locally; live database verification pending | `3f6646d` | Established dark-first/light-complete tokens, preserved nine status gradients and the `.glass-*` U7 bridge, added eight standalone shared primitives, capped/queued/deduplicated accessible toasts, persisted sidebar collapse, removed the shell dead gutter, and expanded the development-only kitchen sink. Backend 110/110, frontend 68/68, and the warning-free production build passed with a 429.42 kB initial bundle; browser and live item-population evidence remain unavailable. |
 | UI Rework U6 | Completed locally; browser/live item evidence pending | `dac0cc4` | Rebuilt the flat-order workspace with ordered collapsible sections, capability-aware section navigation, a server-value-only summary rail, dense product/payment tables, real loading/empty/error states, and a responsive bottom action bar. Backend 110/110, frontend 81/81, and the warning-free production build passed with a 429.42 kB initial bundle; browser evidence was unavailable and the Testing item lookup returned HTTP 502. |
 | UI Rework U7 | Completed locally; browser/live evidence pending | `d3219dd` | Migrated the remaining application surfaces to U5/U6 primitives and tokens, removed the navbar dead alert, deleted all legacy glass consumers/definitions and unused aliases, and preserved routes, drawer tabs, capability behavior, and Production safety. Backend 110/110, frontend 85/85, and the warning-free production build passed with a 427.19 kB initial bundle; no in-app browser was available and the Testing item lookup returned HTTP 502. |
+| UI Rework U8 | Completed locally; external verification pending | U8 closeout commit | Reproduced backend/frontend/build gates, completed safe local API and hygiene checks, reconciled the final plan and memory, archived the active U8 plan, and closed the U0-U8 programme locally. Browser visual checks and full safe Testing order population/send/cancel/resend evidence remain deferred; no Production action was attempted. |
 
-## Active Continuation
+## Programme Status
 
-- UI Rework U8 is the remaining active session.
+- U0-U8 are complete locally. U8 closed the programme after final regression,
+  static/hygiene, documentation, and memory verification.
 - U5 owns the completed dark-first token system, shared UI primitives, capped
   toast behavior, sidebar/shell offset, and development-only kitchen sink. U6
   owns the completed order-builder layout; U7 owns the completed app-wide
-  primitive migration and legacy glass removal. U8 owns Testing-only
-  verification, documentation, and cleanup.
+  primitive migration and legacy glass removal.
+- Browser visual checks and full safe Testing order population/send/cancel/
+  resend evidence remain deferred external acceptance evidence, not active
+  implementation work. No active UI rework plan remains.

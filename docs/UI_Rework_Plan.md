@@ -1,10 +1,11 @@
-# UI Rework & Workflow Remediation Plan - Active U8
+# UI Rework & Workflow Remediation Plan - Programme Closed Locally
 
-> Companion to [`UI_Rework_Prompts.md`](UI_Rework_Prompts.md). The active session
-> is U8. The .NET rewrite, remediation R0-R10, and UI sessions
-> U0 through U7 are complete locally. U3 branch data and U4 database item
-> lookup still lack live evidence because the safe Testing infrastructure is
-> unavailable; this is not reported as a passed live gate.
+> Companion to [`UI_Rework_Prompts.md`](UI_Rework_Prompts.md). This is the
+> historical closeout record for U0-U8. The .NET rewrite, remediation R0-R10,
+> and UI sessions U0 through U8 are complete locally. Browser visual
+> verification and full safe UPC Testing order acceptance remain deferred
+> because the required external/browser evidence was unavailable; no active
+> implementation session remains.
 >
 > Milestone evidence is indexed in [`.ai/HISTORY.md`](../.ai/HISTORY.md).
 > Completed audit plans are kept under `.ai/archive/` when they have lasting
@@ -14,9 +15,9 @@
 
 ## 1. Verdict
 
-The verified engine, data flow, U5 presentation foundation, and U6 builder
-workspace are locally sound. The remaining work is the final feature
-migration/Testing verification.
+The verified engine, data flow, U5 presentation foundation, U6 builder
+workspace, U7 migration, and final local U8 checks are sound. The U0-U8
+programme is closed locally; no active implementation work remains.
 
 Do not re-derive or modify the payload builders and their key-for-key contract
 tests, the verified SQL in [`database-schema.md`](database-schema.md),
@@ -128,22 +129,74 @@ memory.
 | U5 | **Completed locally - browser/live evidence pending.** Design-system foundation, shared primitives, capped toasts, sidebar reflow, and kitchen sink. | Tokens, gradients, shared UI, toast, sidebar, shell, kitchen sink, tests/docs | Commit `3f6646d`; backend 110/110, frontend 68/68, production build 429.42 kB; no browser instance |
 | U6 | **Completed locally - builder layout (D11).** Two-column workspace with collapsible sections, sticky section navigation, server-driven summary rail, dense product/payment tables, responsive bottom action bar, and real empty/loading/error states. | Commit `dac0cc4`; flat-order feature and new summary-rail/layout components | Backend 110/110, frontend 81/81, production initial bundle 429.42 kB; browser evidence unavailable |
 | U7 | **Completed locally (D10, D14).** Migrated navbar, sidebar, breadcrumb, landing, Order Requests, Uni-Commerce, and Order Validation to U5/U6 primitives; preserved routes and behavior; removed all legacy `.glass-*` rules and dead aliases. | Remaining layout/features, shared components, and `_gradients.css` compatibility rules | Commit `d3219dd`; backend 110/110, frontend 85/85, production initial bundle 427.19 kB; browser unavailable; Testing item lookup HTTP 502 |
-| U8 | **Testing-only end-to-end verification, docs, cleanup.** Verify the UPC Testing flow through Order Requests and cancellation, refresh final documentation, and confirm no credentials/generated files are tracked. | Docs, scripts/build gate, safe browser flow | Full build, required greps, concise E2E transcript, clean diff |
+| U8 | **Completed locally - external verification pending.** Final regression, safe local API checks, documentation reconciliation, hygiene checks, and programme closeout are complete. | Closeout documentation, memory, plan retirement, and verification evidence | Backend 110/110, frontend 85/85, Release build 0 warnings/0 errors, Angular initial bundle 427.19 kB, local read-only API/proxy/routes passed; browser and full safe Testing order evidence deferred |
 
-**Dependencies:** U0-U7 are locally complete, with live evidence pending for
-database-dependent reads and browser inspection. U8 is the remaining session.
-U8 depends on the completed U3-U7 local gates.
+**Dependencies:** U0-U8 are locally complete. Browser inspection and
+database-dependent order acceptance remain external deferred evidence, not
+active implementation dependencies.
 
-Run sessions in order. A green build does not convert an unavailable live
-Testing dependency into a passed live claim.
+Historical sequence was U0 through U8. A green build does not convert an
+unavailable live Testing dependency into a passed live claim.
 
 ---
 
 ## 5. Risks
 
-1. U7 was a broad visual rewrite. Keep the U5/U6 primitive contract stable so
-   later verification does not create a parallel design system.
-2. Live database access is required for U3/U4 item evidence and U8. Report an
-   HTTP 502 or other external failure separately from local test results.
-3. Browser inspection may be unavailable; report it without fabricating visual
-   evidence. U8 remains Testing-only and must not use Production.
+1. U7 was a broad visual rewrite. The U5/U6 primitive contract remains stable
+   and no parallel design system was introduced.
+2. Live database access is still required for U3/U4 item evidence and complete
+   Testing order acceptance. Safe synthetic item probes were inconsistent: one
+   returned HTTP 200 with `success=false` and a repeat returned HTTP 502. Both
+   outcomes remain documented separately from local test results.
+3. Browser inspection was unavailable. No visual evidence was fabricated;
+   viewport/theme acceptance remains deferred. No Production action was used.
+
+---
+
+## 6. Final Closeout (U8)
+
+### Shipped
+
+- U0-U8 local programme work is complete, including the U7 app-wide
+  primitive migration and legacy glass removal.
+- U8 completed final backend/frontend regression, static and hygiene checks,
+  documentation reconciliation, project-memory cleanup, and active-plan
+  retirement.
+- No payload, SQL, API, capability, dependency, or Production behavior
+  changed during U8.
+
+### Deferred Verification
+
+- Browser visual, theme, and responsive checks at 1920, 1280, 900, and 600
+  pixels were not run because no in-app browser was available.
+- Full safe Testing order population, send, Order Requests UI drawer,
+  Request/Response JSON inspection, cancellation, and resend were not run
+  because no approved real Testing item was available for a safe workflow.
+- Safe synthetic item probes were inconsistent: one returned HTTP 200 with
+  `success=false` and a repeat returned HTTP 502. The prior U4/U7 HTTP 502
+  remains recorded. No item-population pass is claimed.
+
+### Known External Blockers
+
+- The browser connector reported no available browser instance.
+- Testing item population depends on an approved safe item and external
+  database behavior; no safe real item was available.
+- Live acceptance remains external. Local read-only API calls are not
+  send/cancel evidence.
+
+### Discrepancies
+
+- No active U7/U8 implementation discrepancy remains.
+- `README.md`, `docs/api-spec.md`, and `docs/database-schema.md` were checked
+  against the current code; no verified fact required changing them.
+- No active UI rework plan remains; the U8 plan is archived.
+
+### Final Validation
+
+- Backend tests: 110/110; frontend tests: 17 files/85 tests; Release build:
+  0 warnings/0 errors; Angular initial bundle: 427.19 kB.
+- `check_memory.py`, Markdown links, glass/raw-style, runtime/generated,
+  secret/hygiene, conflict/debug, and `git diff --check` passed.
+- Local frontend routes/proxy, API module catalog, Testing endpoint metadata,
+  branch list, and Order Requests list/detail read paths passed. No Production
+  action was attempted.

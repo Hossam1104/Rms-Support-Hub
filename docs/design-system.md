@@ -155,4 +155,5 @@ production navigation and is tree-shaken from the production route graph.
 - U6 consumes these primitives for the two-column order-builder workspace,
   collapsible sections, dense tables, and server-totals summary rail.
 - U7 migrated the remaining feature pages and deleted the `.glass-*` bridge and
-  aliases proven unused. U8 is the verification and cleanup session.
+  aliases proven unused. U8 completed local verification and closed the UI
+  rework programme; browser and external Testing evidence remain deferred.
