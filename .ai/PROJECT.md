@@ -51,19 +51,28 @@ Do not copy facts that can be cheaply discovered from the repository.
   exported through `frontend/src/app/shared/ui/index.ts`. Toast state is
   capped/queued/deduplicated in `ToastService`, and sidebar collapse is
   persisted by `SidebarStateService` and published to the module shell.
+- U6 flat-order authoring is organized into collapsible `ui-section` blocks
+  with capability-aware section navigation, a server-value-only summary rail,
+  dense product/payment tables, real loading/empty/error states, and a
+  responsive bottom action bar. Product/payment edits use their existing PUT
+  endpoints; order-data edits retain U2 serialized batching. The current API
+  has no standalone validation endpoint, so the U6 Validate action is a
+  non-sending draft/preview/totals refresh and `send-request` remains the
+  server-authoritative validation/send path.
 - No background workers, queues, repository-owned migrations, E2E framework, or
   application authentication/authorization scheme are present.
 
 ## Build and Validation Entry Points
 
-- Full gate: `.\scripts\build.ps1` - passed on 2026-08-03 (110 backend tests,
-  Release build, and production Angular build; initial bundle 429.42 kB).
+- Full gate: `.\scripts\build.ps1` - passed for U6 on 2026-08-04 (110 backend
+  tests, Release build, and production Angular build; initial bundle 429.42
+  kB).
 - Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` - passed
   110/110 on 2026-08-03.
 - Frontend production build/type check: `cd frontend; npm run build --
   --configuration production` - covered by the full gate on 2026-08-03.
-- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 68/68
-  across twelve spec files on 2026-08-03.
+- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 81/81
+  across fifteen spec files for U6 on 2026-08-04.
 - Local run: `.\scripts\dev.ps1` - discovered but not executed; starts API on
   port 5200 and Angular on port 4200.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
@@ -103,5 +112,6 @@ Do not copy facts that can be cheaply discovered from the repository.
 - U5 primitives are standalone, token-based, and exported through the shared UI
   barrel. The development-only kitchen sink is their compatibility showcase;
   `.glass-*` remains a temporary bridge until U7.
-- U6 should consume the U5 primitives and server-owned totals without creating
-  layout-specific parallel components or client-side financial calculations.
+- U6 consumes the U5 primitives and server-owned totals without creating
+  client-side financial calculations; U7 owns migration of the remaining
+  `.glass-*` consumers and removal of the bridge.

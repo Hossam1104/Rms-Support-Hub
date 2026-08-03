@@ -6,9 +6,8 @@ automatically read every plan.
 
 ## Current active plan
 
-- [`UI-U6-builder-layout.md`](UI-U6-builder-layout.md) - responsive order
-  builder workspace, collapsible sections, dense tables, and a sticky
-  server-driven summary rail.
+- [`UI-U7-app-migration.md`](UI-U7-app-migration.md) - migrate remaining app
+  surfaces to U5/U6 primitives and remove the legacy glass compatibility layer.
 
 After completion, record the outcome in `.ai/HISTORY.md`, then delete the plan
 or archive it only when it has lasting audit value.

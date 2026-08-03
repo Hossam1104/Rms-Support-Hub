@@ -1,9 +1,9 @@
-# UI Rework Execution Prompts - Active Sessions U6-U8
+# UI Rework Execution Prompts - Active Sessions U7-U8
 
-Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U5 are complete
+Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U6 are complete
 locally and recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). U3 branch data
 and U4 item lookup still lack live evidence because the safe Testing dependency
-is unavailable; execute U6-U8 in order, one session at a time.
+is unavailable; execute U7-U8 in order, one session at a time.
 
 ---
 
@@ -36,48 +36,18 @@ UPC Testing item lookup remains an external HTTP 502 limitation.
 
 ---
 
-## Session U6 - Order builder layout rebuild
+## Completed U6 closeout
 
-Execute **U6 only**. Read `TASK.md`, `.ai/STATE.md`,
-`.ai/plans/UI-U6-builder-layout.md`, UI Rework Plan D11 and its U6 row, this
-section, `docs/design-system.md`, the direct flat-order/UI files, the draft
-store, and the U5 shared primitives named by the active plan.
+U6 was completed in `dac0cc4`: the flat-order workspace now uses ordered
+collapsible sections, capability-aware section navigation, a server-value-only
+summary rail, dense product/payment tables, real loading/empty/error states,
+and a responsive bottom action bar. Backend 110/110, frontend 81/81, and the
+warning-free production build passed with a 429.42 kB initial bundle. Browser
+inspection was unavailable; the UPC Testing item lookup remained HTTP 502.
 
-### Required outcome
-
-1. Build a responsive two-column order-builder workspace with collapsible
-   `ui-section` content, sticky section navigation, intentional field spans,
-   and skeletons while the draft is loading.
-2. Add a sticky approximately 340px `order-summary-rail` with item count,
-   subtotal, VAT, discount, delivery, total, paid, balance, validation issues,
-   environment, Validate, and Send. Values come from server totals; invalid
-   Send is disabled with a useful reason.
-3. Use dense/sticky `ui-table` surfaces for products and payments, with correct
-   row net totals, draft-store quantity/discount edits, explicit delete, and
-   real empty states.
-4. Below 1200px use a sticky bottom total/Send bar; below 768px use one column;
-   prevent page horizontal scroll and preserve narrow-screen keyboard access.
-5. Preserve U2 draft batching, U3 branch selection, U4 lookup/totals/validation/
-   send behavior, capabilities, payloads, SQL, and Production safety.
-
-### Verify
-
-```powershell
-dotnet test backend/OnlineOrderTool.slnx --nologo
-cd frontend
-npm test -- --watch=false
-cd ..
-.\scripts\build.ps1
-python .ai/scripts/context.py
-python .ai/scripts/check_memory.py
-git diff --check
-```
-
-At 1920/1280/900/600px, verify no overlap or page horizontal scroll when an
-in-app browser is available. If unavailable, report that without fabricating
-visual evidence.
-
-Suggested commit: `feat(u6): two-column order builder workspace with a sticky summary rail`
+U6 Validate is intentionally a non-sending draft/preview/totals refresh because
+the current API has no standalone validation endpoint. The existing
+`send-request` path remains the server-authoritative validation/send action.
 
 ---
 

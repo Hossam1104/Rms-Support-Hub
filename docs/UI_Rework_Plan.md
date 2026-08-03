@@ -1,9 +1,9 @@
-# UI Rework & Workflow Remediation Plan - Active U6-U8
+# UI Rework & Workflow Remediation Plan - Active U7-U8
 
 > Companion to [`UI_Rework_Prompts.md`](UI_Rework_Prompts.md). Active sessions
-> are U6 through U8. The .NET rewrite, remediation R0-R10, and UI sessions U0
-> through U5 are complete locally. U3 branch data and U4 database item lookup
-> still lack live evidence because the safe Testing infrastructure is
+> is U7, followed by U8. The .NET rewrite, remediation R0-R10, and UI sessions
+> U0 through U6 are complete locally. U3 branch data and U4 database item
+> lookup still lack live evidence because the safe Testing infrastructure is
 > unavailable; this is not reported as a passed live gate.
 >
 > Milestone evidence is indexed in [`.ai/HISTORY.md`](../.ai/HISTORY.md).
@@ -14,9 +14,9 @@
 
 ## 1. Verdict
 
-The verified engine, data flow, and U5 presentation foundation are locally
-sound. The remaining work is the order-builder workspace and the final
-feature migration/Testing verification.
+The verified engine, data flow, U5 presentation foundation, and U6 builder
+workspace are locally sound. The remaining work is the final feature
+migration/Testing verification.
 
 Do not re-derive or modify the payload builders and their key-for-key contract
 tests, the verified SQL in [`database-schema.md`](database-schema.md),
@@ -28,17 +28,18 @@ The remaining operator-facing defects are:
 
 1. **D10 - Two design systems coexist.** U5 established the shared token and
    primitive foundation; the `.glass-*` bridge remains until the U7 migration.
-2. **D11 - The order builder has no hierarchy or summary rail.** The six cards
-   remain a single full-width column; U6 owns the two-column rebuild.
-3. **D14 - Dead documentation affordance.** The navbar still uses an alert;
+2. **D14 - Dead documentation affordance.** The navbar still uses an alert;
    U7 owns the route-safe replacement.
 
-U5 is closed locally at `3f6646d`. Its backend/frontend/build gates pass, the
-raw-color and compatibility checks are clean, and browser visual evidence is
-unavailable in this session. U4 endpoint display, server totals, and
-validation were reported green by the handoff and are covered by local
-contracts; the database-dependent item lookup returned HTTP 502 and remains
-pending for live verification.
+U5 is closed locally at `3f6646d`, and U6 is closed locally at `dac0cc4`. U6
+rebuilt the flat-order workspace with collapsible sections, capability-aware
+navigation, a server-value-only summary rail, dense product/payment tables,
+real loading/empty/error states, and a responsive bottom action bar. U6 passed
+backend 110/110, frontend 81/81, and the warning-free production build with a
+429.42 kB initial bundle. Browser visual evidence is unavailable in this
+session. U4 endpoint display, server totals, and validation are covered by
+local contracts; the database-dependent item lookup returned HTTP 502 and
+remains pending for live verification.
 
 ---
 
@@ -52,17 +53,22 @@ operator cannot reasonably work, and **S3** means quality, drift, or hygiene.
 | ID | Severity | Defect | Owner |
 |---|---|---|---|
 | D10 | S2 | New shared UI tokens and primitives coexist with the temporary `.glass-*` feature styles. | U5 foundation; U7 migration/removal |
-| D11 | S2 | The builder is a single undifferentiated column with no completion hierarchy or summary rail. | U6 |
 | D14 | S3 | Navbar documentation action calls `alert()` and the page lacks a useful documentation link. | U7 |
 
-### 2.2 Closed U5 register
+### 2.2 Closed U6 register
+
+| ID | Resolution | Evidence |
+|---|---|---|
+| D11 | The flat-order builder now has an ordered two-column workspace with collapsible sections, capability-aware section navigation, a server-driven summary rail, dense product/payment tables, real loading/empty/error states, and a responsive bottom action bar. | `dac0cc4`, flat-order focused specs; backend 110/110, frontend 81/81, production initial bundle 429.42 kB; browser evidence unavailable |
+
+### 2.3 Closed U5 register
 
 | ID | Resolution | Evidence |
 |---|---|---|
 | D9 | Toasts now cap visible items at three, queue overflow, collapse repeated messages, pause on hover/focus, support close, promote queued items, and expose an accessible live region. | `toast.service.ts`, `toast.component.ts`, toast tests |
 | D12 | Sidebar collapse is persisted and the module shell binds `--sidebar-width` to the actual expanded/collapsed width without the former dead gutter. | `sidebar-state.service.ts`, `sidebar.component.ts`, `module-shell.component.ts`, sidebar test |
 
-### 2.3 Closed U4 register
+### 2.4 Closed U4 register
 
 | ID | Resolution | Evidence |
 |---|---|---|
@@ -72,6 +78,11 @@ operator cannot reasonably work, and **S3** means quality, drift, or hygiene.
 
 U4 live item lookup remains an external HTTP 502 limitation, not an open local
 implementation defect.
+
+U6 Validate remains a non-sending draft/preview/totals refresh because the
+current API has no standalone validation endpoint; `send-request` remains the
+server-authoritative validation/send path. No payload, totals, SQL,
+capability, draft, or API contract was changed.
 
 ---
 
@@ -119,13 +130,13 @@ memory.
 |---|---|---|---|
 | U4 | **Completed locally - live database item lookup pending.** Item lookup, server totals, send lifecycle, safe endpoint controls, inline validation, and adapter removal. | `features/flat-order/**`, endpoint DTO/controller, U4 tests/docs | Local backend 110/110, frontend 57/57, production build 419.85 kB; safe item lookup HTTP 502 |
 | U5 | **Completed locally - browser/live evidence pending.** Design-system foundation, shared primitives, capped toasts, sidebar reflow, and kitchen sink. | Tokens, gradients, shared UI, toast, sidebar, shell, kitchen sink, tests/docs | Commit `3f6646d`; backend 110/110, frontend 68/68, production build 429.42 kB; no browser instance |
-| U6 | **Order-builder layout (D11).** Two-column workspace with collapsible sections, sticky section navigation, server-driven summary rail, dense product/payment tables, responsive bottom action bar, and real empty/loading states. | Flat-order feature and new summary-rail/layout components | 1920/1280/900/600px browser flow with no overlap or page horizontal scroll |
+| U6 | **Completed locally - builder layout (D11).** Two-column workspace with collapsible sections, sticky section navigation, server-driven summary rail, dense product/payment tables, responsive bottom action bar, and real empty/loading/error states. | Commit `dac0cc4`; flat-order feature and new summary-rail/layout components | Backend 110/110, frontend 81/81, production initial bundle 429.42 kB; browser evidence unavailable |
 | U7 | **Remaining migration (D10, D14).** Migrate navbar, sidebar, breadcrumb, landing, Order Requests, Uni-Commerce, and Order Validation to U5/U6 primitives; preserve routes and behavior; remove all legacy `.glass-*` rules after consumers are gone. | Remaining layout/features and `_gradients.css` compatibility rules | `git grep` for legacy classes is empty; all routes build and render |
 | U8 | **Testing-only end-to-end verification, docs, cleanup.** Verify the UPC Testing flow through Order Requests and cancellation, refresh final documentation, and confirm no credentials/generated files are tracked. | Docs, scripts/build gate, safe browser flow | Full build, required greps, concise E2E transcript, clean diff |
 
-**Dependencies:** U0-U5 are locally complete, with live evidence pending for
-database-dependent reads. U6 is next, followed by U7 and U8. U8 depends on
-the completed U3-U7 local gates.
+**Dependencies:** U0-U6 are locally complete, with live evidence pending for
+database-dependent reads and browser inspection. U7 is next, followed by U8.
+U8 depends on the completed U3-U7 local gates.
 
 Run sessions in order. A green build does not convert an unavailable live
 Testing dependency into a passed live claim.
@@ -134,8 +145,8 @@ Testing dependency into a passed live claim.
 
 ## 5. Risks
 
-1. U6-U7 are a broad visual rewrite. Keep the U5 primitive contract stable so
-   the layout and migration work do not create parallel design systems.
+1. U7 is a broad visual rewrite. Keep the U5/U6 primitive contract stable so
+   the migration work does not create a parallel design system.
 2. The U5 `.glass-*` bridge is intentionally retained; U7 must remove it only
    after the final consumer migration and a repository-wide grep.
 3. Live database access is required for U3/U4 item evidence and U8. Report an
