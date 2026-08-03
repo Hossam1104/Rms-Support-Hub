@@ -99,6 +99,35 @@ describe('AddProductDialogComponent', () => {
     expect(component.lookupMessage?.text).toContain('not found');
   });
 
+  it('clears still-database-filled values while a new lookup is pending', () => {
+    const component = createComponent({ status: 'found', product: foundProduct });
+    const emissions: unknown[] = [];
+    component.lookupItem.subscribe(e => emissions.push(e));
+    component.searchCode = '999999';
+
+    component.onItemLookup();
+
+    expect(emissions).toEqual([{ code: '999999', branchCode: '101' }]);
+    expect(component.product.itemCode).toBe('999999');
+    expect(component.product.itemName).toBe('');
+    expect(component.product.itemNameAr).toBeNull();
+    expect(component.product.unitPrice).toBe(0);
+    expect(component.product.vatPercentage).toBe(15);
+    expect(component.dbFilled.size).toBe(0);
+  });
+
+  it('keeps manually edited lookup fields when a new lookup is pending', () => {
+    const component = createComponent({ status: 'found', product: foundProduct });
+    component.product.itemName = 'Operator override';
+    component.onFieldEdit('itemName');
+    component.searchCode = '999999';
+
+    component.onItemLookup();
+
+    expect(component.product.itemName).toBe('Operator override');
+    expect(component.product.unitPrice).toBe(0);
+  });
+
   it('keeps entered values untouched on an infrastructure failure', () => {
     const component = createComponent({ status: 'found', product: foundProduct });
 

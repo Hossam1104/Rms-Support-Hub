@@ -228,8 +228,24 @@ export class AddProductDialogComponent implements OnChanges {
       this.lookupMessage = { kind: 'info', text: 'Enter an item/material code first.' };
       return;
     }
+    this.clearStaleLookupValues(this.searchCode.trim());
     this.lookupMessage = null;
     this.lookupItem.emit({ code: this.searchCode.trim(), branchCode: this.branchCode });
+  }
+
+  /** Keep operator edits, but remove values that are still marked as coming
+   * from the previous database lookup while the new lookup is in flight. */
+  private clearStaleLookupValues(nextCode: string) {
+    const nextProduct = { ...this.product };
+
+    if (this.dbFilled.has('itemCode')) nextProduct.itemCode = nextCode;
+    if (this.dbFilled.has('itemName')) nextProduct.itemName = '';
+    if (this.dbFilled.has('itemNameAr')) nextProduct.itemNameAr = null;
+    if (this.dbFilled.has('unitPrice')) nextProduct.unitPrice = 0;
+    if (this.dbFilled.has('vatPercentage')) nextProduct.vatPercentage = 15;
+
+    this.product = nextProduct;
+    this.dbFilled.clear();
   }
 
   onAdd() {

@@ -21,6 +21,9 @@ its first `Available` environment.
 - **`GET /api/modules`**
 - **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, the module's environments, and its `capabilities` (mirrors `ModuleCapabilities`: `draftKind`, `itemLookup`, `consumerLookup`, `orderRequests`, `cancel`, `resend`, `hasDeliveryFields` — added in R7 so the frontend can gate routes/UI on real capability data instead of hardcoded module-key checks; `hasDeliveryFields` added in R10 so the flat-order builder can show/hide the Delivery card without comparing module-key strings — `true` only for `ghc_ecommerce`). No `password`/`db_config`/raw credentials are ever emitted.
 
+The capability object also includes `branchLookup`; it gates the branch route
+described in section 4 alongside item and consumer lookup capabilities.
+
 ### Get Module Details + Current Draft
 - **`GET /api/modules/{key}`**
 - **Response `200 OK`**: `{ module: ModuleDto, state: OrderDraft }`

@@ -64,6 +64,7 @@ describe('QuickStatsComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Totals have not been calculated yet');
+    expect(fixture.nativeElement.querySelectorAll('app-stat-tile').length).toBe(0);
   });
 
   it('shows the error state without fabricating totals', () => {

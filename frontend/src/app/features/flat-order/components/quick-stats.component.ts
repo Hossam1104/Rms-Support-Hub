@@ -16,7 +16,7 @@ import { TotalsSummary } from '../../../core/models';
   standalone: true,
   imports: [CommonModule, StatTileComponent],
   template: `
-    <div class="quick-stats-grid">
+    <div class="quick-stats-grid" *ngIf="totals">
       <app-stat-tile label="Total Amount" [value]="totals?.totalOrderAmount ?? 0" [decimals]="2" icon="bi-cart-check" variant="brand"></app-stat-tile>
       <app-stat-tile label="Paid Amount" [value]="totals?.totalPaidAmount ?? 0" [decimals]="2" icon="bi-wallet2" variant="success"></app-stat-tile>
       <app-stat-tile label="Remaining Balance" [value]="totals?.remainingBalance ?? 0" [decimals]="2" [variant]="(totals?.remainingBalance ?? 0) > 0 ? 'muted' : 'success'" icon="bi-calculator"></app-stat-tile>

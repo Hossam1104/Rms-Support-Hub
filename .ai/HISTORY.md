@@ -7,15 +7,16 @@ in Git; completed plans with lasting audit value live under `.ai/archive/`.
 |---|---|---|---|
 | Flask multi-module refactor | Completed and superseded | `1f2612d`, `0dcbe16` | Added module-scoped GHC/UPC/Uni-Commerce workflows and UPC validation before the later platform rewrite. |
 | .NET 10 + Angular 22 rewrite | Completed | `936bdda` | Replaced the active Flask application with the layered .NET API and Angular SPA baseline. |
-| Remediation R0-R10 | Completed | `936bdda` through `b011ffb` | Corrected payload and SQL contracts, moved history to `OrderRequests`, added capability routing and per-session drafts, rebuilt the frontend contract/design system and removed the legacy Flask tree. |
+| Remediation R0-R10 | Completed | `936bdda` through `b011ffb` | Corrected payload and SQL contracts, moved history to `OrderRequests`, added capability routing and per-session drafts, rebuilt the frontend contract/design system, and removed the legacy Flask tree. |
 | UI Rework U0 | Completed | `682fd55`, `ea66830` | Verified `dbo.Branches`, corrected API-host evidence, and retained the separately verified SQL host. |
 | UI Rework U1 | Completed | `6fd7f77` | Made Testing the explicit default, persisted and displayed the environment, and gated Production actions. |
 | UI Rework U2 | Completed | `5ddc4de` | Serialized and atomically persisted per-session draft patches; the frontend now batches and debounces edits. |
-| UI Rework U3 | Completed but live verification pending | `f4c5792` implementation, `3453b19` closeout, `015a627` frontend test baseline | Added the capability-gated `dbo.Branches` endpoint with cache refresh, the shared searchable selector, and branch-code-only integration across the current consumers. Backend tests, frontend tests, and the production build pass; the safe Testing read returned HTTP 500 and browser evidence is still pending. |
+| UI Rework U3 | Completed but live verification pending | `f4c5792`, `3453b19`, `015a627` | Added the capability-gated branch endpoint with cache refresh, the shared searchable selector, and branch-code-only integration. Local backend/frontend/build gates passed; the safe Testing branch read remained unavailable. |
+| UI Rework U4 | Completed locally; live database verification pending | `fd5d65d` plus the U4 review transition commit | Connected item lookup results, typed server totals, request-lifecycle send state, safe endpoint display/custom opt-in, inline validation, and removed the temporary per-field adapter. Added regression coverage for stale lookup values and pre-load totals. Local backend 110/110, frontend 57/57, and production build 419.85 kB passed; the Testing item lookup returned HTTP 502. |
 
 ## Active Continuation
 
-- UI Rework U3 is locally complete at `f4c5792`, with documentation closeout in
-  `3453b19` and a green frontend test baseline in `015a627`; its live
-  Testing/browser gate is pending because the safe branch read returned HTTP 500.
-- UI Rework U4-U8 remain the active continuation, with U4 next.
+- UI Rework U5-U8 remain active, with U5 next.
+- U5 owns the dark-first token system, shared UI primitives, capped toast
+  behavior, sidebar/shell offset, and development-only kitchen sink. U6 owns
+  the order-builder layout; U7 owns the remaining `.glass-*` migration.

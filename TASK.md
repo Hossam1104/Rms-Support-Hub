@@ -1,60 +1,62 @@
 # Current Task
 
-- **Task ID:** UI-U4
+- **Task ID:** UI-U5
 - **Status:** Ready
 - **Role:** Implement
 
 ## Objective
 
-Finish U4 so the flat-order builder uses the item lookup result, server-owned
-totals, real request lifecycle state, explicit endpoint configuration, and
-inline validation without changing the verified payload or validation layer.
+Build the dark-first design-system foundation for UI-U6 and UI-U7 while
+preserving the completed U4 order-builder behavior and all verified backend,
+payload, SQL, and draft contracts.
 
 ## Done When
 
-- Item lookup populates the Add Product form with the available English and
-  Arabic names, code, unit price, VAT rate, and computed net price; a missing
-  branch blocks lookup with a picker-directed message.
-- The summary reads the typed `calculate-totals` response instead of a client
-  money-math reimplementation, and draft mutations refresh it through U2's
-  batched store.
-- Send loading follows the request lifecycle; the active environment URL is
-  read-only unless an explicit custom-endpoint toggle is enabled.
-- `{ success: false, errors: [...] }` validation maps to inline field errors,
-  and the temporary `PUT order-field` adapter and its callers are removed.
-- Targeted tests, `.\scripts\build.ps1`, and the required Testing-only
-  verification pass; unavailable live infrastructure is reported separately.
+- Dark-first tokens define distinct page, panel, raised, overlay, interactive,
+  muted, hover, and selected surfaces; the light theme remains complete.
+- Radius, shadow, motion, reduced-motion, and still-used compatibility aliases
+  remain intact; gradients are limited to status and intentional accent use.
+- Standalone signal-based `ui-card`, `ui-section`, `ui-field`, `ui-input`,
+  `ui-select`, `ui-button`, `ui-table`, and `ui-toolbar` primitives are
+  exported and covered in the development-only kitchen sink.
+- Toasts cap visible items at three, queue overflow, collapse repeated messages,
+  pause while hovered/focused, support manual close, and remain accessible.
+- Sidebar collapse persists and drives the shell's real `--sidebar-width`
+  offset without a dead gutter.
+- Focused U5 tests, the full backend/frontend suites, raw-color and legacy
+  compatibility searches, memory checks, and `scripts/build.ps1` pass.
+- U6 layout work, U7 migration, API/payload/database changes, dependency
+  changes, and production actions remain out of scope.
 
 ## Read First
 
-- `docs/UI_Rework_Plan.md` defects D2, D8, and D13.
-- `docs/UI_Rework_Prompts.md` section `Session U4`.
-- `.ai/plans/UI-U4-builder.md`.
-- The `TotalsCalculator` response shape, current builder files, direct tests,
-  and the current task-related diff.
+- `docs/UI_Rework_Plan.md` defects D9, D10, and D12 plus decisions 5-6.
+- `docs/UI_Rework_Prompts.md` Session U5.
+- `.ai/plans/UI-U5-design-system.md`.
+- `docs/design-system.md` and the targeted token, gradient, shared UI, toast,
+  sidebar, shell, kitchen-sink, and direct test files.
 
 ## Scope
 
-- Flat-order item lookup, Add Product population, server totals, send state,
-  endpoint controls, inline validation, and removal of the U2 compatibility
-  adapter.
-- Preserve U0-U3 branch selection and U2's batched draft contract while
-  integrating the builder changes.
+- Frontend design tokens, gradient discipline, shared UI primitives, toast
+  lifecycle/queue behavior, sidebar state publication, shell offset, kitchen
+  sink coverage, and design-system documentation.
+- Preserve the `.glass-*` bridge until U7; new U5 primitives must use tokens.
 
 ## Constraints
 
 - Do not modify `FlatOrderPayloadBuilder`, `FlatOrderValidator`,
-  `TotalsCalculator`, verified SQL, payload fixtures, or module capability
-  routing.
-- Keep backend dependencies flowing Core -> Data -> API; do not add module-key
-  comparisons or invent payload keys.
-- Verification is UPC Testing only; never send, cancel, or resend against
-  Production.
-- U5-U8, dependency upgrades, and unrelated redesign are out of scope.
+  `TotalsCalculator`, verified SQL, request fixtures, module capability
+  routing, API contracts, or U4 behavior.
+- Keep backend dependencies flowing Core -> Data -> API and credentials outside
+  tracked files.
+- Verification is UPC Testing only when a live call is required. Never send,
+  cancel, or resend against Production.
+- Do not edit generated/runtime paths or add dependencies.
 
 ## Checkpoint
 
-- **Baseline commit:** `f4c579291dcabcf011cd6c325f3d0aa871e1a3cc`
-- U3 implementation and local build gates are complete. The safe UPC Testing
-  branch read returned HTTP 500 and browser verification remains pending; do
-  not claim that live gate as passed.
+- **U4 implementation reviewed:** `fd5d65d`
+- U4 is locally complete. Endpoint/totals/validation checks were reported
+  green; database-dependent item lookup remains blocked by HTTP 502, so live
+  item population and browser evidence are not claimed.
