@@ -10,9 +10,9 @@ import { CommonModule } from '@angular/common';
     .skeleton {
       display: block;
       background: linear-gradient(90deg,
-        var(--bg-tertiary) 25%,
-        var(--glass-hover-bg) 37%,
-        var(--bg-tertiary) 63%);
+        var(--surface-raised) 25%,
+        var(--surface-hover) 37%,
+        var(--surface-raised) 63%);
       background-size: 400% 100%;
       animation: shimmerSweep 1.4s linear infinite;
     }

@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="json-box glass-card">
+    <section class="json-box" aria-label="JSON viewer">
       <div class="json-header">
         <span class="json-title">{{ title || 'JSON Data' }}</span>
         <div class="json-actions">
@@ -21,15 +21,15 @@ import { CommonModule } from '@angular/common';
       @if (!collapsed()) {
         <pre class="json-content"><code>{{ formattedJson() }}</code></pre>
       }
-    </div>
+    </section>
   `,
   styles: [`
-    .json-box { padding: 12px; margin-top: 8px; }
+    .json-box { padding: 12px; margin-top: 8px; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
     .json-header { display: flex; justify-content: space-between; align-items: center; }
     .json-title { font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); }
     .json-actions { display: flex; gap: 8px; }
     .btn-icon { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; }
-    .json-content { margin-top: 8px; padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-sm); max-height: 400px; overflow-y: auto; color: var(--primary-hover); font-size: 0.85rem; }
+    .json-content { margin-top: 8px; padding: 12px; background: var(--surface-raised); border-radius: var(--radius-sm); max-height: 400px; overflow-y: auto; color: var(--text-accent); font-size: 0.85rem; }
   `]
 })
 export class JsonViewerComponent {

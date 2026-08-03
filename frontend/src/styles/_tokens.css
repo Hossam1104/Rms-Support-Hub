@@ -29,15 +29,6 @@
   --surface-hover: var(--slate-700);
   --surface-selected: rgba(139, 92, 246, .18);
 
-  /* Existing names remain aliases for the current feature bridge. */
-  --bg-primary: var(--surface-page);
-  --bg-main: var(--surface-page);
-  --bg-secondary: var(--surface-panel);
-  --bg-tertiary: var(--surface-raised);
-  --glass-bg: var(--surface-panel);
-  --glass-border: var(--border-subtle);
-  --glass-hover-bg: var(--surface-hover);
-
   /* ---- Text ramp ---- */
   --text-primary: #f4f7fb;
   --text-secondary: #b5c0d2;
@@ -76,19 +67,6 @@
   --state-neutral-fg: var(--text-secondary);
   --state-neutral-bg: rgba(193, 207, 230, .10);
   --state-neutral-border: var(--border-subtle);
-
-  /* Back-compat semantic aliases used by existing screens. */
-  --primary: var(--accent);
-  --primary-hover: var(--accent-hover);
-  --primary-gradient: var(--grad-brand);
-  --success: var(--state-success-fg);
-  --success-bg: var(--state-success-bg);
-  --warning: var(--state-warning-fg);
-  --warning-bg: var(--state-warning-bg);
-  --danger: var(--state-danger-fg);
-  --danger-bg: var(--state-danger-bg);
-  --info: var(--state-info-fg);
-  --info-bg: var(--state-info-bg);
 
   /* Legacy gradient stop aliases. Gradient definitions live in _gradients.css. */
   --brand-500: var(--violet-500);
@@ -149,14 +127,6 @@
   --surface-muted: #e8eef7;
   --surface-hover: #e2e9f3;
   --surface-selected: rgba(109, 40, 217, .10);
-
-  --bg-primary: var(--surface-page);
-  --bg-main: var(--surface-page);
-  --bg-secondary: var(--surface-panel);
-  --bg-tertiary: var(--surface-raised);
-  --glass-bg: var(--surface-panel);
-  --glass-border: rgba(30, 49, 79, .14);
-  --glass-hover-bg: var(--surface-hover);
 
   --text-primary: #152238;
   --text-secondary: #40516b;

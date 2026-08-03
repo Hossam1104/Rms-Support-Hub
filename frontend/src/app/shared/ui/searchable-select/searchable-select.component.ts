@@ -52,21 +52,21 @@ let nextSelectId = 0;
     :host { display: block; min-width: 0; }
     .searchable-select { min-width: 0; }
     .select-control { position: relative; display: flex; align-items: center; }
-    input { width: 100%; min-width: 0; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 56px 8px 10px; font: inherit; }
-    input:focus { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
+    input { width: 100%; min-width: 0; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 56px 8px 10px; font: inherit; }
+    input:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     input:disabled { cursor: not-allowed; opacity: .6; }
-    .is-open input { border-color: var(--primary); }
-    .has-error input { border-color: var(--danger); }
+    .is-open input { border-color: var(--border-focus); }
+    .has-error input { border-color: var(--state-danger-border); }
     .caret { position: absolute; right: 11px; color: var(--text-muted); pointer-events: none; }
     .clear-button { position: absolute; right: 29px; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); cursor: pointer; }
-    .clear-button:hover { background: var(--glass-hover-bg); color: var(--text-primary); }
-    .select-overlay { width: min(420px, calc(100vw - 32px)); margin-top: 4px; overflow: hidden; background: var(--bg-secondary); border: 1px solid var(--glass-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); color: var(--text-primary); }
+    .clear-button:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .select-overlay { width: min(420px, calc(100vw - 32px)); margin-top: 4px; overflow: hidden; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); color: var(--text-primary); }
     .select-list { height: min(240px, 45vh); }
     .select-option { display: block; width: 100%; height: 40px; padding: 0 12px; overflow: hidden; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-    .select-option:hover, .select-option.active { background: var(--glass-hover-bg); }
-    .select-option.selected { color: var(--primary); font-weight: 700; }
+    .select-option:hover, .select-option.active { background: var(--surface-hover); }
+    .select-option.selected { color: var(--text-accent); font-weight: 700; }
     .select-state { display: flex; align-items: center; gap: 8px; min-height: 68px; padding: 12px; color: var(--text-secondary); font-size: .86rem; }
-    .select-state.error { justify-content: space-between; color: var(--danger); }
+    .select-state.error { justify-content: space-between; color: var(--state-danger-fg); }
     .select-state button { border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; }
     .spin { animation: searchableSelectSpin var(--transition-slow, .7s) linear infinite; }
     @keyframes searchableSelectSpin { to { transform: rotate(360deg); } }

@@ -74,7 +74,7 @@ function containsMatch(value: JsonValue, term: string): boolean {
     .type-number { color: var(--code-number); }
     .type-boolean { color: var(--code-boolean); }
     .type-null { color: var(--code-null); font-style: italic; }
-    .node-children { margin-left: 18px; border-left: 1px dashed var(--glass-border); padding-left: 10px; }
+    .node-children { margin-left: 18px; border-left: 1px dashed var(--border-subtle); padding-left: 10px; }
     .copied-flash { color: var(--code-string); font-size: 0.75rem; }
     :host ::ng-deep mark { background: var(--accent-amber); color: var(--on-amber); border-radius: 2px; padding: 0 1px; }
   `]

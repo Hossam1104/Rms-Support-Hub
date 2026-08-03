@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-export type UiInputType = 'text' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'time';
+export type UiInputType = 'text' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'time' | 'datetime-local';
 export type UiControlSize = 'sm' | 'md';
 
 @Component({
@@ -19,6 +19,8 @@ export type UiControlSize = 'sm' | 'md';
         [type]="type()"
         [value]="currentValue() ?? ''"
         [placeholder]="placeholder()"
+        [attr.step]="step() || null"
+        [attr.maxlength]="maxLength() || null"
         [disabled]="effectiveDisabled()"
         [readOnly]="readOnly()"
         [attr.aria-label]="ariaLabel() || null"
@@ -51,6 +53,8 @@ export class UiInputComponent implements ControlValueAccessor {
   readonly name = input('');
   readonly type = input<UiInputType>('text');
   readonly placeholder = input('');
+  readonly step = input<string | number | null>(null);
+  readonly maxLength = input<number | null>(null);
   readonly value = input<string | number | null>('');
   readonly size = input<UiControlSize>('md');
   readonly disabled = input(false);

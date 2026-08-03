@@ -3,14 +3,15 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ModuleDto, EnvironmentDto } from '../../core/models';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
 
 @Component({
   selector: 'app-module-card',
   standalone: true,
-  imports: [CommonModule, RouterLink, StatusBadgeComponent],
+  imports: [CommonModule, RouterLink, StatusBadgeComponent, UiButtonComponent, UiCardComponent],
   template: `
-    <div class="module-card glass-card" [class.disabled]="!module.available" [style.border-left-color]="getAccentColor(module.key)">
-      <div class="card-head">
+    <ui-card variant="raised" class="module-card" [disabled]="!module.available" [style.--module-accent]="getAccentColor(module.key)">
+      <div class="card-head" uiCardHeader>
         <div class="identity">
           <img [src]="getLogoUrl(module.key)" [alt]="module.label" class="module-logo" />
           <div>
@@ -24,14 +25,16 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 
       <div class="card-envs" *ngIf="module.available && module.environments.length > 0">
         @for (env of module.environments; track env.key) {
-          <button type="button" class="env-btn glass-card" (click)="onSelectEnv(env)">
-            <span class="env-icon"><i class="bi" [class]="env.icon"></i></span>
-            <div class="env-meta">
+          <ui-button variant="secondary" size="sm" class="env-btn" [ariaLabel]="'Select environment ' + env.key" (pressed)="onSelectEnv(env)">
+            <span class="env-content">
+              <span class="env-icon"><i class="bi" [class]="env.icon" aria-hidden="true"></i></span>
+              <span class="env-meta">
               <span class="env-key">{{ env.key }}</span>
               <span class="env-desc">{{ env.description }}</span>
-            </div>
-            <app-status-badge [label]="env.statusLabel" [variant]="env.environment === 'Production' ? 'success' : 'info'"></app-status-badge>
-          </button>
+              </span>
+              <app-status-badge [label]="env.statusLabel" [variant]="env.environment === 'Production' ? 'success' : 'info'"></app-status-badge>
+            </span>
+          </ui-button>
         }
       </div>
 
@@ -41,27 +44,28 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
           <i class="bi bi-arrow-right"></i>
         </a>
       </div>
-    </div>
+    </ui-card>
   `,
   styles: [`
-    .module-card { padding: 24px; display: flex; flex-direction: column; gap: 20px; border-left: 4px solid var(--primary); transition: transform var(--d-slow) var(--ease-spring), box-shadow var(--transition-normal); }
-    .module-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg), var(--shadow-glow); }
-    .module-card.disabled { opacity: 0.5; pointer-events: none; }
+    .module-card { border-left: 4px solid var(--module-accent); }
+    :host ::ng-deep .module-card .ui-card { overflow: visible; }
     .card-head { display: flex; justify-content: space-between; align-items: center; }
     .identity { display: flex; align-items: center; gap: 16px; }
     .module-logo { width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--surface-selected); padding: 4px; object-fit: contain; }
     .module-title { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
     .client-name { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     .card-envs { display: flex; flex-direction: column; gap: 10px; }
-    .env-btn { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-md); cursor: pointer; text-align: left; transition: all var(--transition-fast); }
-    .env-btn:hover { border-color: var(--primary); transform: translateX(6px); background: var(--glass-hover-bg); }
-    .env-icon { font-size: 1.25rem; color: var(--primary); }
+    :host ::ng-deep ui-button.env-btn { display: block; width: 100%; }
+    :host ::ng-deep ui-button.env-btn .ui-button { width: 100%; min-height: 68px; justify-content: flex-start; text-align: left; border-color: var(--border-subtle); background: var(--surface-interactive); }
+    :host ::ng-deep ui-button.env-btn .ui-button:hover:not(:disabled) { transform: translateX(4px); border-color: var(--module-accent); background: var(--surface-hover); }
+    .env-content { display: flex; align-items: center; width: 100%; gap: 12px; }
+    .env-icon { flex: 0 0 auto; font-size: 1.25rem; color: var(--module-accent); }
     .env-meta { flex: 1; display: flex; flex-direction: column; }
-    .env-key { font-weight: 600; font-size: 0.88rem; color: var(--text-primary); }
+    .env-key { font-weight: 700; font-size: 0.88rem; color: var(--text-primary); }
     .env-desc { font-size: 0.75rem; color: var(--text-secondary); }
     .card-footer { display: flex; justify-content: flex-end; padding-top: 8px; }
-    .enter-link { display: flex; align-items: center; gap: 8px; color: var(--primary); text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: gap var(--transition-fast); }
-    .enter-link:hover { gap: 12px; color: var(--primary-hover); }
+    .enter-link { display: flex; align-items: center; gap: 8px; color: var(--text-accent); text-decoration: none; font-weight: 700; font-size: 0.95rem; transition: gap var(--transition-fast); }
+    .enter-link:hover { gap: 12px; color: var(--accent-hover); }
   `]
 })
 export class ModuleCardComponent {

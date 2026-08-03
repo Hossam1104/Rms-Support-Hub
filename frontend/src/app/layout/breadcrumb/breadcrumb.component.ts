@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
   styles: [`
     .breadcrumb-nav { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
     .crumb-item { color: var(--text-secondary); text-decoration: none; }
-    .crumb-item:hover { color: var(--primary); }
+    .crumb-item:hover { color: var(--text-accent); }
     .crumb-item.current { color: var(--text-primary); font-weight: 600; }
     .crumb-separator { color: var(--text-muted); }
   `]

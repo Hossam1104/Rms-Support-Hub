@@ -39,8 +39,8 @@ import { A11yModule } from '@angular/cdk/a11y';
       position: absolute;
       top: 0; right: 0; bottom: 0;
       width: min(720px, 100vw);
-      background: var(--bg-secondary);
-      border-left: 1px solid var(--glass-border);
+      background: var(--surface-panel);
+      border-left: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-lg);
       display: flex;
       flex-direction: column;
@@ -49,7 +49,7 @@ import { A11yModule } from '@angular/cdk/a11y';
     .drawer-header {
       display: flex; justify-content: space-between; align-items: center;
       padding: 20px 24px;
-      border-bottom: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--divider);
       flex-shrink: 0;
     }
     .drawer-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-primary); }

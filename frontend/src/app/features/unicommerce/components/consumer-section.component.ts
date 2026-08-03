@@ -1,71 +1,63 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Consumer } from '../../../core/models';
+import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-consumer-section',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
   template: `
-    <div class="card-section glass-card">
-      <div class="card-title">
-        <i class="bi bi-person-circle"></i>
-        <span>Invoice Consumer Details</span>
+    <ui-card variant="raised" class="card-section">
+      <div uiCardHeader class="section-heading">
+        <span class="section-title"><i class="bi bi-person-circle" aria-hidden="true"></i> Invoice Consumer Details</span>
       </div>
 
-      <div class="lookup-bar mb-3">
-        <div class="input-group">
-          <input type="text" class="glass-input" [(ngModel)]="lookupPhone" placeholder="Enter consumer phone number..." />
-          <button type="button" class="glass-button" (click)="onLookup()"><i class="bi bi-search"></i> Lookup Consumer</button>
-        </div>
+      <div class="lookup-row">
+        <ui-field label="Lookup consumer phone" forId="consumer-lookup-phone" class="lookup-field">
+          <ui-input inputId="consumer-lookup-phone" type="tel" placeholder="Enter consumer phone number..."
+            [value]="lookupPhone" (valueChange)="lookupPhone = $any($event) || ''"></ui-input>
+        </ui-field>
+        <ui-button variant="secondary" icon="bi-search" (pressed)="onLookup()">Lookup Consumer</ui-button>
       </div>
 
       <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">First Name</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.firstName" (ngModelChange)="onFieldChange('firstName', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Middle Name</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.middleName" (ngModelChange)="onFieldChange('middleName', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Last Name</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.lastName" (ngModelChange)="onFieldChange('lastName', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Consumer Code</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.consumerCode" (ngModelChange)="onFieldChange('consumerCode', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Primary Phone</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.primaryPhoneNumber" (ngModelChange)="onFieldChange('primaryPhoneNumber', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" class="glass-input" [ngModel]="consumer.email" (ngModelChange)="onFieldChange('email', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">National ID</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.nationalId" (ngModelChange)="onFieldChange('nationalId', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Nationality</label>
-          <input type="text" class="glass-input" [ngModel]="consumer.nationality" (ngModelChange)="onFieldChange('nationality', $event)" />
-        </div>
+        <ui-field label="First Name" forId="consumer-first-name">
+          <ui-input inputId="consumer-first-name" [value]="consumer.firstName || ''" (valueChange)="onFieldChange('firstName', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Middle Name" forId="consumer-middle-name">
+          <ui-input inputId="consumer-middle-name" [value]="consumer.middleName || ''" (valueChange)="onFieldChange('middleName', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Last Name" forId="consumer-last-name">
+          <ui-input inputId="consumer-last-name" [value]="consumer.lastName || ''" (valueChange)="onFieldChange('lastName', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Consumer Code" forId="consumer-code">
+          <ui-input inputId="consumer-code" [value]="consumer.consumerCode || ''" (valueChange)="onFieldChange('consumerCode', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Primary Phone" forId="consumer-primary-phone">
+          <ui-input inputId="consumer-primary-phone" type="tel" [value]="consumer.primaryPhoneNumber || ''" (valueChange)="onFieldChange('primaryPhoneNumber', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Email" forId="consumer-email">
+          <ui-input inputId="consumer-email" type="email" [value]="consumer.email || ''" (valueChange)="onFieldChange('email', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="National ID" forId="consumer-national-id">
+          <ui-input inputId="consumer-national-id" [value]="consumer.nationalId || ''" (valueChange)="onFieldChange('nationalId', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Nationality" forId="consumer-nationality">
+          <ui-input inputId="consumer-nationality" [value]="consumer.nationality || ''" (valueChange)="onFieldChange('nationality', $event)"></ui-input>
+        </ui-field>
       </div>
-    </div>
+    </ui-card>
   `,
   styles: [`
-    .card-section { padding: 24px; margin-bottom: 24px; }
-    .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
-    .card-title i { color: var(--primary); }
-    .input-group { display: flex; gap: 10px; margin-bottom: 16px; }
-    .input-group input { flex: 1; }
+    .card-section { margin-bottom: 24px; }
+    .section-heading { display: flex; align-items: center; gap: 10px; }
+    .section-title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); }
+    .section-title i { color: var(--accent); }
+    .lookup-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 20px; }
+    .lookup-field { flex: 1; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    @media (max-width: 560px) { .lookup-row { align-items: stretch; flex-direction: column; } .lookup-row ui-button { align-self: flex-start; } }
   `]
 })
 export class ConsumerSectionComponent {
@@ -73,15 +65,13 @@ export class ConsumerSectionComponent {
   @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
   @Output() lookupConsumer = new EventEmitter<string>();
 
-  lookupPhone: string = '';
+  lookupPhone = '';
 
   onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });
   }
 
   onLookup() {
-    if (this.lookupPhone.trim()) {
-      this.lookupConsumer.emit(this.lookupPhone.trim());
-    }
+    if (this.lookupPhone.trim()) this.lookupConsumer.emit(this.lookupPhone.trim());
   }
 }

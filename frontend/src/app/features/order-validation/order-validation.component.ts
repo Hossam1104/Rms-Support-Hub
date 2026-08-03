@@ -22,6 +22,10 @@ const MODULE_KEY = 'upc_ecommerce';
   imports: [CommonModule, SearchFormComponent, ResultsGridComponent, OrderDetailsModalComponent],
   template: `
     <div class="validation-container">
+      <div class="superseded-banner" role="note">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>This legacy validation route is superseded by the routed Order Requests workspace.</span>
+      </div>
       <app-search-form (search)="onSearch($event)"></app-search-form>
 
       <app-results-grid
@@ -39,6 +43,7 @@ const MODULE_KEY = 'upc_ecommerce';
   `,
   styles: [`
     .validation-container { display: flex; flex-direction: column; }
+    .superseded-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 10px 14px; border: 1px solid var(--state-warning-border); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .82rem; }
   `]
 })
 export class OrderValidationComponent {

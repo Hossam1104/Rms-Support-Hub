@@ -32,9 +32,9 @@ import { FormsModule } from '@angular/forms';
     .pagination-summary { font-size: 0.85rem; color: var(--text-muted); }
     .pagination-controls { display: flex; align-items: center; gap: 10px; }
     .page-size-select {
-      background: var(--bg-tertiary);
+      background: var(--surface-interactive);
       color: var(--text-primary);
-      border: 1px solid var(--glass-border);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-sm);
       padding: 4px 8px;
       font-size: 0.8rem;
@@ -43,13 +43,13 @@ import { FormsModule } from '@angular/forms';
       width: 32px; height: 32px;
       display: flex; align-items: center; justify-content: center;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--glass-border);
-      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-interactive);
       color: var(--text-primary);
       cursor: pointer;
       transition: background var(--transition-fast), transform var(--transition-fast);
     }
-    .page-btn:hover:not(:disabled) { background: var(--glass-hover-bg); transform: translateY(-1px); }
+    .page-btn:hover:not(:disabled) { background: var(--surface-hover); transform: translateY(-1px); }
     .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .page-current { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); min-width: 60px; text-align: center; }
   `]

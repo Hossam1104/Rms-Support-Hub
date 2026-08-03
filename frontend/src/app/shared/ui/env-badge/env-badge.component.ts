@@ -56,7 +56,7 @@ import { EnvironmentDto } from '../../../core/models';
     .env-menu {
       position: absolute; top: calc(100% + 6px); right: 0; z-index: 1200;
       min-width: 220px;
-      background: var(--bg-secondary); border: 1px solid var(--glass-border);
+      background: var(--surface-panel); border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
       padding: 6px; display: flex; flex-direction: column; gap: 2px;
     }
@@ -66,13 +66,13 @@ import { EnvironmentDto } from '../../../core/models';
       padding: 8px 10px; border-radius: var(--radius-sm);
       font-size: 0.85rem; color: var(--text-primary);
     }
-    .env-option:hover { background: var(--glass-hover-bg); }
+    .env-option:hover { background: var(--surface-hover); }
     .env-option.active { font-weight: 700; }
-    .option-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-500); flex-shrink: 0; }
-    .option-dot.dot-prod { background: var(--danger); }
+    .option-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .option-dot.dot-prod { background: var(--state-danger-fg); }
     .option-tag {
       margin-left: auto; font-size: 0.65rem; text-transform: uppercase;
-      color: var(--text-muted); border: 1px solid var(--glass-border);
+      color: var(--text-muted); border: 1px solid var(--border-subtle);
       border-radius: var(--radius-pill); padding: 1px 6px;
     }
   `]

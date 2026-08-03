@@ -22,11 +22,11 @@ import { CommonModule } from '@angular/common';
       font-weight: 600;
     }
     .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-    .badge-success { background: var(--success-bg); color: var(--success); }
-    .badge-danger { background: var(--danger-bg); color: var(--danger); }
-    .badge-warning { background: var(--warning-bg); color: var(--warning); }
+    .badge-success { background: var(--state-success-bg); color: var(--state-success-fg); }
+    .badge-danger { background: var(--state-danger-bg); color: var(--state-danger-fg); }
+    .badge-warning { background: var(--state-warning-bg); color: var(--state-warning-fg); }
     .badge-info { background: var(--state-info-bg); color: var(--state-info-fg); }
-    .badge-secondary { background: var(--bg-tertiary); color: var(--text-muted); }
+    .badge-secondary { background: var(--surface-raised); color: var(--text-muted); }
   `]
 })
 export class StatusBadgeComponent {

@@ -41,27 +41,27 @@ export type ConfirmVariant = 'danger' | 'brand';
       position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       width: min(480px, calc(100vw - 32px));
-      background: var(--bg-secondary);
+      background: var(--surface-panel);
       border-radius: var(--radius-lg);
-      border: 1px solid var(--glass-border);
+      border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-lg);
       padding: 24px;
       animation: dialogSpringIn var(--d-slow) var(--ease-spring);
     }
     .confirm-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
     .confirm-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-primary); }
-    .confirm-header i { font-size: 1.3rem; color: var(--danger); }
-    .variant-brand .confirm-header i { color: var(--brand-500); }
+    .confirm-header i { font-size: 1.3rem; color: var(--state-danger-fg); }
+    .variant-brand .confirm-header i { color: var(--accent); }
     .confirm-message { color: var(--text-secondary); font-size: 0.9rem; margin: 0 0 16px; }
     .reason-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
     .reason-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .reason-group textarea {
-      background: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+      background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm);
       color: var(--text-primary); padding: 8px 10px; font-family: inherit; resize: vertical;
     }
     .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
     .btn-secondary {
-      background: var(--bg-tertiary); border: 1px solid var(--glass-border); color: var(--text-secondary);
+      background: var(--surface-interactive); border: 1px solid var(--border-strong); color: var(--text-secondary);
       border-radius: var(--radius-md); padding: 8px 16px; cursor: pointer;
     }
     .btn-confirm {

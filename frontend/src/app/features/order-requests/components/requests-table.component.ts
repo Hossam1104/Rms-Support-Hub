@@ -4,16 +4,17 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { OrderRequestsStore } from '../order-requests.store';
 import { OrderRequestListItem } from '../../../core/models';
-import { StatusPillComponent, RiyalComponent, SkeletonComponent, EmptyStateComponent } from '../../../shared/ui';
+import { StatusPillComponent, RiyalComponent, SkeletonComponent, EmptyStateComponent, UiCardComponent } from '../../../shared/ui';
 
 const CANCELLED_STATUSES = new Set([6, 7]);
 
 @Component({
   selector: 'app-requests-table',
   standalone: true,
-  imports: [CommonModule, ScrollingModule, StatusPillComponent, RiyalComponent, SkeletonComponent, EmptyStateComponent],
+  imports: [CommonModule, ScrollingModule, StatusPillComponent, RiyalComponent, SkeletonComponent, EmptyStateComponent, UiCardComponent],
   template: `
-    <div class="table-shell">
+    <ui-card variant="raised" class="table-card">
+      <div class="table-shell">
       <div class="table-head">
         <span></span>
         <span>Order #</span>
@@ -80,10 +81,11 @@ const CANCELLED_STATUSES = new Set([6, 7]);
           </div>
         </cdk-virtual-scroll-viewport>
       }
-    </div>
+      </div>
+    </ui-card>
   `,
   styles: [`
-    .table-shell { border: 1px solid var(--glass-border); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-secondary); }
+    .table-shell { overflow: hidden; border-radius: var(--radius-md); background: var(--surface-panel); }
     .table-head, .table-row {
       display: grid;
       grid-template-columns: 20px 1.1fr 1.1fr 1fr 1.1fr 0.6fr 1fr 1fr 0.9fr 24px;
@@ -91,26 +93,26 @@ const CANCELLED_STATUSES = new Set([6, 7]);
       gap: 10px;
       padding: 0 16px;
     }
-    .table-head { height: 42px; background: var(--bg-tertiary); font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .02em; }
+    .table-head { height: 42px; background: var(--surface-raised); font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .02em; }
     .table-body { height: 560px; transition: opacity var(--transition-normal); }
     .table-body.dimmed { opacity: 0.55; }
     .table-row {
       height: 56px;
-      border-bottom: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--divider);
       cursor: pointer;
       font-size: 0.85rem;
       color: var(--text-primary);
       transition: background var(--transition-fast);
       animation: rowStaggerIn var(--d-slow) var(--ease-spring) backwards;
     }
-    .table-row:hover { background: var(--glass-hover-bg); }
+    .table-row:hover { background: var(--table-row-hover); }
     .table-row.row-failed { border-left: 3px solid var(--state-danger-border); background: var(--state-danger-bg); }
     .table-row.row-cancelled { opacity: 0.65; }
     @keyframes rowStaggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .skeleton-row { display: flex; align-items: center; }
     .outcome-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-    .dot-success { background: var(--success); box-shadow: 0 0 8px var(--success); }
-    .dot-danger { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .dot-success { background: var(--state-success-fg); box-shadow: 0 0 8px var(--state-success-fg); }
+    .dot-danger { background: var(--state-danger-fg); box-shadow: 0 0 8px var(--state-danger-fg); }
     .order-number { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
     .order-number.struck { text-decoration: line-through; color: var(--text-muted); }
     .cell-date { display: flex; flex-direction: column; }
@@ -123,7 +125,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     .net-total { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-weight: 600; }
     .cell-invoice { font-size: 0.78rem; color: var(--text-secondary); }
     .payload-badges { display: flex; gap: 4px; }
-    .badge { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: var(--radius-sm); background: var(--bg-tertiary); color: var(--text-muted); }
+    .badge { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-muted); }
     .badge-lit { background: var(--grad-info); color: var(--on-gradient); }
     .row-action { color: var(--text-muted); }
     .retry-btn { background: var(--grad-brand); color: var(--on-gradient); border: none; border-radius: var(--radius-md); padding: 8px 18px; cursor: pointer; font-weight: 600; }

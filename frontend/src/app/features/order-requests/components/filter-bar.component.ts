@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OrderRequestsStore, QuickRange } from '../order-requests.store';
-import { FilterChipComponent, SearchableSelectComponent } from '../../../shared/ui';
+import { FilterChipComponent, SearchableSelectComponent, UiToolbarComponent } from '../../../shared/ui';
 
 const STATUS_CHIPS = [
   { value: 1, label: 'New' }, { value: 2, label: 'Confirmed' }, { value: 3, label: 'Ready' },
@@ -23,9 +23,9 @@ const STATUS_CHIPS = [
 @Component({
   selector: 'app-filter-bar',
   standalone: true,
-  imports: [CommonModule, FormsModule, FilterChipComponent, SearchableSelectComponent],
+  imports: [CommonModule, FormsModule, FilterChipComponent, SearchableSelectComponent, UiToolbarComponent],
   template: `
-    <div class="filter-bar">
+    <ui-toolbar class="filter-bar" role="region" ariaLabel="Order request filters">
       <div class="filter-row">
         <div class="filter-group flex-grow">
           <label>Search order number</label>
@@ -99,15 +99,13 @@ const STATUS_CHIPS = [
           <app-filter-chip [label]="chip.label" (remove)="store.removeFilterChip(chip.key)"></app-filter-chip>
         }
       </div>
-    </div>
+    </ui-toolbar>
   `,
   styles: [`
     .filter-bar {
       position: sticky; top: 0; z-index: 50;
-      background: var(--glass-bg);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid var(--glass-border);
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
       padding: 18px 20px;
       margin-bottom: 20px;
@@ -120,29 +118,30 @@ const STATUS_CHIPS = [
     .flex-grow { flex: 1; min-width: 220px; }
     .filter-group label { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); }
     .filter-group input, .filter-group select {
-      background: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+      background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm);
       color: var(--text-primary); padding: 7px 10px; font-size: 0.85rem;
     }
     .input-with-icon { position: relative; display: flex; align-items: center; }
     .input-with-icon i { position: absolute; left: 10px; color: var(--text-muted); font-size: 0.85rem; }
     .input-with-icon input { padding-left: 30px; width: 100%; }
-    .segmented { display: flex; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); overflow: hidden; }
-    .segmented button { background: var(--bg-tertiary); border: none; color: var(--text-secondary); padding: 7px 12px; font-size: 0.8rem; cursor: pointer; }
-    .segmented button.active { background: var(--grad-brand); color: var(--on-gradient); font-weight: 600; }
+    .segmented { display: flex; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
+    .segmented button { background: var(--surface-raised); border: none; color: var(--text-secondary); padding: 7px 12px; font-size: 0.8rem; cursor: pointer; }
+    .segmented button.active { background: var(--grad-brand); color: var(--text-inverse); font-weight: 700; }
     .date-range { display: flex; align-items: center; gap: 6px; }
     .date-range input { font-size: 0.78rem; padding: 6px 8px; }
     .quick-ranges { display: flex; gap: 6px; margin-top: 2px; }
     .quick-ranges button {
-      background: none; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+      background: transparent; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
       color: var(--text-secondary); font-size: 0.72rem; padding: 2px 8px; cursor: pointer;
     }
-    .quick-ranges button:hover { color: var(--text-primary); background: var(--glass-hover-bg); }
+    .quick-ranges button:hover { color: var(--text-primary); background: var(--surface-hover); }
     .btn-clear {
       display: flex; align-items: center; gap: 6px;
-      background: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+      background: var(--surface-interactive); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
       color: var(--text-secondary); padding: 7px 14px; font-size: 0.8rem; cursor: pointer; height: 34px;
     }
     .btn-clear:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-clear:focus-visible, .segmented button:focus-visible, .quick-ranges button:focus-visible, .status-chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .status-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .status-chip {
       border: none; cursor: pointer; padding: 5px 12px; border-radius: var(--radius-pill);

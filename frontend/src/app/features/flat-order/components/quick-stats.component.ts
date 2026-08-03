@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { StatTileComponent } from '../../../shared/ui';
+import { StatTileComponent, UiCardComponent } from '../../../shared/ui';
 import { TotalsSummary } from '../../../core/models';
 
 /**
@@ -14,7 +14,7 @@ import { TotalsSummary } from '../../../core/models';
 @Component({
   selector: 'app-quick-stats',
   standalone: true,
-  imports: [CommonModule, StatTileComponent],
+  imports: [CommonModule, StatTileComponent, UiCardComponent],
   template: `
     <div class="quick-stats-grid" *ngIf="totals">
       <app-stat-tile label="Total Amount" [value]="totals?.totalOrderAmount ?? 0" [decimals]="2" icon="bi-cart-check" variant="brand"></app-stat-tile>
@@ -22,7 +22,7 @@ import { TotalsSummary } from '../../../core/models';
       <app-stat-tile label="Remaining Balance" [value]="totals?.remainingBalance ?? 0" [decimals]="2" [variant]="(totals?.remainingBalance ?? 0) > 0 ? 'muted' : 'success'" icon="bi-calculator"></app-stat-tile>
     </div>
 
-    <div class="totals-breakdown glass-card" *ngIf="totals; else totalsUnavailable">
+    <ui-card variant="raised" class="totals-breakdown" *ngIf="totals; else totalsUnavailable">
       <div class="breakdown-row">
         <span class="breakdown-item"><i class="bi bi-box-seam"></i> Products <strong>{{ productCount }}</strong></span>
         <span class="breakdown-item"><i class="bi bi-stack"></i> Quantity <strong>{{ totalQuantity }}</strong></span>
@@ -33,16 +33,16 @@ import { TotalsSummary } from '../../../core/models';
         <span class="breakdown-refresh" *ngIf="loading" title="Refreshing totals from the server"><i class="bi bi-arrow-repeat spin"></i></span>
       </div>
       <p class="breakdown-error" *ngIf="error">{{ error }} Showing the last known values.</p>
-    </div>
+    </ui-card>
 
     <ng-template #totalsUnavailable>
-      <div class="totals-breakdown glass-card">
+      <ui-card variant="raised" class="totals-breakdown">
         <div class="breakdown-row breakdown-placeholder">
           <span *ngIf="loading">Calculating totals…</span>
           <span *ngIf="!loading && error" class="breakdown-error">{{ error }}</span>
           <span *ngIf="!loading && !error">Totals have not been calculated yet.</span>
         </div>
-      </div>
+      </ui-card>
     </ng-template>
   `,
   styles: [`
@@ -52,7 +52,7 @@ import { TotalsSummary } from '../../../core/models';
     .breakdown-item strong { color: var(--text-primary); margin-left: 4px; }
     .breakdown-placeholder { color: var(--text-muted); }
     .breakdown-refresh { margin-left: auto; color: var(--text-muted); }
-    .breakdown-error { font-size: 0.78rem; color: var(--warning); margin: 8px 0 0; }
+    .breakdown-error { font-size: 0.78rem; color: var(--state-warning-fg); margin: 8px 0 0; }
     .spin { animation: spin 1s infinite linear; display: inline-block; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   `]

@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
   `,
   styles: [`
     .skeleton-loader {
-      background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);
+      background: linear-gradient(90deg, var(--surface-panel) 25%, var(--surface-raised) 50%, var(--surface-panel) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }

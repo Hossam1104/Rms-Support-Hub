@@ -51,8 +51,8 @@ import { CopyButtonComponent } from '../copy-button/copy-button.component';
   `,
   styles: [`
     .json-tree-box {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--glass-border);
+      background: var(--surface-raised);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       padding: 12px;
       margin-top: 8px;
@@ -60,12 +60,12 @@ import { CopyButtonComponent } from '../copy-button/copy-button.component';
     .json-tree-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
     .json-tree-title { font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); }
     .toolbar-actions { display: flex; align-items: center; gap: 8px; }
-    .search-input { background: var(--bg-secondary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 3px 8px; font-size: 0.78rem; color: var(--text-primary); }
-    .toolbar-btn { background: none; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 0.75rem; padding: 3px 8px; cursor: pointer; }
-    .toolbar-btn:hover { color: var(--text-primary); background: var(--glass-hover-bg); }
+    .search-input { background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); padding: 3px 8px; font-size: 0.78rem; color: var(--text-primary); }
+    .toolbar-btn { background: var(--surface-interactive); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 0.75rem; padding: 3px 8px; cursor: pointer; }
+    .toolbar-btn:hover { color: var(--text-primary); background: var(--surface-hover); }
     .tree-view, .raw-view { max-height: 420px; overflow: auto; }
     .raw-view { margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-primary); }
-    .danger-banner { background: var(--danger-bg); color: var(--danger); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; }
+    .danger-banner { background: var(--state-danger-bg); color: var(--state-danger-fg); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; }
     .raw-fallback { margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; opacity: 0.85; }
   `]
 })

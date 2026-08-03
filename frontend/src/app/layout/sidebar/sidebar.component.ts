@@ -2,11 +2,12 @@ import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SidebarStateService } from '../../core/services/sidebar-state.service';
+import { UiButtonComponent } from '../../shared/ui';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, UiButtonComponent],
   template: `
     <aside class="sidebar" [class.collapsed]="collapsed()">
       <div class="sidebar-header">
@@ -17,9 +18,11 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
             <span class="client-title">{{ clientName || 'Client' }}</span>
           </div>
         </div>
-        <button type="button" class="btn-toggle" (click)="toggleCollapse()" [attr.aria-expanded]="!collapsed()" aria-label="Toggle navigation sidebar" title="Toggle Sidebar">
-          <i class="bi" [class.bi-chevron-left]="!collapsed()" [class.bi-chevron-right]="collapsed()"></i>
-        </button>
+        <ui-button class="btn-toggle" variant="ghost" size="sm"
+          [icon]="collapsed() ? 'bi-chevron-right' : 'bi-chevron-left'"
+          [ariaLabel]="collapsed() ? 'Expand navigation sidebar' : 'Collapse navigation sidebar'"
+          [ariaExpanded]="!collapsed()"
+          (pressed)="toggleCollapse()"></ui-button>
       </div>
 
       <nav class="sidebar-nav" aria-label="Module navigation">
@@ -62,9 +65,9 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
     .brand-text { display: flex; flex-direction: column; min-width: 0; }
     .module-title { overflow: hidden; font-size: .95rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
     .client-title { color: var(--text-muted); font-size: .75rem; }
-    .btn-toggle { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-interactive); color: var(--text-secondary); cursor: pointer; }
-    .btn-toggle:hover { background: var(--surface-hover); color: var(--text-primary); }
-    .btn-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    :host ::ng-deep ui-button.btn-toggle { display: grid; width: 32px; height: 32px; flex: 0 0 32px; }
+    :host ::ng-deep ui-button.btn-toggle .ui-button { width: 32px; min-height: 32px; padding: 0; border-color: var(--border-subtle); background: var(--surface-interactive); color: var(--text-secondary); }
+    :host ::ng-deep ui-button.btn-toggle .ui-button:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
     .sidebar-nav { display: flex; flex: 1; flex-direction: column; gap: 4px; padding: 16px 8px; }
     .nav-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; transition: background var(--transition-fast), color var(--transition-fast), transform var(--d) var(--ease-spring); }
     .nav-item::before { content: ''; position: absolute; inset: 8px auto 8px 0; width: 2px; border-radius: var(--radius-pill); background: transparent; }

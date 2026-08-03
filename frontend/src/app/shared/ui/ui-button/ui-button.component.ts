@@ -17,6 +17,7 @@ export type UiButtonSize = 'sm' | 'md';
       [disabled]="disabled() || loading()"
       [type]="buttonType()"
       [attr.aria-label]="ariaLabel() || null"
+      [attr.aria-expanded]="ariaExpanded() === null ? null : ariaExpanded()"
       [attr.aria-busy]="loading()"
       (click)="onClick()">
       <i *ngIf="icon() && iconPosition() === 'start' && !loading()" class="bi" [class]="icon()" aria-hidden="true"></i>
@@ -57,6 +58,7 @@ export class UiButtonComponent {
   readonly icon = input<string | null>(null);
   readonly iconPosition = input<'start' | 'end'>('start');
   readonly ariaLabel = input<string | null>(null);
+  readonly ariaExpanded = input<boolean | null>(null);
   readonly buttonType = input<'button' | 'submit' | 'reset'>('button');
   readonly pressed = output<void>();
 

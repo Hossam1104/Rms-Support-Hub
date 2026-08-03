@@ -11,6 +11,7 @@ let nextFieldId = 0;
     <div class="ui-field" [class.is-disabled]="disabled()" [class.has-error]="!!error()">
       <label class="ui-field__label" [attr.for]="fieldId()">
         <span>{{ label() }}</span>
+        <span class="ui-field__status" *ngIf="labelStatus()">{{ labelStatus() }}</span>
         <span class="ui-field__required" *ngIf="required()" aria-hidden="true">*</span>
         <span class="sr-only" *ngIf="required()">required</span>
       </label>
@@ -25,6 +26,7 @@ let nextFieldId = 0;
     :host { display: block; min-width: 0; }
     .ui-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
     .ui-field__label { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-secondary); font-size: .8rem; font-weight: 700; line-height: 1.25; }
+    .ui-field__status { color: var(--text-accent); border: 1px solid var(--border-focus); border-radius: var(--radius-pill); padding: 0 5px; font-size: .62rem; font-weight: 800; letter-spacing: .04em; }
     .ui-field__required { color: var(--state-danger-fg); }
     .ui-field__control { min-width: 0; }
     .ui-field__hint, .ui-field__error { margin: 0; font-size: .76rem; line-height: 1.35; }
@@ -36,6 +38,7 @@ let nextFieldId = 0;
 })
 export class UiFieldComponent {
   readonly label = input.required<string>();
+  readonly labelStatus = input('');
   readonly forId = input<string | null>(null);
   readonly required = input(false);
   readonly hint = input('');

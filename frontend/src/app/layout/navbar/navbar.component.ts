@@ -2,15 +2,15 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
 import { ModuleService } from '../../core/services/module.service';
-import { EnvBadgeComponent } from '../../shared/ui';
+import { EnvBadgeComponent, UiButtonComponent } from '../../shared/ui';
 import { EnvironmentDto } from '../../core/models';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, EnvBadgeComponent],
+  imports: [CommonModule, EnvBadgeComponent, UiButtonComponent],
   template: `
-    <header class="navbar glass-panel">
+    <header class="navbar">
       <div class="navbar-brand">
         <span class="brand-title">Online Order Tool</span>
         <span class="brand-subtitle">Multi-Client Order System</span>
@@ -22,14 +22,12 @@ import { EnvironmentDto } from '../../core/models';
           [options]="m.environments"
           (select)="onSelectEnvironment($event)">
         </app-env-badge>
-        <button type="button" class="btn-action glass-card" (click)="toggleDocs()">
-          <i class="bi bi-book"></i>
-          <span>Docs</span>
-        </button>
-        <button type="button" class="btn-action glass-card" (click)="themeService.toggleTheme()">
-          <i class="bi" [class.bi-sun-fill]="themeService.theme() === 'dark'" [class.bi-moon-fill]="themeService.theme() === 'light'"></i>
-          <span>{{ themeService.theme() === 'dark' ? 'Light Mode' : 'Dark Mode' }}</span>
-        </button>
+        <ui-button class="theme-toggle" variant="ghost" size="sm"
+          [icon]="themeService.theme() === 'dark' ? 'bi-sun-fill' : 'bi-moon-fill'"
+          [ariaLabel]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          (pressed)="themeService.toggleTheme()">
+          {{ themeService.theme() === 'dark' ? 'Light Mode' : 'Dark Mode' }}
+        </ui-button>
       </div>
     </header>
   `,
@@ -45,6 +43,8 @@ import { EnvironmentDto } from '../../core/models';
       justify-content: space-between;
       align-items: center;
       padding: 0 24px;
+      background: var(--surface-panel);
+      border-bottom: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-sm);
     }
     .navbar-brand {
@@ -54,7 +54,7 @@ import { EnvironmentDto } from '../../core/models';
     .brand-title {
       font-size: 1.25rem;
       font-weight: 700;
-      background: var(--primary-gradient);
+      background: var(--grad-brand);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -66,25 +66,13 @@ import { EnvironmentDto } from '../../core/models';
       display: flex;
       gap: 12px;
     }
-    .btn-action {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      font-size: 0.85rem;
-      color: var(--text-primary);
-      cursor: pointer;
-      border-radius: var(--radius-pill);
-    }
+    .theme-toggle { color: var(--text-secondary); }
+    @media (max-width: 560px) { .navbar { padding-inline: 14px; } .brand-subtitle { display: none; } :host ::ng-deep .theme-toggle .ui-button__projected { display: none; } }
   `]
 })
 export class NavbarComponent {
   themeService = inject(ThemeService);
   moduleService = inject(ModuleService);
-
-  toggleDocs() {
-    alert('Project Documentation available in docs/ folder');
-  }
 
   onSelectEnvironment(env: EnvironmentDto) {
     this.moduleService.selectEnvironment(env);

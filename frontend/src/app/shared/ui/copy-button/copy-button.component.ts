@@ -25,7 +25,7 @@ import { CommonModule } from '@angular/common';
       border-radius: var(--radius-sm);
       transition: color var(--transition-fast), background var(--transition-fast);
     }
-    .copy-btn:hover { color: var(--text-primary); background: var(--glass-hover-bg); }
+    .copy-btn:hover { color: var(--text-primary); background: var(--surface-hover); }
   `]
 })
 export class CopyButtonComponent {

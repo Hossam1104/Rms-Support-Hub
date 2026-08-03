@@ -27,7 +27,7 @@ import { CommonModule } from '@angular/common';
       overflow: hidden;
       background-image: var(--grad-mesh);
       background-size: 180% 180%;
-      background-color: var(--bg-secondary);
+      background-color: var(--surface-panel);
       animation: meshDrift 18s ease-in-out infinite;
       margin-bottom: 28px;
     }

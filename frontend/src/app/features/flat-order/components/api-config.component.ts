@@ -17,7 +17,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
   standalone: true,
   imports: [CommonModule, FormsModule, JsonTreeComponent],
   template: `
-    <div class="card-section" [class.glass-card]="!embedded" [class.embedded]="embedded">
+    <section class="card-section" [class.embedded]="embedded">
       <div class="card-title" *ngIf="!embedded">
         <i class="bi bi-send"></i>
         <span>API Request Execution</span>
@@ -32,7 +32,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
         <input
           id="endpoint-url"
           type="text"
-          class="glass-input"
+          class="token-input"
           [value]="endpoint?.apiUrl || ''"
           [placeholder]="endpoint ? 'No endpoint configured for this environment.' : 'Resolving endpoint…'"
           readonly
@@ -46,7 +46,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
         <div class="input-group" *ngIf="useCustomEndpoint">
           <input
             type="text"
-            class="glass-input"
+            class="token-input"
             [ngModel]="customUrl"
             (ngModelChange)="onCustomUrlChange($event)"
             placeholder="https://example.com/api/Order/CreateAndAssignOrder"
@@ -56,7 +56,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
         <p class="field-error" *ngIf="customUrlError">{{ customUrlError }}</p>
       </div>
 
-      <button type="button" class="glass-button send-button" *ngIf="showSend" [disabled]="loading" (click)="onSend()">
+      <button type="button" class="send-button" *ngIf="showSend" [disabled]="loading" (click)="onSend()">
         <i class="bi" [class.bi-send]="!loading" [class.bi-arrow-repeat]="loading" [class.spin]="loading"></i>
         <span>{{ loading ? 'Sending...' : 'Send Order Request' }}</span>
       </button>
@@ -84,38 +84,43 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
         </div>
         <app-json-tree [data]="apiResponse.responseText" title="Raw Response Body"></app-json-tree>
       </div>
-    </div>
+    </section>
   `,
   styles: [`
-    .card-section { padding: 24px; margin-bottom: 24px; }
-    .card-section.embedded { padding: 0; margin: 0; }
+    .card-section { padding: 24px; margin-bottom: 24px; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+    .card-section.embedded { padding: 0; margin: 0; background: transparent; border: 0; box-shadow: none; }
     .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
-    .card-title i { color: var(--primary); }
+    .card-title i { color: var(--accent); }
     .env-tag {
       margin-left: auto; display: flex; align-items: center; gap: 6px;
       font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em;
       padding: 4px 10px; border-radius: var(--radius-pill);
-      background: var(--info-bg, var(--bg-tertiary)); color: var(--info, var(--text-secondary));
+      background: var(--state-info-bg); color: var(--state-info-fg);
     }
-    .env-tag--prod { background: var(--danger-bg); color: var(--danger); }
+    .env-tag--prod { background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .input-group { display: flex; gap: 10px; margin-top: 10px; }
+    .token-input { width: 100%; box-sizing: border-box; min-height: 42px; padding: 0 12px; border: 1px solid var(--input-border); border-radius: var(--radius-md); background: var(--input-bg); color: var(--text-primary); font: inherit; }
+    .token-input:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     .input-group input { flex: 1; }
     .custom-toggle { margin-top: 10px; }
     .toggle-label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; }
-    .send-button { margin-bottom: 16px; }
+    .send-button { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; margin-bottom: 16px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--accent); color: var(--text-inverse); cursor: pointer; font: inherit; font-weight: 750; }
+    .send-button:hover:not(:disabled) { background: var(--accent-hover); }
+    .send-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .send-button:disabled { opacity: .55; cursor: not-allowed; }
     .spin { animation: spin 1s infinite linear; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .field-error { font-size: 0.78rem; color: var(--danger); margin: 6px 0 0; }
+    .field-error { font-size: 0.78rem; color: var(--state-danger-fg); margin: 6px 0 0; }
     .validation-summary {
-      border: 1px solid var(--danger); border-radius: var(--radius-md);
-      background: var(--danger-bg); padding: 12px 16px; margin-bottom: 16px;
+      border: 1px solid var(--state-danger-border); border-radius: var(--radius-md);
+      background: var(--state-danger-bg); padding: 12px 16px; margin-bottom: 16px;
     }
-    .validation-header { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--danger); font-size: 0.9rem; }
+    .validation-header { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--state-danger-fg); font-size: 0.9rem; }
     .validation-list { margin: 8px 0 0; padding-left: 20px; color: var(--text-primary); font-size: 0.85rem; }
     .response-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
     .badge { padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.8rem; }
-    .badge-success { background: var(--success-bg); color: var(--success); }
-    .badge-danger { background: var(--danger-bg); color: var(--danger); }
+    .badge-success { background: var(--state-success-bg); color: var(--state-success-fg); }
+    .badge-danger { background: var(--state-danger-bg); color: var(--state-danger-fg); }
   `]
 })
 export class ApiConfigComponent {

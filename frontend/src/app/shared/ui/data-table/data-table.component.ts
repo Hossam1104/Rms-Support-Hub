@@ -40,17 +40,17 @@ export interface DataTableColumn {
     </div>
   `,
   styles: [`
-    .data-table { display: flex; flex-direction: column; border: 1px solid var(--glass-border); border-radius: var(--radius-lg); overflow: hidden; }
+    .data-table { display: flex; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-panel); }
     .table-head, .table-row { display: grid; align-items: center; }
-    .table-head { background: var(--bg-tertiary); border-bottom: 1px solid var(--glass-border); }
+    .table-head { background: var(--surface-raised); border-bottom: 1px solid var(--divider); }
     .head-cell { padding: 12px 16px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .02em; }
     .table-body { flex: 1; }
     .table-row {
-      border-bottom: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--divider);
       transition: background var(--transition-fast);
       animation: rowStaggerIn var(--d-slow) var(--ease-spring) backwards;
     }
-    .table-row:hover { background: var(--glass-hover-bg); }
+    .table-row:hover { background: var(--table-row-hover); }
     .body-cell { padding: 12px 16px; font-size: 0.88rem; color: var(--text-primary); }
     .align-right { text-align: right; }
     .align-center { text-align: center; }

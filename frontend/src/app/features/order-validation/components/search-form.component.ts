@@ -1,6 +1,6 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
 
 export interface OrderSearchFilters {
   orderNumber: string;
@@ -12,76 +12,68 @@ export interface OrderSearchFilters {
 @Component({
   selector: 'app-search-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
   template: `
-    <div class="search-card glass-card">
-      <div class="card-title">
-        <i class="bi bi-search"></i>
-        <span>Search Database Orders (UPC)</span>
+    <ui-card variant="raised" class="search-card">
+      <div uiCardHeader class="section-heading">
+        <span class="section-title"><i class="bi bi-search" aria-hidden="true"></i> Search Database Orders (UPC)</span>
+        <span class="superseded-label">Superseded by Order Requests</span>
       </div>
 
       <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Order Number</label>
-          <input type="text" class="glass-input" [(ngModel)]="filters.orderNumber" placeholder="e.g. UPC-998822" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Customer Mobile</label>
-          <input type="text" class="glass-input" [(ngModel)]="filters.phone" placeholder="05xxxxxxxx" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Branch Code</label>
-          <input type="text" class="glass-input" [(ngModel)]="filters.branchCode" placeholder="e.g. 201" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Order Status</label>
-          <select class="glass-input" [(ngModel)]="filters.status">
-            <option [ngValue]="null">All Statuses</option>
-            <option [ngValue]="1">1 - New</option>
-            <option [ngValue]="2">2 - Confirmed</option>
-            <option [ngValue]="3">3 - Ready</option>
-            <option [ngValue]="4">4 - With Delegate</option>
-            <option [ngValue]="5">5 - Rejected</option>
-            <option [ngValue]="6">6 - Canceled Client</option>
-            <option [ngValue]="7">7 - Canceled Admin</option>
-            <option [ngValue]="8">8 - Processing</option>
-            <option [ngValue]="9">9 - Done</option>
-          </select>
-        </div>
+        <ui-field label="Order Number" forId="validation-order-number">
+          <ui-input inputId="validation-order-number" placeholder="e.g. UPC-998822" [value]="filters.orderNumber" (valueChange)="setText('orderNumber', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Customer Mobile" forId="validation-phone">
+          <ui-input inputId="validation-phone" type="tel" placeholder="05xxxxxxxx" [value]="filters.phone" (valueChange)="setText('phone', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Branch Code" forId="validation-branch">
+          <ui-input inputId="validation-branch" placeholder="e.g. 201" [value]="filters.branchCode" (valueChange)="setText('branchCode', $event)"></ui-input>
+        </ui-field>
+        <ui-field label="Order Status" forId="validation-status">
+          <ui-select selectId="validation-status" placeholder="All Statuses" [options]="statusOptions" [value]="statusValue()" (valueChange)="setStatus($event)"></ui-select>
+        </ui-field>
       </div>
 
-      <div class="form-actions">
-        <button type="button" class="btn-clear glass-input" (click)="resetFilters()">Clear</button>
-        <button type="button" class="glass-button" (click)="onSearch()">
-          <i class="bi bi-search"></i> Search Database
-        </button>
+      <div uiCardFooter class="form-actions">
+        <ui-button variant="secondary" icon="bi-arrow-counterclockwise" (pressed)="resetFilters()">Clear</ui-button>
+        <ui-button icon="bi-search" (pressed)="onSearch()">Search Database</ui-button>
       </div>
-    </div>
+    </ui-card>
   `,
   styles: [`
-    .search-card { padding: 24px; margin-bottom: 24px; }
-    .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
-    .card-title i { color: var(--primary); }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
-    .form-actions { display: flex; justify-content: flex-end; gap: 12px; }
-    .btn-clear { height: 38px; cursor: pointer; color: var(--text-secondary); }
+    .search-card { margin-bottom: 24px; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .section-title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); }
+    .section-title i { color: var(--accent); }
+    .superseded-label { color: var(--state-warning-fg); background: var(--state-warning-bg); border: 1px solid var(--state-warning-border); border-radius: var(--radius-pill); padding: 4px 10px; font-size: .7rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    @media (max-width: 620px) { .section-heading { align-items: flex-start; flex-direction: column; } .superseded-label { align-self: flex-start; } }
   `]
 })
 export class SearchFormComponent {
   @Output() search = new EventEmitter<OrderSearchFilters>();
 
-  filters: OrderSearchFilters = {
-    orderNumber: '',
-    phone: '',
-    branchCode: '',
-    status: null
-  };
+  filters: OrderSearchFilters = { orderNumber: '', phone: '', branchCode: '', status: null };
 
-  onSearch() {
-    this.search.emit(this.filters);
+  readonly statusOptions: UiSelectOption[] = [
+    { value: '1', label: '1 - New' }, { value: '2', label: '2 - Confirmed' }, { value: '3', label: '3 - Ready' },
+    { value: '4', label: '4 - With Delegate' }, { value: '5', label: '5 - Rejected' }, { value: '6', label: '6 - Canceled Client' },
+    { value: '7', label: '7 - Canceled Admin' }, { value: '8', label: '8 - Processing' }, { value: '9', label: '9 - Done' }
+  ];
+
+  setText(field: 'orderNumber' | 'phone' | 'branchCode', value: unknown) {
+    this.filters = { ...this.filters, [field]: String(value ?? '') };
   }
+
+  setStatus(value: string | null) {
+    this.filters = { ...this.filters, status: value ? Number(value) : null };
+  }
+
+  statusValue(): string { return this.filters.status === null ? '' : `${this.filters.status}`; }
+
+  onSearch() { this.search.emit({ ...this.filters }); }
 
   resetFilters() {
     this.filters = { orderNumber: '', phone: '', branchCode: '', status: null };

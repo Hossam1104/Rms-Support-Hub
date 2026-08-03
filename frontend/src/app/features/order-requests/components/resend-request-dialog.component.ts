@@ -55,22 +55,22 @@ import { SearchableSelectComponent } from '../../../shared/ui';
     .dialog-panel {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: min(480px, calc(100vw - 32px));
-      background: var(--bg-secondary); border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+      background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
       box-shadow: var(--shadow-lg); padding: 24px;
       animation: dialogSpring var(--d-slow) var(--ease-spring);
     }
     @keyframes dialogSpring { from { opacity: 0; transform: translate(-50%,-50%) scale(.92); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
     .dialog-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .dialog-header i { color: var(--brand-500); font-size: 1.3rem; }
+    .dialog-header i { color: var(--accent); font-size: 1.3rem; }
     .dialog-header h3 { flex: 1; margin: 0; font-size: 1.05rem; color: var(--text-primary); }
     .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
     .dialog-desc { color: var(--text-secondary); font-size: 0.88rem; margin: 0 0 14px; }
-    .blocked-banner { background: var(--danger-bg); color: var(--danger); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.88rem; }
+    .blocked-banner { background: var(--state-danger-bg); color: var(--state-danger-fg); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.88rem; }
     .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
     .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
-    .error-message { color: var(--danger); font-size: 0.82rem; margin: 0 0 12px; }
+    .error-message { color: var(--state-danger-fg); font-size: 0.82rem; margin: 0 0 12px; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
-    .btn-secondary { background: var(--bg-tertiary); border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 16px; cursor: pointer; }
+    .btn-secondary { background: var(--surface-interactive); border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 16px; cursor: pointer; }
     .btn-brand { background: var(--grad-brand); color: var(--on-gradient); border: none; border-radius: var(--radius-md); padding: 8px 18px; font-weight: 600; cursor: pointer; }
     .btn-brand:disabled { opacity: 0.5; cursor: not-allowed; }
   `]

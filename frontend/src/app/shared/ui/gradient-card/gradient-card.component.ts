@@ -3,9 +3,7 @@ import { CommonModule } from '@angular/common';
 
 export type GradientCardVariant = 'brand' | 'success' | 'danger' | 'info' | 'muted';
 
-/** Large rounded card with a gradient top accent and a lift-on-hover glow --
- * the successor to the .glass-card utility class (see _gradients.css) for
- * newly-built/restyled UI. */
+/** Large rounded card with a gradient top accent and a lift-on-hover glow. */
 @Component({
   selector: 'app-gradient-card',
   standalone: true,
@@ -18,10 +16,8 @@ export type GradientCardVariant = 'brand' | 'success' | 'danger' | 'info' | 'mut
   styles: [`
     .gradient-card {
       position: relative;
-      background: var(--glass-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow-md);
       transition: transform var(--d) var(--ease-spring), box-shadow var(--transition-normal);
