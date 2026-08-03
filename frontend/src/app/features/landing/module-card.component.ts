@@ -49,7 +49,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
     .module-card.disabled { opacity: 0.5; pointer-events: none; }
     .card-head { display: flex; justify-content: space-between; align-items: center; }
     .identity { display: flex; align-items: center; gap: 16px; }
-    .module-logo { width: 48px; height: 48px; border-radius: var(--radius-md); background: rgba(255,255,255,0.05); padding: 4px; object-fit: contain; }
+    .module-logo { width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--surface-selected); padding: 4px; object-fit: contain; }
     .module-title { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
     .client-name { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     .card-envs { display: flex; flex-direction: column; gap: 10px; }

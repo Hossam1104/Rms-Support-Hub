@@ -25,7 +25,7 @@ import { CommonModule } from '@angular/common';
     .badge-success { background: var(--success-bg); color: var(--success); }
     .badge-danger { background: var(--danger-bg); color: var(--danger); }
     .badge-warning { background: var(--warning-bg); color: var(--warning); }
-    .badge-info { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+    .badge-info { background: var(--state-info-bg); color: var(--state-info-fg); }
     .badge-secondary { background: var(--bg-tertiary); color: var(--text-muted); }
   `]
 })

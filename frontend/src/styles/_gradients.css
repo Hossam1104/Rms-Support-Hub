@@ -1,43 +1,48 @@
 /**
- * Component-level classes built on top of _tokens.css -- the status-pill
- * gradient map, and the pre-R8 glass utility classes kept as a token-backed
- * bridge so features not yet restyled this session (unicommerce,
- * order-requests, order-validation -- see docs/design-system.md "Rollout")
- * don't regress to unstyled markup.
+ * Intentional gradient accents only: status pills, the mesh page header, and
+ * the legacy glass bridge. New shared primitives use semantic surfaces from
+ * _tokens.css and do not depend on gradients.
  */
+:root {
+  --grad-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--accent-500) 55%, var(--hot-500) 100%);
+  --grad-success: linear-gradient(135deg, #059669 0%, #34d399 100%);
+  --grad-danger: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+  --grad-info: linear-gradient(135deg, #2563eb 0%, #22d3ee 100%);
+  --grad-muted: linear-gradient(135deg, #475569 0%, #94a3b8 100%);
+  --grad-indigo: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
+  --grad-teal: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+  --grad-amber: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+  --grad-rose: linear-gradient(135deg, #e11d48 0%, #fb7185 100%);
+  --grad-rose-slate: linear-gradient(135deg, #64748b 0%, #fb7185 100%);
+  --grad-mesh:
+    radial-gradient(60% 60% at 15% 10%, rgba(124, 58, 237, .35), transparent 60%),
+    radial-gradient(50% 50% at 85% 20%, rgba(219, 39, 119, .30), transparent 60%),
+    radial-gradient(60% 60% at 50% 100%, rgba(249, 115, 22, .22), transparent 60%);
+}
 
-/* ---------------------------------------------------------------------- */
-/* Status pill gradient map -- keyed to RequestOrderHeaders.OrderStatus     */
-/* (1..9), see backend/src/OnlineOrderTool.Core/OrderRequestStatus.cs.      */
-/* ---------------------------------------------------------------------- */
-
+/* Status map for RequestOrderHeaders.OrderStatus 1..9. */
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 14px;
   border-radius: var(--radius-pill);
-  font-size: 0.75rem;
+  font-size: .75rem;
   font-weight: 700;
   color: var(--on-gradient);
   line-height: 1.6;
   white-space: nowrap;
 }
 
-.status-pill--1 { background: var(--grad-info); }        /* New */
-.status-pill--2 { background: var(--grad-indigo); }       /* Confirmed */
-.status-pill--3 { background: var(--grad-teal); }         /* Ready */
-.status-pill--4 { background: var(--grad-amber); }        /* With_Delegate */
-.status-pill--5 { background: var(--grad-danger); }       /* Rejected */
-.status-pill--6 { background: var(--grad-rose-slate); }   /* CanceledByClient */
-.status-pill--7 { background: var(--grad-rose); }         /* CanceledByAdmin */
-.status-pill--9 { background: var(--grad-success); }      /* Done */
-
-.status-pill--8 {
-  /* Processing -- brand gradient with a pulsing ring. */
-  background: var(--grad-brand);
-  position: relative;
-}
+.status-pill--1 { background: var(--grad-info); }
+.status-pill--2 { background: var(--grad-indigo); }
+.status-pill--3 { background: var(--grad-teal); }
+.status-pill--4 { background: var(--grad-amber); }
+.status-pill--5 { background: var(--grad-danger); }
+.status-pill--6 { background: var(--grad-rose-slate); }
+.status-pill--7 { background: var(--grad-rose); }
+.status-pill--8 { position: relative; background: var(--grad-brand); }
+.status-pill--9 { background: var(--grad-success); }
 
 .status-pill--8::after {
   content: '';
@@ -49,29 +54,24 @@
 }
 
 @keyframes pillPulseRing {
-  0%   { box-shadow: 0 0 0 0 rgba(124, 58, 237, .55); }
-  70%  { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, .55); }
+  70% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
   100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
 }
 
-/* Ambient hero drift, used by shared/ui/page-header. */
 @keyframes meshDrift {
-  0%   { background-position: 0% 0%, 100% 0%, 50% 100%; }
-  50%  { background-position: 10% 10%, 90% 15%, 55% 90%; }
+  0% { background-position: 0% 0%, 100% 0%, 50% 100%; }
+  50% { background-position: 10% 10%, 90% 15%, 55% 90%; }
   100% { background-position: 0% 0%, 100% 0%, 50% 100%; }
 }
 
-/* Skeleton shimmer sweep, used by shared/ui/skeleton. */
 @keyframes shimmerSweep {
-  0%   { background-position: -200% 0; }
+  0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-/* ---------------------------------------------------------------------- */
-/* Legacy glass utility classes -- superseded by shared/ui/gradient-card    */
-/* etc. going forward, kept only as a bridge for not-yet-restyled features.*/
-/* ---------------------------------------------------------------------- */
-
+/* Compatibility bridge for screens owned by U7. Keep these rules stable and
+ * do not use them in new U5 primitives. */
 .glass-card {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -82,49 +82,14 @@
   transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
-.glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
-}
+.glass-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg), var(--shadow-glow); }
+.glass-panel { background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-right: 1px solid var(--glass-border); }
+.glass-input { background: var(--bg-tertiary); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: var(--radius-md); padding: .5rem .75rem; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.glass-input:focus { outline: none; border-color: var(--brand-500); box-shadow: var(--focus-ring); }
+.glass-button { background: var(--grad-brand); color: var(--on-gradient); border: none; border-radius: var(--radius-md); padding: .5rem 1.25rem; font-weight: 500; cursor: pointer; transition: opacity var(--transition-fast), transform var(--transition-fast); }
+.glass-button:hover { opacity: .9; transform: scale(1.02); }
+.glass-button:active { transform: scale(.97); }
 
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-right: 1px solid var(--glass-border);
-}
-
-.glass-input {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  border-radius: var(--radius-md);
-  padding: 0.5rem 0.75rem;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.glass-input:focus {
-  outline: none;
-  border-color: var(--brand-500);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, .2);
-}
-
-.glass-button {
-  background: var(--grad-brand);
-  color: var(--on-gradient);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 0.5rem 1.25rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
-}
-
-.glass-button:hover {
-  opacity: 0.9;
-  transform: scale(1.02);
-}
-
-.glass-button:active {
-  transform: scale(0.97);
+@media (prefers-reduced-motion: reduce) {
+  .status-pill--8::after { animation: none; }
 }

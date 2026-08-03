@@ -74,7 +74,7 @@ const RESEND_BLOCKED_STATUSES = new Set([4, 8, 9]);
     .data-table th { background: var(--bg-tertiary); color: var(--text-secondary); font-weight: 600; }
     .data-table tbody tr:hover { background: var(--glass-hover-bg); }
     .badge { padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; }
-    .badge-info { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+    .badge-info { background: var(--state-info-bg); color: var(--state-info-fg); }
     .badge-success { background: var(--success-bg); color: var(--success); }
     .badge-danger { background: var(--danger-bg); color: var(--danger); }
     .badge-warning { background: var(--warning-bg); color: var(--warning); }

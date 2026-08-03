@@ -1,136 +1,159 @@
-# Design System — Bold Gradient / Vibrant
+# Design System - U5 dark-first foundation
 
-Replaces the dark-glassmorphism system from the original rewrite
-(`_glassmorphism.css` + the glass variables in the old `_variables.css`) —
-completed in remediation session R8; see [`.ai/HISTORY.md`](../.ai/HISTORY.md).
+U5 establishes a shared visual language for the operational order desk. The
+primary theme is dark: ink/navy page and panel surfaces, a readable slate text
+ramp, one violet action accent, and semantic colors for success, warning,
+danger, information, and neutral states. Light is maintained as a complete
+secondary theme rather than a partial inversion.
 
-## The binding rule
+## Binding rules
 
-**No component stylesheet may contain a raw hex value.** Every color, in
-every `.component.ts`'s inline `styles: [...]` array and every file under
-`frontend/src/styles/`, must read a custom property defined in
-`_tokens.css` or `_gradients.css`. Those two files are the *only* place raw
-hex/`rgba(...)` literals are allowed to live — they are the definition
-site the rest of the app reads from.
+- Component styles consume semantic custom properties. Raw color literals are
+  allowed only in `frontend/src/styles/_tokens.css` and
+  `frontend/src/styles/_gradients.css`.
+- Default content surfaces use `--surface-*` tokens. Gradients are intentional
+  accents for status pills, the mesh hero, and the compatibility bridge only.
+- New shared primitives never use `.glass-card`, `.glass-panel`, `.glass-input`,
+  or `.glass-button`. Those classes remain temporarily for screens owned by
+  U7 and are not extended.
+- Every interactive control has a visible `:focus-visible` treatment, a true
+  disabled state, and reduced-motion behavior where it animates.
 
-Verify with:
+Useful check:
+
 ```powershell
-Select-String -Path src/app -Include *.ts,*.css -Pattern "#[0-9a-fA-F]{3,6}" -Recurse
+git grep -n -E "#[0-9a-fA-F]{3,8}" -- frontend/src/app
+git grep -n "glass-card\|glass-input\|glass-button\|glass-panel" -- frontend/src
 ```
-Expect zero hits (the two style files above are not under `src/app`, so a
-correctly-scoped grep against `src/app` alone should already be empty).
 
-## Files
+The first command should be empty. The second is expected to show only the
+pre-U7 bridge consumers and the bridge definitions until U7 is complete.
 
-- `frontend/src/styles/_tokens.css` — every custom property: brand gradient
-  stops, semantic gradients, back-compat single-color aliases, surfaces,
-  radius scale, shadow scale, motion (durations + easings), plus the
-  `[data-theme="light"]` override block and the global
-  `prefers-reduced-motion` duration collapse.
-- `frontend/src/styles/_gradients.css` — the status-pill gradient map, the
-  `meshDrift`/`shimmerSweep` keyframes, and the legacy `.glass-card` /
-  `.glass-panel` / `.glass-input` / `.glass-button` utility classes, kept as
-  a token-backed bridge (see "Rollout" below).
-- `frontend/src/app/core/services/theme.service.ts` — **unchanged this
-  session**. Still just toggles `document.documentElement.setAttribute('data-theme', 'dark' | 'light')`
-  and persists to `localStorage`; `_tokens.css` supplies both value sets.
+## Token hierarchy
 
-## Token catalogue
+`frontend/src/styles/_tokens.css` is the definition site for surfaces, text,
+semantic states, borders, focus, layout, radius, shadow, and motion.
 
-| Token | Value | Use |
+| Family | Important tokens | Use |
 |---|---|---|
-| `--brand-500` / `--accent-500` / `--hot-500` | `#7C3AED` / `#DB2777` / `#F97316` | Brand gradient stops (violet → pink → orange) |
-| `--grad-brand` | `linear-gradient(135deg, ...)` | Primary CTAs, active nav, brand accents |
-| `--grad-success` / `--grad-danger` / `--grad-info` / `--grad-muted` | | Semantic surfaces |
-| `--grad-indigo` / `--grad-teal` / `--grad-amber` / `--grad-rose` / `--grad-rose-slate` | | Status-pill-only hues (see below) |
-| `--grad-mesh` | 3-layer radial gradient | `page-header`'s hero background |
-| `--on-gradient` | `#ffffff` | Text/icon color painted on any gradient surface |
-| `--radius-sm/md/lg/xl/pill` | `12/18/26/34/999px` | Full radius scale |
-| `--shadow-sm/md/lg` + `--shadow-glow` | | Elevation + brand glow |
-| `--d-fast/--d/--d-slow` | `140/240/420ms` | Motion durations |
-| `--ease-spring` / `--ease-out` | `cubic-bezier(.34,1.56,.64,1)` / `cubic-bezier(.16,1,.3,1)` | Motion easings |
-| `--transition-fast` / `--transition-normal` | `var(--d-fast) var(--ease-out)` / `var(--d) var(--ease-out)` | Back-compat aliases — most existing component styles already read these two names |
+| Surfaces | `--surface-page`, `--surface-panel`, `--surface-raised`, `--surface-interactive`, `--surface-overlay`, `--surface-muted`, `--surface-hover`, `--surface-selected` | Page, cards, controls, overlays, disabled/quiet regions, hover and selection |
+| Text | `--text-primary`, `--text-secondary`, `--text-muted`, `--text-disabled`, `--text-inverse`, `--text-accent` | A deliberate readable text ramp in both themes |
+| Semantic | `--state-success-*`, `--state-warning-*`, `--state-danger-*`, `--state-info-*`, `--state-neutral-*` | Foreground, soft background, border, and emphasis states |
+| Controls | `--input-bg`, `--input-border`, `--border-focus`, `--focus-ring`, `--focus-ring-danger`, `--divider` | Form fields, keyboard focus, table rules, and section rhythm |
+| Tables | `--table-row-hover`, `--table-row-zebra` | Data density without raw colors in feature styles |
+| Layout | `--sidebar-expanded-width`, `--sidebar-collapsed-width`, `--sidebar-width`, `--navbar-height` | Shell geometry and sidebar reflow |
+| Shape/elevation | `--radius-sm/md/lg/xl/pill`, `--shadow-sm/md/lg`, `--shadow-glow` | Consistent shape and depth scale |
+| Motion | `--d-fast`, `--d`, `--d-slow`, `--ease-spring`, `--ease-out`, `--transition-*` | Shared timing and easing; reduced motion collapses durations |
 
-`--primary`, `--primary-gradient`, `--success`, `--warning`, `--danger`,
-`--bg-*`, `--text-*`, `--glass-*` also still exist, as aliases onto the new
-palette — see "Rollout".
+Compatibility aliases such as `--bg-*`, `--text-*`, `--primary`, `--success`,
+`--danger`, and `--glass-*` remain while U7 migrates the older screens. Remove
+an alias only after a repository search proves it is unused.
 
-## Status-pill gradient map
+## Gradient discipline and status map
 
-Keyed to `RequestOrderHeaders.OrderStatus` (1–9), see
-`backend/src/OnlineOrderTool.Core/OrderRequestStatus.cs`:
+`frontend/src/styles/_gradients.css` contains the nine status gradients and the
+mesh hero. It does not define a gradient as the default surface of a new
+primitive.
 
-| Status | Label | Gradient |
+| Status | Label | Accent |
 |---|---|---|
 | 1 | New | `--grad-info` |
 | 2 | Confirmed | `--grad-indigo` |
 | 3 | Ready | `--grad-teal` |
-| 4 | With_Delegate | `--grad-amber` |
+| 4 | With Delegate | `--grad-amber` |
 | 5 | Rejected | `--grad-danger` |
-| 6 | CanceledByClient | `--grad-rose-slate` |
-| 7 | CanceledByAdmin | `--grad-rose` |
-| 8 | Processing | `--grad-brand` + pulsing ring (`.status-pill--8::after`) |
+| 6 | Canceled by Client | `--grad-rose-slate` |
+| 7 | Canceled by Admin | `--grad-rose` |
+| 8 | Processing | `--grad-brand` plus a restrained pulse ring |
 | 9 | Done | `--grad-success` |
 
-Use `<app-status-pill [status]="9">` (`shared/ui/status-pill`) — it applies
-the `.status-pill--N` class from `_gradients.css` and pops (scale spring)
-whenever `status` changes.
+Use `<app-status-pill [status]="9">` for the verified status mapping. The
+`page-header` may use `--grad-mesh` as a deliberate hero treatment. The
+`.glass-*` rules are token-backed compatibility utilities only and remain
+scheduled for deletion in U7.
 
-## Shared UI kit (`frontend/src/app/shared/ui/`)
+## Shared primitives
 
-`gradient-card`, `stat-tile` (count-up via `shared/directives/count-up.directive.ts`),
-`status-pill`, `json-tree` (+ `json-tree-node`, recursive), `drawer` (CDK
-a11y focus trap, Esc/backdrop close), `confirm-dialog` (danger/brand
-variant, optional required-reason textarea), `empty-state`, `skeleton`,
-`data-table` (CDK virtual scroll + staggered row entrance), `pagination`,
-`riyal` (CSS-mask technique — see below), `copy-button`, `filter-chip`,
-`page-header` (mesh hero, `meshDrift`). Barrel export: `shared/ui/index.ts`.
+The standalone signal-based components are exported through
+`frontend/src/app/shared/ui/index.ts`:
 
-Dev-only showcase: `/_kitchen-sink` (`features/kitchen-sink/`), registered
-in `app.routes.ts` only when `!environment.production` — the production
-build's `fileReplacements` swap makes that branch provably dead, so the
-route and its lazy chunk are tree-shaken out of the production bundle
-entirely (verified: no `kitchen-sink-component` chunk in
-`ng build --configuration production` output).
+- `ui-card`: default, raised, and keyboard-activatable interactive surfaces;
+  header/body/footer projection and disabled behavior.
+- `ui-section`: title, description, completion marker, action projection,
+  accessible collapse toggle, expanded state, and reduced-motion-safe rhythm.
+- `ui-field`: label, required marker, hint, inline error, generated IDs, and
+  the `describedBy()` signal used to link projected controls.
+- `ui-input`: text/email/number/tel/url/search inputs with Angular
+  `ControlValueAccessor` support, small/medium sizes, disabled/read-only/
+  invalid states, and prefix/suffix projection.
+- `ui-select`: native-select semantics with typed options, placeholder,
+  Angular forms support, small/medium sizes, disabled and invalid states.
+- `ui-button`: primary, secondary, ghost, and danger variants; small/medium
+  sizes; icons; loading; disabled; submit/reset/button semantics; and a
+  `pressed` output that ignores duplicate activation while busy.
+- `ui-table`: native table markup with dense, sticky-header, zebra, horizontal
+  overflow, caption, and empty-state projection.
+- `ui-toolbar`: start/center/end projection, compact mode, wrapping, and
+  narrow-screen fallback.
 
-### Riyal CSS-mask technique
+Compose `ui-field` with `ui-input`/`ui-select`. Compose it with the existing
+`app-searchable-select` for branch search; U5 does not duplicate the U3
+searchable behavior.
 
-`Saudi_Riyal.svg` is a single-color glyph (`fill="currentColor"`). Painting
-it via `<img>` would lock its color to whatever the SVG's own fill
-resolves to inside an isolated image context (which doesn't inherit CSS at
-all) — instead, `shared/ui/riyal` paints a `background-color: currentColor`
-box masked by the SVG shape (`mask` / `-webkit-mask: url(...) no-repeat
-center / contain`), so the glyph always matches surrounding text color
-without a duplicate colored asset per theme.
+The existing shared kit also includes stat tiles, status pills, data tables,
+drawers, dialogs, empty states, skeletons, pagination, JSON trees, copy
+buttons, filter chips, the Riyal glyph, page headers, and environment badges.
 
-### Reduced motion
+## Toast behavior
 
-`_animations.css` collapses every `animation-duration`/`transition-duration`
-to `0.01ms` under `@media (prefers-reduced-motion: reduce)` — a global
-catch-all, since not every keyframe reads a `--d-*` token directly.
-`_tokens.css` additionally collapses the duration tokens themselves at the
-same breakpoint (belt-and-suspenders for anything computing off them in
-JS). The one animation that can't be handled by CSS alone —
-`count-up.directive.ts`'s `requestAnimationFrame` loop — checks
-`window.matchMedia('(prefers-reduced-motion: reduce)')` itself and renders
-the final value on the first frame instead of animating.
+`ToastService` owns a signal-backed visible list and queue:
 
-## Rollout
+- no more than three toasts are visible;
+- overflow is queued and promoted when a visible item closes;
+- consecutive identical message/type pairs become one item with a `xN` count;
+- timed dismissal is paused by hover or keyboard focus and resumed afterward;
+- each toast has a manual close button, a semantic live region, a variant icon,
+  and a responsive bottom-right position;
+- reduced motion disables entrance and spinner animation through the global
+  motion rules.
 
-This session (R8) swaps the *foundation* — tokens, gradients, the shared
-kit — and restyles `landing`, the shell (`navbar`/`sidebar`/`breadcrumb`),
-and `flat-order` (its `quick-stats` sub-component now uses `app-stat-tile`)
-onto it, per the prompt's explicit scope. It deliberately does **not**
-touch `unicommerce`, `order-requests`, or `order-validation` — those are
-later sessions' jobs (R9 rebuilds Order Requests; R10 rebuilds the
-Uni-Commerce/order-builder UI).
+The service is deterministic under fake timers, which keeps cap, queue,
+deduplication, pause/resume, dismissal, and promotion tests independent of a
+browser or API.
 
-Those not-yet-restyled features still use the pre-R8 `.glass-card` /
-`.glass-panel` / `.glass-input` / `.glass-button` utility class names in
-their templates. Rather than leave them referencing now-deleted CSS
-variables (an unstyled regression across most of the app), `_gradients.css`
-keeps these four class names defined — now sourced entirely from the new
-token set (gradient buttons instead of a flat indigo, the new radius/shadow
-scale, etc.) — as a compatibility bridge. When a feature is restyled in its
-own session, prefer the new `shared/ui` components over these classes; do
-not add new usages of `.glass-*` going forward.
+## Sidebar and shell
+
+`SidebarStateService` publishes the `collapsed` signal and persists it under
+the approved local-storage key `order-tool.sidebar-collapsed`. The sidebar
+uses `--sidebar-expanded-width` or `--sidebar-collapsed-width`; the module
+shell writes the matching value into its local `--sidebar-width` custom
+property, and `main-content` uses that variable for its offset. At narrow
+widths the main content releases the desktop offset while the sidebar remains
+an overlay surface.
+
+## Themes and reduced motion
+
+`ThemeService` continues to set `data-theme="dark"` or `data-theme="light"`
+and persist the choice. Both selectors define the complete surface, text,
+border, input, semantic, focus, table, and shadow values needed by the shared
+kit. `_animations.css` remains the global safety net: `prefers-reduced-motion`
+collapses CSS animations/transitions, disables smooth scrolling, and the
+token-level duration collapse covers components that use token aliases.
+
+## Kitchen sink
+
+`/_kitchen-sink` is registered only when `environment.production` is false.
+It demonstrates every U5 primitive and its important states, the U3
+searchable branch selector, all nine status pills, both themes, focus and
+disabled states, the capped/deduplicated/queued toast stack, existing shared
+components, and reduced-motion-relevant controls. It is not linked from
+production navigation and is tree-shaken from the production route graph.
+
+## Rollout boundary
+
+- U5 owns this foundation, toast behavior, sidebar reflow, and the kitchen
+  sink. It does not redesign feature page layout.
+- U6 consumes these primitives for the two-column order-builder workspace,
+  collapsible sections, dense tables, and server-totals summary rail.
+- U7 migrates the remaining feature pages and then deletes the `.glass-*`
+  bridge and any aliases proven unused.

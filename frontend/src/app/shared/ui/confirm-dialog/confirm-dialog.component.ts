@@ -36,7 +36,7 @@ export type ConfirmVariant = 'danger' | 'brand';
   `,
   styles: [`
     :host { position: fixed; inset: 0; z-index: 2100; }
-    .confirm-backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, .55); backdrop-filter: blur(2px); }
+    .confirm-backdrop { position: absolute; inset: 0; background: var(--backdrop); backdrop-filter: blur(2px); }
     .confirm-dialog {
       position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);

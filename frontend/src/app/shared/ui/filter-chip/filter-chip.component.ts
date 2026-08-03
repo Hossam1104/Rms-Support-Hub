@@ -33,13 +33,13 @@ import { CommonModule } from '@angular/common';
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, .25);
+      background: var(--surface-selected);
       border: none;
       color: inherit;
       cursor: pointer;
       transition: background var(--transition-fast);
     }
-    .chip-remove:hover { background: rgba(255, 255, 255, .4); }
+    .chip-remove:hover { background: var(--surface-hover); }
     @keyframes chipSpringIn {
       from { opacity: 0; transform: scale(.8) translateY(4px); }
       to { opacity: 1; transform: scale(1) translateY(0); }

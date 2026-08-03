@@ -104,7 +104,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
       animation: rowStaggerIn var(--d-slow) var(--ease-spring) backwards;
     }
     .table-row:hover { background: var(--glass-hover-bg); }
-    .table-row.row-failed { border-left: 3px solid transparent; background-image: linear-gradient(90deg, rgba(220,38,38,.12), transparent 12%); }
+    .table-row.row-failed { border-left: 3px solid var(--state-danger-border); background: var(--state-danger-bg); }
     .table-row.row-cancelled { opacity: 0.65; }
     @keyframes rowStaggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .skeleton-row { display: flex; align-items: center; }

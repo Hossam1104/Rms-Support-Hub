@@ -31,7 +31,7 @@ import { A11yModule } from '@angular/cdk/a11y';
     :host { position: fixed; inset: 0; z-index: 2000; }
     .drawer-backdrop {
       position: absolute; inset: 0;
-      background: rgba(2, 6, 23, .55);
+      background: var(--backdrop);
       backdrop-filter: blur(2px);
       animation: fadeIn var(--d) var(--ease-out);
     }

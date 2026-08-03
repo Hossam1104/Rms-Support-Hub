@@ -1,12 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
 import { ToastService } from '../../core/services/toast.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { BranchOption } from '../../core/models';
 import {
-  GradientCardComponent, StatTileComponent, StatusPillComponent, JsonTreeComponent,
-  DrawerComponent, ConfirmDialogComponent, EmptyStateComponent, SkeletonComponent,
-  DataTableComponent, DataTableColumn, PaginationComponent, RiyalComponent,
-  CopyButtonComponent, FilterChipComponent, PageHeaderComponent
+  CopyButtonComponent, DataTableColumn, DataTableComponent, DrawerComponent,
+  EmptyStateComponent, FilterChipComponent, GradientCardComponent, JsonTreeComponent,
+  PageHeaderComponent, PaginationComponent, RiyalComponent, SearchableSelectComponent,
+  SkeletonComponent, StatTileComponent, StatusPillComponent, UiButtonComponent,
+  UiCardComponent, UiFieldComponent, UiInputComponent, UiSectionComponent,
+  UiSelectComponent, UiTableComponent, UiToolbarComponent, UiSelectOption,
+  ConfirmDialogComponent
 } from '../../shared/ui';
 
 interface DemoRow extends Record<string, unknown> {
@@ -16,199 +20,232 @@ interface DemoRow extends Record<string, unknown> {
   net: number;
 }
 
-/**
- * Dev-only showcase of every shared/ui component in every state -- see
- * app.routes.ts (only registered when !environment.production) and
- * docs/design-system.md. Never linked from production navigation.
- */
+/** Development-only visual contract for the shared design system. */
 @Component({
   selector: 'app-kitchen-sink',
   standalone: true,
   imports: [
-    CommonModule, GradientCardComponent, StatTileComponent, StatusPillComponent, JsonTreeComponent,
-    DrawerComponent, ConfirmDialogComponent, EmptyStateComponent, SkeletonComponent,
-    DataTableComponent, PaginationComponent, RiyalComponent, CopyButtonComponent,
-    FilterChipComponent, PageHeaderComponent
+    CommonModule, CopyButtonComponent, DataTableComponent, DrawerComponent,
+    EmptyStateComponent, FilterChipComponent, GradientCardComponent, JsonTreeComponent,
+    PageHeaderComponent, PaginationComponent, RiyalComponent, SearchableSelectComponent,
+    SkeletonComponent, StatTileComponent, StatusPillComponent, UiButtonComponent,
+    UiCardComponent, UiFieldComponent, UiInputComponent, UiSectionComponent,
+    UiSelectComponent, UiTableComponent, UiToolbarComponent, ConfirmDialogComponent
   ],
   template: `
-    <app-page-header title="Kitchen Sink" subtitle="Every shared/ui component, every state. Dev-only.">
-      <button type="button" class="theme-toggle" (click)="themeService.toggleTheme()">
-        Toggle theme ({{ themeService.theme() }})
-      </button>
+    <app-page-header title="Kitchen Sink" subtitle="The shared control desk: every U5 primitive, state, theme, and accessibility edge. Dev-only.">
+      <ui-button variant="secondary" size="sm" icon="bi-circle-half" (pressed)="themeService.toggleTheme()">
+        {{ themeService.theme() === 'dark' ? 'Light theme' : 'Dark theme' }}
+      </ui-button>
     </app-page-header>
 
-    <section class="sink-section">
-      <h2>Stat tiles</h2>
+    <ui-toolbar role="toolbar" ariaLabel="Kitchen sink controls">
+      <span uiToolbarStart class="toolbar-kicker">U5 DESIGN SYSTEM</span>
+      <span uiToolbarCenter class="toolbar-note">Dark-first / light maintained</span>
+      <span uiToolbarEnd>
+        <ui-button variant="ghost" size="sm" icon="bi-arrow-clockwise" (pressed)="resetDemo()">Reset demo</ui-button>
+      </span>
+    </ui-toolbar>
+
+    <ui-section title="Cards and sections" description="Token surfaces replace gradient-heavy default containers." [completed]="true">
+      <span uiSectionActions>
+        <ui-button variant="ghost" size="sm" (pressed)="cardActivated.set(false)">Clear selection</ui-button>
+      </span>
+      <div class="card-grid">
+        <ui-card>
+          <span uiCardHeader>Base panel</span>
+          <p>Quiet surface for routine data and forms.</p>
+        </ui-card>
+        <ui-card variant="raised">
+          <span uiCardHeader>Raised panel</span>
+          <p>Reserved for a step or summary that needs lift.</p>
+        </ui-card>
+        <ui-card variant="interactive" [ariaLabel]="'Interactive card'" (activated)="cardActivated.set(true)">
+          <span uiCardHeader>Interactive option</span>
+          <p>{{ cardActivated() ? 'Activated with keyboard or pointer.' : 'Activate this card.' }}</p>
+        </ui-card>
+        <ui-card variant="interactive" [disabled]="true">
+          <span uiCardHeader>Disabled option</span>
+          <p>Disabled states remain visibly and behaviorally disabled.</p>
+        </ui-card>
+      </div>
+    </ui-section>
+
+    <ui-section title="Fields and controls" description="Labels, descriptions, errors, focus, disabled, and form-compatible controls.">
+      <div class="field-grid">
+        <ui-field #emailField label="Operator email" forId="sink-email" [required]="true" hint="Used only for this local demonstration.">
+          <ui-input inputId="sink-email" type="email" placeholder="operator@example.test" [ariaDescribedBy]="emailField.describedBy()"></ui-input>
+        </ui-field>
+        <ui-field #branchField label="Branch" forId="sink-branch" [required]="true" hint="Searchable branch selection is the U3 composition point.">
+          <app-searchable-select label="Branch" placeholder="Search branches" [options]="branches" [value]="selectedBranch()" (valueChange)="selectedBranch.set($event)"></app-searchable-select>
+        </ui-field>
+        <ui-field #invalidField label="Invalid quantity" forId="sink-quantity" error="Enter a quantity greater than zero." [required]="true">
+          <ui-input inputId="sink-quantity" type="number" value="0" [invalid]="true" [ariaDescribedBy]="invalidField.describedBy()"></ui-input>
+        </ui-field>
+        <ui-field label="Status" forId="sink-status" hint="Native select semantics with a tokenized surface.">
+          <ui-select selectId="sink-status" placeholder="Choose a status" [options]="selectOptions" value="ready"></ui-select>
+        </ui-field>
+        <ui-field label="Read-only" forId="sink-readonly">
+          <ui-input inputId="sink-readonly" value="Testing lane" [readOnly]="true"></ui-input>
+        </ui-field>
+        <ui-field label="Disabled" forId="sink-disabled">
+          <ui-input inputId="sink-disabled" value="Unavailable" [disabled]="true"></ui-input>
+        </ui-field>
+      </div>
+    </ui-section>
+
+    <ui-section title="Buttons" description="Primary, secondary, ghost, danger, small, medium, icon, loading, and disabled states.">
+      <div class="button-row">
+        <ui-button variant="primary" icon="bi-check-lg" (pressed)="toast.showSuccess('Primary action completed.', 0)">Primary</ui-button>
+        <ui-button variant="secondary" size="sm" icon="bi-sliders">Secondary small</ui-button>
+        <ui-button variant="ghost" icon="bi-three-dots">Ghost</ui-button>
+        <ui-button variant="danger" icon="bi-trash3">Danger</ui-button>
+        <ui-button variant="primary" [loading]="buttonLoading()" loadingLabel="Saving..." (pressed)="buttonLoading.set(true)">Loading</ui-button>
+        <ui-button variant="secondary" [disabled]="true">Disabled</ui-button>
+      </div>
+    </ui-section>
+
+    <ui-section title="Tables and toolbar" description="Dense, sticky, zebra, horizontal overflow, empty state, and wrapping toolbar.">
+      <ui-table [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Dense order sample">
+        <thead><tr><th>Order</th><th>Branch</th><th>Net</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of tableRows | slice:0:4"><td>{{ row.orderNumber }}</td><td>{{ row.branch }}</td><td>{{ row.net | number:'1.2-2' }}</td></tr>
+        </tbody>
+      </ui-table>
+      <ui-table [empty]="true"><span uiTableEmpty>No records in this state.</span></ui-table>
+    </ui-section>
+
+    <ui-section title="Status pills" description="All nine RequestOrderHeaders statuses remain gradient accents, not default surfaces.">
+      <div class="pill-row">
+        <app-status-pill *ngFor="let status of statuses" [status]="status"></app-status-pill>
+      </div>
+    </ui-section>
+
+    <ui-section title="Toasts" description="Three visible, queued overflow, duplicate collapse, pause on hover/focus, and manual close.">
+      <div class="button-row">
+        <ui-button variant="primary" size="sm" (pressed)="toast.showSuccess('Order sent successfully!')">Success</ui-button>
+        <ui-button variant="danger" size="sm" (pressed)="toast.showError('Upstream returned 502.')">Error</ui-button>
+        <ui-button variant="secondary" size="sm" (pressed)="toast.showWarning('Testing lane is active.')">Warning</ui-button>
+        <ui-button variant="ghost" size="sm" (pressed)="toast.showInfo('No item found in database.')">Info</ui-button>
+        <ui-button variant="danger" size="sm" icon="bi-repeat" (pressed)="burstDuplicate()">Four identical errors</ui-button>
+        <ui-button variant="secondary" size="sm" icon="bi-stack" (pressed)="queueToasts()">Queue six toasts</ui-button>
+        <ui-button variant="ghost" size="sm" (pressed)="toast.clearAll()">Clear all</ui-button>
+      </div>
+      <p class="demo-meta">Visible {{ toast.toasts().length }} / {{ toast.maxVisible }} · queued {{ toast.queued().length }} · duplicate counter appears on the single matching entry.</p>
+    </ui-section>
+
+    <section class="legacy-showcase sink-section">
+      <h2>Existing shared components</h2>
       <div class="tile-grid">
         <app-stat-tile label="Requests" [value]="statValue()" icon="bi-inbox" variant="brand" [active]="true"></app-stat-tile>
         <app-stat-tile label="Succeeded" [value]="statValue() - 12" icon="bi-check-circle" variant="success"></app-stat-tile>
         <app-stat-tile label="Failed" [value]="8" icon="bi-x-circle" variant="danger"></app-stat-tile>
         <app-stat-tile label="Cancelled" [value]="3" icon="bi-slash-circle" variant="muted"></app-stat-tile>
       </div>
-      <button type="button" class="demo-btn" (click)="statValue.set(statValue() + 137)">Bump count (tests count-up)</button>
-    </section>
-
-    <section class="sink-section">
-      <h2>Status pills -- all nine</h2>
-      <div class="pill-row">
-        @for (s of [1,2,3,4,5,6,7,8,9]; track s) {
-          <app-status-pill [status]="s"></app-status-pill>
-        }
+      <div class="button-row"><ui-button variant="secondary" size="sm" (pressed)="statValue.set(statValue() + 137)">Bump count-up</ui-button></div>
+      <div class="card-grid gradient-grid">
+        <app-gradient-card variant="brand">Brand accent</app-gradient-card>
+        <app-gradient-card variant="success">Success accent</app-gradient-card>
+        <app-gradient-card variant="danger">Danger accent</app-gradient-card>
+        <app-gradient-card variant="info">Info accent</app-gradient-card>
+        <app-gradient-card variant="muted">Muted accent</app-gradient-card>
       </div>
-      <button type="button" class="demo-btn" (click)="popStatus.set(popStatus() === 1 ? 9 : 1)">
-        Toggle status (tests pop animation): <app-status-pill [status]="popStatus()"></app-status-pill>
-      </button>
+      <p class="riyal-demo">1,284.50 <app-riyal [size]="1.1"></app-riyal> <app-copy-button value="Copied from the kitchen sink" label="Copy sample text"></app-copy-button></p>
     </section>
 
-    <section class="sink-section">
-      <h2>Gradient cards -- all variants</h2>
-      <div class="card-grid">
-        <app-gradient-card variant="brand">Brand</app-gradient-card>
-        <app-gradient-card variant="success">Success</app-gradient-card>
-        <app-gradient-card variant="danger">Danger</app-gradient-card>
-        <app-gradient-card variant="info">Info</app-gradient-card>
-        <app-gradient-card variant="muted">Muted</app-gradient-card>
-      </div>
-    </section>
-
-    <section class="sink-section">
-      <h2>Riyal glyph + copy button</h2>
-      <p class="riyal-demo">1,284.50 <app-riyal [size]="1.1"></app-riyal></p>
-      <app-copy-button value="Copied from the kitchen sink" label="Copy sample text"></app-copy-button>
-    </section>
-
-    <section class="sink-section">
-      <h2>Filter chips</h2>
+    <section class="legacy-showcase sink-section">
+      <h2>Data, states, and overlays</h2>
       <div class="chip-row" *ngIf="chips().length; else noChips">
-        @for (chip of chips(); track chip) {
-          <app-filter-chip [label]="chip" (remove)="removeChip(chip)"></app-filter-chip>
-        }
+        <app-filter-chip *ngFor="let chip of chips()" [label]="chip" (remove)="removeChip(chip)"></app-filter-chip>
       </div>
       <ng-template #noChips><span class="text-muted">All chips removed.</span></ng-template>
-    </section>
-
-    <section class="sink-section">
-      <h2>JSON tree -- nested payload and malformed string</h2>
       <app-json-tree title="Valid nested payload" [data]="samplePayload"></app-json-tree>
       <app-json-tree title="Malformed string (danger banner)" [data]="malformedJson"></app-json-tree>
-    </section>
-
-    <section class="sink-section">
-      <h2>Data table + pagination (virtual scroll, staggered rows)</h2>
       <app-data-table [columns]="tableColumns" [rows]="tableRows" height="260px"></app-data-table>
       <app-pagination [page]="page()" [pageSize]="25" [total]="140" (pageChange)="page.set($event)"></app-pagination>
-    </section>
-
-    <section class="sink-section">
-      <h2>Skeletons</h2>
-      <app-skeleton height="14px" width="60%"></app-skeleton>
-      <app-skeleton height="14px" width="80%"></app-skeleton>
-      <app-skeleton height="40px" width="100%" radius="var(--radius-lg)"></app-skeleton>
-    </section>
-
-    <section class="sink-section">
-      <h2>Empty state</h2>
-      <app-empty-state icon="bi-inbox" title="No requests yet" description="Orders sent from this module will appear here.">
-        <button type="button" class="demo-btn">Take an action</button>
-      </app-empty-state>
-    </section>
-
-    <section class="sink-section">
-      <h2>Drawer</h2>
-      <button type="button" class="demo-btn" (click)="drawerOpen.set(true)">Open drawer</button>
-      <app-drawer *ngIf="drawerOpen()" title="Order UPC-99812" (close)="drawerOpen.set(false)">
-        <p>Drawer content -- CDK focus trap, Esc/backdrop close, spring slide-in.</p>
-      </app-drawer>
-    </section>
-
-    <section class="sink-section">
-      <h2>Confirm dialog (danger, required reason)</h2>
-      <button type="button" class="demo-btn" (click)="confirmOpen.set(true)">Open confirm dialog</button>
-      <app-confirm-dialog
-        *ngIf="confirmOpen()"
-        title="Cancel this order?"
-        message="This sends a cancellation request to the upstream API."
-        variant="danger"
-        [requireReason]="true"
-        reasonLabel="Cancellation reason"
-        confirmLabel="Cancel order"
-        (cancel)="confirmOpen.set(false)"
-        (confirm)="onConfirmed($event)">
-      </app-confirm-dialog>
-    </section>
-
-    <section class="sink-section">
-      <h2>Toasts</h2>
-      <div class="demo-row">
-        <button type="button" class="demo-btn" (click)="toast.showSuccess('Order sent successfully!')">Success toast</button>
-        <button type="button" class="demo-btn" (click)="toast.showError('Upstream returned 502.')">Error toast</button>
-        <button type="button" class="demo-btn" (click)="toast.showWarning('This feature isn\\'t available yet.')">Warning toast</button>
-        <button type="button" class="demo-btn" (click)="toast.showInfo('No item found in database.')">Info toast</button>
-      </div>
+      <div class="skeleton-stack"><app-skeleton height="14px" width="60%"></app-skeleton><app-skeleton height="14px" width="80%"></app-skeleton><app-skeleton height="40px" width="100%" radius="var(--radius-lg)"></app-skeleton></div>
+      <app-empty-state icon="bi-inbox" title="No requests yet" description="Orders sent from this module will appear here."></app-empty-state>
+      <div class="button-row"><ui-button variant="secondary" size="sm" (pressed)="drawerOpen.set(true)">Open drawer</ui-button><ui-button variant="danger" size="sm" (pressed)="confirmOpen.set(true)">Open confirm dialog</ui-button></div>
+      <app-drawer *ngIf="drawerOpen()" title="Order UPC-99812" (close)="drawerOpen.set(false)"><p>Drawer content with focus management.</p></app-drawer>
+      <app-confirm-dialog *ngIf="confirmOpen()" title="Cancel this order?" message="This sends a cancellation request to the upstream API." variant="danger" [requireReason]="true" reasonLabel="Cancellation reason" confirmLabel="Cancel order" (cancel)="confirmOpen.set(false)" (confirm)="onConfirmed($event)"></app-confirm-dialog>
     </section>
   `,
   styles: [`
-    :host { display: block; padding: 24px 32px 80px; max-width: 1200px; margin: 0 auto; }
-    .theme-toggle {
-      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: var(--text-primary);
-      border-radius: var(--radius-pill); padding: 8px 16px; cursor: pointer;
-    }
-    .sink-section { margin-bottom: 40px; }
-    .sink-section h2 { font-size: 1.1rem; color: var(--text-primary); margin-bottom: 16px; }
-    .tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 12px; }
-    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
-    .card-grid app-gradient-card { display: block; padding: 20px; color: var(--text-primary); font-weight: 600; }
-    .riyal-demo { font-size: 1.3rem; font-weight: 700; color: var(--text-primary); }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .text-muted { color: var(--text-muted); font-size: 0.85rem; }
-    .demo-btn {
-      background: var(--grad-brand); color: var(--on-gradient); border: none; border-radius: var(--radius-md);
-      padding: 8px 16px; cursor: pointer; font-weight: 600; margin-top: 8px;
-    }
-    .demo-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    :host { display: block; max-width: 1240px; margin: 0 auto; padding: 24px 32px 80px; }
+    .toolbar-kicker { color: var(--text-accent); font-size: .72rem; font-weight: 850; letter-spacing: .10em; }
+    .toolbar-note, .demo-meta, .text-muted { color: var(--text-muted); font-size: .82rem; }
+    .sink-section { margin-top: 24px; }
+    .sink-section h2 { color: var(--text-primary); font-size: 1.1rem; margin: 0 0 14px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+    .card-grid p { margin: 0; color: var(--text-secondary); font-size: .86rem; }
+    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .button-row, .pill-row, .chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .pill-row { padding: 4px 0; }
+    .ui-table-shell + ui-table { margin-top: 14px; }
+    .legacy-showcase { display: flex; flex-direction: column; gap: 16px; }
+    .tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .gradient-grid app-gradient-card { display: block; min-height: 70px; padding: 22px; color: var(--text-primary); font-weight: 700; }
+    .riyal-demo { display: flex; align-items: center; gap: 10px; color: var(--text-primary); font-size: 1.2rem; font-weight: 750; }
+    .skeleton-stack { display: grid; gap: 10px; }
+    @media (max-width: 720px) { :host { padding: 16px 16px 56px; } .field-grid { grid-template-columns: 1fr; } }
   `]
 })
 export class KitchenSinkComponent {
-  toast = inject(ToastService);
-  themeService = inject(ThemeService);
+  readonly toast = inject(ToastService);
+  readonly themeService = inject(ThemeService);
 
-  statValue = signal(1284);
-  popStatus = signal(1);
-  page = signal(1);
-  drawerOpen = signal(false);
-  confirmOpen = signal(false);
-  chips = signal(['branch: P900', 'status: failed', 'succeeded only']);
+  readonly cardActivated = signal(false);
+  readonly buttonLoading = signal(false);
+  readonly statValue = signal(1284);
+  readonly page = signal(1);
+  readonly drawerOpen = signal(false);
+  readonly confirmOpen = signal(false);
+  readonly selectedBranch = signal<string | null>(null);
+  readonly chips = signal(['branch: P900', 'status: failed', 'succeeded only']);
+  readonly statuses = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  readonly branches: BranchOption[] = [
+    { code: '101', name: 'Main Branch' },
+    { code: 'P900', name: 'Riyadh Pharmacy' },
+    { code: 'JED-04', name: 'Jeddah Central' }
+  ];
+  readonly selectOptions: UiSelectOption[] = [
+    { value: 'new', label: 'New' },
+    { value: 'ready', label: 'Ready' },
+    { value: 'done', label: 'Done' }
+  ];
 
-  samplePayload = {
-    order_code: 'UPC-99812',
-    branch_code: 'P900',
-    order_products: [
-      { item_code: '000000000000212401', item_name: 'Beesline F/Cr.Future Barrier 50Gm', quantity: 2, unit_price: 175.0 },
-      { item_code: '000000000000100002', item_name: 'Acc 200Mg 20Sachets.', quantity: 1, unit_price: 11.4 }
-    ],
-    order_gps: [21.5433, 39.1728],
-    is_delivery: true,
-    order_notes: null
+  readonly samplePayload = {
+    order_code: 'UPC-99812', branch_code: 'P900',
+    order_products: [{ item_code: '000000000000212401', quantity: 2, unit_price: 175.0 }],
+    order_gps: [21.5433, 39.1728], is_delivery: true, order_notes: null
   };
-
-  malformedJson = '{"order_code": "UPC-1", "branch_code": ';
-
-  tableColumns: DataTableColumn[] = [
+  readonly malformedJson = '{"order_code": "UPC-1", "branch_code": ';
+  readonly tableColumns: DataTableColumn[] = [
     { key: 'orderNumber', label: 'Order #' },
     { key: 'branch', label: 'Branch' },
     { key: 'net', label: 'Net Total', align: 'right' }
   ];
-
-  tableRows: DemoRow[] = Array.from({ length: 40 }, (_, i) => ({
-    id: i,
-    orderNumber: `UPC-${9000 + i}`,
-    branch: `P${900 + (i % 5)}`,
+  readonly tableRows: DemoRow[] = Array.from({ length: 40 }, (_, i) => ({
+    id: i, orderNumber: `UPC-${9000 + i}`, branch: `P${900 + (i % 5)}`,
     net: Math.round((100 + i * 17.3) * 100) / 100
   }));
 
-  removeChip(chip: string) {
-    this.chips.update(list => list.filter(c => c !== chip));
+  removeChip(chip: string) { this.chips.update(list => list.filter(value => value !== chip)); }
+
+  burstDuplicate() {
+    for (let i = 0; i < 4; i += 1) this.toast.showError('Repeated validation failure.', 0);
+  }
+
+  queueToasts() {
+    for (let i = 1; i <= 6; i += 1) this.toast.showInfo(`Queued notification ${i}.`, 0);
+  }
+
+  resetDemo() {
+    this.cardActivated.set(false);
+    this.buttonLoading.set(false);
+    this.selectedBranch.set(null);
+    this.chips.set(['branch: P900', 'status: failed', 'succeeded only']);
+    this.toast.clearAll();
   }
 
   onConfirmed(reason: string) {

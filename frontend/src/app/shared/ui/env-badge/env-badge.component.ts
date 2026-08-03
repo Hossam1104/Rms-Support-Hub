@@ -50,8 +50,8 @@ import { EnvironmentDto } from '../../../core/models';
       color: var(--on-gradient); cursor: pointer;
     }
     .env-pill:disabled { cursor: default; }
-    .env-pill--test { background: var(--grad-info, #2563eb); }
-    .env-pill--prod { background: var(--grad-danger, #dc2626); }
+    .env-pill--test { background: var(--grad-info); }
+    .env-pill--prod { background: var(--grad-danger); }
     .chevron { font-size: 0.65rem; }
     .env-menu {
       position: absolute; top: calc(100% + 6px); right: 0; z-index: 1200;
@@ -68,8 +68,8 @@ import { EnvironmentDto } from '../../../core/models';
     }
     .env-option:hover { background: var(--glass-hover-bg); }
     .env-option.active { font-weight: 700; }
-    .option-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-500, #2563eb); flex-shrink: 0; }
-    .option-dot.dot-prod { background: var(--danger, #dc2626); }
+    .option-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-500); flex-shrink: 0; }
+    .option-dot.dot-prod { background: var(--danger); }
     .option-tag {
       margin-left: auto; font-size: 0.65rem; text-transform: uppercase;
       color: var(--text-muted); border: 1px solid var(--glass-border);

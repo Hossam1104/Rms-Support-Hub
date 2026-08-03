@@ -85,7 +85,7 @@ import { RequestsTableComponent } from './components/requests-table.component';
     .env-testing { background: var(--grad-info); }
     .hero-btn {
       display: flex; align-items: center; gap: 6px;
-      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: var(--text-primary);
+      background: var(--accent-soft); border: 1px solid var(--border-strong); color: var(--text-primary);
       border-radius: var(--radius-pill); padding: 8px 16px; cursor: pointer; font-size: 0.85rem;
     }
     .hero-btn:disabled { opacity: 0.6; cursor: not-allowed; }

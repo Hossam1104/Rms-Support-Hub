@@ -51,7 +51,7 @@ import { SearchableSelectComponent } from '../../../shared/ui';
   `,
   styles: [`
     :host { position: fixed; inset: 0; z-index: 2100; }
-    .dialog-backdrop { position: absolute; inset: 0; background: rgba(2,6,23,.55); backdrop-filter: blur(2px); }
+    .dialog-backdrop { position: absolute; inset: 0; background: var(--backdrop); backdrop-filter: blur(2px); }
     .dialog-panel {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: min(480px, calc(100vw - 32px));
