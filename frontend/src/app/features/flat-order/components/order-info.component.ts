@@ -15,7 +15,7 @@ import { SearchableSelectComponent } from '../../../shared/ui';
         <span>Order Header Information</span>
       </div>
       <div class="form-grid">
-        <div class="form-group">
+        <div class="form-group" id="field-branch-code">
           <app-searchable-select
             label="Branch"
             [options]="branches"
@@ -25,10 +25,12 @@ import { SearchableSelectComponent } from '../../../shared/ui';
             (valueChange)="onBranchChange($event)"
             (refresh)="branchRefresh.emit()">
           </app-searchable-select>
+          <p class="field-error" *ngFor="let message of fieldErrors['branch_code'] ?? []">{{ message }}</p>
         </div>
         <div class="form-group">
           <label class="form-label">Order Code *</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['order_code']" (ngModelChange)="onFieldChange('order_code', $event)" placeholder="e.g. ORD-998822" required />
+          <input type="text" class="glass-input" id="field-order-code" [ngModel]="orderData['order_code']" (ngModelChange)="onFieldChange('order_code', $event)" placeholder="e.g. ORD-998822" required [attr.aria-invalid]="hasError('order_code') ? true : null" />
+          <p class="field-error" *ngFor="let message of fieldErrors['order_code'] ?? []">{{ message }}</p>
         </div>
         <div class="form-group">
           <label class="form-label">Parent Order Code</label>
@@ -65,6 +67,7 @@ import { SearchableSelectComponent } from '../../../shared/ui';
     .full-width { grid-column: 1 / -1; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-label { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .field-error { font-size: 0.78rem; color: var(--danger); margin: 0; }
   `]
 })
 export class OrderInfoComponent {
@@ -73,8 +76,15 @@ export class OrderInfoComponent {
   @Input() branches: BranchOption[] = [];
   @Input() branchesLoading = false;
   @Input() branchError: string | null = null;
+  /** U4: server send-validation errors keyed by draft field name (see
+   * send-validation.ts) -- shown inline under the matching control. */
+  @Input() fieldErrors: Record<string, string[]> = {};
   @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
   @Output() branchRefresh = new EventEmitter<void>();
+
+  hasError(fieldName: string): boolean {
+    return (this.fieldErrors[fieldName]?.length ?? 0) > 0;
+  }
 
   onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });

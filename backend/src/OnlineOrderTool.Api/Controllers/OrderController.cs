@@ -38,19 +38,20 @@ public class OrderController : ControllerBase
         return Ok(draft);
     }
 
-    /// <summary>Thin adapter over PatchOrderDataAsync kept for callers that
-    /// have not migrated to the batched PATCH order-data route (U2;
-    /// UI_Rework_Plan.md D1). Removed in U4.</summary>
-    [HttpPut("order-field")]
-    public async Task<ActionResult> UpdateOrderField(string key, [FromBody] UpdateOrderFieldRequest request)
+    /// <summary>U4 (UI_Rework_Plan.md D13): the active environment's resolved
+    /// send endpoint for display in the API configuration area. Scoped and
+    /// additive -- GET /api/modules still never carries URLs (B16); this
+    /// exposes only the single resolved environment's ApiUrl, already
+    /// disclosed post-send as urlSent. Uses the same GetEnvironment
+    /// resolution as send-request.</summary>
+    [HttpGet("endpoint")]
+    public ActionResult GetEndpoint(string key, [FromQuery] string? envKey = null)
     {
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var fields = new Dictionary<string, object?> { [request.FieldName] = request.Value };
-        var draft = await _draftManager.PatchOrderDataAsync(HttpContext.GetSessionId(), key, fields, module.DefaultState);
-
-        return Ok(new { success = true, state = draft });
+        var env = module.GetEnvironment(envKey);
+        return Ok(new ModuleEndpointDto(env.Key, env.Environment, env.ApiUrl));
     }
 
     /// <summary>U2 (UI_Rework_Plan.md D1): applies every field in one

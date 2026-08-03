@@ -36,11 +36,13 @@ import { FormsModule } from '@angular/forms';
         </div>
         <div class="form-group">
           <label class="form-label">Phone *</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['client_phone']" (ngModelChange)="onFieldChange('client_phone', $event)" required />
+          <input type="text" class="glass-input" id="field-client-phone" [ngModel]="orderData['client_phone']" (ngModelChange)="onFieldChange('client_phone', $event)" required [attr.aria-invalid]="hasError('client_phone') ? true : null" />
+          <p class="field-error" *ngFor="let message of fieldErrors['client_phone'] ?? []">{{ message }}</p>
         </div>
         <div class="form-group">
           <label class="form-label">First Name *</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['client_first_name']" (ngModelChange)="onFieldChange('client_first_name', $event)" required />
+          <input type="text" class="glass-input" id="field-client-first-name" [ngModel]="orderData['client_first_name']" (ngModelChange)="onFieldChange('client_first_name', $event)" required [attr.aria-invalid]="hasError('client_first_name') ? true : null" />
+          <p class="field-error" *ngFor="let message of fieldErrors['client_first_name'] ?? []">{{ message }}</p>
         </div>
         <div class="form-group">
           <label class="form-label">Middle Name</label>
@@ -67,7 +69,8 @@ import { FormsModule } from '@angular/forms';
         </div>
         <div class="form-group full-width">
           <label class="form-label">Address *</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['order_address']" (ngModelChange)="onFieldChange('order_address', $event)" required />
+          <input type="text" class="glass-input" id="field-order-address" [ngModel]="orderData['order_address']" (ngModelChange)="onFieldChange('order_address', $event)" required [attr.aria-invalid]="hasError('order_address') ? true : null" />
+          <p class="field-error" *ngFor="let message of fieldErrors['order_address'] ?? []">{{ message }}</p>
         </div>
         <div class="form-group">
           <label class="form-label">Address Code</label>
@@ -86,14 +89,22 @@ import { FormsModule } from '@angular/forms';
     .full-width { grid-column: 1 / -1; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-label { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .field-error { font-size: 0.78rem; color: var(--danger); margin: 0; }
   `]
 })
 export class ClientInfoComponent {
   @Input() orderData: Record<string, unknown> = {};
+  /** U4: server send-validation errors keyed by draft field name (see
+   * send-validation.ts) -- shown inline under the matching control. */
+  @Input() fieldErrors: Record<string, string[]> = {};
   @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
   @Output() lookupConsumer = new EventEmitter<string>();
 
   lookupPhone: string = '';
+
+  hasError(fieldName: string): boolean {
+    return (this.fieldErrors[fieldName]?.length ?? 0) > 0;
+  }
 
   onFieldChange(fieldName: string, value: unknown) {
     this.fieldChange.emit({ fieldName, value });

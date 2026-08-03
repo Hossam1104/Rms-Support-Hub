@@ -1,11 +1,13 @@
-import { Component, OnInit, inject, signal, effect } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { BranchOptionsService } from '../../core/services/branch-options.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
-import { BranchOption, LookupResult, OrderDraft, Product, Payment, Consumer, SendOrderResult, OrderRequestDetailResponse } from '../../core/models';
+import { FocusService } from '../../core/services/focus.service';
+import { ApiError, BranchOption, LookupResult, ModuleEndpoint, OrderDraft, Product, Payment, Consumer, SendOrderResult, OrderRequestDetailResponse, TotalsSummary } from '../../core/models';
 import { QuickStatsComponent } from './components/quick-stats.component';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
@@ -13,25 +15,15 @@ import { DeliveryInfoComponent } from './components/delivery-info.component';
 import { ProductsTableComponent } from './components/products-table.component';
 import { PaymentsTableComponent } from './components/payments-table.component';
 import { ApiConfigComponent } from './components/api-config.component';
-import { AddProductDialogComponent } from './components/add-product-dialog.component';
+import { AddProductDialogComponent, ItemLookupOutcome } from './components/add-product-dialog.component';
 import { AddPaymentDialogComponent } from './components/add-payment-dialog.component';
 import { ConfirmDialogComponent } from '../../shared/ui';
 import { DraftStore } from './draft.store';
+import { MappedValidationErrors, mapSendValidationErrors } from './send-validation';
 
-/** Client-side preview total -- NOT the backend's full TotalsSummary (which
- * also reports totalProductAmount/totalProductVat/orderDiscount). Kept
- * local rather than reusing TotalsSummary because this is a UI-only preview
- * computed ahead of any server round trip; it is never sent anywhere. */
-interface FlatOrderPreviewTotals {
-  totalOrderAmount: number;
-  totalPaidAmount: number;
-  remainingBalance: number;
-}
-
-function asNumber(value: unknown, fallback = 0): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
+/** Debounce for the server totals refresh -- mirrors the U2 patch debounce
+ * so bursts of mutations coalesce into one GET calculate-totals. */
+const TOTALS_DEBOUNCE_MS = 300;
 
 /**
  * Rebound (R10, remediation_plan.md B1/B5/B21) to the corrected schema
@@ -40,6 +32,13 @@ function asNumber(value: unknown, fallback = 0): number {
  * card and the compiled-JSON preview are both driven by real server data
  * (Capabilities.HasDeliveryFields and GET .../export-json respectively)
  * instead of a hand-rolled approximation or a module-key string comparison.
+ *
+ * U4 (UI_Rework_Plan.md D2/D8/D13): the item lookup result now populates
+ * the Add Product dialog via ItemLookupOutcome instead of being discarded;
+ * the summary is the server's typed TotalsSummary (GET calculate-totals)
+ * with no client money math; send loading is the real request lifecycle;
+ * and send validation failures map to inline field errors through
+ * send-validation.ts.
  */
 @Component({
   selector: 'app-flat-order',
@@ -62,9 +61,11 @@ function asNumber(value: unknown, fallback = 0): number {
   template: `
     <div class="flat-order-container">
       <app-quick-stats
-        [totalAmount]="totals().totalOrderAmount"
-        [paidAmount]="totals().totalPaidAmount"
-        [remainingBalance]="totals().remainingBalance">
+        [totals]="totals()"
+        [productCount]="draftStore.draft().products.length"
+        [totalQuantity]="totalQuantity()"
+        [loading]="totalsLoading()"
+        [error]="totalsError()">
       </app-quick-stats>
 
       <app-order-info
@@ -73,12 +74,14 @@ function asNumber(value: unknown, fallback = 0): number {
         [branches]="branches()"
         [branchesLoading]="branchesLoading()"
         [branchError]="branchError()"
+        [fieldErrors]="fieldErrors()"
         (branchRefresh)="loadBranches(true)"
         (fieldChange)="onFieldChange($event)">
       </app-order-info>
 
       <app-client-info
         [orderData]="draftStore.draft().orderData"
+        [fieldErrors]="fieldErrors()"
         (fieldChange)="onFieldChange($event)"
         (lookupConsumer)="onLookupConsumer($event)">
       </app-client-info>
@@ -91,12 +94,14 @@ function asNumber(value: unknown, fallback = 0): number {
 
       <app-products-table
         [products]="draftStore.draft().products"
-        (openAddDialog)="showAddProductDialog.set(true)"
+        [errors]="fieldErrors()['products'] ?? []"
+        (openAddDialog)="openAddProductDialog()"
         (deleteProduct)="onDeleteProduct($event)">
       </app-products-table>
 
       <app-payments-table
         [payments]="draftStore.draft().payments"
+        [errors]="fieldErrors()['payments'] ?? []"
         (openAddDialog)="showAddPaymentDialog.set(true)"
         (deletePayment)="onDeletePayment($event)">
       </app-payments-table>
@@ -104,6 +109,10 @@ function asNumber(value: unknown, fallback = 0): number {
       <app-api-config
         [compiledJson]="compiledJson()"
         [apiResponse]="apiResponse()"
+        [loading]="sending()"
+        [endpoint]="activeEndpoint()"
+        [environment]="moduleService.activeEnvironment()"
+        [validationSummary]="validationSummary()"
         (sendRequest)="onSendOrder($event)">
       </app-api-config>
 
@@ -135,6 +144,7 @@ function asNumber(value: unknown, fallback = 0): number {
       [moduleKey]="moduleKey()"
       [branchCode]="branchCode()"
       [branchName]="selectedBranchName()"
+      [lookupOutcome]="itemLookupOutcome()"
       (close)="showAddProductDialog.set(false)"
       (add)="onAddProduct($event)"
       (lookupItem)="onLookupItem($event)">
@@ -164,17 +174,37 @@ export class FlatOrderComponent implements OnInit {
   moduleService = inject(ModuleService);
   private toast = inject(ToastService);
   private route = inject(ActivatedRoute);
+  private focus = inject(FocusService);
   draftStore = inject(DraftStore);
 
   moduleKey = signal<string>('ghc_ecommerce');
-  totals = signal<FlatOrderPreviewTotals>({ totalOrderAmount: 0, totalPaidAmount: 0, remainingBalance: 0 });
+  /** U4 (D8): the server-owned summary (GET calculate-totals). null = not
+   * loaded yet -- never rendered as fabricated zeros. */
+  totals = signal<TotalsSummary | null>(null);
+  totalsLoading = signal(false);
+  totalsError = signal<string | null>(null);
   compiledJson = signal<Record<string, unknown> | null>(null);
   apiResponse = signal<SendOrderResult | null>(null);
   landedRequestId = signal<number | null>(null);
   branches = signal<BranchOption[]>([]);
   branchesLoading = signal(false);
   branchError = signal<string | null>(null);
-
+  /** U4 (D13): the active environment's resolved send endpoint, displayed
+   * read-only in the API configuration area. */
+  activeEndpoint = signal<ModuleEndpoint | null>(null);
+  /** U4 (D13): real send-request lifecycle state -- set before POST
+   * send-request, cleared in finalize; also blocks duplicate sends. */
+  sending = signal(false);
+  /** U4 (D2): the last item lookup outcome, pushed into the open Add
+   * Product dialog so the result populates the form. */
+  itemLookupOutcome = signal<ItemLookupOutcome | null>(null);
+  /** U4: mapped server send-validation errors (see send-validation.ts). */
+  private validation = signal<MappedValidationErrors | null>(null);
+  fieldErrors = computed(() => this.validation()?.fieldErrors ?? {});
+  validationSummary = computed(() => {
+    const v = this.validation();
+    return v ? { totalCount: v.totalCount, globalErrors: v.globalErrors } : null;
+  });
 
   showAddProductDialog = signal<boolean>(false);
   showAddPaymentDialog = signal<boolean>(false);
@@ -186,6 +216,9 @@ export class FlatOrderComponent implements OnInit {
    * never re-fetches on the initial load -- only on an actual switch. */
   private lastEnvKey: string | undefined = undefined;
   private branchLoadToken = 0;
+  private endpointLoadToken = 0;
+  private totalsToken = 0;
+  private totalsDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // U1 (UI_Rework_Plan.md D4 step 5): switching environments must clear
@@ -199,6 +232,16 @@ export class FlatOrderComponent implements OnInit {
         this.loadState();
       }
       this.lastEnvKey = envKey;
+    });
+
+    // U4 (D8): totals are server-owned, and the server totals are computed
+    // from the server draft -- so the refresh must run only after the U2
+    // PATCH order-data flush has settled, never in parallel with it (a GET
+    // fired mid-flush would read the pre-patch draft and display stale
+    // totals with no later correction).
+    effect(() => {
+      this.draftStore.flushVersion();
+      this.scheduleTotalsRefresh();
     });
   }
 
@@ -222,6 +265,11 @@ export class FlatOrderComponent implements OnInit {
   selectedBranchName(): string {
     const branch = this.branches().find(option => option.code === this.branchCode());
     return branch ? `${branch.name} (${branch.code})` : '';
+  }
+
+  /** Item/quantity counts for the summary header -- counts, not money math. */
+  totalQuantity(): number {
+    return this.draftStore.draft().products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
   }
 
   loadBranches(refresh = false) {
@@ -254,84 +302,154 @@ export class FlatOrderComponent implements OnInit {
     this.draftStore.setModuleKey(key);
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.loadBranches();
+    this.loadEndpoint();
     this.api.get<OrderDraft>(`modules/${key}/state`, { envKey }).subscribe({
       next: state => {
         if (state) this.draftStore.setDraft(state);
-        this.recalculate();
+        this.refreshTotals();
         this.refreshCompiledJson();
       },
       // errorEnvelopeInterceptor already surfaces the failure via a toast.
       error: () => {
-        this.recalculate();
+        this.refreshTotals();
         this.refreshCompiledJson();
       }
     });
   }
 
+  /** U4 (D13): resolves the endpoint the send would target for the active
+   * environment (same GetEnvironment resolution as send-request). */
+  private loadEndpoint() {
+    const key = this.moduleKey();
+    if (!key) return;
+
+    const token = ++this.endpointLoadToken;
+    this.api.get<ModuleEndpoint>(`modules/${key}/endpoint`, {
+      envKey: this.moduleService.activeEnvironment()?.key
+    }).subscribe({
+      next: endpoint => {
+        if (token !== this.endpointLoadToken) return;
+        this.activeEndpoint.set(endpoint);
+      },
+      // errorEnvelopeInterceptor already surfaces the failure via a toast.
+      error: () => {
+        if (token !== this.endpointLoadToken) return;
+        this.activeEndpoint.set(null);
+      }
+    });
+  }
+
   /** Applies immediately to local state and debounces the persisted write
-   * via DraftStore.patch (U2, UI_Rework_Plan.md D1) -- see draft.store.ts. */
+   * via DraftStore.patch (U2, UI_Rework_Plan.md D1) -- see draft.store.ts.
+   * The totals refresh follows automatically once that PATCH settles. */
   onFieldChange(event: { fieldName: string, value: unknown }) {
     this.draftStore.patch({ [event.fieldName]: event.value });
-    this.recalculate();
+    this.clearFieldError(event.fieldName);
     this.refreshCompiledJson();
+  }
+
+  /** U4: a corrected field sheds its inline server-validation error as soon
+   * as the operator edits it; the section/summary counts follow. */
+  private clearFieldError(fieldName: string) {
+    const current = this.validation();
+    if (!current || !(fieldName in current.fieldErrors)) return;
+
+    const cleared = current.fieldErrors[fieldName].length;
+    const fieldErrors = { ...current.fieldErrors };
+    delete fieldErrors[fieldName];
+
+    const totalCount = current.totalCount - cleared;
+    if (totalCount <= 0 && current.globalErrors.length === 0) {
+      this.validation.set(null);
+    } else {
+      this.validation.set({ ...current, fieldErrors, totalCount });
+    }
+  }
+
+  private clearSectionError(section: 'products' | 'payments') {
+    this.clearFieldError(section);
   }
 
   onAddProduct(product: Product) {
     this.draftStore.updateLocal(d => ({ ...d, products: [...d.products, product] }));
-    this.recalculate();
     this.refreshCompiledJson();
     this.showAddProductDialog.set(false);
+    this.clearSectionError('products');
     this.toast.showSuccess('Product added successfully.');
 
     const key = this.moduleKey();
-    this.api.post(`modules/${key}/products`, product).subscribe({ error: () => {} });
+    this.api.post<{ success: boolean, products: Product[], totals: TotalsSummary }>(`modules/${key}/products`, product).subscribe({
+      next: res => this.applyServerTotals(res.totals),
+      error: () => {}
+    });
   }
 
   onDeleteProduct(index: number) {
     this.draftStore.updateLocal(d => ({ ...d, products: d.products.filter((_, i) => i !== index) }));
-    this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Product removed.');
 
     const key = this.moduleKey();
-    this.api.delete(`modules/${key}/products/${index}`).subscribe({ error: () => {} });
+    this.api.delete<{ success: boolean, products: Product[], totals: TotalsSummary }>(`modules/${key}/products/${index}`).subscribe({
+      next: res => this.applyServerTotals(res.totals),
+      error: () => {}
+    });
   }
 
   onAddPayment(payment: Payment) {
     this.draftStore.updateLocal(d => ({ ...d, payments: [...d.payments, payment] }));
-    this.recalculate();
     this.refreshCompiledJson();
     this.showAddPaymentDialog.set(false);
+    this.clearSectionError('payments');
     this.toast.showSuccess('Payment method added.');
 
     const key = this.moduleKey();
-    this.api.post(`modules/${key}/payments`, payment).subscribe({ error: () => {} });
+    this.api.post<{ success: boolean, payments: Payment[], totals: TotalsSummary }>(`modules/${key}/payments`, payment).subscribe({
+      next: res => this.applyServerTotals(res.totals),
+      error: () => {}
+    });
   }
 
   onDeletePayment(index: number) {
     this.draftStore.updateLocal(d => ({ ...d, payments: d.payments.filter((_, i) => i !== index) }));
-    this.recalculate();
     this.refreshCompiledJson();
     this.toast.showInfo('Payment method removed.');
 
     const key = this.moduleKey();
-    this.api.delete(`modules/${key}/payments/${index}`).subscribe({ error: () => {} });
+    this.api.delete<{ success: boolean, payments: Payment[], totals: TotalsSummary }>(`modules/${key}/payments/${index}`).subscribe({
+      next: res => this.applyServerTotals(res.totals),
+      error: () => {}
+    });
   }
 
+  /** U4 (D2): the lookup result is pushed back into the dialog as a typed
+   * outcome so it populates the form. A missing branch blocks the lookup
+   * with a picker-directed message (defense in depth -- the dialog also
+   * disables the search controls without a branch). Not-found (200,
+   * success:false) and infrastructure failure (HTTP error) stay distinct:
+   * only the former reports "not found". */
   onLookupItem(event: { code: string, branchCode: string }) {
+    const branchCode = event.branchCode.trim();
+    if (!branchCode) {
+      this.itemLookupOutcome.set({ status: 'missing-branch' });
+      return;
+    }
+
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.get<LookupResult<Product>>(`modules/${key}/lookup/item`, { code: event.code, branchCode: event.branchCode, envKey }).subscribe({
+    this.api.get<LookupResult<Product>>(`modules/${key}/lookup/item`, { code: event.code, branchCode, envKey }).subscribe({
       next: res => {
         if (res.success && res.data) {
+          this.itemLookupOutcome.set({ status: 'found', product: res.data });
           this.toast.showSuccess(`Found item: ${res.data.itemName}`);
         } else {
-          this.toast.showInfo(`Item ${event.code} not found in database.`);
+          this.itemLookupOutcome.set({ status: 'not-found', code: event.code });
         }
       },
       // A genuine HTTP failure (DB unreachable, etc.) is already toasted by
-      // errorEnvelopeInterceptor -- this only covers the 200 "not found" path above.
-      error: () => {}
+      // errorEnvelopeInterceptor -- the dialog shows a neutral failure note
+      // via the outcome and keeps the operator's entered values.
+      error: () => this.itemLookupOutcome.set({ status: 'error' })
     });
   }
 
@@ -342,12 +460,11 @@ export class FlatOrderComponent implements OnInit {
    *
    * U2 (UI_Rework_Plan.md D1): every prefilled field is sent as ONE
    * DraftStore.patch call instead of the previous nine sequential
-   * onFieldChange/PUT order-field calls -- that was the exact race in the
-   * reported screenshot, where late responses built from stale reads
-   * clobbered fields a later request had already written. The toast now
-   * separately names which fields the lookup actually returned and which
-   * came back empty, so an empty Last Name reads as the data's fault, not
-   * a tool bug. */
+   * per-field calls -- that was the exact race in the reported screenshot,
+   * where late responses built from stale reads clobbered fields a later
+   * request had already written. The toast now separately names which
+   * fields the lookup actually returned and which came back empty, so an
+   * empty Last Name reads as the data's fault, not a tool bug. */
   onLookupConsumer(phone: string) {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
@@ -390,7 +507,6 @@ export class FlatOrderComponent implements OnInit {
           }
 
           this.draftStore.patch(fields);
-          this.recalculate();
           this.refreshCompiledJson();
 
           const name = `${c.firstName || ''} ${c.lastName || ''}`.trim();
@@ -427,27 +543,53 @@ export class FlatOrderComponent implements OnInit {
   }
 
   private performSend(event: { url: string }) {
+    // A send is already in flight -- block the duplicate (U4, D13).
+    if (this.sending()) return;
+
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.landedRequestId.set(null);
+    this.validation.set(null);
     // Any edit still sitting in the debounce window must reach the server
     // draft before it is compiled into the payload.
     this.draftStore.flushNow();
+    this.sending.set(true);
 
-    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined }).subscribe({
-      next: res => {
-        this.apiResponse.set(res);
-        if (res.success) {
-          this.toast.showSuccess(`Order sent successfully! Status: ${res.statusCode}`);
-          this.lookupLandedRequest();
-        } else {
-          this.toast.showError(`Order request failed. Status: ${res.statusCode}`);
+    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined })
+      .pipe(finalize(() => this.sending.set(false)))
+      .subscribe({
+        next: res => {
+          this.apiResponse.set(res);
+          if (res.success) {
+            this.toast.showSuccess(`Order sent successfully! Status: ${res.statusCode}`);
+            this.lookupLandedRequest();
+          } else {
+            this.toast.showError(`Order request failed. Status: ${res.statusCode}`);
+          }
+        },
+        error: (err: ApiError) => {
+          // U4: contract validation failures (400 { success:false,
+          // errors:[...] }) map to inline field errors through the
+          // centralized mapper -- the interceptor already toasted a single
+          // summary, so no second toast here.
+          if (err.code === 'validation_failed' && Array.isArray(err.details)) {
+            const errors = err.details as string[];
+            const mapped = mapSendValidationErrors(errors);
+            this.validation.set(mapped);
+            // The raw error list stays visible as the API response body for
+            // diagnostics.
+            this.apiResponse.set({
+              success: false,
+              statusCode: err.status,
+              responseText: errors.join('\n'),
+              urlSent: ''
+            });
+            if (mapped.firstTargetId) this.focus.scrollToAndFocus(mapped.firstTargetId);
+            return;
+          }
+          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText: 'The request could not be completed.', urlSent: event.url });
         }
-      },
-      error: () => {
-        this.apiResponse.set({ success: false, statusCode: 0, responseText: 'The request could not be completed.', urlSent: event.url });
-      }
-    });
+      });
   }
 
   /** OrderRequests is written by the upstream API itself (see
@@ -469,32 +611,51 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
-  recalculate() {
-    const products = this.draftStore.draft().products;
-    let prodTotal = 0;
-    products.forEach(p => {
-      const price = p.unitPrice || 0;
-      const disc = p.discount || 0;
-      const vat = (p.vatPercentage || 0) / 100;
-      prodTotal += (price - disc + (price - disc) * vat) * (p.quantity || 0);
-    });
+  /** U4 (D8): debounced server totals refresh. Coalesces bursts of draft
+   * mutations into one GET instead of one HTTP request per keystroke. */
+  scheduleTotalsRefresh() {
+    if (this.totalsDebounceHandle) clearTimeout(this.totalsDebounceHandle);
+    this.totalsDebounceHandle = setTimeout(() => {
+      this.totalsDebounceHandle = null;
+      this.refreshTotals();
+    }, TOTALS_DEBOUNCE_MS);
+  }
 
-    const deliveryCost = asNumber(this.draftStore.draft().orderData['order_delivery_cost']);
-    const totalOrderAmount = prodTotal + deliveryCost;
+  /** Reads the authoritative server summary (TotalsCalculator via GET
+   * calculate-totals). A response token prevents an older in-flight
+   * response from overwriting newer totals. The last valid summary stays
+   * on screen across refreshes and failures -- error state never
+   * fabricates totals. */
+  refreshTotals() {
+    const key = this.moduleKey();
+    if (!key) return;
 
-    const payments = this.draftStore.draft().payments;
-    let paid = 0;
-    payments.forEach(py => {
-      if (py.paymentStatus === 'done_payment' || py.paymentMethod === 'CashOnDelivery') {
-        paid += py.paymentAmount || 0;
+    const token = ++this.totalsToken;
+    this.totalsLoading.set(true);
+    this.api.get<TotalsSummary>(`modules/${key}/calculate-totals`).subscribe({
+      next: totals => {
+        if (token !== this.totalsToken) return;
+        this.totalsLoading.set(false);
+        this.totals.set(totals);
+        this.totalsError.set(null);
+      },
+      // errorEnvelopeInterceptor already surfaces the failure via a toast;
+      // the last valid totals (if any) remain displayed.
+      error: () => {
+        if (token !== this.totalsToken) return;
+        this.totalsLoading.set(false);
+        this.totalsError.set('Totals could not be refreshed from the server.');
       }
     });
+  }
 
-    this.totals.set({
-      totalOrderAmount: Math.round(totalOrderAmount * 100) / 100,
-      totalPaidAmount: Math.round(paid * 100) / 100,
-      remainingBalance: Math.round((totalOrderAmount - paid) * 100) / 100
-    });
+  /** Product/payment mutation responses already carry the post-mutation
+   * server totals -- adopting them directly saves a follow-up GET. Any
+   * in-flight GET predates this snapshot, so it is invalidated. */
+  private applyServerTotals(totals: TotalsSummary) {
+    this.totalsToken++;
+    this.totals.set(totals);
+    this.totalsError.set(null);
   }
 
   /** The compiled-payload preview is the real server-built payload
@@ -506,5 +667,10 @@ export class FlatOrderComponent implements OnInit {
       next: json => this.compiledJson.set(json),
       error: () => {}
     });
+  }
+
+  openAddProductDialog() {
+    this.itemLookupOutcome.set(null);
+    this.showAddProductDialog.set(true);
   }
 }

@@ -1,9 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { finalize } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
-import { OrderDraft, RowItem, Consumer, SendOrderResult, LookupResult } from '../../core/models';
+import { ApiError, OrderDraft, RowItem, Consumer, SendOrderResult, LookupResult, ModuleEndpoint } from '../../core/models';
 import { InvoiceSummaryComponent } from './components/invoice-summary.component';
 import { OrderFieldsComponent } from './components/order-fields.component';
 import { ConsumerSectionComponent } from './components/consumer-section.component';
@@ -65,6 +66,9 @@ function asNumber(value: unknown, fallback = 0): number {
       <app-api-config
         [compiledJson]="compiledJson()"
         [apiResponse]="apiResponse()"
+        [loading]="sending()"
+        [endpoint]="activeEndpoint()"
+        [environment]="moduleService.activeEnvironment()"
         (sendRequest)="onSendOrder($event)">
       </app-api-config>
     </div>
@@ -95,6 +99,11 @@ export class UnicommerceComponent implements OnInit {
   });
   compiledJson = signal<Record<string, unknown> | null>(null);
   apiResponse = signal<SendOrderResult | null>(null);
+  /** U4 (D13): the active environment's resolved endpoint, displayed
+   * read-only in the shared API configuration component. */
+  activeEndpoint = signal<ModuleEndpoint | null>(null);
+  /** U4 (D13): real send-request lifecycle state (finalize-cleared). */
+  sending = signal(false);
 
   showAddRowItemDialog = signal<boolean>(false);
 
@@ -111,6 +120,7 @@ export class UnicommerceComponent implements OnInit {
 
   loadState() {
     const key = this.moduleKey();
+    this.loadEndpoint();
     this.api.get<OrderDraft>(`modules/${key}/state`).subscribe({
       next: state => {
         this.draft.set(state);
@@ -122,14 +132,29 @@ export class UnicommerceComponent implements OnInit {
     });
   }
 
+  /** U4 (D13): resolves the endpoint a send would target for the active
+   * environment (same GetEnvironment resolution as send-request). */
+  private loadEndpoint() {
+    const key = this.moduleKey();
+    this.api.get<ModuleEndpoint>(`modules/${key}/endpoint`, {
+      envKey: this.moduleService.activeEnvironment()?.key
+    }).subscribe({
+      next: endpoint => this.activeEndpoint.set(endpoint),
+      error: () => this.activeEndpoint.set(null)
+    });
+  }
+
+  /** U4: writes go through the batched PATCH order-data route (U2,
+   * UI_Rework_Plan.md D1) -- the temporary per-field PUT order-field
+   * adapter is retired. The edit applies locally first and the response is
+   * never re-assigned over local state, so a late response cannot clobber
+   * newer edits. */
   onFieldChange(event: { fieldName: string, value: unknown }) {
     const key = this.moduleKey();
-    this.api.put<{ success: boolean, state: OrderDraft }>(`modules/${key}/order-field`, event).subscribe({
-      next: res => {
-        this.draft.set(res.state);
-        this.recalculate();
-        this.refreshCompiledJson();
-      },
+    this.draft.update(d => ({ ...d, orderData: { ...d.orderData, [event.fieldName]: event.value } }));
+    this.recalculate();
+    this.refreshCompiledJson();
+    this.api.patch(`modules/${key}/order-data`, { fields: { [event.fieldName]: event.value } }).subscribe({
       error: () => {}
     });
   }
@@ -187,21 +212,32 @@ export class UnicommerceComponent implements OnInit {
   }
 
   onSendOrder(event: { url: string }) {
+    // A send is already in flight -- block the duplicate (U4, D13).
+    if (this.sending()) return;
+
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
-    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined }).subscribe({
-      next: res => {
-        this.apiResponse.set(res);
-        if (res.success) {
-          this.toast.showSuccess(`Invoice submitted successfully! Status: ${res.statusCode}`);
-        } else {
-          this.toast.showError(`Invoice submission failed. Status: ${res.statusCode}`);
+    this.sending.set(true);
+    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined })
+      .pipe(finalize(() => this.sending.set(false)))
+      .subscribe({
+        next: res => {
+          this.apiResponse.set(res);
+          if (res.success) {
+            this.toast.showSuccess(`Invoice submitted successfully! Status: ${res.statusCode}`);
+          } else {
+            this.toast.showError(`Invoice submission failed. Status: ${res.statusCode}`);
+          }
+        },
+        error: (err: ApiError) => {
+          // Contract validation failures (400 { success:false, errors })
+          // keep their raw error list visible for diagnostics.
+          const responseText = err.code === 'validation_failed' && Array.isArray(err.details)
+            ? (err.details as string[]).join('\n')
+            : 'The request could not be completed.';
+          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText, urlSent: event.url });
         }
-      },
-      error: () => {
-        this.apiResponse.set({ success: false, statusCode: 0, responseText: 'The request could not be completed.', urlSent: event.url });
-      }
-    });
+      });
   }
 
   recalculate() {

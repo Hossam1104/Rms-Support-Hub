@@ -7,13 +7,17 @@ import { Product } from '../../../core/models';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="card-section glass-card">
+    <div class="card-section glass-card" id="products-card">
       <div class="section-header">
         <div class="card-title">
           <i class="bi bi-box-seam"></i>
           <span>Order Products ({{ products.length }})</span>
         </div>
         <button type="button" class="glass-button" (click)="openAddDialog.emit()"><i class="bi bi-plus-circle"></i> Add Product</button>
+      </div>
+
+      <div class="section-errors" role="alert" *ngIf="errors.length > 0">
+        <p class="field-error" *ngFor="let message of errors">{{ message }}</p>
       </div>
 
       <div class="table-responsive" *ngIf="products.length > 0; else emptyState">
@@ -75,19 +79,29 @@ import { Product } from '../../../core/models';
     .btn-icon.danger { color: var(--danger); }
     .empty-placeholder { text-align: center; padding: 40px 20px; color: var(--text-muted); }
     .empty-placeholder i { font-size: 2.5rem; margin-bottom: 8px; display: block; }
+    .section-errors { border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-bg); padding: 8px 14px; margin-bottom: 12px; }
+    .field-error { font-size: 0.8rem; color: var(--danger); margin: 2px 0; }
   `]
 })
 export class ProductsTableComponent {
   @Input() products: Product[] = [];
+  /** U4: server send-validation errors routed to the products section (see
+   * send-validation.ts). */
+  @Input() errors: string[] = [];
   @Output() openAddDialog = new EventEmitter<void>();
   @Output() deleteProduct = new EventEmitter<number>();
 
+  /** Row total (row_net_total) using the project's verified calculation
+   * convention -- Product.cs EstimatedTotal: quantity * unitPrice, minus
+   * the flat row-level discount ONCE (not per unit), plus VAT on the
+   * discounted subtotal. Display-only; the server owns the real totals. */
   getProductTotal(prod: Product): number {
     const qty = prod.quantity || 0;
     const price = prod.unitPrice || 0;
     const discount = prod.discount || 0;
     const vatPct = prod.vatPercentage || 0;
-    const vat = (price - discount) * (vatPct / 100);
-    return (price - discount + vat) * qty;
+    const rowSubtotal = qty * price;
+    const totalVat = Math.round((rowSubtotal - discount) * (vatPct / 100) * 100) / 100;
+    return Math.round((rowSubtotal - discount + totalVat) * 100) / 100;
   }
 }

@@ -7,13 +7,17 @@ import { Payment } from '../../../core/models';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="card-section glass-card">
+    <div class="card-section glass-card" id="payments-card">
       <div class="section-header">
         <div class="card-title">
           <i class="bi bi-wallet2"></i>
           <span>Payment Methods ({{ payments.length }})</span>
         </div>
         <button type="button" class="glass-button" (click)="openAddDialog.emit()"><i class="bi bi-plus-circle"></i> Add Payment</button>
+      </div>
+
+      <div class="section-errors" role="alert" *ngIf="errors.length > 0">
+        <p class="field-error" *ngFor="let message of errors">{{ message }}</p>
       </div>
 
       <div class="table-responsive" *ngIf="payments.length > 0; else emptyState">
@@ -72,10 +76,15 @@ import { Payment } from '../../../core/models';
     .btn-icon.danger { color: var(--danger); }
     .empty-placeholder { text-align: center; padding: 40px 20px; color: var(--text-muted); }
     .empty-placeholder i { font-size: 2.5rem; margin-bottom: 8px; display: block; }
+    .section-errors { border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-bg); padding: 8px 14px; margin-bottom: 12px; }
+    .field-error { font-size: 0.8rem; color: var(--danger); margin: 2px 0; }
   `]
 })
 export class PaymentsTableComponent {
   @Input() payments: Payment[] = [];
+  /** U4: server send-validation errors routed to the payments section (see
+   * send-validation.ts). */
+  @Input() errors: string[] = [];
   @Output() openAddDialog = new EventEmitter<void>();
   @Output() deletePayment = new EventEmitter<number>();
 }

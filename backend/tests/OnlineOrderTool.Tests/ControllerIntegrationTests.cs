@@ -166,19 +166,68 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    /// <summary>U2: PUT order-field is now a thin adapter over the same
-    /// synchronised PatchOrderDataAsync path -- it must still work
-    /// unchanged for callers that have not migrated (removed in U4).</summary>
+    /// <summary>U4 (UI_Rework_Plan.md D13): the temporary U2 compatibility
+    /// adapter is retired -- the batched PATCH order-data route (covered by
+    /// PatchOrderData_AppliesMultiFieldBodyInOneCall above) is the only
+    /// order-data write path, so the old route must be gone, not just empty.</summary>
     [Fact]
-    public async Task UpdateOrderField_StillAppliesSingleField()
+    public async Task OldOrderFieldRoute_NoLongerExists()
     {
         var body = new { fieldName = "branch_code", value = "101" };
         var response = await _client.PutAsJsonAsync("/api/modules/upc_ecommerce/order-field", body);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>U4: the operator must see where Send will post. The endpoint
+    /// route returns the resolved environment's ApiUrl (Testing by default)
+    /// -- scoped to the single active environment, unlike the module catalog
+    /// which never carries URLs (B16).</summary>
+    [Fact]
+    public async Task GetEndpoint_ReturnsResolvedEnvironmentApiUrl()
+    {
+        var response = await _client.GetAsync("/api/modules/upc_ecommerce/endpoint");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var stateResponse = await _client.GetAsync("/api/modules/upc_ecommerce/state");
-        var draft = await stateResponse.Content.ReadFromJsonAsync<OrderDraft>();
-        Assert.Equal("101", draft!.OrderData["branch_code"]?.ToString());
+        var endpoint = await response.Content.ReadFromJsonAsync<ModuleEndpointDto>();
+        Assert.NotNull(endpoint);
+        Assert.Equal("UPC Testing", endpoint!.EnvironmentKey);
+        Assert.Equal("Testing", endpoint.Environment);
+        Assert.False(string.IsNullOrWhiteSpace(endpoint.ApiUrl));
+    }
+
+    /// <summary>The same GetEnvironment resolution send-request uses applies
+    /// here too -- an explicit envKey selects that environment's URL.</summary>
+    [Fact]
+    public async Task GetEndpoint_HonoursExplicitEnvKey()
+    {
+        var response = await _client.GetAsync("/api/modules/upc_ecommerce/endpoint?envKey=UPC%20Production");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var endpoint = await response.Content.ReadFromJsonAsync<ModuleEndpointDto>();
+        Assert.NotNull(endpoint);
+        Assert.Equal("UPC Production", endpoint!.EnvironmentKey);
+        Assert.Equal("Production", endpoint.Environment);
+    }
+
+    /// <summary>The display contract must not become a new topology leak:
+    /// no CancelUrl, connection-string name, or database config is emitted.</summary>
+    [Fact]
+    public async Task GetEndpoint_NeverExposesCancelUrlOrConnectionInfo()
+    {
+        var response = await _client.GetAsync("/api/modules/upc_ecommerce/endpoint");
+        var raw = await response.Content.ReadAsStringAsync();
+
+        using var doc = JsonDocument.Parse(raw);
+        Assert.False(doc.RootElement.TryGetProperty("cancelUrl", out _), "endpoint.cancelUrl must not be exposed.");
+        Assert.False(doc.RootElement.TryGetProperty("connectionStringName", out _), "endpoint.connectionStringName must not be exposed.");
+        Assert.False(doc.RootElement.TryGetProperty("dbConfig", out _), "endpoint.dbConfig must not be exposed.");
+    }
+
+    [Fact]
+    public async Task GetEndpoint_UnknownModule_Returns404()
+    {
+        var response = await _client.GetAsync("/api/modules/no_such_module/endpoint");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     /// <summary>Proves the R6 fix for remediation_plan.md B16: internal RMS

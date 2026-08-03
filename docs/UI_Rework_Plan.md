@@ -42,7 +42,7 @@ Three facts frame the active continuation:
 2. **Testing is the default lane.** U1 made it explicit, persisted, visible,
    and threaded through operational calls. Production actions remain gated.
 3. **Draft writes are serialized and batched.** U2 removed the lost-update
-   race. Its temporary `PUT order-field` adapter remains until U4 removes it.
+   race; U4 removed its temporary `PUT order-field` adapter.
 
 **Recommendation: repair in place.** The backend contract work and U3 branch
 workflow are correct locally and tested. This continuation changes builder

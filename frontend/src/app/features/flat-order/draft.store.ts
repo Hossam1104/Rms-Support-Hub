@@ -38,6 +38,12 @@ export class DraftStore {
   draft = signal<OrderDraft>(emptyDraft());
   saving = signal(false);
 
+  /** Incremented every time a PATCH order-data flush settles (success or
+   * failure -- the server draft is then known to be current or the fields
+   * have rejoined the pending batch). U4 totals refresh hooks onto this so
+   * GET calculate-totals never races ahead of the PATCH it depends on. */
+  flushVersion = signal(0);
+
   private pendingFields: Record<string, unknown> = {};
   private debounceHandle: ReturnType<typeof setTimeout> | null = null;
   private sendInFlight = false;
@@ -122,6 +128,7 @@ export class DraftStore {
   private onSendSettled() {
     this.sendInFlight = false;
     this.saving.set(false);
+    this.flushVersion.update(v => v + 1);
     if (Object.keys(this.pendingFields).length > 0) this.flush();
   }
 }

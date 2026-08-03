@@ -33,10 +33,17 @@ its first `Available` environment.
 - **`GET /api/modules/{key}/state`**
 - **Response `200 OK`**: `OrderDraft` object.
 
-### Update Single Draft Field
-- **`PUT /api/modules/{key}/order-field`**
-- **Request Body**: `{ fieldName: string, value: any }`
+### Patch Draft Order Data (batched)
+- **`PATCH /api/modules/{key}/order-data`**
+- **Request Body**: `{ fields: { [fieldName: string]: any } }` — every field applied in one synchronised load-modify-write (U2, UI_Rework_Plan.md D1).
 - **Response `200 OK`**: `{ success: true, state: OrderDraft }`
+- **`400 Bad Request`**: empty `fields` object.
+- The retired per-field `PUT .../order-field` adapter was removed in U4; this batched route is the only order-data write path.
+
+### Get Active Send Endpoint
+- **`GET /api/modules/{key}/endpoint?envKey=`**
+- **Response `200 OK`**: `{ environmentKey: string, environment: string, apiUrl: string | null }` — the resolved environment's send endpoint for read-only display in the builder (U4, UI_Rework_Plan.md D13). Deliberately scoped: the module catalog still never carries URLs (see §1), and this route never returns `CancelUrl`, connection-string names, or database config. Uses the same `GetEnvironment` resolution as `send-request`.
+- **`404 Not Found`**: unknown module key.
 
 ### Calculate Totals
 - **`GET /api/modules/{key}/calculate-totals`**

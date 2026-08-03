@@ -46,13 +46,19 @@ public record ModuleDto(
     ModuleCapabilitiesDto Capabilities
 );
 
-public record UpdateOrderFieldRequest(string FieldName, object? Value);
-
-/// <summary>U2 (UI_Rework_Plan.md D1): the batched replacement for
-/// UpdateOrderFieldRequest -- every field in Fields is applied inside one
-/// synchronised DraftManager.PatchOrderDataAsync load-modify-write instead
-/// of one HTTP round trip per field.</summary>
+/// <summary>U2 (UI_Rework_Plan.md D1): applies every field in Fields inside
+/// one synchronised DraftManager.PatchOrderDataAsync load-modify-write
+/// instead of one HTTP round trip per field.</summary>
 public record PatchOrderDataRequest(Dictionary<string, object?> Fields);
+
+/// <summary>U4 (UI_Rework_Plan.md D13): the active environment's resolved
+/// send endpoint, so the operator can see where Send will post before
+/// sending. Deliberately scoped and additive: the module catalog
+/// (GET /api/modules) still never carries URLs (remediation_plan.md B16) --
+/// this returns only the single resolved environment's ApiUrl, the same URL
+/// every send response already discloses as urlSent. It never carries
+/// CancelUrl, connection strings, or credentials.</summary>
+public record ModuleEndpointDto(string EnvironmentKey, string Environment, string? ApiUrl);
 
 public record SendOrderRequest(string? EnvironmentKey, string? CustomApiUrl);
 
