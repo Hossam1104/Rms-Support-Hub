@@ -64,15 +64,15 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Build and Validation Entry Points
 
-- Full gate: `.\scripts\build.ps1` - passed for U6 on 2026-08-04 (110 backend
-  tests, Release build, and production Angular build; initial bundle 429.42
+- Full gate: `.\scripts\build.ps1` - passed for U7 on 2026-08-04 (110 backend
+  tests, Release build, and production Angular build; initial bundle 427.19
   kB).
 - Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` - passed
-  110/110 on 2026-08-03.
+  110/110 on 2026-08-04.
 - Frontend production build/type check: `cd frontend; npm run build --
-  --configuration production` - covered by the full gate on 2026-08-03.
-- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 81/81
-  across fifteen spec files for U6 on 2026-08-04.
+  --configuration production` - covered by the full gate on 2026-08-04.
+- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 85/85
+  across seventeen spec files for U7 on 2026-08-04.
 - Local run: `.\scripts\dev.ps1` - discovered but not executed; starts API on
   port 5200 and Angular on port 4200.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
@@ -111,7 +111,10 @@ Do not copy facts that can be cheaply discovered from the repository.
   `frontend/src/styles/_tokens.css` and `_gradients.css`.
 - U5 primitives are standalone, token-based, and exported through the shared UI
   barrel. The development-only kitchen sink is their compatibility showcase;
-  `.glass-*` remains a temporary bridge until U7.
+  all active feature surfaces now consume this shared system.
 - U6 consumes the U5 primitives and server-owned totals without creating
-  client-side financial calculations; U7 owns migration of the remaining
-  `.glass-*` consumers and removal of the bridge.
+  client-side financial calculations.
+- U7 completed the app-wide primitive migration and removed all `.glass-*`
+  definitions, consumers, and unused compatibility aliases. The route-driven
+  Order Requests drawer, six tabs, feature-specific behavior, and capability
+  gates remain preserved.

@@ -1,9 +1,9 @@
-# UI Rework Execution Prompts - Active Sessions U7-U8
+# UI Rework Execution Prompts - Active Session U8
 
-Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U6 are complete
+Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U7 are complete
 locally and recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). U3 branch data
 and U4 item lookup still lack live evidence because the safe Testing dependency
-is unavailable; execute U7-U8 in order, one session at a time.
+is unavailable; U8 is the remaining session.
 
 ---
 
@@ -48,30 +48,6 @@ inspection was unavailable; the UPC Testing item lookup remained HTTP 502.
 U6 Validate is intentionally a non-sending draft/preview/totals refresh because
 the current API has no standalone validation endpoint. The existing
 `send-request` path remains the server-authoritative validation/send action.
-
----
-
-## Session U7 - Migrate the rest of the app and remove legacy classes
-
-Execute **U7 only**. Read UI Rework Plan D10/D14 and decision 5, current
-state/diff, and the listed layout/features. Reuse U5/U6 primitives; preserve
-routes and behavior.
-
-### Required outcome
-
-- Migrate navbar, sidebar, breadcrumb, landing, Order Requests/drawer/filter
-  bar, Uni-Commerce, and Order Validation to the shared primitives. Preserve
-  environment controls, theme toggle, six drawer tabs, statuses, branch picker,
-  and the superseded Order Validation route.
-- Replace the navbar documentation alert with a meaningful route/link or remove
-  the dead affordance.
-- Remove `.glass-card`, `.glass-panel`, `.glass-input`, and `.glass-button`
-  rules only after all consumers are migrated; remove only now-unused aliases.
-
-Verify `git grep` for all four legacy classes is empty, run the full build/tests,
-and check the affected routes in both themes when a browser is available.
-
-Suggested commit: `refactor(u7): migrate every remaining feature to the new primitives, delete the legacy glass classes`
 
 ---
 

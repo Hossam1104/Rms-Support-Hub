@@ -12,10 +12,9 @@ secondary theme rather than a partial inversion.
   allowed only in `frontend/src/styles/_tokens.css` and
   `frontend/src/styles/_gradients.css`.
 - Default content surfaces use `--surface-*` tokens. Gradients are intentional
-  accents for status pills, the mesh hero, and the compatibility bridge only.
-- New shared primitives never use `.glass-card`, `.glass-panel`, `.glass-input`,
-  or `.glass-button`. Those classes remain temporarily for screens owned by
-  U7 and are not extended.
+  accents for status pills and the mesh hero only.
+- New shared primitives and migrated feature screens use the shared primitives
+  and tokens. The legacy `.glass-*` compatibility layer was removed in U7.
 - Every interactive control has a visible `:focus-visible` treatment, a true
   disabled state, and reduced-motion behavior where it animates.
 
@@ -26,8 +25,8 @@ git grep -n -E "#[0-9a-fA-F]{3,8}" -- frontend/src/app
 git grep -n "glass-card\|glass-input\|glass-button\|glass-panel" -- frontend/src
 ```
 
-The first command should be empty. The second is expected to show only the
-pre-U7 bridge consumers and the bridge definitions until U7 is complete.
+Both commands should be empty after U7. Raw feature colors remain restricted to
+the token and gradient definition files.
 
 ## Token hierarchy
 
@@ -45,9 +44,9 @@ semantic states, borders, focus, layout, radius, shadow, and motion.
 | Shape/elevation | `--radius-sm/md/lg/xl/pill`, `--shadow-sm/md/lg`, `--shadow-glow` | Consistent shape and depth scale |
 | Motion | `--d-fast`, `--d`, `--d-slow`, `--ease-spring`, `--ease-out`, `--transition-*` | Shared timing and easing; reduced motion collapses durations |
 
-Compatibility aliases such as `--bg-*`, `--text-*`, `--primary`, `--success`,
-`--danger`, and `--glass-*` remain while U7 migrates the older screens. Remove
-an alias only after a repository search proves it is unused.
+Legacy compatibility aliases such as `--bg-*`, `--primary`, `--success`,
+`--danger`, and `--glass-*` were removed after the U7 migration proved that
+they were unused. Current feature styles consume semantic tokens directly.
 
 ## Gradient discipline and status map
 
@@ -69,8 +68,7 @@ primitive.
 
 Use `<app-status-pill [status]="9">` for the verified status mapping. The
 `page-header` may use `--grad-mesh` as a deliberate hero treatment. The
-`.glass-*` rules are token-backed compatibility utilities only and remain
-scheduled for deletion in U7.
+legacy glass compatibility utilities are no longer defined or consumed.
 
 ## Shared primitives
 
@@ -81,8 +79,9 @@ The standalone signal-based components are exported through
   header/body/footer projection and disabled behavior.
 - `ui-section`: title, description, completion marker, action projection,
   accessible collapse toggle, expanded state, and reduced-motion-safe rhythm.
-- `ui-field`: label, required marker, hint, inline error, generated IDs, and
-  the `describedBy()` signal used to link projected controls.
+- `ui-field`: label, optional label status marker, required marker, hint, inline
+  error, generated IDs, and the `describedBy()` signal used to link projected
+  controls.
 - `ui-input`: text/email/number/tel/url/search inputs with Angular
   `ControlValueAccessor` support, small/medium sizes, disabled/read-only/
   invalid states, and prefix/suffix projection.
@@ -155,5 +154,5 @@ production navigation and is tree-shaken from the production route graph.
   sink. It does not redesign feature page layout.
 - U6 consumes these primitives for the two-column order-builder workspace,
   collapsible sections, dense tables, and server-totals summary rail.
-- U7 migrates the remaining feature pages and then deletes the `.glass-*`
-  bridge and any aliases proven unused.
+- U7 migrated the remaining feature pages and deleted the `.glass-*` bridge and
+  aliases proven unused. U8 is the verification and cleanup session.

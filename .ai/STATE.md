@@ -2,8 +2,8 @@
 
 - **Updated:** 2026-08-04
 - **Branch:** `main`
-- **Reviewed implementation:** `dac0cc4`
-- **Release or milestone:** UI Rework U6 complete locally; U7 next
+- **Reviewed implementation:** `d3219dd`
+- **Release or milestone:** UI Rework U7 complete locally; U8 next
 
 ## Working State
 
@@ -25,14 +25,16 @@
 - The current API has no standalone validation endpoint. U6 Validate is a
   non-sending draft/preview/totals refresh and review action; `send-request`
   remains the server-authoritative validation and send path.
-- U6 local validation is green: backend 110/110, frontend 81/81 across
-  fifteen spec files, `scripts/build.ps1` passes, and the production initial
-  bundle is 429.42 kB with zero Release warnings/errors.
-- The `.glass-*` bridge remains intentionally in place for U7 migration. U6
-  added no new glass-based layout components; raw application color literals
-  remain confined to the designated token/gradient layers.
-- U7 is active in `TASK.md`; its plan is
-  `.ai/plans/UI-U7-app-migration.md`.
+- U7 migrated the remaining navbar/sidebar/breadcrumb, landing, Order Requests,
+  Uni-Commerce, Order Validation, flat-order dialog, and shared-component
+  consumers to U5/U6 primitives and tokens. The `.glass-*` definitions,
+  consumers, and dead compatibility aliases were removed; the route-driven
+  drawer, six tabs, capability behavior, and Production safety paths remain.
+- U7 local validation is green: backend 110/110, frontend 85/85 across
+  seventeen spec files, `scripts/build.ps1` passes, and the production initial
+  bundle is 427.19 kB with zero Release warnings/errors.
+- U8 is active in `TASK.md`; its plan is
+  `.ai/plans/UI-U8-verification.md`. U8 is verification and cleanup only.
 - `.ai/HANDOFF.md` is Empty. No Production action was attempted.
 
 ## Active Blockers
@@ -58,6 +60,8 @@
 
 ## Recently Completed
 
+- `d3219dd` delivered the U7 app-wide primitive migration, legacy glass removal,
+  dead navbar-alert removal, and focused landing/validation coverage.
 - `dac0cc4` delivered the U6 flat-order workspace rebuild, responsive summary
   actions, dense tables, validation navigation, and focused frontend tests.
 - `3f6646d` delivered the U5 dark-first design system, shared primitives, toast
@@ -67,6 +71,6 @@
 
 ## Next Recommended Task
 
-- Execute UI-U7 from `.ai/plans/UI-U7-app-migration.md`: migrate the remaining
-  app surfaces to U5/U6 primitives, replace the dead documentation action, and
-  remove the legacy glass bridge after all consumers are gone.
+- Execute UI-U8 from `.ai/plans/UI-U8-verification.md`: perform the
+  Testing-only end-to-end flow, final documentation reconciliation, and
+  security/repository cleanup checks without adding features.

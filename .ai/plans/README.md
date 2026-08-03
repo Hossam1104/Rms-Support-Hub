@@ -6,8 +6,7 @@ automatically read every plan.
 
 ## Current active plan
 
-- [`UI-U7-app-migration.md`](UI-U7-app-migration.md) - migrate remaining app
-  surfaces to U5/U6 primitives and remove the legacy glass compatibility layer.
+- [`UI-U8-verification.md`](UI-U8-verification.md) - perform Testing-only
+  end-to-end verification, documentation reconciliation, and cleanup.
 
-After completion, record the outcome in `.ai/HISTORY.md`, then delete the plan
-or archive it only when it has lasting audit value.
+Completed plans with lasting audit value belong under `.ai/archive/`.
