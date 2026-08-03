@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-03
 - **Branch:** `main`
-- **HEAD:** `f4c579291dcabcf011cd6c325f3d0aa871e1a3cc`
+- **HEAD:** `015a627d43a845116db78e57a3085086c51a93cd`
 - **Release or milestone:** UI Rework U3 complete locally; U4 next
 
 ## Working State
@@ -11,10 +11,10 @@
 - UPC/GHC flat-order authoring, GHC Uni-Commerce invoice authoring, SQL-backed Order Requests, capability-driven routing, and per-session local drafts exist; live support varies by module.
 - UPC is the only module with Order Requests and branch lookup enabled. GHC E-Commerce history/consumer schema remains unverified; GHC Uni-Commerce lacks live lookup/history/cancel/resend support.
 - UI Rework U0-U2 are committed: verified branch schema/environment corrections, Testing-default safety, and atomic batched draft persistence.
-- U3 is implemented in `f4c5792`: the capability-gated `dbo.Branches` endpoint, five-minute cache/refresh path, shared searchable selector, and all current branch consumers are present.
-- A U3 import correction in `order-info.component.ts` is currently uncommitted; it was required for the production Angular build and does not change the feature contract.
+- U3 is implemented in `f4c5792` and its documentation/source closeout is recorded in `3453b19`: the capability-gated `dbo.Branches` endpoint, five-minute cache/refresh path, shared searchable selector, and all current branch consumers are present.
+- The `order-info.component.ts` import correction required for the production Angular build is committed in `3453b19` and does not change the feature contract.
 - Targeted branch-controller tests pass 7/7; the full backend suite passes 106/106; `scripts/build.ps1` passes with a clean Release build and production bundle.
-- Frontend unit tests remain 1 passed, 1 failed because the generated `app.spec.ts` still expects the removed starter `<h1>`; no selector-specific component test exists yet.
+- Frontend unit tests pass 8/8 across two spec files; `015a627` replaces the generated starter assertion and adds focused deterministic coverage for the searchable selector.
 - The safe UPC Testing branch read returned HTTP 500, so no live branch sample or browser verification was completed. No Production action was attempted.
 - No CI/CD, container, infrastructure-as-code, migration mechanism, or deployment automation was found in the repository.
 - Active plan/prompt surfaces now contain only UI Rework U4-U8. Completed
@@ -31,9 +31,7 @@
 - Controllers expose operational and order/customer data without an application authentication or authorization scheme.
 - Outbound TLS certificate verification defaults to disabled for the shared RMS HTTP client.
 - Local draft JSON may contain customer/order data and has no confirmed cleanup, encryption, or multi-instance strategy.
-- The frontend shell suite is red in one stale starter test; the U3 backend and
-  production build gates are green.
-- No direct selector component test or browser evidence is present yet.
+- Frontend and backend local test gates plus the production build are green; live/browser evidence for U3 is still unavailable.
 - The branch cache key uses the resolved connection-string value in process
   memory; it is not returned to clients or written to logs.
 - Live SQL/API behavior, GHC schemas, production hosting, monitoring, backup, and secret-rotation ownership are not established by local tests.
@@ -44,6 +42,9 @@
 - The project-plan reconciliation archived completed milestone plans with
   audit value, removed executed prompt runners, and retained U4-U8 as the
   active UI programme.
+- `015a627` repaired the Angular shell test and added focused searchable-selector
+  unit tests; the frontend suite now passes 8/8.
+- `3453b19` reconciled the U3 closeout documentation and activated the U4 plan.
 - `f4c5792` completed the U3 branch workflow implementation; local backend and
   production build validation passed, with live/browser verification pending.
 - `a6a07ba` established the shared AI workflow skeleton and archived completed

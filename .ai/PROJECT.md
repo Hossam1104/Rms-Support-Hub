@@ -29,7 +29,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` — passed 106/106 on 2026-08-03.
 - Targeted backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --filter FullyQualifiedName~<TestClass>` — branch controller slice passed 7/7 on 2026-08-03.
 - Frontend production build/type check: `cd frontend; npm run build -- --configuration production` — passed through the full gate on 2026-08-03.
-- Frontend tests: `cd frontend; npm test -- --watch=false` — one stale starter test fails because it expects the removed generated `<h1>`; current result is recorded in `.ai/STATE.md`.
+- Frontend tests: `cd frontend; npm test -- --watch=false` — passed 8/8 across two spec files on 2026-08-03, including the repaired shell test and focused searchable-selector coverage.
 - Local run: `.\scripts\dev.ps1` — discovered but not executed; starts API on port 5200 and Angular on port 4200.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend; npm ci` — discovered but not executed.
 - Lint/format/E2E: no configured command.
