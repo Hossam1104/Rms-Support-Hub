@@ -1,9 +1,9 @@
-# UI Rework Execution Prompts - Active Sessions U5-U8
+# UI Rework Execution Prompts - Active Sessions U6-U8
 
-Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U4 are complete
+Companion to [`UI_Rework_Plan.md`](UI_Rework_Plan.md). U0-U5 are complete
 locally and recorded in [`.ai/HISTORY.md`](../.ai/HISTORY.md). U3 branch data
 and U4 item lookup still lack live evidence because the safe Testing dependency
-is unavailable; execute U5-U8 in order, one session at a time.
+is unavailable; execute U6-U8 in order, one session at a time.
 
 ---
 
@@ -16,8 +16,8 @@ is unavailable; execute U5-U8 in order, one session at a time.
 - Every live call is UPC Testing only. Never send, cancel, or resend against
   Production.
 - Keep credentials and customer data out of tracked files, logs, and `.ai/`.
-- Work only in the selected session's scope. Do not start U6 layout or U7
-  migration during U5.
+- Work only in the selected session's scope. Do not start a later session's
+  layout, migration, or end-to-end work early.
 - Run the required Verify block and report unavailable live/browser evidence
   honestly. A green build is not visual or live verification.
 - Do not edit generated/runtime paths, add dependencies, push, deploy, reset,
@@ -25,50 +25,40 @@ is unavailable; execute U5-U8 in order, one session at a time.
 - Keep successful output concise, review the task diff, update project memory,
   and leave `.ai/HANDOFF.md` Empty when the session completes.
 
-## Completed U4 closeout
+## Completed U5 closeout
 
-U4 was reviewed at `fd5d65d` and closed locally. The review correction covers
-stale database-filled lookup values during a new search and fabricated stat
-tiles before the first server totals response. Local backend/frontend/build
-gates pass; database-dependent item lookup remains HTTP 502.
+U5 was completed in `3f6646d`: dark-first/light-complete tokens, preserved
+status gradients and the `.glass-*` bridge, eight shared primitives, capped
+and queued toasts, persisted sidebar reflow, and the development-only kitchen
+sink. Backend 110/110, frontend 68/68, and the warning-free production build
+passed with a 429.42 kB initial bundle. No in-app browser was available, and
+UPC Testing item lookup remains an external HTTP 502 limitation.
 
 ---
 
-## Session U5 - Design system: dark-first rebuild
+## Session U6 - Order builder layout rebuild
 
-Execute **U5 only**. Read `TASK.md`, `.ai/STATE.md`,
-`.ai/plans/UI-U5-design-system.md`, UI Rework Plan D9/D10/D12 and decisions
-5-6, this section, `docs/design-system.md`, and the targeted token, gradient,
-animation, shared UI, toast, sidebar, shell, kitchen-sink, and direct test files.
+Execute **U6 only**. Read `TASK.md`, `.ai/STATE.md`,
+`.ai/plans/UI-U6-builder-layout.md`, UI Rework Plan D11 and its U6 row, this
+section, `docs/design-system.md`, the direct flat-order/UI files, the draft
+store, and the U5 shared primitives named by the active plan.
 
 ### Required outcome
 
-1. Make `_tokens.css` dark-first with distinct page/panel/raised/overlay,
-   interactive/muted/hover/selected surfaces, readable text ramp, one accent,
-   semantic colors, borders, input states, and focus rings. Keep complete light
-   overrides and preserve radius, shadow, motion, easing, and reduced-motion
-   behavior. Retain only still-used compatibility aliases.
-2. In `_gradients.css`, preserve all nine status gradients, mesh hero, and
-   intentional accents. Do not use gradients as default surfaces. Keep
-   `.glass-*` until U7 and do not use it in new primitives.
-3. Create and export standalone signal-based `ui-card`, collapsible
-   `ui-section`, `ui-field`, `ui-input`, `ui-select`, `ui-button`, `ui-table`,
-   and `ui-toolbar`. Support semantic markup, accessible focus/labels, true
-   disabled/read-only/invalid states, button variants primary/secondary/ghost/
-   danger, small/medium sizes, loading, dense/sticky/zebra tables, and
-   responsive toolbar wrapping. Compose with the U3 searchable selector.
-4. Rebuild toasts with at most three visible items, queued overflow, identical
-   consecutive-message collapse with a `xN` indicator, timed auto-dismiss,
-   hover/focus pause and resume, manual close, bottom-right responsive
-   placement, live-region semantics, and reduced motion.
-5. Publish and persist sidebar collapse; make the shell's `--sidebar-width`
-   match expanded/collapsed width and remove the dead gutter. Preserve narrow
-   screen overlay behavior and keyboard access.
-6. Expand the development-only kitchen sink to demonstrate every primitive,
-   state, theme, focus ring, nine status pills, searchable select, toast cap,
-   deduplication, queue promotion, and reduced-motion behavior.
-7. Update `docs/design-system.md` with token hierarchy, no-raw-color rule,
-   primitive catalogue, toast/sidebar behavior, and U6/U7 boundaries.
+1. Build a responsive two-column order-builder workspace with collapsible
+   `ui-section` content, sticky section navigation, intentional field spans,
+   and skeletons while the draft is loading.
+2. Add a sticky approximately 340px `order-summary-rail` with item count,
+   subtotal, VAT, discount, delivery, total, paid, balance, validation issues,
+   environment, Validate, and Send. Values come from server totals; invalid
+   Send is disabled with a useful reason.
+3. Use dense/sticky `ui-table` surfaces for products and payments, with correct
+   row net totals, draft-store quantity/discount edits, explicit delete, and
+   real empty states.
+4. Below 1200px use a sticky bottom total/Send bar; below 768px use one column;
+   prevent page horizontal scroll and preserve narrow-screen keyboard access.
+5. Preserve U2 draft batching, U3 branch selection, U4 lookup/totals/validation/
+   send behavior, capabilities, payloads, SQL, and Production safety.
 
 ### Verify
 
@@ -81,43 +71,11 @@ cd ..
 python .ai/scripts/context.py
 python .ai/scripts/check_memory.py
 git diff --check
-git grep -n "#[0-9a-fA-F]" -- frontend/src/app frontend/src/styles
-git grep -n "glass-card\|glass-input\|glass-button\|glass-panel" -- frontend/src
 ```
 
-The raw-color search must have no matches outside designated token/gradient
-files; legacy classes may remain for existing U7 consumers, but no new U5
-primitive may use them. Verify the kitchen sink in both themes, keyboard focus,
-disabled controls, four identical errors collapsing to one `x4` toast, queued
-toast promotion, hover pause, reduced motion, and sidebar reflow when a browser
-is available. If no browser is available, say so without fabricating evidence.
-
-Suggested commit: `feat(u5): rebuild design system and shared UI primitives`
-
----
-
-## Session U6 - Order builder layout rebuild
-
-Execute **U6 only**. Read UI Rework Plan D11, the U6 row, current state/diff,
-the direct flat-order/UI files, and the U5 shared primitives. Reuse U3 picker,
-U4 server totals/data flow, and U2 store.
-
-Required outcome:
-
-- Two-column builder using `ui-section`: fluid collapsible Order/Customer/
-  Products/Payments/Payload sections, completion derived from server validation,
-  sticky section navigation, and a sticky approximately 340px summary rail.
-- Add `order-summary-rail` with item count, subtotal, VAT, discount, delivery,
-  total, paid, balance, validation issues, environment badge, Validate, and Send.
-  Values come from server totals; invalid Send is disabled with a reason.
-- Products/payments use dense sticky `ui-table`, correct row net totals, inline
-  quantity/discount through the draft store, explicit delete, and empty states.
-- Use `ui-field` with deliberate spans and skeletons until draft load completes.
-- Below 1200px use a sticky bottom total/Send bar; below 768px use one column;
-  prevent page horizontal scroll.
-
-Verify at 1920/1280/900/600px when a browser is available, plus the full build
-and test gates. Do not change payload, validator, SQL, or capability contracts.
+At 1920/1280/900/600px, verify no overlap or page horizontal scroll when an
+in-app browser is available. If unavailable, report that without fabricating
+visual evidence.
 
 Suggested commit: `feat(u6): two-column order builder workspace with a sticky summary rail`
 
@@ -125,11 +83,11 @@ Suggested commit: `feat(u6): two-column order builder workspace with a sticky su
 
 ## Session U7 - Migrate the rest of the app and remove legacy classes
 
-Execute **U7 only**. Read UI Rework Plan D10/D14 and decision 5, current state/
-diff, and the listed layout/features. Reuse U5/U6 primitives; preserve routes
-and behavior.
+Execute **U7 only**. Read UI Rework Plan D10/D14 and decision 5, current
+state/diff, and the listed layout/features. Reuse U5/U6 primitives; preserve
+routes and behavior.
 
-Required outcome:
+### Required outcome
 
 - Migrate navbar, sidebar, breadcrumb, landing, Order Requests/drawer/filter
   bar, Uni-Commerce, and Order Validation to the shared primitives. Preserve
@@ -170,8 +128,7 @@ git ls-files | Select-String "var/drafts"
 git status --short
 ```
 
-Report a compact numbered E2E transcript. If any live step is unavailable,
-name that exact step and do not call the session complete without user
-direction.
+Report a compact numbered E2E transcript. If any live step is unavailable, name
+that exact step and do not call the session complete without user direction.
 
 Suggested commit: `docs(u8): verify the reworked tool end-to-end on UPC Testing and refresh the documentation`

@@ -12,11 +12,12 @@ in Git; completed plans with lasting audit value live under `.ai/archive/`.
 | UI Rework U1 | Completed | `6fd7f77` | Made Testing the explicit default, persisted and displayed the environment, and gated Production actions. |
 | UI Rework U2 | Completed | `5ddc4de` | Serialized and atomically persisted per-session draft patches; the frontend now batches and debounces edits. |
 | UI Rework U3 | Completed but live verification pending | `f4c5792`, `3453b19`, `015a627` | Added the capability-gated branch endpoint with cache refresh, the shared searchable selector, and branch-code-only integration. Local backend/frontend/build gates passed; the safe Testing branch read remained unavailable. |
-| UI Rework U4 | Completed locally; live database verification pending | `fd5d65d` plus the U4 review transition commit | Connected item lookup results, typed server totals, request-lifecycle send state, safe endpoint display/custom opt-in, inline validation, and removed the temporary per-field adapter. Added regression coverage for stale lookup values and pre-load totals. Local backend 110/110, frontend 57/57, and production build 419.85 kB passed; the Testing item lookup returned HTTP 502. |
+| UI Rework U4 | Completed locally; live database verification pending | `fd5d65d`, `e8d8a81` | Connected item lookup results, typed server totals, request-lifecycle send state, safe endpoint display/custom opt-in, inline validation, and removed the temporary per-field adapter. Added regression coverage for stale lookup values and pre-load totals. Local backend 110/110, frontend 57/57, and production build 419.85 kB passed; the Testing item lookup returned HTTP 502. |
+| UI Rework U5 | Completed locally; live database verification pending | `3f6646d` | Established dark-first/light-complete tokens, preserved nine status gradients and the `.glass-*` U7 bridge, added eight standalone shared primitives, capped/queued/deduplicated accessible toasts, persisted sidebar collapse, removed the shell dead gutter, and expanded the development-only kitchen sink. Backend 110/110, frontend 68/68, and the warning-free production build passed with a 429.42 kB initial bundle; browser and live item-population evidence remain unavailable. |
 
 ## Active Continuation
 
-- UI Rework U5-U8 remain active, with U5 next.
-- U5 owns the dark-first token system, shared UI primitives, capped toast
-  behavior, sidebar/shell offset, and development-only kitchen sink. U6 owns
-  the order-builder layout; U7 owns the remaining `.glass-*` migration.
+- UI Rework U6-U8 remain active, with U6 next.
+- U5 owns the completed dark-first token system, shared UI primitives, capped
+  toast behavior, sidebar/shell offset, and development-only kitchen sink. U6
+  owns the order-builder layout; U7 owns the remaining `.glass-*` migration.

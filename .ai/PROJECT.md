@@ -47,23 +47,27 @@ Do not copy facts that can be cheaply discovered from the repository.
 - U4's flat-order summary consumes `TotalsSummary` from the server. The
   frontend may show display-only derived values, but authoritative totals stay
   in `TotalsCalculator` and the draft mutation responses.
+- U5 shared UI primitives are standalone, signal-based, token-only components
+  exported through `frontend/src/app/shared/ui/index.ts`. Toast state is
+  capped/queued/deduplicated in `ToastService`, and sidebar collapse is
+  persisted by `SidebarStateService` and published to the module shell.
 - No background workers, queues, repository-owned migrations, E2E framework, or
   application authentication/authorization scheme are present.
 
 ## Build and Validation Entry Points
 
-- Full gate: `.\scripts\build.ps1` — passed on 2026-08-03 (110 backend tests,
-  Release build, and production Angular build; initial bundle 419.85 kB).
-- Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` — passed
+- Full gate: `.\scripts\build.ps1` - passed on 2026-08-03 (110 backend tests,
+  Release build, and production Angular build; initial bundle 429.42 kB).
+- Backend tests: `cd backend; dotnet test OnlineOrderTool.slnx --nologo` - passed
   110/110 on 2026-08-03.
 - Frontend production build/type check: `cd frontend; npm run build --
-  --configuration production` — covered by the full gate on 2026-08-03.
-- Frontend tests: `cd frontend; npm test -- --watch=false` — passed 57/57
-  across nine spec files on 2026-08-03.
-- Local run: `.\scripts\dev.ps1` — discovered but not executed; starts API on port
-  5200 and Angular on port 4200.
+  --configuration production` - covered by the full gate on 2026-08-03.
+- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 68/68
+  across twelve spec files on 2026-08-03.
+- Local run: `.\scripts\dev.ps1` - discovered but not executed; starts API on
+  port 5200 and Angular on port 4200.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
-  npm ci` — discovered but not executed.
+  npm ci` - discovered but not executed.
 - Lint/format/E2E: no configured command.
 
 ## Integrations
@@ -99,3 +103,5 @@ Do not copy facts that can be cheaply discovered from the repository.
 - U5 primitives are standalone, token-based, and exported through the shared UI
   barrel. The development-only kitchen sink is their compatibility showcase;
   `.glass-*` remains a temporary bridge until U7.
+- U6 should consume the U5 primitives and server-owned totals without creating
+  layout-specific parallel components or client-side financial calculations.
