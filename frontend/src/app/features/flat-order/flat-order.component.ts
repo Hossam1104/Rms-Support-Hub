@@ -1,23 +1,24 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { BranchOptionsService } from '../../core/services/branch-options.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FocusService } from '../../core/services/focus.service';
 import { ApiError, BranchOption, LookupResult, ModuleEndpoint, OrderDraft, Product, Payment, Consumer, SendOrderResult, OrderRequestDetailResponse, TotalsSummary } from '../../core/models';
-import { QuickStatsComponent } from './components/quick-stats.component';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
 import { DeliveryInfoComponent } from './components/delivery-info.component';
-import { ProductsTableComponent } from './components/products-table.component';
-import { PaymentsTableComponent } from './components/payments-table.component';
+import { ProductUpdate, ProductsTableComponent } from './components/products-table.component';
+import { PaymentUpdate, PaymentsTableComponent } from './components/payments-table.component';
 import { ApiConfigComponent } from './components/api-config.component';
+import { OrderBuilderSection, OrderSectionNavigationComponent } from './components/order-section-navigation.component';
+import { OrderSummaryRailComponent, OrderValidationIssue } from './components/order-summary-rail.component';
 import { AddProductDialogComponent, ItemLookupOutcome } from './components/add-product-dialog.component';
 import { AddPaymentDialogComponent } from './components/add-payment-dialog.component';
-import { ConfirmDialogComponent } from '../../shared/ui';
+import { ConfirmDialogComponent, EnvBadgeComponent, PageHeaderComponent, SkeletonComponent, UiButtonComponent, UiSectionComponent } from '../../shared/ui';
 import { DraftStore } from './draft.store';
 import { MappedValidationErrors, mapSendValidationErrors } from './send-validation';
 
@@ -46,13 +47,19 @@ const TOTALS_DEBOUNCE_MS = 300;
   imports: [
     CommonModule,
     RouterLink,
-    QuickStatsComponent,
+    EnvBadgeComponent,
+    PageHeaderComponent,
+    SkeletonComponent,
+    UiButtonComponent,
+    UiSectionComponent,
     OrderInfoComponent,
     ClientInfoComponent,
     DeliveryInfoComponent,
     ProductsTableComponent,
     PaymentsTableComponent,
     ApiConfigComponent,
+    OrderSectionNavigationComponent,
+    OrderSummaryRailComponent,
     AddProductDialogComponent,
     AddPaymentDialogComponent,
     ConfirmDialogComponent
@@ -60,69 +67,216 @@ const TOTALS_DEBOUNCE_MS = 300;
   providers: [DraftStore],
   template: `
     <div class="flat-order-container">
-      <app-quick-stats
-        [totals]="totals()"
-        [productCount]="draftStore.draft().products.length"
-        [totalQuantity]="totalQuantity()"
-        [loading]="totalsLoading()"
-        [error]="totalsError()">
-      </app-quick-stats>
+      <app-page-header
+        [title]="moduleLabel()"
+        subtitle="Prepare the draft, review server totals, and send through the active environment.">
+        <div class="builder-header-status">
+          <span class="workflow-status" [class.is-busy]="sending() || totalsLoading() || draftStore.saving()">
+            <span class="workflow-status__dot" aria-hidden="true"></span>{{ workflowStatusLabel() }}
+          </span>
+          <app-env-badge
+            [environment]="moduleService.activeEnvironment()"
+            [options]="moduleService.activeModule()?.environments ?? []"
+            (select)="moduleService.selectEnvironment($event)">
+          </app-env-badge>
+        </div>
+      </app-page-header>
 
-      <app-order-info
-        [orderData]="draftStore.draft().orderData"
-        [moduleKey]="moduleKey()"
-        [branches]="branches()"
-        [branchesLoading]="branchesLoading()"
-        [branchError]="branchError()"
-        [fieldErrors]="fieldErrors()"
-        (branchRefresh)="loadBranches(true)"
-        (fieldChange)="onFieldChange($event)">
-      </app-order-info>
+      <ng-container *ngIf="draftLoading(); else loadedBuilder">
+        <div class="builder-skeleton" aria-label="Loading order builder" data-testid="builder-skeleton">
+          <div class="builder-skeleton__main">
+            <app-skeleton width="100%" height="48px"></app-skeleton>
+            <app-skeleton width="100%" height="178px"></app-skeleton>
+            <app-skeleton width="100%" height="214px"></app-skeleton>
+            <app-skeleton width="100%" height="188px"></app-skeleton>
+          </div>
+          <div class="builder-skeleton__rail">
+            <app-skeleton width="100%" height="420px"></app-skeleton>
+          </div>
+        </div>
+      </ng-container>
 
-      <app-client-info
-        [orderData]="draftStore.draft().orderData"
-        [fieldErrors]="fieldErrors()"
-        (fieldChange)="onFieldChange($event)"
-        (lookupConsumer)="onLookupConsumer($event)">
-      </app-client-info>
+      <ng-template #loadedBuilder>
+        <ng-container *ngIf="draftLoadError(); else builderWorkspace">
+          <section class="builder-load-error" role="alert" data-testid="builder-load-error">
+            <i class="bi bi-cloud-slash" aria-hidden="true"></i>
+            <div>
+              <h2>Draft unavailable</h2>
+              <p>{{ draftLoadError() }}</p>
+            </div>
+            <ui-button variant="secondary" icon="bi bi-arrow-clockwise" (pressed)="loadState()">Retry draft</ui-button>
+          </section>
+        </ng-container>
+      </ng-template>
 
-      <app-delivery-info
-        *ngIf="hasDeliveryFields()"
-        [orderData]="draftStore.draft().orderData"
-        (fieldChange)="onFieldChange($event)">
-      </app-delivery-info>
+      <ng-template #builderWorkspace>
+        <div class="builder-grid">
+          <main class="workflow-column">
+            <app-order-section-navigation
+              [sections]="sections()"
+              [activeSectionId]="activeSectionId()"
+              (sectionSelected)="scrollToSection($event)">
+            </app-order-section-navigation>
 
-      <app-products-table
-        [products]="draftStore.draft().products"
-        [errors]="fieldErrors()['products'] ?? []"
-        (openAddDialog)="openAddProductDialog()"
-        (deleteProduct)="onDeleteProduct($event)">
-      </app-products-table>
+            <div class="workflow-sections">
+              <ui-section
+                id="order-header-section"
+                title="Order header"
+                description="Branch, order identity, status, notes, and coordinates."
+                [completed]="section('order-header').completed"
+                [hasIssues]="section('order-header').hasIssues"
+                [issueCount]="section('order-header').issueCount">
+                <app-order-info
+                  [orderData]="draftStore.draft().orderData"
+                  [moduleKey]="moduleKey()"
+                  [branches]="branches()"
+                  [branchesLoading]="branchesLoading()"
+                  [branchError]="branchError()"
+                  [fieldErrors]="fieldErrors()"
+                  (branchRefresh)="loadBranches(true)"
+                  (fieldChange)="onFieldChange($event)">
+                </app-order-info>
+              </ui-section>
 
-      <app-payments-table
-        [payments]="draftStore.draft().payments"
-        [errors]="fieldErrors()['payments'] ?? []"
-        (openAddDialog)="showAddPaymentDialog.set(true)"
-        (deletePayment)="onDeletePayment($event)">
-      </app-payments-table>
+              <ui-section
+                id="customer-section"
+                title="Customer"
+                description="Consumer lookup and the payload’s customer/address fields."
+                [completed]="section('customer').completed"
+                [hasIssues]="section('customer').hasIssues"
+                [issueCount]="section('customer').issueCount">
+                <app-client-info
+                  [orderData]="draftStore.draft().orderData"
+                  [fieldErrors]="fieldErrors()"
+                  (fieldChange)="onFieldChange($event)"
+                  (lookupConsumer)="onLookupConsumer($event)">
+                </app-client-info>
+              </ui-section>
 
-      <app-api-config
-        [compiledJson]="compiledJson()"
-        [apiResponse]="apiResponse()"
-        [loading]="sending()"
-        [endpoint]="activeEndpoint()"
-        [environment]="moduleService.activeEnvironment()"
-        [validationSummary]="validationSummary()"
-        (sendRequest)="onSendOrder($event)">
-      </app-api-config>
+              <ui-section
+                *ngIf="hasDeliveryFields()"
+                id="delivery-section"
+                title="Delivery"
+                description="Schedule and fulfillment details exposed by the active module."
+                [completed]="section('delivery').completed"
+                [hasIssues]="section('delivery').hasIssues"
+                [issueCount]="section('delivery').issueCount">
+                <app-delivery-info
+                  [orderData]="draftStore.draft().orderData"
+                  [fieldErrors]="fieldErrors()"
+                  (fieldChange)="onFieldChange($event)">
+                </app-delivery-info>
+              </ui-section>
 
-      <div class="landed-card glass-card" *ngIf="landedRequestId() as id">
-        <i class="bi bi-check-circle-fill"></i>
-        <span>Order recorded as request #{{ id }} in the OrderRequests table.</span>
-        <a [routerLink]="['/modules', moduleKey(), 'requests', id]" class="landed-link">
-          Open in Order Requests <i class="bi bi-arrow-right"></i>
-        </a>
-      </div>
+              <ui-section
+                id="products-section"
+                title="Products"
+                description="Dense item rows with server-backed lookup, draft edits, and row actions."
+                [completed]="section('products').completed"
+                [hasIssues]="section('products').hasIssues"
+                [issueCount]="section('products').issueCount">
+                <app-products-table
+                  [products]="draftStore.draft().products"
+                  [errors]="fieldErrors()['products'] ?? []"
+                  (openAddDialog)="openAddProductDialog()"
+                  (deleteProduct)="onDeleteProduct($event)"
+                  (updateProduct)="onUpdateProduct($event)">
+                </app-products-table>
+              </ui-section>
+
+              <ui-section
+                id="payments-section"
+                title="Payments"
+                description="Payment methods, statuses, references, and editable amounts."
+                [completed]="section('payments').completed"
+                [hasIssues]="section('payments').hasIssues"
+                [issueCount]="section('payments').issueCount">
+                <app-payments-table
+                  [payments]="draftStore.draft().payments"
+                  [errors]="fieldErrors()['payments'] ?? []"
+                  (openAddDialog)="showAddPaymentDialog.set(true)"
+                  (deletePayment)="onDeletePayment($event)"
+                  (updatePayment)="onUpdatePayment($event)">
+                </app-payments-table>
+              </ui-section>
+
+              <ui-section
+                id="payload-section"
+                title="Payload preview & send"
+                description="Server-compiled JSON, resolved endpoint, and response diagnostics."
+                [completed]="section('payload').completed"
+                [hasIssues]="section('payload').hasIssues"
+                [issueCount]="section('payload').issueCount">
+                <app-api-config
+                  [embedded]="true"
+                  [showSend]="false"
+                  [compiledJson]="compiledJson()"
+                  [apiResponse]="apiResponse()"
+                  [loading]="sending()"
+                  [endpoint]="activeEndpoint()"
+                  [environment]="moduleService.activeEnvironment()"
+                  [validationSummary]="validationSummary()"
+                  (customEndpointChange)="onCustomEndpointChange($event)">
+                </app-api-config>
+              </ui-section>
+
+              <div class="global-validation" *ngIf="validationSummary()?.globalErrors?.length" role="alert">
+                <div class="global-validation__heading"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><strong>Server validation needs review</strong></div>
+                <p *ngFor="let message of validationSummary()!.globalErrors">{{ message }}</p>
+              </div>
+
+              <div class="landed-card" *ngIf="landedRequestId() as id">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                <span>Order recorded as request #{{ id }} in the OrderRequests table.</span>
+                <a [routerLink]="['/modules', moduleKey(), 'requests', id]" class="landed-link">
+                  Open in Order Requests <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                </a>
+              </div>
+            </div>
+          </main>
+
+          <aside class="summary-column">
+            <app-order-summary-rail
+              [totals]="totals()"
+              [itemCount]="draftStore.draft().products.length"
+              [totalQuantity]="totalQuantity()"
+              [loading]="totalsLoading()"
+              [error]="totalsError()"
+              [validationSummary]="validationSummary()"
+              [validationIssues]="validationIssues()"
+              [environment]="moduleService.activeEnvironment()"
+              [endpoint]="activeEndpoint()"
+              [sending]="sending()"
+              [customEndpointEnabled]="customEndpointEnabled()"
+              [customEndpointValid]="customEndpointValid()"
+              (validate)="onValidate()"
+              (send)="onSummarySend()"
+              (issueSelected)="onValidationIssue($event)">
+            </app-order-summary-rail>
+          </aside>
+        </div>
+
+        <div class="mobile-summary">
+          <app-order-summary-rail
+            [compact]="true"
+            [totals]="totals()"
+            [itemCount]="draftStore.draft().products.length"
+            [totalQuantity]="totalQuantity()"
+            [loading]="totalsLoading()"
+            [error]="totalsError()"
+            [validationSummary]="validationSummary()"
+            [validationIssues]="validationIssues()"
+            [environment]="moduleService.activeEnvironment()"
+            [endpoint]="activeEndpoint()"
+            [sending]="sending()"
+            [customEndpointEnabled]="customEndpointEnabled()"
+            [customEndpointValid]="customEndpointValid()"
+            (validate)="onValidate()"
+            (send)="onSummarySend()"
+            (issueSelected)="onValidationIssue($event)">
+          </app-order-summary-rail>
+        </div>
+      </ng-template>
     </div>
 
     <app-confirm-dialog
@@ -158,17 +312,60 @@ const TOTALS_DEBOUNCE_MS = 300;
     </app-add-payment-dialog>
   `,
   styles: [`
-    .flat-order-container { display: flex; flex-direction: column; }
+    :host { display: block; min-width: 0; }
+    .flat-order-container { min-width: 0; max-width: 1680px; margin: 0 auto; }
+    .builder-header-status { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+    .workflow-status { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-panel); color: var(--text-secondary); font-size: .74rem; font-weight: 750; white-space: nowrap; }
+    .workflow-status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--state-success-fg); box-shadow: 0 0 0 4px var(--state-success-bg); }
+    .workflow-status.is-busy .workflow-status__dot { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); animation: builderPulse 1.4s ease-in-out infinite; }
+    .builder-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); align-items: start; gap: 24px; }
+    .workflow-column, .summary-column { min-width: 0; }
+    app-order-section-navigation { position: sticky; top: 16px; z-index: 8; margin-bottom: 16px; }
+    .workflow-sections { display: flex; flex-direction: column; gap: 16px; }
+    ui-section { scroll-margin-top: 88px; }
+    .summary-column { position: sticky; top: 16px; }
+    .mobile-summary { display: none; }
+    .builder-skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); gap: 24px; }
+    .builder-skeleton__main, .builder-skeleton__rail { display: flex; flex-direction: column; gap: 16px; }
+    .builder-skeleton app-skeleton { display: block; min-height: 48px; }
+    .builder-load-error { display: flex; align-items: center; gap: 16px; padding: 28px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-xl); background: var(--state-danger-bg); color: var(--text-primary); }
+    .builder-load-error > i { color: var(--state-danger-fg); font-size: 1.6rem; }
+    .builder-load-error h2 { margin: 0 0 4px; font-size: 1.05rem; }
+    .builder-load-error p { margin: 0; color: var(--text-secondary); font-size: .84rem; }
+    .builder-load-error ui-button { margin-left: auto; }
+    .global-validation { padding: 15px 18px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-lg); background: var(--state-danger-bg); color: var(--state-danger-fg); }
+    .global-validation__heading { display: flex; align-items: center; gap: 8px; font-size: .86rem; }
+    .global-validation p { margin: 8px 0 0 24px; color: var(--text-primary); font-size: .8rem; }
     .landed-card {
       display: flex; align-items: center; gap: 12px; padding: 16px 20px;
-      background: var(--success-bg); color: var(--success); font-weight: 600;
+      border: 1px solid var(--state-success-border); border-radius: var(--radius-lg);
+      background: var(--state-success-bg); color: var(--state-success-fg); font-weight: 600;
       animation: fadeInUp var(--d-slow) var(--ease-spring);
     }
     .landed-card i.bi-check-circle-fill { font-size: 1.3rem; }
-    .landed-link { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--success); text-decoration: underline; font-weight: 700; white-space: nowrap; }
+    .landed-link { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--state-success-fg); text-decoration: underline; font-weight: 700; white-space: nowrap; }
+    @keyframes builderPulse { 50% { opacity: .45; transform: scale(.8); } }
+    @media (max-width: 1199px) {
+      .builder-grid, .builder-skeleton { display: block; }
+      .summary-column, .builder-skeleton__rail { display: none; }
+      .mobile-summary { position: sticky; bottom: 14px; z-index: 20; display: block; margin-top: 20px; padding-bottom: env(safe-area-inset-bottom, 0px); }
+      app-order-section-navigation { top: 12px; }
+    }
+    @media (max-width: 767px) {
+      .builder-header-status { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .workflow-status { width: 100%; justify-content: center; }
+      .builder-load-error { align-items: flex-start; flex-wrap: wrap; padding: 20px; }
+      .builder-load-error ui-button { width: 100%; margin-left: 0; }
+      .landed-card { align-items: flex-start; flex-wrap: wrap; }
+      .landed-link { flex-basis: 100%; margin-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { .workflow-status__dot, .landed-card { animation: none; } }
   `]
 })
-export class FlatOrderComponent implements OnInit {
+export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChildren(UiSectionComponent, { read: ElementRef }) private sectionElementRefs!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChildren(UiSectionComponent) private sectionComponents!: QueryList<UiSectionComponent>;
+
   private api = inject(ApiService);
   private branchOptions = inject(BranchOptionsService);
   moduleService = inject(ModuleService);
@@ -178,6 +375,9 @@ export class FlatOrderComponent implements OnInit {
   draftStore = inject(DraftStore);
 
   moduleKey = signal<string>('ghc_ecommerce');
+  draftLoading = signal(true);
+  draftLoadError = signal<string | null>(null);
+  activeSectionId = signal('order-header-section');
   /** U4 (D8): the server-owned summary (GET calculate-totals). null = not
    * loaded yet -- never rendered as fabricated zeros. */
   totals = signal<TotalsSummary | null>(null);
@@ -201,6 +401,11 @@ export class FlatOrderComponent implements OnInit {
   /** U4: mapped server send-validation errors (see send-validation.ts). */
   private validation = signal<MappedValidationErrors | null>(null);
   fieldErrors = computed(() => this.validation()?.fieldErrors ?? {});
+  validationIssues = computed<OrderValidationIssue[]>(() => this.validation()?.issues.map(issue => ({
+    key: issue.key,
+    message: issue.message,
+    targetId: issue.targetId
+  })) ?? []);
   validationSummary = computed(() => {
     const v = this.validation();
     return v ? { totalCount: v.totalCount, globalErrors: v.globalErrors } : null;
@@ -211,6 +416,9 @@ export class FlatOrderComponent implements OnInit {
 
   showProdSendConfirm = signal<boolean>(false);
   pendingSendEvent: { url: string } | null = null;
+  customEndpointEnabled = signal(false);
+  customEndpointUrl = signal('');
+  customEndpointValid = signal(true);
 
   /** undefined until the first environment is known, so the effect below
    * never re-fetches on the initial load -- only on an actual switch. */
@@ -219,6 +427,9 @@ export class FlatOrderComponent implements OnInit {
   private endpointLoadToken = 0;
   private totalsToken = 0;
   private totalsDebounceHandle: ReturnType<typeof setTimeout> | null = null;
+  private draftLoadToken = 0;
+  private sectionObserver: IntersectionObserver | null = null;
+  private sectionQuerySubscription: Subscription | null = null;
 
   constructor() {
     // U1 (UI_Rework_Plan.md D4 step 5): switching environments must clear
@@ -255,6 +466,71 @@ export class FlatOrderComponent implements OnInit {
 
   hasDeliveryFields(): boolean {
     return this.moduleService.activeModule()?.capabilities?.hasDeliveryFields ?? false;
+  }
+
+  moduleLabel(): string {
+    return this.moduleService.activeModule()?.label || 'Online order builder';
+  }
+
+  workflowStatusLabel(): string {
+    if (this.draftLoading()) return 'Loading draft';
+    if (this.sending()) return 'Sending order';
+    if (Object.keys(this.fieldErrors()).length > 0) return 'Needs attention';
+    if (this.draftStore.saving()) return 'Saving changes';
+    if (this.totalsLoading()) return 'Refreshing totals';
+    return 'Draft ready';
+  }
+
+  /** Section facts are deliberately lightweight: completion reflects the
+   * current draft and the existing mapped server errors, not a second client
+   * validation engine. */
+  sections = computed<OrderBuilderSection[]>(() => {
+    const draft = this.draftStore.draft();
+    const errors = this.fieldErrors();
+    const orderData = draft.orderData;
+    const issueCount = (keys: string[]) => keys.reduce((count, key) => count + (errors[key]?.length ?? 0), 0);
+    const orderHeaderIssues = issueCount(['branch_code', 'order_code', 'parent_order_code', 'order_delivery_cost', 'order_status', 'order_notes', 'order_gps']);
+    const customerIssues = issueCount(['client_country_code', 'client_phone', 'client_first_name', 'client_middle_name', 'client_last_name', 'client_email', 'client_birthdate', 'client_gender', 'order_address', 'address_code']);
+    const deliveryIssues = issueCount(['delivery_date', 'delivery_from_time', 'delivery_to_time', 'fullfilment_plant', 'shipping_address_2']);
+    const productIssues = errors['products']?.length ?? 0;
+    const paymentIssues = errors['payments']?.length ?? 0;
+    const payloadIssues = this.validation()?.globalErrors.length ?? 0;
+    const deliveryAvailable = this.hasDeliveryFields();
+
+    return [
+      {
+        id: 'order-header-section', label: 'Order header', description: 'Branch and order identity',
+        completed: Boolean(String(orderData['branch_code'] ?? '').trim() && String(orderData['order_code'] ?? '').trim()),
+        hasIssues: orderHeaderIssues > 0, issueCount: orderHeaderIssues
+      },
+      {
+        id: 'customer-section', label: 'Customer', description: 'Consumer and address',
+        completed: Boolean(String(orderData['client_phone'] ?? '').trim() && String(orderData['client_first_name'] ?? '').trim() && String(orderData['order_address'] ?? '').trim()),
+        hasIssues: customerIssues > 0, issueCount: customerIssues
+      },
+      {
+        id: 'delivery-section', label: 'Delivery', description: 'Schedule and fulfillment',
+        completed: !deliveryAvailable || deliveryIssues === 0, hasIssues: deliveryIssues > 0, issueCount: deliveryIssues
+      },
+      {
+        id: 'products-section', label: 'Products', description: 'Items and row edits',
+        completed: draft.products.length > 0 && productIssues === 0, hasIssues: productIssues > 0, issueCount: productIssues
+      },
+      {
+        id: 'payments-section', label: 'Payments', description: 'Settlement methods',
+        completed: draft.payments.length > 0 && paymentIssues === 0, hasIssues: paymentIssues > 0, issueCount: paymentIssues
+      },
+      {
+        id: 'payload-section', label: 'Payload & send', description: 'Preview and destination',
+        completed: this.compiledJson() !== null && payloadIssues === 0, hasIssues: payloadIssues > 0, issueCount: payloadIssues
+      }
+    ].filter(section => section.id !== 'delivery-section' || deliveryAvailable);
+  });
+
+  section(id: string): OrderBuilderSection {
+    return this.sections().find(section => section.id === `${id}-section`) ?? {
+      id: `${id}-section`, label: id, description: '', completed: false, hasIssues: false, issueCount: 0
+    };
   }
 
   branchCode(): string {
@@ -299,18 +575,38 @@ export class FlatOrderComponent implements OnInit {
 
   loadState() {
     const key = this.moduleKey();
+    if (!key) return;
+
+    const token = ++this.draftLoadToken;
+    this.draftLoading.set(true);
+    this.draftLoadError.set(null);
+    this.validation.set(null);
+    this.customEndpointEnabled.set(false);
+    this.customEndpointUrl.set('');
+    this.customEndpointValid.set(true);
+    this.activeEndpoint.set(null);
+    this.totals.set(null);
+    this.totalsError.set(null);
+    this.compiledJson.set(null);
+    this.apiResponse.set(null);
+    this.landedRequestId.set(null);
     this.draftStore.setModuleKey(key);
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.loadBranches();
     this.loadEndpoint();
     this.api.get<OrderDraft>(`modules/${key}/state`, { envKey }).subscribe({
       next: state => {
+        if (token !== this.draftLoadToken) return;
         if (state) this.draftStore.setDraft(state);
+        this.draftLoading.set(false);
         this.refreshTotals();
         this.refreshCompiledJson();
       },
       // errorEnvelopeInterceptor already surfaces the failure via a toast.
       error: () => {
+        if (token !== this.draftLoadToken) return;
+        this.draftLoading.set(false);
+        this.draftLoadError.set('The saved draft could not be loaded. Retry to fetch the current order state.');
         this.refreshTotals();
         this.refreshCompiledJson();
       }
@@ -362,7 +658,12 @@ export class FlatOrderComponent implements OnInit {
     if (totalCount <= 0 && current.globalErrors.length === 0) {
       this.validation.set(null);
     } else {
-      this.validation.set({ ...current, fieldErrors, totalCount });
+      this.validation.set({
+        ...current,
+        fieldErrors,
+        totalCount,
+        issues: current.issues.filter(issue => issue.key !== fieldName)
+      });
     }
   }
 
@@ -396,6 +697,31 @@ export class FlatOrderComponent implements OnInit {
     });
   }
 
+  /** Table editors commit on change/blur rather than on every raw keypress.
+   * The local draft stays responsive while the existing dedicated endpoint
+   * persists the complete row and returns authoritative totals. */
+  onUpdateProduct(event: ProductUpdate) {
+    const current = this.draftStore.draft().products[event.index];
+    if (!current) return;
+
+    const product = { ...current, ...event.patch };
+    this.draftStore.updateLocal(draft => ({
+      ...draft,
+      products: draft.products.map((row, index) => index === event.index ? product : row)
+    }));
+    this.clearSectionError('products');
+    this.refreshCompiledJson();
+
+    const key = this.moduleKey();
+    this.api.put<{ success: boolean, products: Product[], totals: TotalsSummary }>(`modules/${key}/products/${event.index}`, product).subscribe({
+      next: response => {
+        if (response.products) this.draftStore.updateLocal(draft => ({ ...draft, products: response.products }));
+        if (response.totals) this.applyServerTotals(response.totals);
+      },
+      error: () => this.toast.showError('Product changes could not be saved.')
+    });
+  }
+
   onAddPayment(payment: Payment) {
     this.draftStore.updateLocal(d => ({ ...d, payments: [...d.payments, payment] }));
     this.refreshCompiledJson();
@@ -419,6 +745,28 @@ export class FlatOrderComponent implements OnInit {
     this.api.delete<{ success: boolean, payments: Payment[], totals: TotalsSummary }>(`modules/${key}/payments/${index}`).subscribe({
       next: res => this.applyServerTotals(res.totals),
       error: () => {}
+    });
+  }
+
+  onUpdatePayment(event: PaymentUpdate) {
+    const current = this.draftStore.draft().payments[event.index];
+    if (!current) return;
+
+    const payment = { ...current, ...event.patch };
+    this.draftStore.updateLocal(draft => ({
+      ...draft,
+      payments: draft.payments.map((row, index) => index === event.index ? payment : row)
+    }));
+    this.clearSectionError('payments');
+    this.refreshCompiledJson();
+
+    const key = this.moduleKey();
+    this.api.put<{ success: boolean, payments: Payment[], totals: TotalsSummary }>(`modules/${key}/payments/${event.index}`, payment).subscribe({
+      next: response => {
+        if (response.payments) this.draftStore.updateLocal(draft => ({ ...draft, payments: response.payments }));
+        if (response.totals) this.applyServerTotals(response.totals);
+      },
+      error: () => this.toast.showError('Payment changes could not be saved.')
     });
   }
 
@@ -525,6 +873,38 @@ export class FlatOrderComponent implements OnInit {
   /** Gates the send behind a typed confirmation when the active lane is
    * Production (U1, UI_Rework_Plan.md §3 decision 4) -- Testing sends
    * proceed immediately. */
+  onCustomEndpointChange(state: { enabled: boolean, url: string, valid: boolean }) {
+    this.customEndpointEnabled.set(state.enabled);
+    this.customEndpointUrl.set(state.url);
+    this.customEndpointValid.set(state.valid);
+  }
+
+  /** There is intentionally no standalone validate endpoint in the current
+   * API contract. This action flushes pending draft edits, refreshes the
+   * server-built preview/totals when safe, and opens any already-known server
+   * issue without invoking send-request. */
+  onValidate() {
+    if (this.sending()) return;
+
+    const wasSaving = this.draftStore.saving();
+    this.draftStore.flushNow();
+    this.refreshCompiledJson();
+    if (!wasSaving && !this.draftStore.saving()) this.refreshTotals();
+
+    const firstTargetId = this.validation()?.firstTargetId;
+    if (firstTargetId) {
+      const issue = this.validationIssues().find(item => item.targetId === firstTargetId);
+      if (issue) this.onValidationIssue(issue);
+      else this.focus.scrollToAndFocus(firstTargetId);
+      return;
+    }
+    this.toast.showInfo('Draft refreshed. Server validation runs immediately before a request is sent.');
+  }
+
+  onSummarySend() {
+    this.onSendOrder({ url: this.customEndpointEnabled() ? this.customEndpointUrl() : '' });
+  }
+
   onSendOrder(event: { url: string }) {
     if (this.moduleService.activeEnvironment()?.environment === 'Production') {
       this.pendingSendEvent = event;
@@ -584,7 +964,11 @@ export class FlatOrderComponent implements OnInit {
               responseText: errors.join('\n'),
               urlSent: ''
             });
-            if (mapped.firstTargetId) this.focus.scrollToAndFocus(mapped.firstTargetId);
+            if (mapped.firstTargetId) {
+              const firstIssue = mapped.issues.find(issue => issue.targetId === mapped.firstTargetId);
+              if (firstIssue) this.onValidationIssue(firstIssue);
+              else this.focus.scrollToAndFocus(mapped.firstTargetId);
+            }
             return;
           }
           this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText: 'The request could not be completed.', urlSent: event.url });
@@ -672,5 +1056,73 @@ export class FlatOrderComponent implements OnInit {
   openAddProductDialog() {
     this.itemLookupOutcome.set(null);
     this.showAddProductDialog.set(true);
+  }
+
+  ngAfterViewInit() {
+    this.sectionQuerySubscription = this.sectionElementRefs.changes.subscribe(() => this.setupSectionObserver());
+    this.setupSectionObserver();
+  }
+
+  private setupSectionObserver() {
+    this.sectionObserver?.disconnect();
+    this.sectionObserver = null;
+    if (!this.sectionElementRefs?.length || typeof IntersectionObserver === 'undefined') return;
+
+    this.sectionObserver = new IntersectionObserver(entries => {
+      const visible = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
+      const id = visible?.target instanceof HTMLElement ? visible.target.id : '';
+      if (id && this.sections().some(section => section.id === id)) this.activeSectionId.set(id);
+    }, { rootMargin: '-16% 0px -68% 0px', threshold: [0, .2, .6] });
+
+    this.sectionElementRefs.forEach(reference => this.sectionObserver?.observe(reference.nativeElement));
+  }
+
+  scrollToSection(sectionId: string) {
+    const references = this.sectionElementRefs?.toArray() ?? [];
+    const index = references.findIndex(item => item.nativeElement.id === sectionId);
+    const element = references[index]?.nativeElement;
+    if (!element) return;
+
+    this.sectionComponents.get(index)?.expand();
+    this.activeSectionId.set(sectionId);
+    if (typeof element.scrollIntoView === 'function') {
+      element.scrollIntoView({ behavior: this.prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+
+  onValidationIssue(issue: OrderValidationIssue) {
+    if (!issue.targetId) return;
+    const sectionId = this.sectionIdForValidationKey(issue.key);
+    if (sectionId) this.scrollToSection(sectionId);
+
+    const focusTarget = () => this.focus.scrollToAndFocus(issue.targetId!);
+    if (typeof document !== 'undefined' && document.getElementById(issue.targetId)) focusTarget();
+    else if (typeof queueMicrotask === 'function') queueMicrotask(focusTarget);
+    else focusTarget();
+  }
+
+  private sectionIdForValidationKey(key: string): string | null {
+    if (['branch_code', 'order_code', 'parent_order_code', 'order_delivery_cost', 'order_status', 'order_notes', 'order_gps'].includes(key)) return 'order-header-section';
+    if (['client_country_code', 'client_phone', 'client_first_name', 'client_middle_name', 'client_last_name', 'client_email', 'client_birthdate', 'client_gender', 'order_address', 'address_code'].includes(key)) return 'customer-section';
+    if (['delivery_date', 'delivery_from_time', 'delivery_to_time', 'fullfilment_plant', 'shipping_address_2'].includes(key)) return 'delivery-section';
+    if (key === 'products') return 'products-section';
+    if (key === 'payments') return 'payments-section';
+    return null;
+  }
+
+  private prefersReducedMotion(): boolean {
+    try {
+      return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
+  }
+
+  ngOnDestroy() {
+    this.sectionObserver?.disconnect();
+    this.sectionQuerySubscription?.unsubscribe();
+    if (this.totalsDebounceHandle) clearTimeout(this.totalsDebounceHandle);
   }
 }

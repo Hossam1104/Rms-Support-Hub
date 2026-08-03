@@ -64,10 +64,12 @@ class MockApiService {
   });
 
   delete = vi.fn(() => of({ success: true, totals: totalsOf() }));
+  put = vi.fn((_path: string, body: unknown) => of({ success: true, products: body ? [body] : [], payments: body ? [body] : [], totals: totalsOf() }));
 }
 
 describe('FlatOrderComponent', () => {
   let api: MockApiService;
+  let activeModuleSignal = signal({} as ModuleDto);
   let toast: { showSuccess: ReturnType<typeof vi.fn>, showInfo: ReturnType<typeof vi.fn>, showError: ReturnType<typeof vi.fn> };
   let focus: { scrollToAndFocus: ReturnType<typeof vi.fn> };
 
@@ -77,7 +79,7 @@ describe('FlatOrderComponent', () => {
     focus = { scrollToAndFocus: vi.fn(() => true) };
 
     const activeEnvironment = signal({ key: 'UPC Testing', environment: 'Testing' } as EnvironmentDto);
-    const activeModule = signal({
+    activeModuleSignal = signal({
       key: 'upc_ecommerce',
       capabilities: { hasDeliveryFields: false, orderRequests: false }
     } as ModuleDto);
@@ -87,7 +89,7 @@ describe('FlatOrderComponent', () => {
       providers: [
         { provide: ApiService, useValue: api },
         { provide: BranchOptionsService, useValue: { list: vi.fn(() => of({ success: true, data: [] })) } },
-        { provide: ModuleService, useValue: { activeEnvironment, activeModule, selectEnvironment: vi.fn() } },
+        { provide: ModuleService, useValue: { activeEnvironment, activeModule: activeModuleSignal, selectEnvironment: vi.fn() } },
         { provide: ToastService, useValue: toast },
         { provide: FocusService, useValue: focus },
         { provide: ActivatedRoute, useValue: { parent: { paramMap: of(convertToParamMap({ key: 'upc_ecommerce' })) } } }
@@ -288,5 +290,62 @@ describe('FlatOrderComponent', () => {
     expect(component.fieldErrors()['branch_code']).toBeUndefined();
     expect(component.fieldErrors()['order_code']).toEqual(['Missing required field: order_code']);
     expect(component.validationSummary()?.totalCount).toBe(1);
+  });
+
+  it('renders the U6 workflow in order and gates delivery navigation by capability', () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance;
+
+    expect(component.sections().map(section => section.label)).toEqual(['Order header', 'Customer', 'Products', 'Payments', 'Payload & send']);
+    expect(fixture.nativeElement.querySelector('[data-testid="order-summary-rail"]')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).not.toContain('Delivery Schedule');
+
+    activeModuleSignal.set({
+      key: 'upc_ecommerce',
+      capabilities: { hasDeliveryFields: true, orderRequests: false }
+    } as ModuleDto);
+    fixture.detectChanges();
+
+    expect(component.sections().map(section => section.label)).toEqual(['Order header', 'Customer', 'Delivery', 'Products', 'Payments', 'Payload & send']);
+    expect(fixture.nativeElement.querySelector('[data-section-id="delivery-section"]')).toBeTruthy();
+  });
+
+  it('commits product table edits through the existing row endpoint and keeps local draft state responsive', () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance;
+    const product: Product = { itemCode: 'A', itemName: 'A', quantity: 1, unitPrice: 10, vatPercentage: 15, discount: 0 };
+    component.draftStore.setDraft({ ...emptyDraft(), products: [product] });
+
+    component.onUpdateProduct({ index: 0, patch: { quantity: 3, discount: 2 } });
+
+    expect(component.draftStore.draft().products[0]).toMatchObject({ quantity: 3, discount: 2 });
+    expect(api.put).toHaveBeenCalledWith('modules/upc_ecommerce/products/0', { ...product, quantity: 3, discount: 2 });
+  });
+
+  it('opens a collapsed invalid section before focusing its mapped issue target', async () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance;
+    const productsSection = fixture.nativeElement.querySelector('#products-section') as HTMLElement;
+    (productsSection.querySelector('.ui-section__toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(productsSection.querySelector('#products-card')).toBeNull();
+
+    component.onValidationIssue({ key: 'products', message: 'Add a product.', targetId: 'products-card' });
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(productsSection.querySelector('#products-card')).toBeTruthy();
+    expect(focus.scrollToAndFocus).toHaveBeenCalledWith('products-card');
+  });
+
+  it('keeps Validate non-sending because the API has no standalone validation endpoint', () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance;
+
+    component.onValidate();
+
+    expect(api.sentBodies).toEqual([]);
+    expect(toast.showInfo).toHaveBeenCalledWith(expect.stringContaining('Server validation runs'));
   });
 });

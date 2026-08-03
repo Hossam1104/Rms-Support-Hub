@@ -50,6 +50,22 @@ describe('U5 shared UI primitives', () => {
     expect(fixture.nativeElement.querySelector('.ui-section__body')).toBeNull();
   });
 
+  it('keeps a collapsed invalid section visibly marked', () => {
+    const fixture = TestBed.createComponent(UiSectionComponent);
+    fixture.componentRef.setInput('title', 'Products');
+    fixture.componentRef.setInput('hasIssues', true);
+    fixture.componentRef.setInput('issueCount', 2);
+    fixture.detectChanges();
+    const toggle = fixture.nativeElement.querySelector('.ui-section__toggle') as HTMLButtonElement;
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ui-section__marker.is-issue')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.ui-section__issue').textContent).toContain('2 issues');
+    expect(fixture.nativeElement.querySelector('.ui-section__body')).toBeNull();
+  });
+
   it('links field labels and errors to projected controls', () => {
     const fixture = TestBed.createComponent(UiFieldComponent);
     fixture.componentRef.setInput('label', 'Item code');

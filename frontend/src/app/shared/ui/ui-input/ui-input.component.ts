@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-export type UiInputType = 'text' | 'email' | 'number' | 'tel' | 'url' | 'search';
+export type UiInputType = 'text' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'time';
 export type UiControlSize = 'sm' | 'md';
 
 @Component({

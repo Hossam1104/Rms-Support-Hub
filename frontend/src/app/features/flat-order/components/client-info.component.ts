@@ -1,126 +1,117 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { UiButtonComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption, UiToolbarComponent } from '../../../shared/ui';
 
-/**
- * Rebound to the corrected R1 schema (FlatOrderPayloadBuilder.cs) --
- * client_country_code/client_phone/client_first_name/client_middle_name/
- * client_last_name/client_email/client_birthdate/client_gender,
- * order_address/address_code. The pre-R1 invented client_name/client_code/
- * client_mobile/client_national_id/shipping_address/district_name/
- * city_name inputs are gone -- FlatOrderPayloadBuilder has never read them
- * (see remediation_plan.md B1/B5, R10).
- */
 @Component({
   selector: 'app-client-info',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, UiButtonComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiToolbarComponent],
   template: `
-    <div class="card-section glass-card">
-      <div class="card-title">
-        <i class="bi bi-person-badge"></i>
-        <span>Client & Customer Information</span>
-      </div>
-
-      <div class="lookup-bar mb-3">
-        <div class="input-group">
-          <input type="text" class="glass-input" [(ngModel)]="lookupPhone" placeholder="Enter mobile number to search DB..." />
-          <button type="button" class="glass-button" (click)="onLookup()"><i class="bi bi-search"></i> Lookup Consumer</button>
+    <div class="form-panel">
+      <ui-toolbar [compact]="true" [wrap]="true" role="search" ariaLabel="Consumer lookup">
+        <div uiToolbarStart class="lookup-copy">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <span>Prefill from consumer lookup</span>
         </div>
-      </div>
+        <div uiToolbarCenter class="lookup-input">
+          <ui-input inputId="consumer-lookup-phone" type="tel" [value]="lookupPhone" placeholder="Mobile number" autocomplete="tel" (valueChange)="onLookupPhoneChange($event)"></ui-input>
+        </div>
+        <div uiToolbarEnd>
+          <ui-button variant="secondary" size="sm" icon="bi bi-person-check" [disabled]="!lookupPhone.trim()" (pressed)="onLookup()">Lookup consumer</ui-button>
+        </div>
+      </ui-toolbar>
 
       <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Country Code</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['client_country_code']" (ngModelChange)="onFieldChange('client_country_code', $event)" placeholder="966" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone *</label>
-          <input type="text" class="glass-input" id="field-client-phone" [ngModel]="orderData['client_phone']" (ngModelChange)="onFieldChange('client_phone', $event)" required [attr.aria-invalid]="hasError('client_phone') ? true : null" />
-          <p class="field-error" *ngFor="let message of fieldErrors['client_phone'] ?? []">{{ message }}</p>
-        </div>
-        <div class="form-group">
-          <label class="form-label">First Name *</label>
-          <input type="text" class="glass-input" id="field-client-first-name" [ngModel]="orderData['client_first_name']" (ngModelChange)="onFieldChange('client_first_name', $event)" required [attr.aria-invalid]="hasError('client_first_name') ? true : null" />
-          <p class="field-error" *ngFor="let message of fieldErrors['client_first_name'] ?? []">{{ message }}</p>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Middle Name</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['client_middle_name']" (ngModelChange)="onFieldChange('client_middle_name', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Last Name *</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['client_last_name']" (ngModelChange)="onFieldChange('client_last_name', $event)" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" class="glass-input" [ngModel]="orderData['client_email']" (ngModelChange)="onFieldChange('client_email', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Birthdate</label>
-          <input type="date" class="glass-input" [ngModel]="birthdateForInput()" (ngModelChange)="onFieldChange('client_birthdate', $event)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Gender</label>
-          <select class="glass-input" [ngModel]="orderData['client_gender']" (ngModelChange)="onFieldChange('client_gender', $event)">
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </div>
-        <div class="form-group full-width">
-          <label class="form-label">Address *</label>
-          <input type="text" class="glass-input" id="field-order-address" [ngModel]="orderData['order_address']" (ngModelChange)="onFieldChange('order_address', $event)" required [attr.aria-invalid]="hasError('order_address') ? true : null" />
-          <p class="field-error" *ngFor="let message of fieldErrors['order_address'] ?? []">{{ message }}</p>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Address Code</label>
-          <input type="text" class="glass-input" [ngModel]="orderData['address_code']" (ngModelChange)="onFieldChange('address_code', $event)" />
-        </div>
+        <ui-field label="Country code" forId="field-client-country-code">
+          <ui-input inputId="field-client-country-code" type="tel" [value]="textValue('client_country_code')" placeholder="966" (valueChange)="onFieldChange('client_country_code', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field #phoneField label="Phone" forId="field-client-phone" [required]="true" [error]="fieldError('client_phone')">
+          <ui-input inputId="field-client-phone" type="tel" [value]="textValue('client_phone')" autocomplete="tel" [invalid]="hasError('client_phone')" [ariaDescribedBy]="phoneField.describedBy()" (valueChange)="onFieldChange('client_phone', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field #firstNameField label="First name" forId="field-client-first-name" [required]="true" [error]="fieldError('client_first_name')">
+          <ui-input inputId="field-client-first-name" autocomplete="given-name" [value]="textValue('client_first_name')" [invalid]="hasError('client_first_name')" [ariaDescribedBy]="firstNameField.describedBy()" (valueChange)="onFieldChange('client_first_name', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field label="Middle name" forId="field-client-middle-name">
+          <ui-input inputId="field-client-middle-name" autocomplete="additional-name" [value]="textValue('client_middle_name')" (valueChange)="onFieldChange('client_middle_name', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field label="Last name" forId="field-client-last-name" [required]="true">
+          <ui-input inputId="field-client-last-name" autocomplete="family-name" [value]="textValue('client_last_name')" (valueChange)="onFieldChange('client_last_name', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field label="Email" forId="field-client-email">
+          <ui-input inputId="field-client-email" type="email" autocomplete="email" [value]="textValue('client_email')" (valueChange)="onFieldChange('client_email', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field label="Birthdate" forId="field-client-birthdate">
+          <ui-input inputId="field-client-birthdate" type="date" [value]="birthdateForInput()" (valueChange)="onFieldChange('client_birthdate', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field label="Gender" forId="field-client-gender">
+          <ui-select selectId="field-client-gender" [options]="genderOptions" [value]="textValue('client_gender') || null" placeholder="Select gender" (valueChange)="onFieldChange('client_gender', $event)"></ui-select>
+        </ui-field>
+
+        <ui-field #addressField label="Address" forId="field-order-address" [required]="true" [error]="fieldError('order_address')" class="field-span-8">
+          <ui-input inputId="field-order-address" autocomplete="street-address" [value]="textValue('order_address')" [invalid]="hasError('order_address')" [ariaDescribedBy]="addressField.describedBy()" (valueChange)="onFieldChange('order_address', $event)"></ui-input>
+        </ui-field>
+
+        <ui-field label="Address code" forId="field-address-code" class="field-span-4">
+          <ui-input inputId="field-address-code" [value]="textValue('address_code')" (valueChange)="onFieldChange('address_code', $event)"></ui-input>
+        </ui-field>
       </div>
     </div>
   `,
   styles: [`
-    .card-section { padding: 24px; margin-bottom: 24px; }
-    .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
-    .card-title i { color: var(--primary); }
-    .input-group { display: flex; gap: 10px; margin-bottom: 16px; }
-    .input-group input { flex: 1; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-    .full-width { grid-column: 1 / -1; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
-    .field-error { font-size: 0.78rem; color: var(--danger); margin: 0; }
+    :host { display: block; min-width: 0; }
+    .form-panel { min-width: 0; }
+    .lookup-copy { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .78rem; font-weight: 750; }
+    .lookup-copy i { color: var(--accent); }
+    .lookup-input { flex: 1 1 230px; min-width: 180px; }
+    .form-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+    ui-field { grid-column: span 3; }
+    ui-field:nth-child(2), ui-field:nth-child(3) { grid-column: span 4; }
+    .field-span-8 { grid-column: span 8; }
+    .field-span-4 { grid-column: span 4; }
+    @media (max-width: 900px) { ui-field, ui-field:nth-child(2), ui-field:nth-child(3), .field-span-8, .field-span-4 { grid-column: span 6; } }
+    @media (max-width: 620px) { ui-field, ui-field:nth-child(2), ui-field:nth-child(3), .field-span-8, .field-span-4 { grid-column: 1 / -1; } }
   `]
 })
 export class ClientInfoComponent {
   @Input() orderData: Record<string, unknown> = {};
-  /** U4: server send-validation errors keyed by draft field name (see
-   * send-validation.ts) -- shown inline under the matching control. */
   @Input() fieldErrors: Record<string, string[]> = {};
   @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
   @Output() lookupConsumer = new EventEmitter<string>();
 
-  lookupPhone: string = '';
+  readonly genderOptions: UiSelectOption[] = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' }
+  ];
+  lookupPhone = '';
 
-  hasError(fieldName: string): boolean {
-    return (this.fieldErrors[fieldName]?.length ?? 0) > 0;
+  hasError(fieldName: string): boolean { return (this.fieldErrors[fieldName]?.length ?? 0) > 0; }
+  fieldError(fieldName: string): string | null { return this.fieldErrors[fieldName]?.join(' ') || null; }
+  onFieldChange(fieldName: string, value: unknown) { this.fieldChange.emit({ fieldName, value }); }
+
+  textValue(fieldName: string): string {
+    const value = this.orderData[fieldName];
+    return value == null ? '' : String(value);
   }
 
-  onFieldChange(fieldName: string, value: unknown) {
-    this.fieldChange.emit({ fieldName, value });
-  }
-
-  /** client_birthdate is stored/sent as an ISO datetime
-   * (FlatOrderPayloadBuilder.FormatBirthdate); <input type=date> needs just
-   * the yyyy-MM-dd prefix. */
+  /** Stored ISO datetimes are shortened for the date input and are sent back
+   * through the existing draft patch path unchanged as the selected date. */
   birthdateForInput(): string {
     const raw = this.orderData['client_birthdate'];
     return typeof raw === 'string' && raw.length >= 10 ? raw.slice(0, 10) : '';
   }
 
   onLookup() {
-    if (this.lookupPhone.trim()) {
-      this.lookupConsumer.emit(this.lookupPhone.trim());
-    }
+    if (this.lookupPhone.trim()) this.lookupConsumer.emit(this.lookupPhone.trim());
+  }
+
+  onLookupPhoneChange(value: string | number | null) {
+    this.lookupPhone = value == null ? '' : String(value);
   }
 }

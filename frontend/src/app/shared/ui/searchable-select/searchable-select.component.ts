@@ -18,9 +18,10 @@ let nextSelectId = 0;
   template: `
     <div class="searchable-select" [class.is-open]="open" [class.has-error]="!!error">
       <div class="select-control" cdkOverlayOrigin #origin="cdkOverlayOrigin">
-        <input #trigger type="text" role="combobox" autocomplete="off"
+        <input #trigger [id]="inputId || null" type="text" role="combobox" autocomplete="off"
           [attr.aria-label]="label" [attr.aria-expanded]="open" [attr.aria-controls]="listboxId"
           [attr.aria-activedescendant]="open && activeIndex >= 0 ? optionId(activeIndex) : null"
+          [attr.aria-describedby]="ariaDescribedBy"
           [attr.aria-invalid]="!!error" [placeholder]="placeholder" [disabled]="disabled" [value]="displayValue"
           (focus)="openPanel()" (click)="openPanel()" (input)="onInput($any($event.target).value)" (keydown)="onKeydown($event)">
         <button *ngIf="value && !disabled" type="button" class="clear-button" [attr.aria-label]="'Clear ' + label"
@@ -79,6 +80,8 @@ export class SearchableSelectComponent {
   @Input() loading = false;
   @Input() error: string | null = null;
   @Input() disabled = false;
+  @Input() inputId: string | null = null;
+  @Input() ariaDescribedBy: string | null = null;
 
   @Output() valueChange = new EventEmitter<string | null>();
   @Output() refresh = new EventEmitter<void>();

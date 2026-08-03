@@ -17,8 +17,8 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
   standalone: true,
   imports: [CommonModule, FormsModule, JsonTreeComponent],
   template: `
-    <div class="card-section glass-card">
-      <div class="card-title">
+    <div class="card-section" [class.glass-card]="!embedded" [class.embedded]="embedded">
+      <div class="card-title" *ngIf="!embedded">
         <i class="bi bi-send"></i>
         <span>API Request Execution</span>
         <span class="env-tag" [class.env-tag--prod]="isProduction()" *ngIf="environment">
@@ -47,8 +47,8 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
           <input
             type="text"
             class="glass-input"
-            [(ngModel)]="customUrl"
-            (ngModelChange)="customUrlError = null"
+            [ngModel]="customUrl"
+            (ngModelChange)="onCustomUrlChange($event)"
             placeholder="https://example.com/api/Order/CreateAndAssignOrder"
             [disabled]="loading"
             [attr.aria-invalid]="customUrlError ? true : null" />
@@ -56,7 +56,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
         <p class="field-error" *ngIf="customUrlError">{{ customUrlError }}</p>
       </div>
 
-      <button type="button" class="glass-button send-button" [disabled]="loading" (click)="onSend()">
+      <button type="button" class="glass-button send-button" *ngIf="showSend" [disabled]="loading" (click)="onSend()">
         <i class="bi" [class.bi-send]="!loading" [class.bi-arrow-repeat]="loading" [class.spin]="loading"></i>
         <span>{{ loading ? 'Sending...' : 'Send Order Request' }}</span>
       </button>
@@ -88,6 +88,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
   `,
   styles: [`
     .card-section { padding: 24px; margin-bottom: 24px; }
+    .card-section.embedded { padding: 0; margin: 0; }
     .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
     .card-title i { color: var(--primary); }
     .env-tag {
@@ -129,8 +130,13 @@ export class ApiConfigComponent {
   /** Server validation outcome of the last send attempt (U4): issue count
    * plus the errors that have no field/section home. */
   @Input() validationSummary: { totalCount: number, globalErrors: string[] } | null = null;
+  /** Flat-order U6 owns the send action in the summary rail; other consumers
+   * keep the legacy local send button by default. */
+  @Input() showSend = true;
+  @Input() embedded = false;
 
   @Output() sendRequest = new EventEmitter<{ url: string }>();
+  @Output() customEndpointChange = new EventEmitter<{ enabled: boolean, url: string, valid: boolean }>();
 
   useCustomEndpoint = false;
   customUrl = '';
@@ -141,10 +147,27 @@ export class ApiConfigComponent {
   }
 
   onToggleCustom(enabled: boolean) {
+    this.useCustomEndpoint = enabled;
     if (!enabled) {
       this.customUrl = '';
       this.customUrlError = null;
     }
+    this.emitCustomEndpointState();
+  }
+
+  onCustomUrlChange(value: string) {
+    this.customUrl = value;
+    this.customUrlError = null;
+    this.emitCustomEndpointState();
+  }
+
+  private emitCustomEndpointState() {
+    const candidate = this.customUrl.trim();
+    this.customEndpointChange.emit({
+      enabled: this.useCustomEndpoint,
+      url: candidate,
+      valid: !this.useCustomEndpoint || /^https?:\/\/\S+$/i.test(candidate)
+    });
   }
 
   onSend() {

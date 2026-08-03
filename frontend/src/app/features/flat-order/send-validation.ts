@@ -23,6 +23,14 @@ export interface MappedValidationErrors {
   totalCount: number;
   /** DOM id of the first invalid target in page order, for focus/scroll. */
   firstTargetId: string | null;
+  /** Individual mapped issues for section summaries and issue navigation. */
+  issues: MappedValidationIssue[];
+}
+
+export interface MappedValidationIssue {
+  key: string;
+  message: string;
+  targetId: string;
 }
 
 /** Draft field key -> DOM id of the control (or section card) to focus.
@@ -61,6 +69,7 @@ const SECTION_RULES: ReadonlyArray<readonly [RegExp, string]> = [
 export function mapSendValidationErrors(errors: string[]): MappedValidationErrors {
   const fieldErrors: Record<string, string[]> = {};
   const globalErrors: string[] = [];
+  const issues: MappedValidationIssue[] = [];
 
   const push = (key: string, message: string) => {
     (fieldErrors[key] ??= []).push(message);
@@ -70,12 +79,14 @@ export function mapSendValidationErrors(errors: string[]): MappedValidationError
     const missing = MISSING_REQUIRED.exec(message);
     if (missing && missing[1] in FIELD_TARGET_IDS) {
       push(missing[1], message);
+      issues.push({ key: missing[1], message, targetId: FIELD_TARGET_IDS[missing[1]] });
       continue;
     }
 
     const section = SECTION_RULES.find(([pattern]) => pattern.test(message));
     if (section) {
       push(section[1], message);
+      issues.push({ key: section[1], message, targetId: FIELD_TARGET_IDS[section[1]] });
       continue;
     }
 
@@ -88,6 +99,7 @@ export function mapSendValidationErrors(errors: string[]): MappedValidationError
     fieldErrors,
     globalErrors,
     totalCount: errors.length,
-    firstTargetId: firstKey ? FIELD_TARGET_IDS[firstKey] : null
+    firstTargetId: firstKey ? FIELD_TARGET_IDS[firstKey] : null,
+    issues
   };
 }

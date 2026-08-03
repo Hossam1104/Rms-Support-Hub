@@ -99,6 +99,20 @@ describe('ApiConfigComponent', () => {
     expect(sent).toEqual([{ url: '' }]);
   });
 
+  it('publishes custom endpoint state so a single parent-owned send action can use it', () => {
+    const fixture = createFixture();
+    const states: unknown[] = [];
+    fixture.componentInstance.customEndpointChange.subscribe(state => states.push(state));
+
+    fixture.componentInstance.onToggleCustom(true);
+    fixture.componentInstance.onCustomUrlChange('https://example.com/api/Order');
+
+    expect(states).toEqual([
+      { enabled: true, url: '', valid: false },
+      { enabled: true, url: 'https://example.com/api/Order', valid: true }
+    ]);
+  });
+
   it('drives the button state from the lifecycle loading input, not a timer', () => {
     const fixture = createFixture();
 

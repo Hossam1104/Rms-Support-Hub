@@ -33,4 +33,14 @@ describe('ProductsTableComponent', () => {
     // rowSubtotal = 0; vat = round((0 - 0) * 0.15, 2) = 0; total = 0.
     expect(component.getProductTotal(product)).toBe(0);
   });
+
+  it('emits one committed row patch instead of reacting to raw keypresses', () => {
+    const component = new ProductsTableComponent();
+    const updates: unknown[] = [];
+    component.updateProduct.subscribe(update => updates.push(update));
+
+    component.onEdit(0, 'quantity', { target: { value: '4' } } as unknown as Event);
+
+    expect(updates).toEqual([{ index: 0, patch: { quantity: 4 } }]);
+  });
 });
