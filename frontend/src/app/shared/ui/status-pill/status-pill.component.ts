@@ -1,13 +1,9 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ORDER_REQUEST_STATUS_LABELS } from '../../../core/models';
 
 /** RequestOrderHeaders.OrderStatus (1..9) -- see
  * backend/src/OnlineOrderTool.Core/OrderRequestStatus.cs. */
-const STATUS_LABELS: Record<number, string> = {
-  1: 'New', 2: 'Confirmed', 3: 'Ready', 4: 'With Delegate', 5: 'Rejected',
-  6: 'Canceled (Client)', 7: 'Canceled (Admin)', 8: 'Processing', 9: 'Done'
-};
-
 /** Renders one of the nine order-status gradient pills defined in
  * _gradients.css. Pops on status change (spring scale via a CSS class
  * toggled for one animation cycle -- no @angular/animations dependency
@@ -48,6 +44,6 @@ export class StatusPillComponent implements OnChanges {
   }
 
   fallbackLabel(): string {
-    return STATUS_LABELS[this.status] ?? `Status ${this.status}`;
+    return ORDER_REQUEST_STATUS_LABELS[this.status] ?? `Status ${this.status}`;
   }
 }
