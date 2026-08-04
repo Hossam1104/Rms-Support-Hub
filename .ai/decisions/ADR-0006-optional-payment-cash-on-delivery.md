@@ -69,3 +69,20 @@ Required follow-up before relying on Cash on Delivery in Production: send one
 payment-free order against **UPC Testing** and confirm the RMS accepts
 `"COD"`. If it does not, the fix belongs in `GetPaymentMethodString` together
 with a decision about the casing of every other method.
+
+## Final acceptance evidence (2026-08-04)
+
+- Evidence source: local API state, totals, and export reads on the default
+  UPC Testing environment, plus the verified UPC reference fixtures under
+  `docs/request_examples/UPC/`.
+- Local exported value: `order_payment_method` is `"COD"`;
+  `order_payment_status` is `"not_payment"`; and
+  `payment_methods_with_options` is empty. Paid total is zero and the balance
+  remains server-calculated.
+- Verified UPC-accepted value: not established. The read-only item lookup
+  returned no data for documented fixture codes, and no approved synthetic
+  branch/item/consumer was available for a state-changing send.
+- Code and fixture changes: none required by this run. The implementation
+  continues to emit `"COD"` pending accepted UPC Testing evidence.
+- Safety result: no send, cancel, resend, or Production operation was
+  attempted.

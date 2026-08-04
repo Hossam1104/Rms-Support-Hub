@@ -82,8 +82,9 @@ Do not copy facts that can be cheaply discovered from the repository.
   verifies the approved SAMA vector's canonical SHA-1, SVG structure, and
   absence of textual or external references.
 - Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
-  4200; U8 verified the local API, frontend proxy, and route fallbacks without
-  running a state-changing workflow.
+  4200; final acceptance verified local API metadata, Testing branches, exact
+  Order Requests search, the payment-free export contract, and frontend route
+  rendering without running a state-changing workflow.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
   npm ci` - discovered but not executed.
 - Lint/format/E2E: no configured command.
@@ -131,7 +132,8 @@ Do not copy facts that can be cheaply discovered from the repository.
   viewport with a compact labelled sidebar rail.
 - The final Order Requests unification owns the canonical route-level detail
   page, compatibility redirects, same-number resend contract, and removal of
-  the superseded validation component tree. A local Edge headless check covers
-  landing and UPC order-builder route rendering; connected interactive browser
-  and full safe Testing order population/send/cancel/resend evidence remain
-  deferred; there is no active UI rework plan.
+  the superseded validation component tree. Final local Edge headless checks
+  cover the order-builder and Order Requests route at the required viewports;
+  the connected interactive browser and full safe Testing order
+  population/send/cancel/resend evidence remain deferred; there is no active
+  UI rework plan.

@@ -1,6 +1,6 @@
 # Current Task
 
-- **Task ID:** FINAL-ACCEPTANCE-HARDENING
+- **Task ID:** FINAL-LIVE-ACCEPTANCE
 - **Status:** Completed Locally
 - **Role:** Closed
 
@@ -35,11 +35,22 @@ deploying.
   stale active documentation were removed or reconciled. ADR-0008 records the
   lasting route/resend decision.
 - Read-only UPC Testing metadata and branch discovery were exercised. The item
-  lookup returned an upstream 502, and no explicitly approved synthetic QA
-  branch/item was available, so send/cancel/resend was not attempted. No
-  Production action was attempted.
-- The implementation is merged into local `main` with the requested
-  no-fast-forward merge. Nothing is pushed or deployed.
+  lookup returned a successful no-data result for documented fixture codes, and
+  no explicitly approved synthetic QA branch/item was available, so
+  send/cancel/resend was not attempted. No Production action was attempted.
+- The unfiltered Order Requests read reproduced the documented infrastructure
+  gap: the API returned HTTP 500 after its approximately 15-second timeout;
+  an exact-number read returned HTTP 200 with zero results. This is the
+  documented missing-index condition on header/invoice join columns, not a
+  newly introduced frontend defect.
+- The local payment-free draft contract was exercised without an external send:
+  zero payments, paid total zero, server balance, exported `COD`,
+  `not_payment`, and an empty payment list.
+- Edge headless screenshots verified dark-theme layout at 1920x1080,
+  1280x720, 900x900, and 600x900. The connected interactive browser was
+  unavailable, so pointer, keyboard, theme-toggle, and live detail workflow
+  evidence remains blocked.
+- The implementation is merged into local `main`; no deployment is performed.
 
 ## Validation
 
@@ -51,20 +62,20 @@ deploying.
 - Release solution build: 0 warnings, 0 errors.
 - `scripts/build.ps1`: all checks passed; Angular production bundle generated
   at 426.93 kB with no style-budget warnings.
-- Local Edge headless route checks loaded the landing and UPC order-builder
-  routes and captured desktop/mobile screenshots. The connected in-app browser
-  runtime remained unavailable, so interactive browser evidence is still
-  deferred.
+- Local Edge headless route checks loaded the landing, UPC order-builder, and
+  Order Requests routes and captured the required desktop/tablet/mobile
+  screenshots. The connected in-app browser runtime remained unavailable, so
+  interactive browser evidence is still deferred.
 - No Production send, cancel, or resend was attempted.
 
 ## Deferred
 
-- No connected in-app browser was available for interactive responsive/theme
-  or outside-click verification; local headless screenshots cover layout only.
+- No connected in-app browser was available for interactive responsive/theme,
+  hover, keyboard, or outside-click verification; local headless screenshots
+  cover layout only.
 - No explicitly approved synthetic Testing order/branch/item was available for
   live send/cancel or same-number resend evidence. The UPC Testing item read
-  remained an upstream 502, and the COD "COD" acceptance send is still
-  deferred.
+  returned no data, and the COD `COD` acceptance send is still deferred.
 
 ## Constraints Retained
 
