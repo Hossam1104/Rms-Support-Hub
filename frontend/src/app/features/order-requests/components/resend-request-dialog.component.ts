@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { BranchOption } from '../../../core/models';
 import { SearchableSelectComponent } from '../../../shared/ui';
+import { canResend as canResendStatus } from '../resend-eligibility';
 
 @Component({
   selector: 'app-resend-request-dialog',
@@ -18,12 +19,17 @@ import { SearchableSelectComponent } from '../../../shared/ui';
         <button type="button" class="close-btn" (click)="close.emit()"><i class="bi bi-x-lg"></i></button>
       </div>
 
-      <div class="blocked-banner" *ngIf="!canResend">
+      <div class="blocked-banner" *ngIf="!isEligible()">
         This order cannot be resent: {{ blockedReason }}
       </div>
 
-      <ng-container *ngIf="canResend">
-        <p class="dialog-desc">Rebuilds the payload from this request's own stored data and sends it to the selected branch. Currently recorded branch: <strong>{{ currentBranchCode || 'none' }}</strong>.</p>
+      <ng-container *ngIf="isEligible()">
+        <div class="resend-facts">
+          <div><span>Current status</span><strong>{{ statusLabel || 'Unknown' }}</strong></div>
+          <div><span>Target environment</span><strong>{{ environmentKey || 'Current environment' }}</strong></div>
+          <div><span>Original number</span><strong class="mono">{{ orderNumber }}</strong></div>
+        </div>
+        <p class="dialog-desc">The original stored request and the same order number will be sent again. No replacement number will be generated. Currently recorded branch: <strong>{{ currentBranchCode || 'none' }}</strong>.</p>
 
         <div class="form-group">
           <app-searchable-select
@@ -42,7 +48,7 @@ import { SearchableSelectComponent } from '../../../shared/ui';
 
         <div class="dialog-actions">
           <button type="button" class="btn-secondary" (click)="close.emit()">Close</button>
-          <button type="button" class="btn-brand" [disabled]="!selectedBranch || submitting" (click)="confirm.emit(selectedBranch)">
+          <button type="button" class="btn-brand" [disabled]="!selectedBranch || submitting || !isEligible()" (click)="onConfirm()">
             {{ submitting ? 'Resending...' : 'Resend order' }}
           </button>
         </div>
@@ -65,6 +71,11 @@ import { SearchableSelectComponent } from '../../../shared/ui';
     .dialog-header h3 { flex: 1; margin: 0; font-size: 1.05rem; color: var(--text-primary); }
     .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
     .dialog-desc { color: var(--text-secondary); font-size: 0.88rem; margin: 0 0 14px; }
+    .resend-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
+    .resend-facts div { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 9px 10px; background: var(--surface-raised); border-radius: var(--radius-sm); }
+    .resend-facts span { color: var(--text-muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .03em; }
+    .resend-facts strong { overflow: hidden; color: var(--text-primary); font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
     .blocked-banner { background: var(--state-danger-bg); color: var(--state-danger-fg); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.88rem; }
     .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
     .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
@@ -78,7 +89,10 @@ import { SearchableSelectComponent } from '../../../shared/ui';
 export class ResendRequestDialogComponent implements OnInit {
   @Input() orderNumber: string = '';
   @Input() currentBranchCode: string | null = null;
-  @Input() canResend: boolean = true;
+  @Input() canResend: boolean = false;
+  @Input() status: number | null = null;
+  @Input() statusLabel: string | null = null;
+  @Input() environmentKey: string | null = null;
   @Input() blockedReason: string = '';
   @Input() branches: BranchOption[] = [];
   @Input() branchesLoading = false;
@@ -94,6 +108,16 @@ export class ResendRequestDialogComponent implements OnInit {
 
   ngOnInit() {
     this.selectedBranch = this.currentBranchCode || '';
+  }
+
+  isEligible(): boolean {
+    return this.canResend && canResendStatus(this.status ?? this.statusLabel);
+  }
+
+  onConfirm() {
+    const branchCode = this.selectedBranch.trim();
+    if (!branchCode || this.submitting || !this.isEligible()) return;
+    this.confirm.emit(branchCode);
   }
 
   @HostListener('document:keydown.escape')

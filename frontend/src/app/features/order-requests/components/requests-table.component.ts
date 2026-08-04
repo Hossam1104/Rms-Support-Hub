@@ -49,9 +49,11 @@ const CANCELLED_STATUSES = new Set([6, 7]);
         </app-empty-state>
       } @else {
         <cdk-virtual-scroll-viewport itemSize="56" class="table-body" [class.dimmed]="store.status() === 'loading'">
-          <div
+          <button
+            type="button"
             *cdkVirtualFor="let row of store.items(); let i = index"
             class="table-row"
+            [attr.aria-label]="'Open order request ' + row.orderNumber + ' (' + row.id + ')'"
             [class.row-failed]="row.isSucceeded === false"
             [class.row-cancelled]="isCancelled(row)"
             [style.animationDelay.ms]="Math.min(i, 20) * 30"
@@ -78,7 +80,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
               <span class="badge" [class.badge-lit]="row.hasResponse">RES</span>
             </span>
             <span class="row-action"><i class="bi bi-chevron-right"></i></span>
-          </div>
+          </button>
         </cdk-virtual-scroll-viewport>
       }
       </div>
@@ -98,14 +100,23 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     .table-body.dimmed { opacity: 0.55; }
     .table-row {
       height: 56px;
+      width: 100%;
+      box-sizing: border-box;
       border-bottom: 1px solid var(--divider);
+      border-top: 0;
+      border-left: 0;
+      border-right: 0;
+      background: transparent;
       cursor: pointer;
       font-size: 0.85rem;
       color: var(--text-primary);
+      font-family: inherit;
+      text-align: left;
       transition: background var(--transition-fast);
       animation: rowStaggerIn var(--d-slow) var(--ease-spring) backwards;
     }
     .table-row:hover { background: var(--table-row-hover); }
+    .table-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .table-row.row-failed { border-left: 3px solid var(--state-danger-border); background: var(--state-danger-bg); }
     .table-row.row-cancelled { opacity: 0.65; }
     @keyframes rowStaggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
