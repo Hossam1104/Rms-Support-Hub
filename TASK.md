@@ -41,6 +41,5 @@ Production-safety contracts.
 ## Closeout
 
 The feature branch was committed as logical backend, UI state, UI design, and
-documentation changes, then merged into local `main` with a no-fast-forward
-merge. Repository synchronization and temporary-branch cleanup are the final
-closeout steps. No deploy.
+documentation changes, merged into local `main` with a no-fast-forward merge,
+pushed to `origin/main`, and deleted after synchronization. No deploy.
