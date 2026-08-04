@@ -142,10 +142,11 @@ drawer surfaces.
 
 ### List
 - **`GET /api/modules/{key}/order-requests`**
-- **Query**: `q` (alias for `orderNumber`), `orderNumber`, `phone`, `branchCode`, `status` (single value, 1–9), `statuses` (repeated, e.g. `?statuses=6&statuses=7` — R9 multi-select status chips; takes precedence over `status` when both are given), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC`).
+- **Query**: `q` (alias for `orderNumber`), `orderNumber`, `exactMatch` (optional; defaults to `true`), `phone`, `branchCode`, `status` (single value, 1–9), `statuses` (repeated, e.g. `?statuses=6&statuses=7` — multi-select status chips; takes precedence over `status` when both are given), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC`).
 - **Response `200 OK`**: `{ items: OrderRequestListItemDto[], page, pageSize, total, totalPages, stats: OrderRequestStatsDto }`.
 - The list query never selects `RequestJson`/`ResponseJson` — only `DATALENGTH(RequestJson) AS requestBytes` and a `hasResponse` flag, so the grid stays fast regardless of blob size.
-- `statuses`/`status` both filter on `H.OrderStatus` (the `OUTER APPLY`'d header), same as every other header-derived filter (`branchCode`, `dateFrom`/`dateTo`) — these hit the missing-index gap on `RequestOrderHeaders`/`Invoices` documented since R4 (not a new regression); only `orderNumber` is a fast, indexed lookup today.
+- Exact order searches use `R.OrderNumber = @OrderNumber` by default. `exactMatch=false` uses an escaped contains predicate for the supported partial-search behavior. Phone input is normalized to its last nine digits and matches `RIGHT(H.ConsumerMobile, 9)`; branch and status use canonical `BranchCode`/`OrderStatus` values from the latest matching header. Date bounds use `R.OrderDate >= @DateFrom` and an exclusive next-day `R.OrderDate < DATEADD(day, 1, @DateTo)` boundary.
+- The list, count, and stats reads share one normalized filter model. Header-derived filters use the ranked latest-header CTE; base-only list filters page `OrderRequests` before applying the latest header/invoice projections. Count and stats use distinct request IDs, and the list never returns raw request/response JSON.
 
 ### Detail
 - **`GET /api/modules/{key}/order-requests/{id}`**

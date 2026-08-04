@@ -56,10 +56,11 @@ keep 17 first, or keep both in a fallback list with 18 first and a short
 | `Branches` | `Id, Name, NativeName, BranchCode, IsActive, Address, VatNumber, LATIDUTE, Description, InternalDeliveryDistance, MaximumDeliveryDistance, Email, OpeningTimes, Phone1, Phone2, LONGITUDE, Area, Fax, RegionId, SalesDistrictId, SalesOfficeId, NationalSalesManagerId, StoreManagerId, RegionManagerId, ASS_StoreManagerId, StoreManager2Id, StoreManager3Id, Labour1Id, Labour2Id, Labour3Id, PhyscianId, ClinicpharmacistId, NutrionanestId, RasdGlnNumber, RasdUserName, RasdPassword, IsRasdEnable, LastOnline, MonthlyTarget, DeliveryFees, BranchInstallStatus, CreatedBy, CreatedOn, ModifiedBy, LastModifiedOn, IsDeleted, DeletedBy, WasfatyPassword, WasfatySenderId, WasfatyUserName, WasfatyDivision, LocationCityId, BranchGroupId, InstallationGuid, ReleaseNumber, MachinesAdminUserName, MachinesAdminEncryptedPassword, CommercialRegistration, IsEnableUploadCashClearanceToERP, IsEnableUploadInvoicesToERP, IsTestingBranch, QitafBranchCode, TenantId, UploadInvoicesToErpType, UploadTillTime, IsZatcaEnable, CloseTime, OpenTime, IsOnline, DefaultCurrencyId, DefaultBranchCurrencyId` | PK: `Id`. Human-readable name: `Name` (English), `NativeName` (Arabic). `BranchCode` is nullable and is what `BranchItemUnitOfMeasures`/`RequestOrderHeaders` join on. Active flag: **`IsActive`** (bit, `NOT NULL`) — filter a branch picker on this; also note `IsDeleted` (bit, `NOT NULL`) and `IsTestingBranch` (bit, `NOT NULL`), which a picker should likely also exclude/flag but which U3 must decide on explicitly rather than assume. Confirmed live against server `10.10.8.181`, database `RmsMainTest2`, via `sqlcmd`/ODBC Driver 18, 2026-07-26 — see §5 note below on why this host, not `10.10.10.181`, is used for the database connection. |
 
 **Neither `OrderRequests` nor `Invoices` is 1:1 with `OrderNumber`** — retries
-and re-invoicing both create extra rows for the same order number. Every join
-onto either table must be `OUTER APPLY (SELECT TOP 1 … ORDER BY Id DESC)`,
-never a plain `JOIN`/`LEFT JOIN`, or a single header row silently multiplies
-into duplicate result rows.
+and re-invoicing both create extra rows for the same order number. Any
+projection of a single latest header/invoice row must preserve the
+`ORDER BY Id DESC` rule: the base-only list path uses `OUTER APPLY TOP 1`,
+while header-filtered list/count/stats paths use the equivalent ranked
+`LatestHeaders` CTE. A plain unranked join would multiply request rows.
 
 ## 2. Order status decode map
 
@@ -198,43 +199,43 @@ are already saved in table `OrderRequests`, so no need to save them
 locally."* **`OrderRequests` is the base table**, not `RequestOrderHeaders`
 — an earlier draft of this repository (`UpcOrderValidationRepository`,
 deleted in R5) queried `RequestOrderHeaders` first, which meant orders that
-never produced a header (most failures) were invisible. `RequestOrderHeaders`
-and `Invoices` are joined via `OUTER APPLY TOP 1` for the reason in §1.
+never produced a header (most failures) were invisible. The list repository
+uses two verified shapes: base-only filters page `OrderRequests` first and
+then apply the latest header/invoice lookups; phone, branch, and status
+filters use a `LatestHeaders` CTE with `ROW_NUMBER() OVER (PARTITION BY
+OrderNumber ORDER BY Id DESC)` so the latest header is joined before filtering.
 
 ```sql
 -- List (OnlineOrderTool.Data/Repositories/OrderRequestRepository.cs::BuildListSql)
 -- RequestJson/ResponseJson are never selected here -- only DATALENGTH/existence,
 -- so the list stays fast regardless of blob size. Paginated with OFFSET/FETCH.
-SELECT
-    R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
-    DATALENGTH(R.RequestJson) AS RequestBytes,
-    CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse,
-    H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber,
-    I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
-FROM dbo.OrderRequests AS R
-    OUTER APPLY (
-        SELECT TOP 1 Id, BranchCode, BranchName, OrderStatus, ParentOrderNumber
-        FROM dbo.RequestOrderHeaders
-        WHERE OrderNumber = R.OrderNumber
-        ORDER BY Id DESC
-    ) AS H
-    OUTER APPLY (
-        SELECT TOP 1 Barcode, CloseDateLocalTime
-        FROM dbo.Invoices
-        WHERE OnlineOrderNumber = R.OrderNumber
-        ORDER BY Id DESC
-    ) AS I
-WHERE 1 = 1
-  -- AND R.OrderNumber = @OrderNumber                      -- the only filter that hits an index today (see §6)
-  -- AND RIGHT(H.ConsumerMobile, 9) = @Phone9
-  -- AND H.BranchCode = @BranchCode
-  -- AND H.OrderStatus = @Status                            -- or: AND H.OrderStatus IN @Statuses (R9 multi-select)
-  -- AND R.IsSucceeded = @Succeeded
-  -- AND R.ExceptionMessage IS [NOT] NULL
-  -- AND R.OrderDate >= @DateFrom
-  -- AND R.OrderDate < DATEADD(day, 1, @DateTo)
-ORDER BY R.OrderDate DESC, R.Id DESC
-OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
+-- Canonical predicates are shared by list, count, and stats.
+-- Base-only list path (order number, outcome, exception, dates):
+WITH PagedRequests AS (
+    SELECT R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount,
+           R.IsSucceeded, DATALENGTH(R.RequestJson) AS RequestBytes,
+           CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse
+    FROM dbo.OrderRequests AS R
+    WHERE R.OrderDate >= @DateFrom
+      AND R.OrderDate < DATEADD(day, 1, @DateTo)
+    ORDER BY R.OrderDate DESC, R.Id DESC
+    OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+)
+SELECT R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount,
+       R.IsSucceeded, R.RequestBytes, R.HasResponse,
+       H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus,
+       H.ParentOrderNumber,
+       I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
+FROM PagedRequests AS R
+OUTER APPLY (SELECT TOP 1 Id, BranchCode, BranchName, OrderStatus,
+                    ParentOrderNumber, ConsumerMobile
+             FROM dbo.RequestOrderHeaders
+             WHERE OrderNumber = R.OrderNumber
+             ORDER BY Id DESC) AS H
+OUTER APPLY (SELECT TOP 1 Barcode, CloseDateLocalTime
+             FROM dbo.Invoices
+             WHERE OnlineOrderNumber = R.OrderNumber
+             ORDER BY Id DESC) AS I;
 ```
 
 **Detail** (`GetDetailAsync`) is the only query that reads the blobs, keyed
@@ -282,27 +283,32 @@ settles quickly rather than hanging.
 
 ---
 
-## 6. Known performance gap — missing indexes on the OUTER APPLY join columns
+## 6. Order Requests performance indexes
 
-Diagnosed in R4 via `sys.indexes`/`sys.index_columns` and reproduced
-consistently through R5/R9: `RequestOrderHeaders.OrderNumber` and
-`Invoices.OnlineOrderNumber` have **no index** on this database, unlike
-`OrderRequests.OrderNumber`. Any §3.4 list/count/stats query filtered on a
-header-derived column (`branchCode`, `status`/`statuses`, `dateFrom`/`dateTo`,
-`phone`) times out ("Execution Timeout Expired") once the table has enough
-rows, because SQL Server cannot push the filter below the correlated
-`OUTER APPLY` — it must evaluate the join for every `OrderRequests` row
-before it can filter. **Filtering by `orderNumber` alone is unaffected**
-(it filters the base table directly, before any join). This is an
-infrastructure gap, not a query defect — confirmed by the exact same query
-shape succeeding instantly when scoped by `orderNumber`. Creating the
-indexes below is a DDL decision on a shared production database, out of
-scope for any single remediation session; whoever owns that SQL Server
-instance should run:
+The original live reproduction showed the unfiltered list/stats path timing
+out around the 15-second command limit. `RequestOrderHeaders.OrderNumber` and
+`Invoices.OnlineOrderNumber` had no supporting join/order indexes in the UPC
+Testing database, while the base `OrderRequests` search was already indexed.
+The repository now also avoids loading raw JSON in list results, pages base
+rows before lookups when filters permit, and ranks headers once when a
+header-derived filter is required.
+
+The reviewed, idempotent external-database script is
+[`docs/sql/order-requests-performance-indexes.sql`](sql/order-requests-performance-indexes.sql).
+It adds these covering indexes when they are absent:
 
 ```sql
-CREATE NONCLUSTERED INDEX IX_RequestOrderHeaders_OrderNumber
-    ON dbo.RequestOrderHeaders (OrderNumber);
-CREATE NONCLUSTERED INDEX IX_Invoices_OnlineOrderNumber
-    ON dbo.Invoices (OnlineOrderNumber);
+IX_RequestOrderHeaders_OrderNumber_Id
+    (RequestOrderHeaders.OrderNumber, Id DESC)
+    INCLUDE (BranchCode, BranchName, OrderStatus, ParentOrderNumber, ConsumerMobile)
+IX_Invoices_OnlineOrderNumber_Id
+    (Invoices.OnlineOrderNumber, Id DESC)
+    INCLUDE (Barcode, CloseDateLocalTime)
 ```
+
+The script was applied only to the approved UPC Testing database during the
+2026-08-04 read-only verification. The unfiltered API read then returned HTTP
+200 in roughly 2.4 seconds instead of the prior timeout/HTTP 500; branch
+filtering returned in roughly 0.6 seconds. Production remains untouched and
+requires separate database-owner approval. The script includes guarded
+rollback statements; it is not part of the application migration pipeline.

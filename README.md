@@ -191,11 +191,14 @@ cd frontend && npm run build
 3. **Uni-Commerce invoice builder** — invoice headers, consumer details,
    row items, `IsReturn`/parent-reference logic, live calculated totals.
 4. **Order Requests** — reads the real `OrderRequests` table (not a local
-   file): a filterable, paginated list with four live stat tiles and a
-   route-level detail page (Items / Order Info / Transactions / Request JSON /
-   Response JSON) with server-enforced cancel and same-number resend. The
-   historical `/requests` and `/validation` paths redirect to this canonical
-   route.
+   file): an explicitly applied, paginated filter workbench with exact or
+   escaped partial order search, last-nine-digit phone search, four live stat
+   tiles, and a route-level detail page (Items / Order Info / Transactions /
+   Request JSON / Response JSON) with server-enforced cancel and same-number
+   resend. The historical `/requests` and `/validation` paths redirect to
+   this canonical route. External database support indexes are documented in
+   `docs/sql/order-requests-performance-indexes.sql` and require per-database
+   owner approval.
 5. **Bold-gradient design system** — a shared UI kit
    (`frontend/src/app/shared/ui/`) built on design tokens; see
    `docs/design-system.md`.
