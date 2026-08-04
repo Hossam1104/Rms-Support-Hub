@@ -14,9 +14,14 @@ Do not copy facts that can be cheaply discovered from the repository.
 - UPC item pricing is branch-specific. A valid branch code is required before
   item lookup, and 6-digit UPC material numbers normalize to the stored
   18-digit form.
-- Flat orders require identity/address fields, at least one product, and at
-  least one supported payment. Payment-status and full-settlement rules are
-  enforced in `FlatOrderValidator`.
+- Flat orders require identity/address fields and at least one product. A
+  payment is optional: an empty payment list is the verified Cash on Delivery
+  state, not an error. Payment-status and full-settlement rules are enforced in
+  `FlatOrderValidator` and apply only to payments that are actually present.
+- The Saudi country code lives in its own payload key
+  (`client_country_code`/`order_country_code`); the number fields carry the
+  bare local subscriber number. `Normalizers.NormalizeLocalPhone` is the
+  authoritative split and runs inside `FlatOrderPayloadBuilder`.
 - Order status controls cancel/resend eligibility through
   `OrderRequestStatus`; controllers re-check these rules server-side.
 
