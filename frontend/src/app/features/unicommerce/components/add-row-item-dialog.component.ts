@@ -2,12 +2,12 @@ import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RowItem } from '../../../core/models';
-import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
+import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-add-row-item-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
+  imports: [CommonModule, FormsModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
   template: `
     <div class="modal-backdrop" (click)="close.emit()">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
@@ -26,11 +26,15 @@ import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent 
           <ui-field label="Quantity" forId="row-quantity" [required]="true">
             <ui-input inputId="row-quantity" type="number" step="0.01" [(ngModel)]="item.quantity"></ui-input>
           </ui-field>
-          <ui-field label="Item Price (SAR)" forId="row-price" [required]="true">
-            <ui-input inputId="row-price" type="number" step="0.01" [(ngModel)]="item.itemPrice"></ui-input>
+          <ui-field label="Item Price" forId="row-price" [required]="true">
+            <ui-input inputId="row-price" type="number" step="0.01" [(ngModel)]="item.itemPrice">
+              <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+            </ui-input>
           </ui-field>
-          <ui-field label="Item Discount (SAR)" forId="row-discount">
-            <ui-input inputId="row-discount" type="number" step="0.01" [(ngModel)]="item.itemDiscount"></ui-input>
+          <ui-field label="Item Discount" forId="row-discount">
+            <ui-input inputId="row-discount" type="number" step="0.01" [(ngModel)]="item.itemDiscount">
+              <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+            </ui-input>
           </ui-field>
           <ui-field label="VAT %" forId="row-vat">
             <ui-input inputId="row-vat" type="number" step="0.01" [(ngModel)]="item.vatPercentage"></ui-input>

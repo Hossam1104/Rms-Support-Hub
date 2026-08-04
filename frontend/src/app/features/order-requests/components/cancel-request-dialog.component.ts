@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, HostListener, signal } from '@a
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
-import { JsonTreeComponent } from '../../../shared/ui';
+import { JsonTreeComponent, RiyalComponent } from '../../../shared/ui';
 
 export interface CancelDialogResult {
   reason: string;
@@ -28,7 +28,7 @@ const QUICK_REASONS = ['Customer request', 'Out of stock', 'Duplicate order', 'W
 @Component({
   selector: 'app-cancel-request-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, A11yModule, JsonTreeComponent],
+  imports: [CommonModule, FormsModule, A11yModule, JsonTreeComponent, RiyalComponent],
   template: `
     <div class="dialog-backdrop" (click)="close.emit()"></div>
     <div class="dialog-panel" cdkTrapFocus cdkTrapFocusAutoCapture role="alertdialog" aria-modal="true">
@@ -43,7 +43,7 @@ const QUICK_REASONS = ['Customer request', 'Out of stock', 'Duplicate order', 'W
       </div>
 
       <ng-container *ngIf="canCancel">
-        <p class="dialog-desc">This sends a cancellation request to the upstream RMS API. Net total: <strong>{{ netTotal | number:'1.2-2' }} SAR</strong>.</p>
+        <p class="dialog-desc">This sends a cancellation request to the upstream RMS API. Net total: <strong><app-riyal [size]=".9"></app-riyal>{{ netTotal | number:'1.2-2' }}</strong>.</p>
 
         <div class="quick-reasons">
           @for (r of quickReasons; track r) {

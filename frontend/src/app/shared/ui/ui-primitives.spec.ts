@@ -7,12 +7,35 @@ import { UiSectionComponent } from './ui-section/ui-section.component';
 import { UiSelectComponent } from './ui-select/ui-select.component';
 import { UiTableComponent } from './ui-table/ui-table.component';
 import { UiToolbarComponent } from './ui-toolbar/ui-toolbar.component';
+import { RiyalComponent } from './riyal/riyal.component';
 
 describe('U5 shared UI primitives', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSectionComponent, UiSelectComponent, UiTableComponent, UiToolbarComponent]
+      imports: [UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSectionComponent, UiSelectComponent, UiTableComponent, UiToolbarComponent, RiyalComponent]
     }).compileComponents();
+  });
+
+  it('renders the Riyal asset as a masked glyph with an accessible name', () => {
+    const fixture = TestBed.createComponent(RiyalComponent);
+    fixture.detectChanges();
+
+    // The glyph must be the shared asset, never literal "SAR"/"ر.س" text.
+    const icon = fixture.nativeElement.querySelector('.riyal-icon') as HTMLElement;
+    expect(icon).toBeTruthy();
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
+    expect(fixture.nativeElement.textContent).not.toContain('SAR');
+    expect(fixture.nativeElement.querySelector('.sr-only').textContent).toContain('Saudi Riyal');
+  });
+
+  it('drops the Riyal accessible name when an adjacent label already states the currency', () => {
+    const fixture = TestBed.createComponent(RiyalComponent);
+    fixture.componentRef.setInput('decorative', true);
+    fixture.componentRef.setInput('size', 0.85);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.sr-only')).toBeNull();
+    expect((fixture.nativeElement.querySelector('.riyal-icon') as HTMLElement).style.width).toBe('0.85em');
   });
 
   it('emits a button action but blocks disabled and loading activation', () => {

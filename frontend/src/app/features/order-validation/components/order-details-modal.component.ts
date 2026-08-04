@@ -2,12 +2,12 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { JsonViewerComponent } from '../../../shared/components/json-viewer/json-viewer.component';
 import { OrderRequestDetailResponse } from '../../../core/models';
-import { UiButtonComponent, UiCardComponent } from '../../../shared/ui';
+import { RiyalComponent, UiButtonComponent, UiCardComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-order-details-modal',
   standalone: true,
-  imports: [CommonModule, JsonViewerComponent, UiButtonComponent, UiCardComponent],
+  imports: [CommonModule, JsonViewerComponent, RiyalComponent, UiButtonComponent, UiCardComponent],
   template: `
     <div class="modal-backdrop" (click)="close.emit()">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
@@ -28,7 +28,7 @@ import { UiButtonComponent, UiCardComponent } from '../../../shared/ui';
           <section class="details-section" *ngIf="d.request.exceptionMessage"><h4 class="section-heading">Exception</h4><p class="exception-text">{{ d.request.exceptionMessage }}</p></section>
           <section class="details-section" *ngIf="d.request.invoice">
             <h4 class="section-heading">Invoice Details</h4>
-            <div class="info-grid"><div><strong>Barcode:</strong> {{ d.request.invoice.barcode }}</div><div><strong>Net Amount:</strong> {{ d.request.invoice.netAmount | number:'1.2-2' }} SAR</div><div><strong>Invoice Date:</strong> {{ d.request.invoice.closeDateLocalTime | date:'medium' }}</div></div>
+            <div class="info-grid"><div><strong>Barcode:</strong> {{ d.request.invoice.barcode }}</div><div><strong>Net Amount:</strong> <app-riyal [size]=".9"></app-riyal>{{ d.request.invoice.netAmount | number:'1.2-2' }}</div><div><strong>Invoice Date:</strong> {{ d.request.invoice.closeDateLocalTime | date:'medium' }}</div></div>
           </section>
           <div class="json-sections" *ngIf="d.request.requestJson"><app-json-viewer [data]="d.request.requestJson" title="Original Order Request JSON"></app-json-viewer><app-json-viewer *ngIf="d.request.responseJson" [data]="d.request.responseJson" title="Response JSON"></app-json-viewer></div>
         </div>

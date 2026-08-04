@@ -11,6 +11,24 @@ export interface ModuleDetailResponse {
 
 const ENV_STORAGE_PREFIX = 'onlineOrderTool.activeEnvironment.';
 
+/** Module keys pinned to the front of the dashboard, in this order. Anything
+ * unlisted keeps the backend's own order behind them, so adding a module
+ * server-side needs no change here. Declared as display priority rather than
+ * a template-level sort so every consumer of `modules()` sees one ordering. */
+const DISPLAY_PRIORITY = ['upc_ecommerce'];
+
+/** Stable ascending sort by display priority. `Array.prototype.sort` is
+ * specified as stable, so equal-priority modules keep the order the backend
+ * returned them in -- a backend reorder can never move UPC off the front,
+ * and can never scramble the rest either. */
+export function orderModulesForDisplay(modules: ModuleDto[]): ModuleDto[] {
+  const rank = (module: ModuleDto) => {
+    const index = DISPLAY_PRIORITY.indexOf(module.key);
+    return index === -1 ? DISPLAY_PRIORITY.length : index;
+  };
+  return [...modules].sort((a, b) => rank(a) - rank(b));
+}
+
 /**
  * The module list used to be ~90 lines of hardcoded environments, logos and
  * URLs duplicating the backend's own module registry (remediation_plan.md
@@ -32,7 +50,7 @@ export class ModuleService {
   async initialize(): Promise<void> {
     try {
       const modules = await firstValueFrom(this.api.get<ModuleDto[]>('modules'));
-      this.modules.set(modules ?? []);
+      this.modules.set(orderModulesForDisplay(modules ?? []));
     } catch (err) {
       console.error('Failed to load /api/modules at startup.', err);
       this.modules.set([]);

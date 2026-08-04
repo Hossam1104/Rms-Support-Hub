@@ -1,12 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DeliveryDetails } from '../../../core/models';
-import { UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
+import { RiyalComponent, UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-delivery-section',
   standalone: true,
-  imports: [CommonModule, UiCardComponent, UiFieldComponent, UiInputComponent],
+  imports: [CommonModule, RiyalComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
   template: `
     <ui-card variant="raised" class="card-section">
       <div uiCardHeader class="section-heading"><span class="section-title"><i class="bi bi-geo-alt" aria-hidden="true"></i> Delivery Details</span></div>
@@ -18,8 +18,10 @@ import { UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../sh
         <ui-field label="Delivery Location URL" forId="delivery-location-url">
           <ui-input inputId="delivery-location-url" type="url" placeholder="https://maps.google.com/..." [value]="delivery.deliveryLocationUrl || ''" (valueChange)="onFieldChange('deliveryLocationUrl', $event)"></ui-input>
         </ui-field>
-        <ui-field label="Delivery Fees (SAR)" forId="delivery-fees">
-          <ui-input inputId="delivery-fees" type="number" step="0.01" [value]="delivery.deliveryFees || 0" (valueChange)="onFieldChange('deliveryFees', $event)"></ui-input>
+        <ui-field label="Delivery Fees" forId="delivery-fees">
+          <ui-input inputId="delivery-fees" type="number" step="0.01" [value]="delivery.deliveryFees || 0" (valueChange)="onFieldChange('deliveryFees', $event)">
+            <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+          </ui-input>
         </ui-field>
         <ui-field label="Delivery Address" forId="delivery-address" class="full-width">
           <ui-input inputId="delivery-address" placeholder="Full street address..." [value]="delivery.deliveryAddress || ''" (valueChange)="onFieldChange('deliveryAddress', $event)"></ui-input>
