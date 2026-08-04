@@ -166,17 +166,14 @@ export interface OrderValidationSummary {
     .summary-rail__issues button { padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
     .summary-rail__issues button:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring-danger); }
     .summary-rail__issues .is-global { text-decoration: none; }
-    .summary-rail__environment-panel p:first-of-type { color: var(--text-primary); font-weight: 750; }
-    .summary-rail__endpoint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .summary-rail__endpoint { overflow-wrap: anywhere; }
     .summary-rail__custom { color: var(--state-info-fg) !important; }
-    .summary-rail__custom i { margin-right: 4px; }
     .summary-rail__actions { display: flex; flex-direction: column; gap: 9px; padding-top: 4px; }
     .summary-rail__actions ui-button { display: block; }
     .summary-rail__actions ui-button ::ng-deep .ui-button { width: 100%; }
     .summary-rail__action-hint { color: var(--text-muted); font-size: .72rem; line-height: 1.35; }
     .summary-action-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface-panel); box-shadow: var(--shadow-lg); }
-    .summary-action-bar__status, .summary-action-bar__actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .summary-action-bar__status { overflow: hidden; }
+    .summary-action-bar__status, .summary-action-bar__actions { display: flex; align-items: center; gap: 10px; }
     .summary-action-bar__environment { flex: 0 0 auto; padding: 4px 7px; border-radius: var(--radius-pill); background: var(--state-success-bg); color: var(--state-success-fg); font-size: .66rem; font-weight: 850; letter-spacing: .04em; }
     .summary-action-bar__environment.is-production { background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .summary-action-bar__total { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-primary); font-size: .92rem; font-weight: 850; white-space: nowrap; }
@@ -185,7 +182,6 @@ export interface OrderValidationSummary {
     .summary-action-bar__cod { flex: 0 0 auto; padding: 3px 7px; border-radius: var(--radius-pill); background: var(--state-info-bg); color: var(--state-info-fg); font-size: .7rem; font-weight: 800; white-space: nowrap; }
     .summary-action-bar__actions { flex: 0 0 auto; }
     @media (max-width: 620px) { .summary-action-bar { align-items: stretch; flex-direction: column; } .summary-action-bar__actions ui-button { flex: 1; } .summary-action-bar__actions { width: 100%; } }
-    @media (prefers-reduced-motion: reduce) { .summary-rail *, .summary-action-bar * { transition: none !important; animation: none !important; } }
   `]
 })
 export class OrderSummaryRailComponent {

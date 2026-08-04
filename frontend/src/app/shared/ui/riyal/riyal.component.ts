@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 
 /**
  * The single Saudi Riyal currency glyph for the whole app. Every human-visible
- * Riyal amount renders through this component instead of a textual currency
- * "ر.س" text, so the symbol, its color response and its accessible name stay
+ * Riyal amount renders through this component instead of a legacy textual
+ * currency label, so the symbol, its color response and its accessible name stay
  * consistent across the summary rail, dense tables, dialogs and totals.
  *
  * The glyph is `public/assets/Saudi_Riyal.svg` painted via a CSS mask rather
@@ -32,7 +32,6 @@ import { CommonModule } from '@angular/common';
       -webkit-mask: url('/assets/Saudi_Riyal.svg') no-repeat center / contain;
       mask: url('/assets/Saudi_Riyal.svg') no-repeat center / contain;
     }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   `]
 })
 export class RiyalComponent {

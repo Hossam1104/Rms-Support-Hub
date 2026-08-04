@@ -6,9 +6,9 @@ import { Component, input } from '@angular/core';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="ui-table-shell" [class.ui-table--dense]="dense()" [class.ui-table--sticky]="stickyHeader()" [class.ui-table--zebra]="zebra()">
+    <div class="ui-table-shell" [class.ui-table--dense]="dense()" [class.ui-table--sticky]="stickyHeader()" [class.ui-table--zebra]="zebra()" [class.ui-table--wide]="wide()">
       <table>
-        <caption *ngIf="caption()">{{ caption() }}</caption>
+        <caption *ngIf="caption()" [class.sr-only]="captionHidden()">{{ caption() }}</caption>
         <ng-content select="thead"></ng-content>
         <ng-content select="tbody"></ng-content>
         <ng-content select="tfoot"></ng-content>
@@ -20,6 +20,7 @@ import { Component, input } from '@angular/core';
     :host { display: block; min-width: 0; }
     .ui-table-shell { overflow: auto; max-width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-panel); }
     table { width: 100%; min-width: 520px; border-collapse: separate; border-spacing: 0; color: var(--text-primary); font-size: .86rem; }
+    .ui-table--wide table { min-width: 860px; }
     caption { padding: 12px 16px; color: var(--text-secondary); text-align: left; }
     th, td { padding: 13px 16px; border-bottom: 1px solid var(--divider); text-align: left; vertical-align: middle; }
     th { color: var(--text-secondary); background: var(--surface-raised); font-size: .74rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
@@ -37,6 +38,8 @@ export class UiTableComponent {
   readonly dense = input(false);
   readonly stickyHeader = input(false);
   readonly zebra = input(false);
+  readonly wide = input(false);
   readonly empty = input(false);
   readonly caption = input('');
+  readonly captionHidden = input(false);
 }

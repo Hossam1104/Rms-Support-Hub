@@ -16,7 +16,7 @@ import { EnvironmentDto } from '../../core/models';
         <span class="brand-subtitle">Multi-Client Order System</span>
       </div>
       <div class="navbar-actions">
-        <app-env-badge
+        <app-env-badge class="navbar-environment"
           *ngIf="moduleService.activeModule() as m"
           [environment]="moduleService.activeEnvironment()"
           [options]="m.environments"
@@ -67,7 +67,12 @@ import { EnvironmentDto } from '../../core/models';
       gap: 12px;
     }
     .theme-toggle { color: var(--text-secondary); }
-    @media (max-width: 560px) { .navbar { padding-inline: 14px; } .brand-subtitle { display: none; } :host ::ng-deep .theme-toggle .ui-button__projected { display: none; } }
+    @media (max-width: 560px) {
+      .navbar { padding-inline: 14px; }
+      .brand-subtitle { display: none; }
+      :host ::ng-deep .navbar-environment { display: none; }
+      :host ::ng-deep .theme-toggle .ui-button__projected { display: none; }
+    }
   `]
 })
 export class NavbarComponent {

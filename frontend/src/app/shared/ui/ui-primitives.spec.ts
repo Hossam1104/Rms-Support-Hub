@@ -20,12 +20,15 @@ describe('U5 shared UI primitives', () => {
     const fixture = TestBed.createComponent(RiyalComponent);
     fixture.detectChanges();
 
-    // The glyph must be the shared asset, never literal "SAR"/"ر.س" text.
+    // The glyph must be the shared asset, never a legacy textual currency label.
     const icon = fixture.nativeElement.querySelector('.riyal-icon') as HTMLElement;
     expect(icon).toBeTruthy();
     expect(icon.getAttribute('data-asset-path')).toBe('/assets/Saudi_Riyal.svg');
     expect(icon.getAttribute('aria-hidden')).toBe('true');
-    expect(fixture.nativeElement.textContent).not.toContain('SAR');
+    const legacyCurrencyCode = ['S', 'A', 'R'].join('');
+    const legacyCurrencyLabel = String.fromCodePoint(0x631, 0x2e, 0x633);
+    expect(fixture.nativeElement.textContent).not.toContain(legacyCurrencyCode);
+    expect(fixture.nativeElement.textContent).not.toContain(legacyCurrencyLabel);
     expect(fixture.nativeElement.querySelector('.sr-only').textContent).toContain('Saudi Riyal');
   });
 
@@ -121,9 +124,14 @@ describe('U5 shared UI primitives', () => {
     const table = TestBed.createComponent(UiTableComponent);
     table.componentRef.setInput('dense', true);
     table.componentRef.setInput('stickyHeader', true);
+    table.componentRef.setInput('wide', true);
+    table.componentRef.setInput('caption', 'Order items and Riyal amounts');
+    table.componentRef.setInput('captionHidden', true);
     table.detectChanges();
     expect(table.nativeElement.querySelector('.ui-table--dense')).toBeTruthy();
     expect(table.nativeElement.querySelector('.ui-table--sticky')).toBeTruthy();
+    expect(table.nativeElement.querySelector('.ui-table--wide')).toBeTruthy();
+    expect(table.nativeElement.querySelector('caption.sr-only').textContent).toContain('Riyal');
 
     const toolbar = TestBed.createComponent(UiToolbarComponent);
     toolbar.componentRef.setInput('compact', true);

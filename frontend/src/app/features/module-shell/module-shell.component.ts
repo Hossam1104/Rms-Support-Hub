@@ -36,9 +36,10 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
       padding: 30px;
       transition: margin-left var(--transition-normal);
       min-height: calc(100vh - var(--navbar-height));
+      min-width: 0;
     }
     @media (max-width: 768px) {
-      .main-content { margin-left: 0; padding: 20px 16px 32px; }
+      .main-content { margin-left: var(--sidebar-collapsed-width); padding: 20px 12px 32px; }
     }
   `]
 })

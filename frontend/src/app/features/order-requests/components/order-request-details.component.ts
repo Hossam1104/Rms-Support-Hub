@@ -9,7 +9,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { ModuleService } from '../../../core/services/module.service';
 import {
   StatusPillComponent, JsonTreeComponent, RiyalComponent, UiSectionComponent,
-  CopyButtonComponent, EmptyStateComponent, SkeletonComponent, ConfirmDialogComponent
+  CopyButtonComponent, EmptyStateComponent, SkeletonComponent, ConfirmDialogComponent, UiTableComponent
 } from '../../../shared/ui';
 import { CancelRequestDialogComponent, CancelDialogResult, CancelErrorState } from './cancel-request-dialog.component';
 import { ResendRequestDialogComponent } from './resend-request-dialog.component';
@@ -33,7 +33,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
   imports: [
     CommonModule, StatusPillComponent, JsonTreeComponent, RiyalComponent, UiSectionComponent,
     CopyButtonComponent, EmptyStateComponent, SkeletonComponent, CancelRequestDialogComponent,
-    ResendRequestDialogComponent, ConfirmDialogComponent
+    ResendRequestDialogComponent, ConfirmDialogComponent, UiTableComponent
   ],
   template: `
     <main class="order-details-page">
@@ -63,7 +63,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
       } @else if (store.selected(); as detail) {
         <header class="detail-header">
           <div class="detail-heading">
-            <button type="button" class="back-btn" (click)="onClose()">
+            <button type="button" class="action-btn secondary" (click)="onClose()">
               <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Order Requests
             </button>
             <div class="heading-row">
@@ -110,9 +110,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
         <div class="detail-sections">
           <ui-section title="Items" [collapsible]="false">
             @if (detail.request.details.length > 0) {
-              <div class="table-scroll">
-                <table class="detail-table">
-                  <caption class="sr-only">Order items and Riyal amounts</caption>
+              <ui-table class="detail-table" [dense]="true" [wide]="true" caption="Order items and Riyal amounts" [captionHidden]="true">
                   <thead>
                     <tr>
                       <th scope="col">Item</th>
@@ -140,7 +138,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                       </tr>
                     }
                   </tbody>
-                  <tfoot>
+                  <tfoot class="detail-table-footer">
                     <tr>
                       <th scope="row" colspan="4">Column sums</th>
                       <td class="align-right amount">{{ sumDiscount(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
@@ -148,8 +146,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                       <td class="align-right amount">{{ sumTotal(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
                     </tr>
                   </tfoot>
-                </table>
-              </div>
+              </ui-table>
             } @else {
               <app-empty-state icon="bi-box" title="No line items recorded"></app-empty-state>
             }
@@ -362,68 +359,58 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
   `,
   styles: [`
     :host { display: block; }
-    .order-details-page { display: flex; flex-direction: column; gap: 18px; padding-bottom: 32px; }
+    .order-details-page { display: flex; flex-direction: column; gap: 18px; }
     .detail-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
     .detail-heading { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-    .back-btn { display: inline-flex; align-items: center; gap: 7px; width: fit-content; padding: 0; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; font-size: .82rem; }
-    .back-btn:hover { color: var(--text-accent); }
-    .back-btn:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }
     .heading-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .eyebrow { margin: 0 0 3px; color: var(--text-muted); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .eyebrow { margin: 0 0 3px; }
     h1.order-number { margin: 0; color: var(--text-primary); font-size: clamp(1.35rem, 3vw, 2rem); }
-    .mono { font-family: 'JetBrains Mono', monospace; }
     .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .header-total { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; color: var(--text-primary); font-size: 1rem; font-weight: 750; }
-    .action-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); cursor: pointer; font: inherit; font-size: .82rem; font-weight: 650; }
+    .header-total { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); font-size: 1rem; font-weight: 750; }
+    .action-btn, .attempt-row, .lineage-node { cursor: pointer; font: inherit; }
+    .action-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font-size: .82rem; font-weight: 650; }
     .action-btn.brand { border: 0; background: var(--grad-brand); color: var(--on-gradient); }
     .action-btn.danger { border: 0; background: var(--grad-danger); color: var(--on-gradient); }
     .action-btn.secondary { background: var(--surface-interactive); }
     .action-btn:disabled { cursor: not-allowed; opacity: .45; }
-    .detail-context { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 11px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-secondary); font-size: .78rem; }
-    .detail-context strong { margin-right: 4px; color: var(--text-muted); font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; }
+    .detail-context { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 11px 14px; border: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: .78rem; }
     .blocked-hint { color: var(--state-warning-fg); }
     .detail-sections { display: flex; flex-direction: column; gap: 16px; }
-    .table-scroll { overflow-x: auto; }
-    .detail-table { width: 100%; min-width: 860px; border-collapse: collapse; font-size: .83rem; }
-    .detail-table th, .detail-table td { padding: 11px 10px; border-bottom: 1px solid var(--divider); text-align: left; vertical-align: middle; }
-    .detail-table thead th { color: var(--text-muted); font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
-    .detail-table tbody tr:hover { background: var(--surface-hover); }
-    .detail-table tfoot th, .detail-table tfoot td { border-bottom: 0; color: var(--state-success-fg); font-weight: 750; }
+    .detail-table-footer th, .detail-table-footer td { color: var(--state-success-fg); font-weight: 750; }
     .align-right { text-align: right !important; }
     .amount { white-space: nowrap; }
     .muted { color: var(--text-muted); }
     .small { display: block; font-size: .72rem; }
     .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 18px; margin: 0; }
     .field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .field dt, .field-label { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+    .eyebrow, .detail-context strong, .field dt, .field-label, .totals-grid span { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
     .field dd { margin: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: .86rem; }
     .amber-callout { display: flex; gap: 10px; margin-top: 18px; padding: 12px 16px; border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .84rem; }
     .totals-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
-    .totals-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; border-radius: var(--radius-md); background: var(--surface-raised); }
-    .totals-grid span { color: var(--text-muted); font-size: .7rem; font-weight: 750; text-transform: uppercase; }
+    .totals-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; }
     .totals-grid strong { color: var(--text-primary); font-size: .92rem; }
     .totals-grid .net strong { color: var(--accent); font-size: 1.05rem; }
     .consistency-check { display: flex; align-items: center; gap: 7px; margin-top: 14px; color: var(--state-success-fg); font-size: .78rem; }
     .consistency-check.mismatch { color: var(--state-warning-fg); }
-    .invoice-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 18px; padding: 15px; border-radius: var(--radius-md); background: var(--surface-raised); }
-    .subsection-title { margin: 22px 0 10px; color: var(--text-primary); font-size: .92rem; }
+    .detail-context, .invoice-card, .totals-grid > div, .transaction-card, .outcome-banner { border-radius: var(--radius-md); background: var(--surface-raised); }
+    .invoice-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 18px; padding: 15px; }
     .attempts-timeline { display: flex; flex-direction: column; gap: 4px; }
-    .attempt-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; font-size: .8rem; text-align: left; }
+    .attempt-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); font-size: .8rem; text-align: left; }
     .attempt-row:hover { background: var(--surface-hover); }
     .attempt-row.current { border-color: var(--accent); }
     .outcome-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--text-muted); }
     .dot-success { background: var(--state-success-fg); }
     .dot-danger { background: var(--state-danger-fg); }
     .lineage-trail { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-    .lineage-node { padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); cursor: pointer; font: inherit; font-size: .8rem; }
+    .lineage-node { padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); font-size: .8rem; }
     .lineage-node.current { border: 0; background: var(--grad-brand); color: var(--on-gradient); font-weight: 700; }
     .transaction-list { display: flex; flex-direction: column; gap: 10px; }
-    .transaction-card { display: flex; align-items: center; gap: 16px; padding: 13px 15px; border-radius: var(--radius-md); background: var(--surface-raised); }
+    .transaction-card { display: flex; align-items: center; gap: 16px; padding: 13px 15px; }
     .transaction-main { display: flex; flex-direction: column; gap: 3px; min-width: 150px; }
     .transaction-main span, .transaction-meta { color: var(--text-secondary); font-size: .78rem; }
     .transaction-meta { display: flex; flex: 1; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
     .transaction-amount { white-space: nowrap; }
-    .outcome-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 14px; border-radius: var(--radius-md); background: var(--surface-raised); font-weight: 700; }
+    .outcome-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 14px; font-weight: 700; }
     .outcome-banner.success { background: var(--state-success-bg); color: var(--state-success-fg); }
     .outcome-banner.danger { background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .exception-card { margin-bottom: 14px; padding: 14px 16px; border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
@@ -435,9 +422,8 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
     .state-panel p { max-width: 520px; margin: 0 0 8px; }
     .state-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
     .detail-skeleton { display: flex; flex-direction: column; gap: 16px; }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     @media (max-width: 720px) { .totals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .transaction-card { align-items: flex-start; flex-direction: column; gap: 8px; } .transaction-amount { align-self: flex-end; } }
-    @media (max-width: 520px) { .totals-grid { grid-template-columns: 1fr 1fr; } .header-actions { justify-content: flex-start; } }
+    @media (max-width: 520px) { .header-actions { justify-content: flex-start; } }
   `]
 })
 export class OrderRequestDetailsComponent implements OnDestroy {
