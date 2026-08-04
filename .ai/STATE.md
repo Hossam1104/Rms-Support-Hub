@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-04
-- **Branch:** `main`
-- **Release or milestone:** Final Order Requests UX, branch-selector stability,
-  Riyal renderer reconciliation, and same-number resend implementation.
+- **Branch:** `main` after the final-acceptance no-fast-forward merge
+- **Release or milestone:** Final acceptance hardening for Riyal provenance,
+  responsive token UI, branch-selector dismissal, and safe UPC Testing gates.
 
 ## Working State
 
@@ -25,8 +25,9 @@
   through focus restoration.
 - Every visible currency amount renders through `app-riyal`, which points to
   `/assets/Saudi_Riyal.svg` and inherits `currentColor`. The checked-in asset is
-  still a placeholder containing legacy text, so the approved vector asset is
-  an external completion dependency; no glyph was fabricated or downloaded.
+  the approved two-path SAMA vector; the canonical content SHA-1 is
+  `02b0fe79a4c8f39f6344682e7ef4dcb5f21cf938`, verified by
+  `npm run test:riyal-asset`.
 - Resend is allowed for known statuses 2, 3, 5, 6, 7, 8, and 9, and blocked
   for New (1), With_Delegate (4), and unknown values. The server reads the
   selected row's stored RequestJson, verifies `order_code`, changes only
@@ -37,6 +38,10 @@
 - The Order Requests list now uses a sea-glass/Atlantic token palette with
   responsive modern filter inputs, stable horizontal grid geometry, compact
   short-result viewports, and explicit loading/focus states.
+- Shared `ui-table` now supports wide/caption-hidden tables; global `.sr-only`
+  and `.mono` utilities remove repeated component CSS. The order-builder shell
+  uses a compact labelled sidebar rail and narrow page-header rules so forms,
+  grids, and controls stay within the viewport.
 - Order Requests searches normalize exact order numbers and phone input,
   cancel superseded list/branch/detail requests, and fail visibly after a
   15-second request timeout. The backend projects ConsumerMobile correctly,
@@ -47,29 +52,33 @@
 
 - Backend tests: 148/148 passed.
 - Frontend tests: 107/107 passed across 22 spec files.
+- `npm run test:riyal-asset`: passed; official vector structure and canonical
+  hash verified.
 - `dotnet build backend/OnlineOrderTool.slnx -c Release --nologo`: 0 warnings,
   0 errors.
-- `npm run build`: passed; Angular initial bundle 426.79 kB.
-  Angular emitted two existing/non-blocking style-budget warnings: the flat
-  order summary rail and the new Order Requests detail page exceed the 6 kB
-  warning budget but remain below the 8 kB error budget.
+- `npm run build`: passed; Angular initial bundle 426.93 kB with no style-budget
+  warnings. The 6 kB warning / 8 kB error budgets remain unchanged.
+- `scripts/build.ps1`: all checks passed after stopping the repo's local Debug
+  API process that had locked its own DLLs.
+- Local Edge headless desktop/mobile route screenshots loaded successfully.
 - `git diff --check` passed. No Production send, cancel, or resend was
   attempted.
 
 ## Deferred Acceptance
 
-- No in-app browser instance was available (`agent.browsers.list()` returned
-  no browsers), so responsive/theme/visual checks and visual confirmation of
-  the Riyal glyph remain unperformed.
-- No approved live Testing order was available for safe list/detail/send,
-  cancel, or resend verification. Local tests cover the status, payload, and
-  duplicate-submit guards.
+- No connected in-app browser instance was available
+  (`agent.browsers.list()` returned no browsers), so interactive theme and
+  outside-click evidence remains external; local Edge screenshots cover the
+  desktop/mobile layout.
+- UPC Testing metadata/branch reads were safe and read-only; the item lookup
+  returned HTTP 502. No explicitly approved synthetic QA branch/item was
+  available for a state-changing send/cancel/resend, and no Production action
+  was attempted. The COD `"COD"` acceptance send remains pending.
 
 ## Known Risks
 
-- `public/assets/Saudi_Riyal.svg`, `upc_logo.svg`, and `whites_logo.svg` need
-  approved asset replacements. The Riyal component path and color behavior are
-  ready, but the current Riyal file is not the approved glyph.
+- `upc_logo.svg` and `whites_logo.svg` remain separate existing asset review
+  items; the Riyal asset is now provenance-verified and no longer a placeholder.
 - Controllers do not provide application authentication/authorization, the
   shared RMS client defaults TLS verification off, and live SQL/API behavior
   remains environment-dependent.
@@ -79,6 +88,7 @@
 
 ## Programme Status
 
-- U0-U8 remain closed. The final Order Requests unification is implemented and
-  merged into local `main` with the requested no-fast-forward merge.
+- U0-U8 and Final Acceptance Hardening remain closed. The final Order Requests
+  unification plus acceptance hardening are implemented and merged into local
+  `main` with the requested no-fast-forward merge.
 - `.ai/HANDOFF.md` is Empty and there is no active implementation plan.

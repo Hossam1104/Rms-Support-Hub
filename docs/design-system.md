@@ -1,8 +1,8 @@
-# Design System - U5 dark-first foundation
+# Design System - dark-first foundation
 
 U5 establishes a shared visual language for the operational order desk. The
 primary theme is dark: ink/navy page and panel surfaces, a readable slate text
-ramp, one violet action accent, and semantic colors for success, warning,
+ramp, a sea-glass/Atlantic teal action accent, and semantic colors for success, warning,
 danger, information, and neutral states. Light is maintained as a complete
 secondary theme rather than a partial inversion.
 
@@ -90,8 +90,9 @@ The standalone signal-based components are exported through
 - `ui-button`: primary, secondary, ghost, and danger variants; small/medium
   sizes; icons; loading; disabled; submit/reset/button semantics; and a
   `pressed` output that ignores duplicate activation while busy.
-- `ui-table`: native table markup with dense, sticky-header, zebra, horizontal
-  overflow, caption, and empty-state projection.
+- `ui-table`: native table markup with dense, sticky-header, zebra, wide-table,
+  horizontal overflow, accessible/visually-hidden caption, and empty-state
+  projection.
 - `ui-toolbar`: start/center/end projection, compact mode, wrapping, and
   narrow-screen fallback.
 
@@ -108,10 +109,15 @@ buttons, filter chips, the Riyal glyph, page headers, and environment badges.
 All human-visible Saudi currency amounts use `app-riyal`; feature templates do
 not spell the currency as `SAR` or a textual abbreviation. The component points
 to the approved `/assets/Saudi_Riyal.svg` asset, uses the current text color,
-and keeps an accessible `Saudi Riyal` label. The repository currently contains
-a placeholder at that path, so visual approval is still required before the
-asset can be considered complete; do not redraw, download, or substitute a
-glyph in source code.
+and keeps an accessible `Saudi Riyal` label. The checked-in asset is the
+approved two-path SAMA vector from the [Saudi Riyal Symbol guideline]
+(https://sama.gov.sa/en-US/Currency/SRS/Pages/Guideline.aspx), with canonical
+SHA-1 `02b0fe79a4c8f39f6344682e7ef4dcb5f21cf938`. Its official direct asset
+URL is `https://sama.gov.sa/ar-sa/Currency/Documents/Saudi_Riyal_Symbol-2.svg`.
+Run
+`cd frontend; npm run test:riyal-asset` to verify its provenance, viewBox,
+path count, and absence of text or external references. The component paints it
+through a CSS mask so the symbol inherits `currentColor` in both themes.
 
 ### Searchable branch selector
 
@@ -145,8 +151,9 @@ the approved local-storage key `order-tool.sidebar-collapsed`. The sidebar
 uses `--sidebar-expanded-width` or `--sidebar-collapsed-width`; the module
 shell writes the matching value into its local `--sidebar-width` custom
 property, and `main-content` uses that variable for its offset. At narrow
-widths the main content releases the desktop offset while the sidebar remains
-an overlay surface.
+widths the sidebar becomes a compact, labelled icon rail and the main content
+uses the collapsed offset so forms and grids do not sit underneath an expanded
+navigation surface.
 
 ## Themes and reduced motion
 
@@ -174,4 +181,7 @@ production navigation and is tree-shaken from the production route graph.
   collapsible sections, dense tables, and server-totals summary rail.
 - U7 migrated the remaining feature pages and deleted the `.glass-*` bridge and
   aliases proven unused. U8 completed local verification and closed the UI
-  rework programme; browser and external Testing evidence remain deferred.
+  rework programme. Final acceptance hardening keeps the warning budgets
+  unchanged, removes the remaining component style-budget warnings, and adds
+  local desktop/mobile route evidence; connected interactive-browser and safe
+  live Testing evidence remain external gates.
