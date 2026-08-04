@@ -66,6 +66,23 @@ describe('SearchableSelectComponent', () => {
     expect(values).toEqual(['P900']);
   });
 
+  it('keeps the open option list stable while the mouse moves across options', () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance;
+
+    component.openPanel();
+    fixture.detectChanges();
+    const beforeActive = component.activeIndex;
+    const beforeOrder = component.filteredOptions.map(option => option.code);
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(component.open).toBe(true);
+    expect(component.activeIndex).toBe(beforeActive);
+    expect(component.filteredOptions.map(item => item.code)).toEqual(beforeOrder);
+  });
+
   it('closes on Escape', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;

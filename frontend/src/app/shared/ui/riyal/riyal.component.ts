@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 
 /**
  * The single Saudi Riyal currency glyph for the whole app. Every human-visible
- * Riyal amount renders through this component instead of literal "SAR" or
+ * Riyal amount renders through this component instead of a textual currency
  * "ر.س" text, so the symbol, its color response and its accessible name stay
  * consistent across the summary rail, dense tables, dialogs and totals.
  *
@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-riyal',
   standalone: true,
   imports: [CommonModule],
-  template: `<span class="riyal" [class.is-decorative]="decorative"><span class="riyal-icon" [style.width.em]="size" [style.height.em]="size" aria-hidden="true"></span><span class="sr-only" *ngIf="!decorative">Saudi Riyal</span></span>`,
+  template: `<span class="riyal" [class.is-decorative]="decorative"><span class="riyal-icon" data-asset-path="/assets/Saudi_Riyal.svg" [style.width.em]="size" [style.height.em]="size" aria-hidden="true"></span><span class="sr-only" *ngIf="!decorative">Saudi Riyal</span></span>`,
   styles: [`
     .riyal { display: inline-flex; align-items: center; }
     .riyal-icon {

@@ -40,7 +40,7 @@ let nextSelectId = 0;
             [itemSize]="40" [minBufferPx]="200" [maxBufferPx]="400" [id]="listboxId" role="listbox" [attr.aria-label]="label + ' options'">
             <button *cdkVirtualFor="let option of filteredOptions; let index = index" type="button" role="option" class="select-option"
               [id]="optionId(index)" [class.active]="index === activeIndex" [class.selected]="option.code === value"
-              [attr.aria-selected]="option.code === value" (mouseenter)="setActive(index)" (mousedown)="$event.preventDefault()" (click)="select(option)">
+              [attr.aria-selected]="option.code === value" (mousedown)="$event.preventDefault()" (click)="select(option)">
               {{ format(option) }}
             </button>
           </cdk-virtual-scroll-viewport>
@@ -62,7 +62,7 @@ let nextSelectId = 0;
     .clear-button:hover { background: var(--surface-hover); color: var(--text-primary); }
     .select-overlay { width: min(420px, calc(100vw - 32px)); margin-top: 4px; overflow: hidden; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); color: var(--text-primary); }
     .select-list { height: min(240px, 45vh); }
-    .select-option { display: block; width: 100%; height: 40px; padding: 0 12px; overflow: hidden; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .select-option { display: block; width: 100%; height: 40px; box-sizing: border-box; padding: 0 12px; overflow: hidden; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; line-height: 40px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
     .select-option:hover, .select-option.active { background: var(--surface-hover); }
     .select-option.selected { color: var(--text-accent); font-weight: 700; }
     .select-state { display: flex; align-items: center; gap: 8px; min-height: 68px; padding: 12px; color: var(--text-secondary); font-size: .86rem; }
@@ -165,7 +165,9 @@ export class SearchableSelectComponent {
 
   setActive(index: number) {
     this.activeIndex = index;
-    if (index >= 0) queueMicrotask(() => this.viewport?.scrollToIndex(index, 'smooth'));
+    // Keyboard navigation may move the virtualized list, but it must not
+    // animate the overlay while the operator is moving through options.
+    if (index >= 0) queueMicrotask(() => this.viewport?.scrollToIndex(index, 'auto'));
   }
 
   select(option: BranchOption) {
