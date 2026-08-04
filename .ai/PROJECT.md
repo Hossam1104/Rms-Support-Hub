@@ -70,14 +70,17 @@ Do not copy facts that can be cheaply discovered from the repository.
 ## Build and Validation Entry Points
 
 - Full gate: `.\scripts\build.ps1` - passed for the final Order Requests
-  unification on 2026-08-04 (146 backend tests, Release build, and production
-  Angular build; initial bundle 425.91 kB).
+  hardening on 2026-08-04 (148 backend tests, Release build, and production
+  Angular build; initial bundle 426.93 kB).
 - Backend tests: `dotnet test backend/OnlineOrderTool.slnx -c Release
-  --nologo` - passed 146/146 on 2026-08-04.
+  --nologo` - passed 148/148 on 2026-08-04.
 - Frontend production build/type check: `cd frontend; npm run build --
   --configuration production` - covered by the full gate on 2026-08-04.
-- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 105/105
-  across 21 spec files on 2026-08-04.
+- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 107/107
+  across 22 spec files on 2026-08-04.
+- Riyal asset provenance check: `cd frontend; npm run test:riyal-asset` -
+  verifies the approved SAMA vector's canonical SHA-1, SVG structure, and
+  absence of textual or external references.
 - Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
   4200; U8 verified the local API, frontend proxy, and route fallbacks without
   running a state-changing workflow.
@@ -122,8 +125,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   client-side financial calculations.
 - U7 completed the app-wide primitive migration and removed all `.glass-*`
   definitions, consumers, and unused compatibility aliases.
+- Final acceptance hardening keeps the token palette and 6 kB/8 kB style
+  budgets unchanged, uses shared wide/caption-hidden tables and global
+  accessibility utilities, and keeps narrow order-builder screens inside the
+  viewport with a compact labelled sidebar rail.
 - The final Order Requests unification owns the canonical route-level detail
   page, compatibility redirects, same-number resend contract, and removal of
-  the superseded validation component tree. Browser visual verification and
-  full safe Testing order population/send/cancel/resend evidence remain
+  the superseded validation component tree. A local Edge headless check covers
+  landing and UPC order-builder route rendering; connected interactive browser
+  and full safe Testing order population/send/cancel/resend evidence remain
   deferred; there is no active UI rework plan.

@@ -26,17 +26,17 @@ import { UiButtonComponent } from '../../shared/ui';
       </div>
 
       <nav class="sidebar-nav" aria-label="Module navigation">
-        <a *ngIf="moduleKey !== 'ghc_unicommerce'" routerLink="order" routerLinkActive="active" class="nav-item">
+        <a *ngIf="moduleKey !== 'ghc_unicommerce'" routerLink="order" routerLinkActive="active" class="nav-item" aria-label="Order Builder" title="Order Builder">
           <i class="bi bi-speedometer2"></i>
           <span class="nav-label" *ngIf="!collapsed()">Order Builder</span>
         </a>
 
-        <a *ngIf="moduleKey === 'ghc_unicommerce'" routerLink="unicommerce" routerLinkActive="active" class="nav-item">
+        <a *ngIf="moduleKey === 'ghc_unicommerce'" routerLink="unicommerce" routerLinkActive="active" class="nav-item" aria-label="Invoice Builder" title="Invoice Builder">
           <i class="bi bi-file-earmark-spreadsheet"></i>
           <span class="nav-label" *ngIf="!collapsed()">Invoice Builder</span>
         </a>
 
-        <a routerLink="order-requests" routerLinkActive="active" class="nav-item">
+        <a routerLink="order-requests" routerLinkActive="active" class="nav-item" aria-label="Order Requests" title="Order Requests">
           <i class="bi bi-clock-history"></i>
           <span class="nav-label" *ngIf="!collapsed()">Order Requests</span>
         </a>
@@ -75,7 +75,14 @@ import { UiButtonComponent } from '../../shared/ui';
     .back-link { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .85rem; font-weight: 500; text-decoration: none; }
     .back-link:hover { color: var(--text-accent); }
     .back-link:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }
-    @media (max-width: 768px) { .sidebar { box-shadow: var(--shadow-lg); } }
+    @media (max-width: 768px) {
+      .sidebar { width: var(--sidebar-collapsed-width); box-shadow: var(--shadow-lg); }
+      .sidebar-header { min-height: 56px; justify-content: center; padding: 10px 8px; }
+      .brand-logo, .nav-label, .sidebar-footer { display: none; }
+      :host ::ng-deep ui-button.btn-toggle { display: none; }
+      .sidebar-nav { padding-inline: 8px; }
+      .nav-item { justify-content: center; padding-inline: 12px; }
+    }
   `]
 })
 export class SidebarComponent {

@@ -93,7 +93,6 @@ export interface ProductUpdate {
     .table-editor { width: 82px; min-height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: .82rem; }
     .table-editor--quantity { width: 68px; }
     .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     @media (max-width: 767px) { .table-panel__heading { flex: 1 1 auto; } }
   `]
 })

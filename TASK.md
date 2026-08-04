@@ -1,16 +1,16 @@
 # Current Task
 
-- **Task ID:** ORDER-REQUESTS-UNIFICATION
+- **Task ID:** FINAL-ACCEPTANCE-HARDENING
 - **Status:** Completed Locally
 - **Role:** Closed
 
 ## Objective
 
-Unify the Order Requests and superseded validation experiences, make the
-canonical detail view a stable full page, enforce the final resend rule using
-the selected stored request and original number, stabilize branch selection,
-reconcile Riyal rendering and project documentation, and prepare a clean local
-merge into `main`.
+Close the final acceptance gaps around the approved Riyal asset, modern token
+based form/grid styling, responsive layout, branch-selector dismissal, UPC
+Testing safety evidence, and the documented Cash-on-Delivery contract. Keep
+the work local and merge the completed hardening into `main` without pushing or
+deploying.
 
 ## Closeout
 
@@ -25,31 +25,46 @@ merge into `main`.
   leaves the historical row unchanged. Production confirmation and duplicate
   submit guards remain active.
 - Branch selection keeps fixed option geometry and keyboard ownership of the
-  active row. Visible amounts use the shared `app-riyal` renderer and its
-  approved asset path; the checked-in asset itself is still an unapproved
-  placeholder awaiting replacement.
+  active row; the CDK backdrop closes it on an outside click without stealing
+  focus back into the control. Visible amounts use the shared `app-riyal`
+  renderer and the approved two-path SAMA vector at its asset path.
+- Shared table/caption utilities, global accessibility helpers, and compact
+  narrow-screen shell rules keep modern fields and grids within the viewport;
+  component style budgets remain unchanged and no longer warn in production.
 - The consumer-free Order Validation component tree, duplicate navigation, and
   stale active documentation were removed or reconciled. ADR-0008 records the
   lasting route/resend decision.
+- Read-only UPC Testing metadata and branch discovery were exercised. The item
+  lookup returned an upstream 502, and no explicitly approved synthetic QA
+  branch/item was available, so send/cancel/resend was not attempted. No
+  Production action was attempted.
 - The implementation is merged into local `main` with the requested
   no-fast-forward merge. Nothing is pushed or deployed.
 
 ## Validation
 
-- Backend tests: 146/146 passed.
-- Frontend tests: 105/105 passed across 21 spec files.
+- Backend tests: 148/148 passed.
+- Frontend tests: 107/107 passed across 22 spec files.
+- `npm run test:riyal-asset`: passed; canonical SHA-1
+  `02b0fe79a4c8f39f6344682e7ef4dcb5f21cf938`, two vector paths, no text or
+  external references.
 - Release solution build: 0 warnings, 0 errors.
 - `scripts/build.ps1`: all checks passed; Angular production bundle generated
-  with two non-blocking style-budget warnings.
+  at 426.93 kB with no style-budget warnings.
+- Local Edge headless route checks loaded the landing and UPC order-builder
+  routes and captured desktop/mobile screenshots. The connected in-app browser
+  runtime remained unavailable, so interactive browser evidence is still
+  deferred.
 - No Production send, cancel, or resend was attempted.
 
 ## Deferred
 
-- No browser instance was available for responsive/theme visual verification.
-- No approved safe Testing order was available for live Order Requests,
-  send/cancel, or same-number resend evidence.
-- The approved `frontend/public/assets/Saudi_Riyal.svg` replacement is still
-  required; no symbol was fabricated, redrawn, or downloaded.
+- No connected in-app browser was available for interactive responsive/theme
+  or outside-click verification; local headless screenshots cover layout only.
+- No explicitly approved synthetic Testing order/branch/item was available for
+  live send/cancel or same-number resend evidence. The UPC Testing item read
+  remained an upstream 502, and the COD "COD" acceptance send is still
+  deferred.
 
 ## Constraints Retained
 
