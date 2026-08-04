@@ -1,8 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-04
-- **Branch:** `luna/order-requests-filter-fix` pending the requested merge to
-  local `main`, push, and temporary-branch cleanup.
+- **Branch:** `main` after the requested no-fast-forward merge from
+  `luna/order-requests-filter-fix`; push and temporary-branch cleanup are the
+  remaining repository synchronization steps.
 - **Release or milestone:** Order Requests database-filter correction and
   modern search-workbench closeout.
 
@@ -77,6 +78,6 @@
 ## Programme Status
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
-  hardening remain closed. This task is implemented locally and is in
-  repository closeout; `.ai/HANDOFF.md` remains Empty and there is no active
-  implementation plan.
+  hardening remain closed. This task is merged into local `main` and is in
+  repository synchronization closeout; `.ai/HANDOFF.md` remains Empty and
+  there is no active implementation plan.
