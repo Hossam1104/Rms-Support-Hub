@@ -127,6 +127,24 @@ options; hover does not change the active keyboard option or trigger animated
 overlay repositioning. Keyboard navigation remains responsible for active-row
 movement and scrolling.
 
+### Order Requests search workbench
+
+The Order Requests list uses an explicit-apply filter workbench because its
+reads can be expensive. The header owns the environment badge, manual refresh,
+30-second auto-refresh switch, and collapse control. Primary filters use the
+shared `ui-card`, `ui-field`, `ui-input`, `ui-button`, and
+`app-searchable-select` primitives; order number is exact by default and
+Enter submits an intentional search. Statuses occupy a separate multi-select
+chip row, while loading and retryable error states sit below the workbench
+instead of competing with status treatment.
+
+The workbench consumes only semantic tokens and the existing status gradients.
+At narrow widths it becomes a single-column layout, wraps active chips and
+status controls, keeps Apply/Clear reachable, and leaves the wide data grid's
+horizontal scrolling inside the table shell rather than on the page. Focus
+rings, programmatic labels, live loading/error regions, and reduced-motion
+rules remain part of the shared interaction contract.
+
 ## Toast behavior
 
 `ToastService` owns a signal-backed visible list and queue:

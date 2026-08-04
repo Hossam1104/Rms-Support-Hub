@@ -33,7 +33,7 @@ let nextSelectId = 0;
         [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="searchable-select-backdrop"
         (backdropClick)="closePanel(false)" (detach)="onOverlayDetach()">
         <section class="select-overlay" [attr.aria-label]="label + ' options'">
-          <div class="select-state" *ngIf="loading"><i class="bi bi-arrow-repeat spin"></i> Loading branches…</div>
+          <div class="select-state" *ngIf="loading"><i class="bi bi-arrow-repeat spin"></i> Loading branches...</div>
           <div class="select-state error" *ngIf="!loading && error"><span>{{ error }}</span><button type="button" (click)="refresh.emit()">Try again</button></div>
           <div class="select-state" *ngIf="!loading && !error && filteredOptions.length === 0">{{ options.length ? 'No matching branches.' : 'No branches are available.' }}</div>
           <cdk-virtual-scroll-viewport *ngIf="!loading && !error && filteredOptions.length" #viewport class="select-list"

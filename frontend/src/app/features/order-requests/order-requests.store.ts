@@ -13,6 +13,7 @@ export type QuickRange = 'today' | '7d' | '30d';
 
 export interface OrderRequestsFilterState {
   search: string;
+  exactMatch: boolean;
   phone: string;
   branchCode: string | null;
   statuses: number[];
@@ -22,7 +23,7 @@ export interface OrderRequestsFilterState {
 }
 
 export const EMPTY_FILTERS: OrderRequestsFilterState = {
-  search: '', phone: '', branchCode: null, statuses: [], outcome: 'all', dateFrom: null, dateTo: null
+  search: '', exactMatch: true, phone: '', branchCode: null, statuses: [], outcome: 'all', dateFrom: null, dateTo: null
 };
 
 /**
@@ -49,6 +50,9 @@ export class OrderRequestsStore {
   stats = signal<OrderRequestStats | null>(null);
   total = signal(0);
   status = signal<LoadStatus>('idle');
+  errorMessage = signal<string | null>(null);
+  lastUpdatedAt = signal<Date | null>(null);
+  autoRefresh = signal(false);
   branches = signal<BranchOption[]>([]);
   branchStatus = signal<LoadStatus>('idle');
   branchError = signal<string | null>(null);
@@ -69,7 +73,7 @@ export class OrderRequestsStore {
   activeFilterChips = computed(() => {
     const f = this.filters();
     const chips: { key: string; label: string }[] = [];
-    if (f.search) chips.push({ key: 'search', label: `Search: ${f.search}` });
+    if (f.search) chips.push({ key: 'search', label: `${f.exactMatch ? 'Order' : 'Contains'}: ${f.search}` });
     if (f.phone) chips.push({ key: 'phone', label: `Phone: ${f.phone}` });
     if (f.branchCode) chips.push({ key: 'branchCode', label: `Branch: ${f.branchCode}` });
     for (const s of f.statuses) chips.push({ key: `status:${s}`, label: `Status: ${s}` });
@@ -89,7 +93,7 @@ export class OrderRequestsStore {
   init(moduleKey: string, envKey: string | null, filters: OrderRequestsFilterState, page: number, pageSize: number) {
     this.moduleKey.set(moduleKey);
     this.envKey.set(envKey);
-    this.filters.set(filters);
+    this.filters.set(this.normalizeFilters(filters));
     this.page.set(page);
     this.pageSize.set(pageSize);
     this.loadBranches();
@@ -97,16 +101,24 @@ export class OrderRequestsStore {
   }
 
   setFilters(patch: Partial<OrderRequestsFilterState>) {
-    const normalizedPatch: Partial<OrderRequestsFilterState> = { ...patch };
-    if (patch.search !== undefined) normalizedPatch.search = patch.search.trim();
-    if (patch.phone !== undefined) normalizedPatch.phone = patch.phone.trim();
-    if (patch.branchCode !== undefined) normalizedPatch.branchCode = patch.branchCode?.trim() || null;
-    if (patch.statuses !== undefined) normalizedPatch.statuses = [...new Set(patch.statuses)];
-
-    const next = { ...this.filters(), ...normalizedPatch };
+    const next = this.normalizeFilters({ ...this.filters(), ...patch });
     if (this.sameFilters(this.filters(), next)) return;
 
     this.filters.set(next);
+    this.page.set(1);
+    this.load();
+  }
+
+  /** Commits a complete draft from the explicit-apply filter workbench. */
+  applyFilters(next: OrderRequestsFilterState) {
+    const normalized = this.normalizeFilters(next);
+    const changed = !this.sameFilters(this.filters(), normalized) || this.page() !== 1;
+    if (!changed) {
+      this.refresh();
+      return;
+    }
+
+    this.filters.set(normalized);
     this.page.set(1);
     this.load();
   }
@@ -169,20 +181,28 @@ export class OrderRequestsStore {
     this.load();
   }
   setEnvKey(envKey: string | null) { this.envKey.set(envKey); this.load(); this.loadBranches(); }
+  setAutoRefresh(enabled: boolean) { this.autoRefresh.set(enabled); }
 
   refresh() { this.load(); }
+  autoRefreshTick() {
+    if (this.status() === 'loading') return;
+    this.load({ auto: true });
+  }
 
-  load() {
+  load(options: { auto?: boolean } = {}) {
     const key = this.moduleKey();
     if (!key) return;
+    if (options.auto && this.status() === 'loading') return;
 
     this.listSubscription?.unsubscribe();
     const token = ++this.requestToken;
     this.status.set('loading');
+    this.errorMessage.set(null);
 
     const f = this.filters();
     const params: ApiParams = {
       orderNumber: f.search || undefined,
+      exactMatch: f.search ? f.exactMatch : undefined,
       phone: f.phone || undefined,
       branchCode: f.branchCode || undefined,
       statuses: f.statuses.length ? f.statuses : undefined,
@@ -203,12 +223,19 @@ export class OrderRequestsStore {
         this.items.set(res.items);
         this.stats.set(res.stats);
         this.total.set(res.total);
+        if (res.page !== this.page()) this.page.set(res.page);
+        this.lastUpdatedAt.set(new Date());
         this.status.set(res.items.length === 0 ? 'empty' : 'ready');
         this.listSubscription = null;
       },
-      error: () => {
+      error: (err) => {
         if (token !== this.requestToken) return;
         this.status.set('error');
+        this.errorMessage.set(err?.name === 'TimeoutError'
+          ? 'The database took too long to respond. Retry the search or narrow the filters.'
+          : err?.status === 400
+            ? err?.message || 'Check the search filters and try again.'
+            : 'The order requests could not be loaded. Retry the search.');
         this.listSubscription = null;
       }
     });
@@ -297,6 +324,7 @@ export class OrderRequestsStore {
 
   private sameFilters(left: OrderRequestsFilterState, right: OrderRequestsFilterState): boolean {
     return left.search === right.search
+      && left.exactMatch === right.exactMatch
       && left.phone === right.phone
       && left.branchCode === right.branchCode
       && left.outcome === right.outcome
@@ -304,5 +332,15 @@ export class OrderRequestsStore {
       && left.dateTo === right.dateTo
       && left.statuses.length === right.statuses.length
       && left.statuses.every((status, index) => status === right.statuses[index]);
+  }
+
+  private normalizeFilters(filters: OrderRequestsFilterState): OrderRequestsFilterState {
+    return {
+      ...filters,
+      search: filters.search.trim(),
+      phone: filters.phone.trim(),
+      branchCode: filters.branchCode?.trim() || null,
+      statuses: [...new Set(filters.statuses)].sort((left, right) => left - right)
+    };
   }
 }

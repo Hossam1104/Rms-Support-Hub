@@ -28,18 +28,27 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
     </div>
   `,
   styles: [`
-    .shell-layout { display: flex; }
+    .shell-layout { display: flex; width: 100%; min-width: 0; }
     .main-content {
       margin-top: var(--navbar-height);
       margin-left: var(--sidebar-width);
-      flex: 1;
+      flex: 0 0 calc(100vw - var(--sidebar-width));
+      width: calc(100vw - var(--sidebar-width));
+      max-width: calc(100vw - var(--sidebar-width));
       padding: 30px;
       transition: margin-left var(--transition-normal);
       min-height: calc(100vh - var(--navbar-height));
       min-width: 0;
+      overflow-x: hidden;
     }
     @media (max-width: 768px) {
-      .main-content { margin-left: var(--sidebar-collapsed-width); padding: 20px 12px 32px; }
+      .main-content {
+        margin-left: var(--sidebar-collapsed-width);
+        flex-basis: calc(100vw - var(--sidebar-collapsed-width));
+        width: calc(100vw - var(--sidebar-collapsed-width));
+        max-width: calc(100vw - var(--sidebar-collapsed-width));
+        padding: 20px 12px 32px;
+      }
     }
   `]
 })

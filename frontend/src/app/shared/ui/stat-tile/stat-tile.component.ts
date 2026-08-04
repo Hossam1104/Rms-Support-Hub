@@ -18,11 +18,14 @@ export type StatTileVariant = 'brand' | 'success' | 'danger' | 'muted';
     </button>
   `,
   styles: [`
+    :host { display: block; min-width: 0; }
     .stat-tile {
       display: flex;
       align-items: center;
       gap: 16px;
       padding: 20px 22px;
+      width: 100%;
+      min-width: 0;
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
       background: var(--surface-panel);

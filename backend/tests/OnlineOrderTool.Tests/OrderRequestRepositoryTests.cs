@@ -157,4 +157,63 @@ public class OrderRequestRepositoryTests
         var (whereSql, _) = OrderRequestRepository.BuildFilters(new OrderRequestFilters(HasException: false));
         Assert.Contains("R.ExceptionMessage IS NULL", whereSql);
     }
+
+    [Fact]
+    public void BuildFilters_PartialOrderNumber_UsesEscapedContainsParameter()
+    {
+        var filters = new OrderRequestFilters(OrderNumber: "UPC_%[42]", ExactOrderNumber: false);
+
+        var (whereSql, parameters) = OrderRequestRepository.BuildFilters(filters);
+
+        Assert.Contains("R.OrderNumber LIKE @OrderNumberPattern ESCAPE '\\'", whereSql);
+        Assert.DoesNotContain("UPC_%[42]", whereSql);
+        Assert.Equal("%UPC\\_\\%\\[42]%", (string)parameters.Get<object>("OrderNumberPattern"));
+    }
+
+    [Fact]
+    public void BuildFilters_FailedOutcome_MatchesTheStatsDefinition()
+    {
+        var (whereSql, _) = OrderRequestRepository.BuildFilters(new OrderRequestFilters(Succeeded: false));
+
+        Assert.Contains("(R.IsSucceeded = @Succeeded OR R.ExceptionMessage IS NOT NULL)", whereSql);
+    }
+
+    [Fact]
+    public void HeaderFilteredList_UsesOneRankedHeaderRowBeforePaging()
+    {
+        var sql = OrderRequestRepository.BuildListSql("WHERE H.BranchCode = @BranchCode", null);
+
+        Assert.Contains("WITH LatestHeaders AS", sql);
+        Assert.Contains("ROW_NUMBER() OVER", sql);
+        Assert.Contains("LEFT JOIN LatestHeaders AS H", sql);
+        Assert.Contains("PARTITION BY H.OrderNumber", sql);
+        Assert.Contains("OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY", sql);
+        Assert.DoesNotContain("JOIN dbo.RequestOrderHeaders AS H", sql);
+    }
+
+    [Fact]
+    public void CountAndStats_UseDistinctBaseRequestIdsAndTheSameLatestHeaderSet()
+    {
+        var countSql = OrderRequestRepository.BuildCountSql("WHERE H.OrderStatus IN @Statuses", requiresHeaderJoin: true);
+        var statsSql = OrderRequestRepository.BuildStatsSql("WHERE H.OrderStatus IN @Statuses");
+
+        Assert.Contains("COUNT(DISTINCT R.Id)", countSql);
+        Assert.Contains("COUNT(DISTINCT R.Id)", statsSql);
+        Assert.Contains("WITH LatestHeaders AS", countSql);
+        Assert.Contains("WITH LatestHeaders AS", statsSql);
+        Assert.Contains("LEFT JOIN LatestHeaders AS H", countSql);
+        Assert.Contains("LEFT JOIN LatestHeaders AS H", statsSql);
+        Assert.Contains("H.OrderStatus IN @Statuses", countSql);
+        Assert.Contains("H.OrderStatus IN @Statuses", statsSql);
+    }
+
+    [Fact]
+    public void CountWithoutHeaderFilters_StaysOnTheBaseTable()
+    {
+        var sql = OrderRequestRepository.BuildCountSql("WHERE R.OrderDate >= @DateFrom", requiresHeaderJoin: false);
+
+        Assert.Contains("FROM dbo.OrderRequests AS R", sql);
+        Assert.DoesNotContain("LatestHeaders", sql);
+        Assert.Contains("COUNT(DISTINCT R.Id)", sql);
+    }
 }

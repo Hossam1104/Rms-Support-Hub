@@ -1,104 +1,82 @@
 # Current Project State
 
 - **Updated:** 2026-08-04
-- **Branch:** `main` after the final-live acceptance no-fast-forward merge
-- **Release or milestone:** Final acceptance hardening for Riyal provenance,
-  responsive token UI, branch-selector dismissal, and safe UPC Testing gates.
+- **Branch:** `luna/order-requests-filter-fix` pending the requested merge to
+  local `main`, push, and temporary-branch cleanup.
+- **Release or milestone:** Order Requests database-filter correction and
+  modern search-workbench closeout.
 
 ## Working State
 
 - The repository contains a .NET 10 Web API, Angular 22 SPA, Dapper SQL
-  Server data layer, and xUnit/Vitest tests.
-- UPC/GHC flat-order authoring, GHC Uni-Commerce invoice authoring,
-  SQL-backed Order Requests, capability-driven routing, and per-session local
-  drafts remain in place.
-- `/modules/:key/order-requests` is the canonical guarded history route. Its
-  `:orderId` child is a full-page detail view with Items, Order Info,
-  Transactions, Request JSON, and Response JSON sections; the JSON sections
-  start collapsed. `/requests` and `/validation` remain compatibility
-  redirects.
-- The superseded `frontend/src/app/features/order-validation` component tree
-  is removed. The sidebar exposes one Order Requests entry.
-- `app-searchable-select` submits branch codes only, uses fixed 40px option
-  geometry, does not alter the active keyboard row while the pointer moves
-  across options, and closes its overlay on outside clicks without reopening
-  through focus restoration.
-- Every visible currency amount renders through `app-riyal`, which points to
-  `/assets/Saudi_Riyal.svg` and inherits `currentColor`. The checked-in asset is
-  the approved two-path SAMA vector; the canonical content SHA-1 is
-  `02b0fe79a4c8f39f6344682e7ef4dcb5f21cf938`, verified by
-  `npm run test:riyal-asset`.
-- Resend is allowed for known statuses 2, 3, 5, 6, 7, 8, and 9, and blocked
-  for New (1), With_Delegate (4), and unknown values. The server reads the
-  selected row's stored RequestJson, verifies `order_code`, changes only
-  `branch_code`, preserves unknown fields and the original number, and does
-  not mutate the stored history row.
-- Testing remains the default environment. Production resend/cancel flows
-  require typed confirmation, and no Production action is part of local work.
-- The Order Requests list now uses a sea-glass/Atlantic token palette with
-  responsive modern filter inputs, stable horizontal grid geometry, compact
-  short-result viewports, and explicit loading/focus states.
-- Shared `ui-table` now supports wide/caption-hidden tables; global `.sr-only`
-  and `.mono` utilities remove repeated component CSS. The order-builder shell
-  uses a compact labelled sidebar rail and narrow page-header rules so forms,
-  grids, and controls stay within the viewport.
-- Order Requests searches normalize exact order numbers and phone input,
-  cancel superseded list/branch/detail requests, and fail visibly after a
-  15-second request timeout. The backend projects ConsumerMobile correctly,
-  pages base rows before header/invoice lookups when possible, and runs list,
-  count, and stats reads concurrently.
+  Server data layer, and xUnit/Vitest tests. Existing order authoring,
+  payment, detail, cancel, resend, payload, and Production-safety contracts
+  remain unchanged.
+- `/modules/:key/order-requests` remains the canonical guarded history route;
+  its detail route and compatibility redirects are unchanged.
+- Order Requests now has one normalized filter model shared by list, count,
+  and stats. Exact order-number matching is the default; escaped contains
+  matching is opt-in. Phone values use the last nine digits, branch/status
+  values use the latest matching header, and date-to is end-exclusive.
+- The repository pages base `OrderRequests` rows before related lookups when
+  possible, uses a ranked latest-header CTE for header-derived filters, keeps
+  raw JSON out of list projections, counts distinct request IDs, and passes
+  cancellation tokens through bounded 15-second list/count/stats commands.
+- The Angular filter workbench uses explicit Apply, order-number Enter,
+  token-based modern controls, a dedicated nine-status row, active chips,
+  refresh/auto-refresh controls, responsive narrow-screen layout, and
+  separate loading/error/retry states. Superseded list requests are cancelled
+  and stale responses cannot overwrite newer results; existing rows remain
+  visible during a failed refresh.
+- The CDK branch selector has a backdrop and closes without focus restoration
+  when the operator clicks outside it. The app shell and table keep wide grid
+  scrolling inside the table surface instead of creating page-level overflow.
+- `docs/sql/order-requests-performance-indexes.sql` is the guarded,
+  idempotent external support script for the two related-table join indexes.
+  It was applied only to the approved UPC Testing database on 2026-08-04;
+  Production was not accessed or changed.
 
-## Final Local Verification
+## Local Verification
 
-- Backend tests: 148/148 passed.
-- Frontend tests: 107/107 passed across 22 spec files.
-- `npm run test:riyal-asset`: passed; official vector structure and canonical
-  hash verified.
-- `dotnet build backend/OnlineOrderTool.slnx -c Release --nologo`: 0 warnings,
-  0 errors.
-- `npm run build`: passed; Angular initial bundle 426.93 kB with no style-budget
-  warnings. The 6 kB warning / 8 kB error budgets remain unchanged.
-- `scripts/build.ps1`: all checks passed after stopping the repo's local Debug
-  API process that had locked its own DLLs.
-- Local Edge headless desktop/mobile route screenshots loaded successfully.
-- Final local Edge headless screenshots loaded the UPC order-builder at
-  1920x1080, 1280x720, 900x900, and 600x900, plus the Order Requests route.
-- The exact-number Order Requests read returned HTTP 200 with zero results;
-  the unfiltered read returned HTTP 500 after the configured approximately
-  15-second timeout, reproducing the documented missing-index infrastructure
-  gap.
-- The local payment-free draft exported `COD` / `not_payment` with zero
-  payments, paid total zero, and a server-calculated balance.
-- `git diff --check` passed. No Production send, cancel, or resend was
+- Focused backend Order Requests tests: 47 passed.
+- Focused frontend Order Requests/searchable-select tests: 20 passed.
+- Full backend suite: 160/160 passed with no skipped tests.
+- Full frontend suite: 114/114 passed across 23 spec files.
+- `dotnet build backend/OnlineOrderTool.slnx -c Release --nologo`: 0
+  warnings, 0 errors.
+- `npm run build`: passed with a 438.35 kB initial bundle and no
+  style-budget warning.
+- `scripts/build.ps1`: passed all backend test, Release build, and Angular
+  production-build gates.
+- Riyal asset verification, link validation, generated-path hygiene, raw
+  color scan, secret scan, and debug-test hygiene checks passed.
+- UPC Testing filter matrix passed after the index script was applied:
+  unfiltered, exact/partial order, phone variants, branch, status, outcome,
+  date bounds, paging, sorting, combined filters, validation errors, and
+  retry/error behavior. No send, cancel, resend, or Production operation was
   attempted.
+- Installed Edge headless renders covered the Order Requests route at
+  desktop, tablet, and 390px mobile widths. The connected in-app browser was
+  unavailable, so interactive pointer/keyboard/theme evidence remains an
+  external acceptance item.
 
-## Deferred Acceptance
+## Known Risks and Deferred Acceptance
 
-- No connected in-app browser instance was available
-  (`agent.browsers.list()` returned no browsers), so interactive theme,
-  hover/keyboard, and outside-click evidence remains external; local Edge
-  screenshots cover the required layout viewports.
-- UPC Testing metadata/branch reads were safe and read-only; the item lookup
-  returned HTTP 200 with `success: false` and no data for documented fixture
-  codes. No explicitly approved synthetic QA branch/item was available for a
-  state-changing send/cancel/resend, and no Production action was attempted.
-  The COD `"COD"` acceptance send remains pending.
-
-## Known Risks
-
-- `upc_logo.svg` and `whites_logo.svg` remain separate existing asset review
-  items; the Riyal asset is now provenance-verified and no longer a placeholder.
-- Controllers do not provide application authentication/authorization, the
-  shared RMS client defaults TLS verification off, and live SQL/API behavior
-  remains environment-dependent.
-- The canonical resend contract deliberately reuses the original number;
-  the upstream Testing RMS must accept duplicate-number resend semantics when
-  a real safe verification fixture is available.
+- The broad status-3 Testing scan was approximately 14.8 seconds against the
+  bounded 15-second command limit; the current verified matrix is successful,
+  but further query/index tuning should be separately approved if that broad
+  status remains a common operational query.
+- The join-index script still needs separate database-owner approval before
+  any Production application. The application does not own external-schema
+  migrations.
+- No safe synthetic fixture was authorized for a state-changing Testing
+  send/cancel/resend workflow, and no Production action was attempted.
+- Controllers still have no application authentication/authorization scheme;
+  this existing project boundary is outside the current filter task.
 
 ## Programme Status
 
-- U0-U8 and Final Acceptance Hardening remain closed. The final Order Requests
-  unification plus acceptance hardening are implemented and merged into local
-  `main` with the requested no-fast-forward merge; the final-live acceptance
-  record is complete on `main`.
-- `.ai/HANDOFF.md` is Empty and there is no active implementation plan.
+- U0-U8, final project polish, Order Requests unification, and acceptance
+  hardening remain closed. This task is implemented locally and is in
+  repository closeout; `.ai/HANDOFF.md` remains Empty and there is no active
+  implementation plan.

@@ -1,6 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { OrderRequestsStore, OrderRequestsFilterState, EMPTY_FILTERS } from './order-requests.store';
 import { ModuleService } from '../../core/services/module.service';
@@ -19,7 +18,7 @@ import { RequestsTableComponent } from './components/requests-table.component';
   standalone: true,
   providers: [OrderRequestsStore],
   imports: [
-    CommonModule, FormsModule, RouterOutlet, PageHeaderComponent, StatTileComponent,
+    CommonModule, RouterOutlet, PageHeaderComponent, StatTileComponent,
     PaginationComponent, FilterBarComponent, RequestsTableComponent
   ],
   template: `
@@ -27,16 +26,6 @@ import { RequestsTableComponent } from './components/requests-table.component';
 
     @if (!detailRouteActive()) {
     <app-page-header [title]="'Order Requests'" [subtitle]="moduleService.activeModule()?.label">
-      <span class="env-pill" [class.env-production]="isProduction()" [class.env-testing]="!isProduction()">
-        {{ activeEnvKey() || 'Default environment' }}
-      </span>
-      <button type="button" class="hero-btn" (click)="store.refresh()" [disabled]="store.status() === 'loading'">
-        <i class="bi bi-arrow-clockwise" [class.spin]="store.status() === 'loading'"></i> Refresh
-      </button>
-      <label class="auto-refresh-toggle">
-        <input type="checkbox" [(ngModel)]="autoRefresh" />
-        Auto-refresh 30s
-      </label>
     </app-page-header>
 
     <div class="stat-tiles">
@@ -81,19 +70,7 @@ import { RequestsTableComponent } from './components/requests-table.component';
     }
   `,
   styles: [`
-    :host { display: block; }
-    .env-pill { padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.78rem; font-weight: 700; color: var(--on-gradient); }
-    .env-production { background: var(--grad-amber); }
-    .env-testing { background: var(--grad-info); }
-    .hero-btn {
-      display: flex; align-items: center; gap: 6px;
-      background: var(--accent-soft); border: 1px solid var(--border-strong); color: var(--text-primary);
-      border-radius: var(--radius-pill); padding: 8px 16px; cursor: pointer; font-size: 0.85rem;
-    }
-    .hero-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .spin { animation: spin 1s linear infinite; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .auto-refresh-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; }
+    :host { display: block; min-width: 0; }
     .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
   `]
 })
@@ -107,7 +84,6 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
     if (event instanceof NavigationEnd) this.syncDetailRoute();
   });
 
-  autoRefresh = false;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private syncingFromUrl = false;
 
@@ -138,6 +114,7 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
     const filters: OrderRequestsFilterState = {
       ...EMPTY_FILTERS,
       search: qp.get('search') || qp.get('orderNumber') || qp.get('q') || qp.get('request') || '',
+      exactMatch: qp.get('exactMatch') !== 'false',
       phone: qp.get('phone') || '',
       branchCode: qp.get('branchCode'),
       statuses: qp.getAll('status').map(Number).filter(n => Number.isFinite(n)),
@@ -153,8 +130,8 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
     this.syncingFromUrl = false;
 
     this.refreshTimer = setInterval(() => {
-      if (this.autoRefresh && this.store.selectedId() === null && !document.hidden) {
-        this.store.refresh();
+      if (this.store.autoRefresh() && this.store.selectedId() === null && !document.hidden) {
+        this.store.autoRefreshTick();
       }
     }, 30000);
   }
@@ -168,14 +145,6 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
     this.detailRouteActive.set(!!this.route.firstChild?.snapshot.paramMap.get('orderId'));
   }
 
-  isProduction(): boolean {
-    return (this.moduleService.activeEnvironment()?.environment || '') === 'Production';
-  }
-
-  activeEnvKey(): string | undefined {
-    return this.moduleService.activeEnvironment()?.key;
-  }
-
   isCancelledFilterActive(): boolean {
     const s = this.store.filters().statuses;
     return s.length === 2 && s.includes(6) && s.includes(7);
@@ -184,6 +153,7 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
   private toQueryParams(f: OrderRequestsFilterState, page: number, pageSize: number): Record<string, string | string[] | null> {
     return {
       search: f.search || null,
+      exactMatch: f.exactMatch ? null : 'false',
       phone: f.phone || null,
       branchCode: f.branchCode || null,
       status: f.statuses.length ? f.statuses.map(String) : null,

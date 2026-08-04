@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
+using OnlineOrderTool.Api.Exceptions;
 using OnlineOrderTool.Core;
 using OnlineOrderTool.Core.DTOs;
 using OnlineOrderTool.Core.Modules;
@@ -37,36 +38,98 @@ public class OrderRequestsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult> List(string key, [FromQuery] OrderRequestListQuery query, [FromQuery] string? envKey = null)
+    public async Task<ActionResult> List(
+        string key,
+        [FromQuery] OrderRequestListQuery query,
+        [FromQuery] string? envKey = null,
+        CancellationToken cancellationToken = default)
     {
         var (module, connStr, guard) = Resolve(key, envKey);
         if (guard != null) return guard;
 
         var page = query.Page is > 0 ? query.Page.Value : 1;
         var pageSize = Math.Clamp(query.PageSize ?? 25, 1, 200);
+
+        var orderNumber = string.IsNullOrWhiteSpace(query.OrderNumber) ? query.Q : query.OrderNumber;
+        string? normalizedPhone = null;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(query.Phone))
+                normalizedPhone = Normalizers.NormalizePhoneSearch(query.Phone);
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(new { error = "Phone must contain at least 9 digits." });
+        }
+
+        if (query.DateFrom.HasValue && query.DateTo.HasValue && query.DateFrom.Value.Date > query.DateTo.Value.Date)
+            return BadRequest(new { error = "dateFrom must be on or before dateTo." });
+
+        var statuses = query.Statuses?.Distinct().ToArray();
+        if (statuses is { Length: > 0 } && statuses.Any(status => status is < 1 or > 9))
+            return BadRequest(new { error = "statuses must contain only values from 1 through 9." });
+        if (query.Status is < 1 or > 9)
+            return BadRequest(new { error = "status must be a value from 1 through 9." });
+
         var filters = new OrderRequestFilters(
-            OrderNumber: string.IsNullOrWhiteSpace(query.OrderNumber) ? query.Q : query.OrderNumber,
-            Phone: query.Phone,
-            BranchCode: query.BranchCode,
+            OrderNumber: string.IsNullOrWhiteSpace(orderNumber) ? null : orderNumber.Trim(),
+            Phone: normalizedPhone,
+            BranchCode: string.IsNullOrWhiteSpace(query.BranchCode) ? null : query.BranchCode.Trim(),
             Status: query.Status,
-            Statuses: query.Statuses,
+            Statuses: statuses,
             Succeeded: query.Succeeded,
             HasException: query.HasException,
             DateFrom: query.DateFrom,
-            DateTo: query.DateTo);
+            DateTo: query.DateTo,
+            ExactOrderNumber: query.ExactMatch ?? true);
 
         // These reads share the same filter set but are independent. Run them
         // together so a slow count or aggregate cannot hold the page data
         // behind two other sequential database round trips.
-        var itemsTask = _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort);
-        var totalTask = _repository.CountAsync(connStr!, filters);
-        var statsTask = _repository.StatsAsync(connStr!, filters);
-        await Task.WhenAll(itemsTask, totalTask, statsTask);
+        var itemsTask = _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort, cancellationToken);
+        var totalTask = _repository.CountAsync(connStr!, filters, cancellationToken);
+        var statsTask = _repository.StatsAsync(connStr!, filters, cancellationToken);
+        try
+        {
+            await Task.WhenAll(itemsTask, totalTask, statsTask);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Do not expose a SQL exception, connection string, or execution
+            // plan detail to the operator. ExceptionMiddleware maps this to
+            // the standard 502 envelope with a retryable message.
+            throw new UpstreamException(
+                "Order request data could not be loaded from the selected environment. Try again.");
+        }
 
         var items = await itemsTask;
         var total = await totalTask;
         var stats = await statsTask;
         var totalPages = total == 0 ? 0 : (int)Math.Ceiling(total / (double)pageSize);
+
+        // A refresh can reduce the result set while the operator is on a later
+        // page. Return the last real page instead of a misleading empty grid.
+        if (totalPages > 0 && page > totalPages)
+        {
+            page = totalPages;
+            try
+            {
+                items = await _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                throw new UpstreamException(
+                    "Order request data could not be loaded from the selected environment. Try again.");
+            }
+        }
 
         return Ok(new { items, page, pageSize, total, totalPages, stats });
     }

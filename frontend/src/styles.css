@@ -3,6 +3,7 @@
 @import './styles/_gradients.css';
 @import './styles/_typography.css';
 @import './styles/_animations.css';
+@import './styles/order-requests-filter.css';
 
 /* Global Reset & Container Utility */
 *, *::before, *::after {

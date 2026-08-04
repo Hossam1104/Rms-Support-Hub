@@ -36,8 +36,8 @@ const CANCELLED_STATUSES = new Set([6, 7]);
             </div>
           }
         </div>
-      } @else if (store.status() === 'error') {
-        <app-empty-state icon="bi-exclamation-octagon" title="Couldn't load order requests" description="The database may be unreachable. Try again.">
+      } @else if (store.status() === 'error' && store.items().length === 0) {
+        <app-empty-state icon="bi-exclamation-octagon" title="Couldn't load order requests" [description]="store.errorMessage() || 'The database may be unreachable. Try again.'">
           <button type="button" class="retry-btn" (click)="store.refresh()">Retry</button>
         </app-empty-state>
       } @else if (store.status() === 'empty') {
@@ -48,6 +48,13 @@ const CANCELLED_STATUSES = new Set([6, 7]);
           <button type="button" class="retry-btn" *ngIf="store.hasActiveFilters()" (click)="store.clearFilters()">Clear filters</button>
         </app-empty-state>
       } @else {
+        @if (store.status() === 'error') {
+          <div class="stale-error" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span>{{ store.errorMessage() || 'The refresh failed. Showing the last successful results.' }}</span>
+            <button type="button" class="retry-btn" (click)="store.refresh()">Retry</button>
+          </div>
+        }
         <cdk-virtual-scroll-viewport itemSize="56" class="table-body" [style.height.px]="tableHeight()" [class.dimmed]="store.status() === 'loading'">
           <button
             type="button"
@@ -100,6 +107,8 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     .table-head { height: 44px; background: var(--surface-raised); font-size: 0.7rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; }
     .table-body { min-width: 1090px; transition: opacity var(--transition-normal); }
     .table-body.dimmed { opacity: 0.55; }
+    .stale-error { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding: 10px 14px; border-bottom: 1px solid var(--state-danger-border); background: var(--state-danger-bg); color: var(--state-danger-fg); font-size: .76rem; }
+    .stale-error span { flex: 1 1 260px; }
     .table-row {
       height: 56px;
       width: 100%;
