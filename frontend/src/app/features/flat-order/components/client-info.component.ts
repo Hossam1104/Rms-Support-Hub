@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UiButtonComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption, UiToolbarComponent } from '../../../shared/ui';
+import { normalizeLocalPhone } from '../../../core/utils/phone.util';
 
 @Component({
   selector: 'app-client-info',
@@ -26,7 +27,7 @@ import { UiButtonComponent, UiFieldComponent, UiInputComponent, UiSelectComponen
           <ui-input inputId="field-client-country-code" type="tel" [value]="textValue('client_country_code')" placeholder="966" (valueChange)="onFieldChange('client_country_code', $event)"></ui-input>
         </ui-field>
 
-        <ui-field #phoneField label="Phone" forId="field-client-phone" [required]="true" [error]="fieldError('client_phone')">
+        <ui-field #phoneField label="Phone" forId="field-client-phone" [required]="true" hint="Local number only — the country code is the separate field." [error]="fieldError('client_phone')">
           <ui-input inputId="field-client-phone" type="tel" [value]="textValue('client_phone')" autocomplete="tel" [invalid]="hasError('client_phone')" [ariaDescribedBy]="phoneField.describedBy()" (valueChange)="onFieldChange('client_phone', $event)"></ui-input>
         </ui-field>
 
@@ -93,7 +94,14 @@ export class ClientInfoComponent {
 
   hasError(fieldName: string): boolean { return (this.fieldErrors[fieldName]?.length ?? 0) > 0; }
   fieldError(fieldName: string): string | null { return this.fieldErrors[fieldName]?.join(' ') || null; }
-  onFieldChange(fieldName: string, value: unknown) { this.fieldChange.emit({ fieldName, value }); }
+  /** `client_phone` is stripped of a leading Saudi country code on the way
+   * into the draft (typed or pasted) so the field settles on the local number
+   * the separate country-code field already accounts for. Every other field
+   * is passed through untouched. */
+  onFieldChange(fieldName: string, value: unknown) {
+    const applied = fieldName === 'client_phone' ? normalizeLocalPhone(value) : value;
+    this.fieldChange.emit({ fieldName, value: applied });
+  }
 
   textValue(fieldName: string): string {
     const value = this.orderData[fieldName];

@@ -210,6 +210,37 @@ public class PayloadAndValidationTests
         Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for this module."));
     }
 
+    /// <summary>The country code lives in its own key, so the number field
+    /// must never repeat it -- including for drafts saved before the rule
+    /// existed, which is why the split happens in the builder.</summary>
+    [Fact]
+    public void BuildPayload_SplitsTheCountryCodeOutOfEveryPhoneField()
+    {
+        var draft = new OrderDraft
+        {
+            OrderData = new Dictionary<string, object?>
+            {
+                ["branch_code"] = "101",
+                ["order_code"] = "ORD-002",
+                ["client_first_name"] = "John",
+                ["client_last_name"] = "Doe",
+                ["client_phone"] = "+966556028080",
+                ["order_country_code"] = "966",
+                ["order_phone"] = "00966556028081",
+                ["order_address"] = "Main St"
+            },
+            Products = new List<Product> { new() { ItemCode = "1", ItemName = "P1", Quantity = 1, UnitPrice = 10 } },
+            Payments = new List<Payment>()
+        };
+
+        var payload = _flatBuilder.BuildPayload(draft, FlatVariant.GhcVariant);
+
+        Assert.Equal("966", payload["client_country_code"]);
+        Assert.Equal("556028080", payload["client_phone"]);
+        Assert.Equal("966", payload["order_country_code"]);
+        Assert.Equal("556028081", payload["order_phone"]);
+    }
+
     [Fact]
     public void UniCommercePayload_CalculatesGrossNetVatAccurately()
     {

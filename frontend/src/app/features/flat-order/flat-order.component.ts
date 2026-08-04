@@ -7,6 +7,7 @@ import { BranchOptionsService } from '../../core/services/branch-options.service
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FocusService } from '../../core/services/focus.service';
+import { normalizeLocalPhone } from '../../core/utils/phone.util';
 import { ApiError, BranchOption, LookupResult, ModuleEndpoint, OrderDraft, Product, Payment, Consumer, SendOrderResult, OrderRequestDetailResponse, TotalsSummary } from '../../core/models';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
@@ -837,7 +838,10 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
             ['First Name', 'client_first_name', c.firstName || ''],
             ['Middle Name', 'client_middle_name', c.middleName || ''],
             ['Last Name', 'client_last_name', c.lastName || ''],
-            ['Phone', 'client_phone', c.primaryPhoneNumber || phone]
+            // The lookup row may carry the country code inline; the draft
+            // keeps it in client_country_code, so only the local part lands
+            // in the number field.
+            ['Phone', 'client_phone', normalizeLocalPhone(c.primaryPhoneNumber || phone)]
           ];
           const conditional: [string, string, unknown][] = [
             ['Email', 'client_email', c.email],

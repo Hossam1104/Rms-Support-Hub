@@ -45,4 +45,33 @@ public class NormalizersTests
     {
         Assert.ThrowsAny<ArgumentException>(() => Normalizers.NormalizePhoneSearch(input));
     }
+
+    [Theory]
+    [InlineData("+966556028080", "556028080")]
+    [InlineData("966556028080", "556028080")]
+    [InlineData("00966556028080", "556028080")]
+    [InlineData("0556028080", "556028080")]
+    [InlineData("556028080", "556028080")]           // already local -- unchanged
+    [InlineData("+966 55 602 8080", "556028080")]    // separators dropped
+    [InlineData("(966) 55-602-8080", "556028080")]
+    public void NormalizeLocalPhone_StripsOnlyTheSaudiCountryCode(string input, string expected)
+    {
+        Assert.Equal(expected, Normalizers.NormalizeLocalPhone(input));
+    }
+
+    /// <summary>The reference payloads carry the country code in its own
+    /// client_country_code key, so only a LEADING 966 belongs to the country
+    /// code. A 966 that merely appears inside a subscriber number, and any
+    /// non-Saudi number, must survive untouched.</summary>
+    [Theory]
+    [InlineData("509661234", "509661234")]           // 9 digits, 966 in the middle
+    [InlineData("966966028080", "966028080")]        // leading 966 goes, inner 966 stays
+    [InlineData("14155552671", "14155552671")]       // US number -- no Saudi rule matches
+    [InlineData("00447911123456", "00447911123456")] // UK 00-prefixed -- not 00966
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void NormalizeLocalPhone_PreservesEverythingElse(string? input, string expected)
+    {
+        Assert.Equal(expected, Normalizers.NormalizeLocalPhone(input));
+    }
 }

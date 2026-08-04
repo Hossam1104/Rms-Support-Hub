@@ -148,7 +148,11 @@ public class FlatOrderPayloadBuilder : IFlatOrderPayloadBuilder
             ["order_payment_method"] = GetPaymentMethodString(draft.Payments),
             ["order_status"] = GetString(data, "order_status", "new"),
             ["client_country_code"] = GetString(data, "client_country_code", "966"),
-            ["client_phone"] = GetString(data, "client_phone"),
+            // The country code travels in client_country_code, so the number
+            // itself must never repeat it -- Normalizers.NormalizeLocalPhone
+            // is the authoritative boundary for that split and also covers
+            // drafts saved before the rule existed.
+            ["client_phone"] = Normalizers.NormalizeLocalPhone(GetString(data, "client_phone")),
             ["client_first_name"] = GetString(data, "client_first_name"),
             ["client_middle_name"] = GetString(data, "client_middle_name"),
             ["client_last_name"] = GetString(data, "client_last_name"),
@@ -166,7 +170,7 @@ public class FlatOrderPayloadBuilder : IFlatOrderPayloadBuilder
         if (variant.IncludeOrderContactFields)
         {
             payload["order_country_code"] = GetString(data, "order_country_code");
-            payload["order_phone"] = GetString(data, "order_phone");
+            payload["order_phone"] = Normalizers.NormalizeLocalPhone(GetString(data, "order_phone"));
         }
 
         if (variant.IncludeDeliveryFields)
