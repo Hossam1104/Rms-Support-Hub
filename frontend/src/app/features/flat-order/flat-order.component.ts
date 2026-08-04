@@ -247,6 +247,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               [environment]="moduleService.activeEnvironment()"
               [endpoint]="activeEndpoint()"
               [sending]="sending()"
+              [isCashOnDelivery]="isCashOnDelivery()"
               [customEndpointEnabled]="customEndpointEnabled()"
               [customEndpointValid]="customEndpointValid()"
               (validate)="onValidate()"
@@ -269,6 +270,7 @@ const TOTALS_DEBOUNCE_MS = 300;
             [environment]="moduleService.activeEnvironment()"
             [endpoint]="activeEndpoint()"
             [sending]="sending()"
+            [isCashOnDelivery]="isCashOnDelivery()"
             [customEndpointEnabled]="customEndpointEnabled()"
             [customEndpointValid]="customEndpointValid()"
             (validate)="onValidate()"
@@ -546,6 +548,14 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Item/quantity counts for the summary header -- counts, not money math. */
   totalQuantity(): number {
     return this.draftStore.draft().products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+  }
+
+  /** An empty payment list is the verified Cash on Delivery state, not a
+   * missing-payment error -- FlatOrderValidator accepts it and
+   * FlatOrderPayloadBuilder emits the COD shape for it. Surfacing it here
+   * keeps the operator informed without fabricating a zero-value payment. */
+  isCashOnDelivery(): boolean {
+    return this.draftStore.draft().payments.length === 0;
   }
 
   loadBranches(refresh = false) {

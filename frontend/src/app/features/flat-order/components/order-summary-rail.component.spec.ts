@@ -55,6 +55,37 @@ describe('OrderSummaryRailComponent', () => {
     expect(compact.nativeElement.querySelector('[data-testid="order-summary-rail"]')).toBeNull();
   });
 
+  it('states Cash on Delivery for a payment-free order without blocking send', () => {
+    const fixture = TestBed.createComponent(OrderSummaryRailComponent);
+    fixture.componentRef.setInput('totals', totalsOf({ totalOrderAmount: 115 }));
+    fixture.componentRef.setInput('environment', environment);
+    fixture.componentRef.setInput('endpoint', endpoint);
+    fixture.componentRef.setInput('validationSummary', { totalCount: 0, globalErrors: [] });
+    fixture.componentRef.setInput('isCashOnDelivery', true);
+    fixture.detectChanges();
+
+    const note = fixture.nativeElement.querySelector('[data-testid="summary-cod-note"]');
+    expect(note).toBeTruthy();
+    expect(note.textContent).toContain('Cash on Delivery');
+    expect((fixture.nativeElement.querySelectorAll('ui-button button')[1] as HTMLButtonElement).disabled).toBe(false);
+
+    fixture.componentRef.setInput('isCashOnDelivery', false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="summary-cod-note"]')).toBeNull();
+  });
+
+  it('surfaces Cash on Delivery in the compact action bar too', () => {
+    const compact = TestBed.createComponent(OrderSummaryRailComponent);
+    compact.componentRef.setInput('compact', true);
+    compact.componentRef.setInput('totals', totalsOf({ totalOrderAmount: 115 }));
+    compact.componentRef.setInput('environment', environment);
+    compact.componentRef.setInput('endpoint', endpoint);
+    compact.componentRef.setInput('isCashOnDelivery', true);
+    compact.detectChanges();
+
+    expect(compact.nativeElement.querySelector('[data-testid="summary-action-bar-cod"]')).toBeTruthy();
+  });
+
   it('emits a clickable mapped issue and disables send while it is known', () => {
     const fixture = TestBed.createComponent(OrderSummaryRailComponent);
     const issue: OrderValidationIssue = { key: 'products', message: 'Add one product.', targetId: 'products-card' };

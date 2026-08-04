@@ -33,6 +33,7 @@ export interface OrderValidationSummary {
           </span>
           <ng-template #compactPending><span class="summary-action-bar__muted">{{ loading ? 'Refreshing totals…' : validationStatusLabel() }}</span></ng-template>
           <span class="summary-action-bar__balance" *ngIf="totals">Balance {{ totals!.remainingBalance | number:'1.2-2' }}</span>
+          <span class="summary-action-bar__cod" *ngIf="isCashOnDelivery" data-testid="summary-action-bar-cod">Cash on Delivery</span>
           <span class="summary-action-bar__validation" *ngIf="hasValidationIssues()">{{ knownIssueCount() }} issue{{ knownIssueCount() === 1 ? '' : 's' }}</span>
         </div>
         <div class="summary-action-bar__actions">
@@ -73,6 +74,9 @@ export interface OrderValidationSummary {
               <div><dt>Paid</dt><dd><app-riyal></app-riyal>{{ totals!.totalPaidAmount | number:'1.2-2' }}</dd></div>
               <div class="summary-rail__balance"><dt>Balance</dt><dd><app-riyal></app-riyal>{{ totals!.remainingBalance | number:'1.2-2' }}</dd></div>
             </dl>
+            <p class="summary-rail__cod" *ngIf="isCashOnDelivery" data-testid="summary-cod-note">
+              <i class="bi bi-cash-coin" aria-hidden="true"></i>No payment selected — sending as Cash on Delivery.
+            </p>
           </ng-container>
           <ng-template #totalsState>
             <div class="summary-rail__loading" *ngIf="loading; else totalsUnavailable">
@@ -153,6 +157,7 @@ export interface OrderValidationSummary {
     .summary-rail__loading { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
     .summary-rail__totals app-empty-state { display: block; transform: scale(.82); transform-origin: top center; margin-bottom: -34px; }
     .summary-rail__error { display: flex; align-items: flex-start; gap: 7px; margin-top: 12px; color: var(--state-danger-fg); font-size: .76rem; line-height: 1.35; }
+    .summary-rail__cod { display: flex; align-items: center; gap: 7px; margin-top: 12px; padding: 8px 10px; border: 1px solid var(--state-info-border); border-radius: var(--radius-md); background: var(--state-info-bg); color: var(--state-info-fg); font-size: .76rem; font-weight: 700; line-height: 1.35; }
     .validation-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--state-success-bg); color: var(--state-success-fg); font-size: .68rem; font-weight: 800; }
     .validation-pill.is-invalid { background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .summary-rail__hint, .summary-rail__environment-panel p { margin-top: 10px; color: var(--text-muted); font-size: .76rem; line-height: 1.4; }
@@ -177,6 +182,7 @@ export interface OrderValidationSummary {
     .summary-action-bar__total { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-primary); font-size: .92rem; font-weight: 850; white-space: nowrap; }
     .summary-action-bar__balance, .summary-action-bar__muted { overflow: hidden; color: var(--text-secondary); font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
     .summary-action-bar__validation { flex: 0 0 auto; color: var(--state-danger-fg); font-size: .74rem; font-weight: 750; }
+    .summary-action-bar__cod { flex: 0 0 auto; padding: 3px 7px; border-radius: var(--radius-pill); background: var(--state-info-bg); color: var(--state-info-fg); font-size: .7rem; font-weight: 800; white-space: nowrap; }
     .summary-action-bar__actions { flex: 0 0 auto; }
     @media (max-width: 620px) { .summary-action-bar { align-items: stretch; flex-direction: column; } .summary-action-bar__actions ui-button { flex: 1; } .summary-action-bar__actions { width: 100%; } }
     @media (prefers-reduced-motion: reduce) { .summary-rail *, .summary-action-bar * { transition: none !important; animation: none !important; } }
@@ -196,6 +202,12 @@ export class OrderSummaryRailComponent {
   @Input() compact = false;
   @Input() customEndpointEnabled = false;
   @Input() customEndpointValid = true;
+  /** True when the draft carries no payment rows. That is a valid,
+   * non-blocking state: FlatOrderPayloadBuilder emits the verified Cash on
+   * Delivery shape for it (order_payment_method "COD",
+   * order_payment_status "not_payment", empty payment list), so the rail
+   * states the outcome rather than reporting a missing payment. */
+  @Input() isCashOnDelivery = false;
 
   @Output() validate = new EventEmitter<void>();
   @Output() send = new EventEmitter<void>();
