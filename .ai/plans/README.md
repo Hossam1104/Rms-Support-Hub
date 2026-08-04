@@ -6,6 +6,7 @@ automatically read every plan.
 
 ## Current active plan
 
-None. The U0-U8 UI rework programme is complete locally, and its executed
-session prompts have been removed from the tree. `.ai/HISTORY.md` indexes the
-milestones; `.ai/archive/` keeps only the plans with lasting audit value.
+None. The U0-U8 UI rework programme and the final Order Requests unification
+are complete locally, and their executed session prompts have been removed from
+the active tree. `.ai/HISTORY.md` indexes the milestones; `.ai/archive/` keeps
+only the plans with lasting audit value.

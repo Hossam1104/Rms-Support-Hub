@@ -103,6 +103,24 @@ The existing shared kit also includes stat tiles, status pills, data tables,
 drawers, dialogs, empty states, skeletons, pagination, JSON trees, copy
 buttons, filter chips, the Riyal glyph, page headers, and environment badges.
 
+### Riyal amounts
+
+All human-visible Saudi currency amounts use `app-riyal`; feature templates do
+not spell the currency as `SAR` or a textual abbreviation. The component points
+to the approved `/assets/Saudi_Riyal.svg` asset, uses the current text color,
+and keeps an accessible `Saudi Riyal` label. The repository currently contains
+a placeholder at that path, so visual approval is still required before the
+asset can be considered complete; do not redraw, download, or substitute a
+glyph in source code.
+
+### Searchable branch selector
+
+Branch selection uses `app-searchable-select` and submits the branch code only.
+The open option list keeps a fixed row geometry while the pointer crosses
+options; hover does not change the active keyboard option or trigger animated
+overlay repositioning. Keyboard navigation remains responsible for active-row
+movement and scrolling.
+
 ## Toast behavior
 
 `ToastService` owns a signal-backed visible list and queue:

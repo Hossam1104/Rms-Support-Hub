@@ -36,14 +36,9 @@ import { UiButtonComponent } from '../../shared/ui';
           <span class="nav-label" *ngIf="!collapsed()">Invoice Builder</span>
         </a>
 
-        <a routerLink="requests" routerLinkActive="active" class="nav-item">
+        <a routerLink="order-requests" routerLinkActive="active" class="nav-item">
           <i class="bi bi-clock-history"></i>
           <span class="nav-label" *ngIf="!collapsed()">Order Requests</span>
-        </a>
-
-        <a *ngIf="moduleKey === 'upc_ecommerce'" routerLink="validation" routerLinkActive="active" class="nav-item">
-          <i class="bi bi-list-check"></i>
-          <span class="nav-label" *ngIf="!collapsed()">Order Validation</span>
         </a>
       </nav>
 

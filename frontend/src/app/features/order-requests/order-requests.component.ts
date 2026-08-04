@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { OrderRequestsStore, OrderRequestsFilterState, EMPTY_FILTERS } from './order-requests.store';
 import { ModuleService } from '../../core/services/module.service';
 import { PageHeaderComponent, StatTileComponent, PaginationComponent } from '../../shared/ui';
@@ -11,9 +11,8 @@ import { RequestsTableComponent } from './components/requests-table.component';
 /**
  * Rebuilt on the R5 API and the R8 kit (remediation_plan.md B14, R9). The
  * store is provided here (not root) so it resets whenever this route is
- * left and re-entered, and so the routed :requestId drawer
- * (order-request-drawer.component.ts, rendered through the <router-outlet>
- * below) can inject the exact same instance.
+ * left and re-entered, and so the routed :orderId detail page (rendered
+ * through the <router-outlet> below) can inject the exact same instance.
  */
 @Component({
   selector: 'app-order-requests',
@@ -24,6 +23,9 @@ import { RequestsTableComponent } from './components/requests-table.component';
     PaginationComponent, FilterBarComponent, RequestsTableComponent
   ],
   template: `
+    <router-outlet></router-outlet>
+
+    @if (!detailRouteActive()) {
     <app-page-header [title]="'Order Requests'" [subtitle]="moduleService.activeModule()?.label">
       <span class="env-pill" [class.env-production]="isProduction()" [class.env-testing]="!isProduction()">
         {{ activeEnvKey() || 'Default environment' }}
@@ -76,7 +78,7 @@ import { RequestsTableComponent } from './components/requests-table.component';
       (pageSizeChange)="store.setPageSize($event)">
     </app-pagination>
 
-    <router-outlet></router-outlet>
+    }
   `,
   styles: [`
     :host { display: block; }
@@ -100,6 +102,10 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
   moduleService = inject(ModuleService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  detailRouteActive = signal(false);
+  private routerEvents = this.router.events.subscribe(event => {
+    if (event instanceof NavigationEnd) this.syncDetailRoute();
+  });
 
   autoRefresh = false;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -124,13 +130,14 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.syncDetailRoute();
     const parentKey = this.route.parent?.snapshot.paramMap.get('key') || '';
     const qp = this.route.snapshot.queryParamMap;
 
     this.syncingFromUrl = true;
     const filters: OrderRequestsFilterState = {
       ...EMPTY_FILTERS,
-      search: qp.get('search') || '',
+      search: qp.get('search') || qp.get('orderNumber') || qp.get('q') || qp.get('request') || '',
       phone: qp.get('phone') || '',
       branchCode: qp.get('branchCode'),
       statuses: qp.getAll('status').map(Number).filter(n => Number.isFinite(n)),
@@ -154,6 +161,11 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.refreshTimer) clearInterval(this.refreshTimer);
+    this.routerEvents.unsubscribe();
+  }
+
+  private syncDetailRoute() {
+    this.detailRouteActive.set(!!this.route.firstChild?.snapshot.paramMap.get('orderId'));
   }
 
   isProduction(): boolean {

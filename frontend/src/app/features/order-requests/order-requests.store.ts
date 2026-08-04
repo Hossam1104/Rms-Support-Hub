@@ -27,8 +27,7 @@ export const EMPTY_FILTERS: OrderRequestsFilterState = {
 /**
  * Route-scoped signal store for the Order Requests page (R9,
  * remediation_plan.md B14). Provided on OrderRequestsComponent (not root),
- * so the routed detail-drawer child (features/order-requests/components/
- * order-request-drawer.component.ts) shares the same instance via normal
+ * so the routed :orderId detail page shares the same instance via normal
  * Angular DI inheritance, and state resets on navigation away.
  */
 @Injectable()
@@ -55,6 +54,7 @@ export class OrderRequestsStore {
   selectedId = signal<number | null>(null);
   selected = signal<OrderRequestDetailResponse | null>(null);
   detailStatus = signal<LoadStatus>('idle');
+  detailError = signal<string | null>(null);
 
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / (this.pageSize() || 1))));
 
@@ -213,6 +213,7 @@ export class OrderRequestsStore {
     const key = this.moduleKey();
     const token = ++this.detailToken;
     this.detailStatus.set('loading');
+    this.detailError.set(null);
     this.selected.set(null);
 
     this.api.get<OrderRequestDetailResponse>(`modules/${key}/order-requests/${id}`, { envKey: this.envKey() || undefined }).subscribe({
@@ -221,9 +222,12 @@ export class OrderRequestsStore {
         this.selected.set(res);
         this.detailStatus.set('ready');
       },
-      error: () => {
+      error: (err) => {
         if (token !== this.detailToken) return;
         this.detailStatus.set('error');
+        this.detailError.set(err?.status === 404
+          ? 'This request was not found in the selected environment.'
+          : err?.message || 'The order request could not be loaded.');
       }
     });
   }
@@ -232,6 +236,7 @@ export class OrderRequestsStore {
     this.selectedId.set(null);
     this.selected.set(null);
     this.detailStatus.set('idle');
+    this.detailError.set(null);
   }
 
   /** Refreshes just the open detail in place (post-cancel/resend) without a

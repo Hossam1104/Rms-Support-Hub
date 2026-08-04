@@ -16,13 +16,14 @@ describe('U5 shared UI primitives', () => {
     }).compileComponents();
   });
 
-  it('renders the Riyal asset as a masked glyph with an accessible name', () => {
+  it('renders the shared Riyal asset path as a masked glyph with an accessible name', () => {
     const fixture = TestBed.createComponent(RiyalComponent);
     fixture.detectChanges();
 
     // The glyph must be the shared asset, never literal "SAR"/"ر.س" text.
     const icon = fixture.nativeElement.querySelector('.riyal-icon') as HTMLElement;
     expect(icon).toBeTruthy();
+    expect(icon.getAttribute('data-asset-path')).toBe('/assets/Saudi_Riyal.svg');
     expect(icon.getAttribute('aria-hidden')).toBe('true');
     expect(fixture.nativeElement.textContent).not.toContain('SAR');
     expect(fixture.nativeElement.querySelector('.sr-only').textContent).toContain('Saudi Riyal');

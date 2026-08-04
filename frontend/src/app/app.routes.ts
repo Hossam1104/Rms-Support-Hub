@@ -32,20 +32,30 @@ export const routes: Routes = [
         loadComponent: () => import('./features/unicommerce/unicommerce.component').then(m => m.UnicommerceComponent)
       },
       {
-        path: 'requests',
+        path: 'order-requests',
         canActivate: [capabilityGuard('orderRequests')],
         loadComponent: () => import('./features/order-requests/order-requests.component').then(m => m.OrderRequestsComponent),
         children: [
           {
-            path: ':requestId',
-            loadComponent: () => import('./features/order-requests/components/order-request-drawer.component').then(m => m.OrderRequestDrawerComponent)
+            path: ':orderId',
+            loadComponent: () => import('./features/order-requests/components/order-request-details.component').then(m => m.OrderRequestDetailsComponent)
           }
         ]
       },
       {
+        path: 'requests/:requestId',
+        redirectTo: 'order-requests/:requestId',
+        pathMatch: 'full'
+      },
+      {
+        path: 'requests',
+        redirectTo: 'order-requests',
+        pathMatch: 'full'
+      },
+      {
         path: 'validation',
-        canActivate: [capabilityGuard('orderRequests')],
-        loadComponent: () => import('./features/order-validation/order-validation.component').then(m => m.OrderValidationComponent)
+        redirectTo: 'order-requests',
+        pathMatch: 'full'
       }
     ]
   },

@@ -1,45 +1,62 @@
 # Current Task
 
-- **Task ID:** FINAL-PROJECT-POLISH
+- **Task ID:** ORDER-REQUESTS-UNIFICATION
 - **Status:** Completed Locally
 - **Role:** Closed
 
 ## Objective
 
-Two approved business-rule corrections (an optional payment sends as Cash on
-Delivery; the phone field carries the local number only), UPC-first module
-ordering, Riyal asset standardization, repository cleanup, and a local merge
-into `main`. The preceding U0-U8 UI rework programme remains complete.
+Unify the Order Requests and superseded validation experiences, make the
+canonical detail view a stable full page, enforce the final resend rule using
+the selected stored request and original number, stabilize branch selection,
+reconcile Riyal rendering and project documentation, and prepare a clean local
+merge into `main`.
 
 ## Closeout
 
-- An empty payment list is a valid Cash-on-Delivery order in the validator,
-  the payload, and the summary/payments UI (ADR-0006).
-- `Normalizers.NormalizeLocalPhone` splits the Saudi country code out of
-  `client_phone` and `order_phone` in the builder, mirrored at the entry
-  boundary by `phone.util.ts` (ADR-0007).
-- UPC is pinned first through `orderModulesForDisplay`; no module-key branch
-  was added. Every visible Riyal amount renders through `app-riyal`.
-- Stale prompts, completed plans, superseded archives, and two consumer-free
-  UI components were removed; live documentation links were repointed.
-- Backend 127/127, frontend 100/100, Release build and `npm run build` passed.
-  The work is merged into local `main`. Nothing was pushed or deployed.
+- `/modules/:key/order-requests` is the single guarded list/detail route;
+  `/requests` and `/validation` remain compatibility redirects.
+- The detail page presents Items, Order Info, Transactions, Request JSON, and
+  Response JSON in that order. Request/response sections are collapsed by
+  default and missing data has explicit safe states.
+- Resend blocks New (1), With_Delegate (4), and unknown statuses. For every
+  other known status, the API verifies the stored `order_code`, reuses the
+  original number, changes only `branch_code`, preserves unknown fields, and
+  leaves the historical row unchanged. Production confirmation and duplicate
+  submit guards remain active.
+- Branch selection keeps fixed option geometry and keyboard ownership of the
+  active row. Visible amounts use the shared `app-riyal` renderer and its
+  approved asset path; the checked-in asset itself is still an unapproved
+  placeholder awaiting replacement.
+- The consumer-free Order Validation component tree, duplicate navigation, and
+  stale active documentation were removed or reconciled. ADR-0008 records the
+  lasting route/resend decision.
+- The implementation is merged into local `main` with the requested
+  no-fast-forward merge. Nothing is pushed or deployed.
+
+## Validation
+
+- Backend tests: 145/145 passed.
+- Frontend tests: 105/105 passed across 21 spec files.
+- Release solution build: 0 warnings, 0 errors.
+- `scripts/build.ps1`: all checks passed; Angular production bundle generated
+  with two non-blocking style-budget warnings.
 - No Production send, cancel, or resend was attempted.
 
 ## Deferred
 
-- Browser visual verification and full safe Testing order population, send,
-  cancel, and resend evidence remain unavailable.
-- One payment-free send against UPC **Testing** must confirm the RMS accepts
-  `order_payment_method` `"COD"` (see the ADR-0006 open risk in STATE.md).
-- `Saudi_Riyal.svg`, `upc_logo.svg`, and `whites_logo.svg` are unverified
-  placeholders awaiting approved assets.
+- No browser instance was available for responsive/theme visual verification.
+- No approved safe Testing order was available for live Order Requests,
+  send/cancel, or same-number resend evidence.
+- The approved `frontend/public/assets/Saudi_Riyal.svg` replacement is still
+  required; no symbol was fabricated, redrawn, or downloaded.
 
 ## Constraints Retained
 
-- Do not modify payload builders, validators, totals, SQL, request fixtures,
-  API contracts, capabilities, draft persistence, dependencies, or features
-  outside an explicitly approved rule change.
-- Do not push, deploy, reset, stash, rebase, amend, or use Production.
-- Do not edit generated/runtime paths or store secrets/customer data in tracked
-  files or `.ai/`.
+- Do not invent SQL columns or payload keys; current SQL, fixtures, and schema
+  documentation remain authoritative.
+- Keep module behavior capability-gated and backend dependencies Core -> Data
+  -> API.
+- Keep credentials outside tracked files and use Testing for agent-run live
+  verification. Never use Production.
+- Do not edit generated/runtime paths or store secrets/customer data in `.ai/`.

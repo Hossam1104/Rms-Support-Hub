@@ -135,6 +135,11 @@ naming the one-line flip once GHC's live database credentials are confirmed.)
 All routes accept `?envKey={envKey}` to pick the environment (and therefore
 the connection string) to query.
 
+The frontend's canonical history route is `/order-requests`; the legacy
+`/requests` and `/validation` paths redirect to it for bookmarked links. The
+detail route is `/order-requests/{id}` and replaces the former validation and
+drawer surfaces.
+
 ### List
 - **`GET /api/modules/{key}/order-requests`**
 - **Query**: `q` (alias for `orderNumber`), `orderNumber`, `phone`, `branchCode`, `status` (single value, 1–9), `statuses` (repeated, e.g. `?statuses=6&statuses=7` — R9 multi-select status chips; takes precedence over `status` when both are given), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC`).
@@ -161,8 +166,9 @@ the connection string) to query.
 
 ### Resend
 - **`POST /api/modules/{key}/order-requests/{id}/resend`**
-- **Request Body**: `{ branchCode: string, endpointKey?: string }`
-- Rebuilds the payload from **that specific request's own stored `RequestJson`** (not the live in-progress draft), overrides only `branch_code`, and re-checks `OrderRequestStatus.ResendBlockedStatuses` (`{4,8,9}` — With_Delegate/Processing/Done).
+- **Request Body**: `{ branchCode?: string, endpointKey?: string }`
+- Reuses **that specific request's own stored `RequestJson`** (not the live in-progress draft), verifies its `order_code` matches the recorded `OrderNumber`, and overrides only `branch_code` when a target is supplied. When omitted, the original stored branch is reused. The original order/request number is sent again unchanged, all unknown payload fields are preserved, and no historical row is mutated.
+- The server re-checks the canonical resend rule `OrderRequestStatus.ResendBlockedStatuses` (`{1,4}` — New/With_Delegate) immediately before sending.
 - **`409 Conflict`**: `{ error: string, resendBlockedReason: string }` if blocked.
 - **`200 OK`** otherwise: `{ success, statusCode, responseText, urlSent }`.
 - Posts to `environment.ApiUrl` (a resend is a new order attempt, not a cancellation).
