@@ -11,7 +11,8 @@ if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
 }
 
 $bytes = [System.IO.File]::ReadAllBytes($assetPath)
-$markup = [System.Text.Encoding]::UTF8.GetString($bytes).TrimEnd()
+$markup = [System.Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n" -replace "`r", "`n"
+$markup = $markup.TrimEnd()
 $canonicalBytes = [System.Text.Encoding]::UTF8.GetBytes($markup)
 $sha1 = ([System.BitConverter]::ToString([System.Security.Cryptography.SHA1]::Create().ComputeHash($canonicalBytes))).Replace('-', '').ToLowerInvariant()
 if ($sha1 -ne $expectedSha1) {
