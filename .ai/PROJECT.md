@@ -70,10 +70,10 @@ Do not copy facts that can be cheaply discovered from the repository.
 ## Build and Validation Entry Points
 
 - Full gate: `.\scripts\build.ps1` - passed for the final Order Requests
-  unification on 2026-08-04 (145 backend tests, Release build, and production
+  unification on 2026-08-04 (146 backend tests, Release build, and production
   Angular build; initial bundle 425.91 kB).
 - Backend tests: `dotnet test backend/OnlineOrderTool.slnx -c Release
-  --nologo` - passed 145/145 on 2026-08-04.
+  --nologo` - passed 146/146 on 2026-08-04.
 - Frontend production build/type check: `cd frontend; npm run build --
   --configuration production` - covered by the full gate on 2026-08-04.
 - Frontend tests: `cd frontend; npm test -- --watch=false` - passed 105/105

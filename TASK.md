@@ -36,7 +36,7 @@ merge into `main`.
 
 ## Validation
 
-- Backend tests: 145/145 passed.
+- Backend tests: 146/146 passed.
 - Frontend tests: 105/105 passed across 21 spec files.
 - Release solution build: 0 warnings, 0 errors.
 - `scripts/build.ps1`: all checks passed; Angular production bundle generated
