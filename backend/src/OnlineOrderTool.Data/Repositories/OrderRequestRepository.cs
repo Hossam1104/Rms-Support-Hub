@@ -41,8 +41,28 @@ public class OrderRequestRepository : IOrderRequestRepository
                 ORDER BY Id DESC
             ) AS I";
 
-    private const string FromClause = @"FROM dbo.OrderRequests AS R" + HeaderApplyClause + InvoiceApplyClause;
-    private const string StatsFromClause = @"FROM dbo.OrderRequests AS R" + HeaderApplyClause;
+    // The external UPC schema is not migration-managed. The reviewed Testing
+    // index script supplies the supporting join indexes; keep the ranked shape
+    // here so header-derived filters and summaries scan one authoritative row
+    // per order number. The row list's base-only fast path still pages
+    // OrderRequests before its small set of header/invoice lookups.
+    private const string LatestHeadersCte = @"
+            WITH LatestHeaders AS (
+                SELECT
+                    H.Id, H.OrderNumber, H.BranchCode, H.BranchName, H.OrderStatus,
+                    H.ParentOrderNumber, H.ConsumerMobile,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY H.OrderNumber
+                        ORDER BY H.Id DESC
+                    ) AS HeaderRank
+                FROM dbo.RequestOrderHeaders AS H
+            )";
+
+    private const string LatestHeaderJoinClause = @"
+            LEFT JOIN LatestHeaders AS H
+                ON H.OrderNumber = R.OrderNumber
+                AND H.HeaderRank = 1";
+
     private const int ListCommandTimeoutSeconds = 15;
 
     private static readonly Dictionary<string, string> SortColumns = new(StringComparer.OrdinalIgnoreCase)
@@ -64,13 +84,22 @@ public class OrderRequestRepository : IOrderRequestRepository
 
         if (!string.IsNullOrWhiteSpace(filters.OrderNumber))
         {
-            clauses.Add("R.OrderNumber = @OrderNumber");
-            p.Add("OrderNumber", filters.OrderNumber.Trim());
+            var orderNumber = filters.OrderNumber.Trim();
+            if (filters.ExactOrderNumber)
+            {
+                clauses.Add("R.OrderNumber = @OrderNumber");
+                p.Add("OrderNumber", orderNumber);
+            }
+            else
+            {
+                clauses.Add("R.OrderNumber LIKE @OrderNumberPattern ESCAPE '\\'");
+                p.Add("OrderNumberPattern", $"%{EscapeLikePattern(orderNumber)}%");
+            }
         }
         if (!string.IsNullOrWhiteSpace(filters.Phone))
         {
             clauses.Add("RIGHT(H.ConsumerMobile, 9) = @Phone9");
-            p.Add("Phone9", Normalizers.NormalizePhoneSearch(filters.Phone));
+            p.Add("Phone9", NormalizePhoneFilter(filters.Phone));
         }
         if (!string.IsNullOrWhiteSpace(filters.BranchCode))
         {
@@ -91,7 +120,9 @@ public class OrderRequestRepository : IOrderRequestRepository
         }
         if (filters.Succeeded.HasValue)
         {
-            clauses.Add("R.IsSucceeded = @Succeeded");
+            clauses.Add(filters.Succeeded.Value
+                ? "R.IsSucceeded = @Succeeded"
+                : "(R.IsSucceeded = @Succeeded OR R.ExceptionMessage IS NOT NULL)");
             p.Add("Succeeded", filters.Succeeded.Value);
         }
         if (filters.HasException.HasValue)
@@ -113,6 +144,18 @@ public class OrderRequestRepository : IOrderRequestRepository
         return (whereSql, p);
     }
 
+    private static string NormalizePhoneFilter(string phone)
+    {
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+        return digits.Length == 9 ? digits : Normalizers.NormalizePhoneSearch(phone);
+    }
+
+    private static string EscapeLikePattern(string value)
+        => value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal)
+            .Replace("[", "\\[", StringComparison.Ordinal);
+
     /// <summary>sort is "field" (desc) or "-field"/"+field"; unrecognized or
     /// absent falls back to R.OrderDate DESC. R.Id DESC is always appended by
     /// the caller as a stable tie-breaker -- see ListAsync.</summary>
@@ -132,7 +175,10 @@ public class OrderRequestRepository : IOrderRequestRepository
     /// DATALENGTH/IS NULL, never selected as raw columns, and that paging is
     /// bound via @Skip/@Take rather than interpolated literals.</summary>
     internal static string BuildListSql(string whereSql, string? sort)
-        => BuildListSql(whereSql, sort, applyHeaderJoinsAfterPaging: false);
+        => BuildListSql(
+            whereSql,
+            sort,
+            applyHeaderJoinsAfterPaging: !whereSql.Contains("H.", StringComparison.Ordinal));
 
     /// <summary>Builds the list query with a fast path for filters that only
     /// touch OrderRequests. The base rows are sorted and paged before the
@@ -145,9 +191,9 @@ public class OrderRequestRepository : IOrderRequestRepository
         // RequestJson/ResponseJson are never selected here -- only
         // DATALENGTH/existence, so the list stays fast at any row count.
         // GetDetailAsync is the only place the raw blobs are read.
+        var orderBy = ResolveSortColumn(sort);
         if (applyHeaderJoinsAfterPaging)
         {
-            var orderBy = ResolveSortColumn(sort);
             return $@"
                 WITH PagedRequests AS (
                     SELECT
@@ -171,31 +217,49 @@ public class OrderRequestRepository : IOrderRequestRepository
         }
 
         return $@"
+            {LatestHeadersCte},
+            FilteredRequests AS (
+                SELECT
+                    R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
+                    DATALENGTH(R.RequestJson) AS RequestBytes,
+                    CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse,
+                    H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber
+                FROM dbo.OrderRequests AS R
+                {LatestHeaderJoinClause}
+                {whereSql}
+            ),
+            PagedRequests AS (
+                SELECT *
+                FROM FilteredRequests AS R
+                ORDER BY {orderBy}, R.Id DESC
+                OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+            )
             SELECT
                 R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
-                DATALENGTH(R.RequestJson) AS RequestBytes,
-                CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse,
-                H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber,
+                R.RequestBytes, R.HasResponse,
+                R.OrderHeaderId, R.BranchCode, R.BranchName, R.OrderStatus, R.ParentOrderNumber,
                 I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
-            {FromClause}
-            {whereSql}
-            ORDER BY {ResolveSortColumn(sort)}, R.Id DESC
-            OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY";
+            FROM PagedRequests AS R
+            {InvoiceApplyClause}
+            ORDER BY {orderBy}, R.Id DESC";
     }
 
     public async Task<List<OrderRequestListItemDto>> ListAsync(
-        string connectionString, OrderRequestFilters filters, int page, int pageSize, string? sort)
+        string connectionString, OrderRequestFilters filters, int page, int pageSize, string? sort,
+        CancellationToken cancellationToken = default)
     {
         var safePage = Math.Max(1, page);
         var safePageSize = Math.Clamp(pageSize, 1, 200);
         var (whereSql, p) = BuildFilters(filters);
-        p.Add("Skip", (safePage - 1) * safePageSize);
+        p.Add("Skip", (long)(safePage - 1) * safePageSize);
         p.Add("Take", safePageSize);
 
         var sql = BuildListSql(whereSql, sort, applyHeaderJoinsAfterPaging: !RequiresHeaderJoin(filters));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var rows = await connection.QueryAsync<ListRow>(sql, p, commandTimeout: ListCommandTimeoutSeconds);
+        var command = new CommandDefinition(
+            sql, p, commandTimeout: ListCommandTimeoutSeconds, cancellationToken: cancellationToken);
+        var rows = await connection.QueryAsync<ListRow>(command);
 
         return rows.Select(r => new OrderRequestListItemDto(
             r.Id, r.OrderNumber ?? "", r.OrderDate, r.NetTotal ?? 0m, r.ItemCount ?? 0, r.IsSucceeded,
@@ -206,30 +270,55 @@ public class OrderRequestRepository : IOrderRequestRepository
         )).ToList();
     }
 
-    public async Task<int> CountAsync(string connectionString, OrderRequestFilters filters)
+    internal static string BuildCountSql(string whereSql, bool requiresHeaderJoin)
     {
-        var (whereSql, p) = BuildFilters(filters);
-        var fromClause = RequiresHeaderJoin(filters) ? FromClause : @"FROM dbo.OrderRequests AS R";
-        var sql = $"SELECT COUNT(*) {fromClause} {whereSql}";
+        if (!requiresHeaderJoin)
+        {
+            return $"SELECT COUNT(DISTINCT R.Id) FROM dbo.OrderRequests AS R {whereSql}";
+        }
 
-        using var connection = _connectionFactory.CreateConnection(connectionString);
-        return await connection.ExecuteScalarAsync<int>(sql, p, commandTimeout: ListCommandTimeoutSeconds);
+        return $@"
+            {LatestHeadersCte}
+            SELECT COUNT(DISTINCT R.Id)
+            FROM dbo.OrderRequests AS R
+            {LatestHeaderJoinClause}
+            {whereSql}";
     }
 
-    public async Task<OrderRequestStatsDto> StatsAsync(string connectionString, OrderRequestFilters filters)
+    public async Task<int> CountAsync(
+        string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
     {
         var (whereSql, p) = BuildFilters(filters);
-        var sql = $@"
+        var sql = BuildCountSql(whereSql, RequiresHeaderJoin(filters));
+
+        using var connection = _connectionFactory.CreateConnection(connectionString);
+        var command = new CommandDefinition(
+            sql, p, commandTimeout: ListCommandTimeoutSeconds, cancellationToken: cancellationToken);
+        return await connection.ExecuteScalarAsync<int>(command);
+    }
+
+    internal static string BuildStatsSql(string whereSql)
+        => $@"
+            {LatestHeadersCte}
             SELECT
-                COUNT(*) AS Total,
+                COUNT(DISTINCT R.Id) AS Total,
                 SUM(CASE WHEN R.IsSucceeded = 1 THEN 1 ELSE 0 END) AS Succeeded,
                 SUM(CASE WHEN R.IsSucceeded = 0 OR R.ExceptionMessage IS NOT NULL THEN 1 ELSE 0 END) AS Failed,
                 SUM(CASE WHEN H.OrderStatus IN (6, 7) THEN 1 ELSE 0 END) AS Cancelled
-            {StatsFromClause}
+            FROM dbo.OrderRequests AS R
+            {LatestHeaderJoinClause}
             {whereSql}";
 
+    public async Task<OrderRequestStatsDto> StatsAsync(
+        string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
+    {
+        var (whereSql, p) = BuildFilters(filters);
+        var sql = BuildStatsSql(whereSql);
+
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var row = await connection.QuerySingleAsync<StatsRow>(sql, p, commandTimeout: ListCommandTimeoutSeconds);
+        var command = new CommandDefinition(
+            sql, p, commandTimeout: ListCommandTimeoutSeconds, cancellationToken: cancellationToken);
+        var row = await connection.QuerySingleAsync<StatsRow>(command);
         return new OrderRequestStatsDto(row.Total, row.Succeeded ?? 0, row.Failed ?? 0, row.Cancelled ?? 0);
     }
 

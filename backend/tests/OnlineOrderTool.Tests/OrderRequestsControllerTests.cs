@@ -72,14 +72,31 @@ public class OrderRequestsControllerTests
     private class FakeOrderRequestRepository : IOrderRequestRepository
     {
         public OrderRequestDetailDto Detail = MakeDetail(orderStatus: 1); // 1 = New, cancel-allowed
+        public OrderRequestFilters? LastFilters;
+        public CancellationToken LastCancellationToken;
+        public int LastPage;
+        public int LastPageSize;
+        public int Total = 0;
+        public Exception? ListException;
 
-        public Task<List<OrderRequestListItemDto>> ListAsync(string connectionString, OrderRequestFilters filters, int page, int pageSize, string? sort)
-            => Task.FromResult(new List<OrderRequestListItemDto>());
+        public Task<List<OrderRequestListItemDto>> ListAsync(
+            string connectionString, OrderRequestFilters filters, int page, int pageSize, string? sort,
+            CancellationToken cancellationToken = default)
+        {
+            LastFilters = filters;
+            LastCancellationToken = cancellationToken;
+            LastPage = page;
+            LastPageSize = pageSize;
+            return ListException == null
+                ? Task.FromResult(new List<OrderRequestListItemDto>())
+                : Task.FromException<List<OrderRequestListItemDto>>(ListException);
+        }
 
-        public Task<int> CountAsync(string connectionString, OrderRequestFilters filters) => Task.FromResult(0);
+        public Task<int> CountAsync(string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
+            => Task.FromResult(Total);
 
-        public Task<OrderRequestStatsDto> StatsAsync(string connectionString, OrderRequestFilters filters)
-            => Task.FromResult(new OrderRequestStatsDto(0, 0, 0, 0));
+        public Task<OrderRequestStatsDto> StatsAsync(string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
+            => Task.FromResult(new OrderRequestStatsDto(Total, 0, 0, 0));
 
         public Task<OrderRequestDetailDto?> GetDetailAsync(string connectionString, long requestId)
             => Task.FromResult<OrderRequestDetailDto?>(Detail);
@@ -219,5 +236,131 @@ public class OrderRequestsControllerTests
         var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
         Assert.NotEqual(200, objectResult.StatusCode);
         Assert.Equal(0, apiClient.CallCount);
+    }
+
+    private static OrderRequestListQuery ListQuery(
+        string? phone = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
+        bool? exactMatch = null,
+        int? status = null,
+        int page = 2,
+        int pageSize = 50)
+        => new(
+            Q: null,
+            OrderNumber: "  UPC-%  ",
+            Phone: phone,
+            BranchCode: " P001 ",
+            Status: status,
+            Statuses: new[] { 6, 7 },
+            Succeeded: false,
+            HasException: null,
+            DateFrom: dateFrom,
+            DateTo: dateTo,
+            Page: page,
+            PageSize: pageSize,
+            Sort: "-net_total",
+            ExactMatch: exactMatch);
+
+    [Fact]
+    public async Task List_NormalizesPhoneAndPassesOneCanonicalFilterSetToAllReads()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        using var cancellation = new CancellationTokenSource();
+
+        var result = await controller.List(
+            "upc_ecommerce", ListQuery(phone: "+966556028080", exactMatch: false), "UPC Testing", cancellation.Token);
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
+        Assert.NotNull(repo.LastFilters);
+        Assert.Equal("556028080", repo.LastFilters!.Phone);
+        Assert.False(repo.LastFilters.ExactOrderNumber);
+        Assert.Equal("P001", repo.LastFilters.BranchCode);
+        Assert.Equal(new[] { 6, 7 }, repo.LastFilters.Statuses);
+        Assert.Equal(2, repo.LastPage);
+        Assert.Equal(cancellation.Token, repo.LastCancellationToken);
+    }
+
+    [Fact]
+    public async Task List_RejectsInvalidDateRangeBeforeStartingDatabaseReads()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var result = await controller.List(
+            "upc_ecommerce", ListQuery(dateFrom: new DateTime(2026, 8, 4), dateTo: new DateTime(2026, 8, 3)), "UPC Testing");
+
+        var badRequest = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequest.StatusCode);
+        Assert.Null(repo.LastFilters);
+    }
+
+    [Fact]
+    public async Task List_RejectsInvalidPhoneBeforeStartingDatabaseReads()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var result = await controller.List(
+            "upc_ecommerce", ListQuery(phone: "123"), "UPC Testing");
+
+        var badRequest = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequest.StatusCode);
+        Assert.Null(repo.LastFilters);
+    }
+
+    [Fact]
+    public async Task List_RejectsInvalidStatusBeforeStartingDatabaseReads()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var result = await controller.List(
+            "upc_ecommerce", ListQuery(status: 99), "UPC Testing");
+
+        var badRequest = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequest.StatusCode);
+        Assert.Null(repo.LastFilters);
+    }
+
+    [Fact]
+    public async Task List_ClampsInvalidPageAndPageSizeBeforeRepositoryPaging()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var result = await controller.List(
+            "upc_ecommerce", ListQuery(page: 0, pageSize: 999), "UPC Testing");
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
+        Assert.Equal(1, repo.LastPage);
+        Assert.Equal(200, repo.LastPageSize);
+    }
+
+    [Fact]
+    public async Task List_FallsBackToLastRealPageWhenTotalShrinks()
+    {
+        var repo = new FakeOrderRequestRepository { Total = 1 };
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var result = await controller.List(
+            "upc_ecommerce", ListQuery(page: 2, pageSize: 50), "UPC Testing");
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
+        Assert.Equal(1, repo.LastPage);
+    }
+
+    [Fact]
+    public async Task List_ConvertsRepositoryFailureToRetryableUpstreamError()
+    {
+        var repo = new FakeOrderRequestRepository { ListException = new InvalidOperationException("secret SQL details") };
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var error = await Assert.ThrowsAsync<OnlineOrderTool.Api.Exceptions.UpstreamException>(() =>
+            controller.List("upc_ecommerce", ListQuery(), "UPC Testing"));
+
+        Assert.Equal(502, error.StatusCode);
+        Assert.DoesNotContain("secret SQL details", error.Message);
     }
 }

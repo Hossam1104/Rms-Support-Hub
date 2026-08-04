@@ -1,9 +1,12 @@
 namespace OnlineOrderTool.Core.DTOs;
 
-/// <summary>Filters for OrderRequestRepository.ListAsync/CountAsync/StatsAsync.
+/// <summary>Normalized filters for OrderRequestRepository.ListAsync/CountAsync/StatsAsync.
 /// All optional -- an empty filter set returns everything. Statuses (R9,
 /// multi-select status chips) takes precedence over the single-value Status
-/// when both are supplied; Status is kept for any other/older caller.</summary>
+/// when both are supplied; Status is kept for any other/older caller. Phone is
+/// normalized to its last nine digits by the API before this model reaches the
+/// repository. ExactOrderNumber defaults to true to preserve the original
+/// exact-search behavior; false opts into an escaped contains search.</summary>
 public record OrderRequestFilters(
     string? OrderNumber = null,
     string? Phone = null,
@@ -13,7 +16,8 @@ public record OrderRequestFilters(
     bool? Succeeded = null,
     bool? HasException = null,
     DateTime? DateFrom = null,
-    DateTime? DateTo = null
+    DateTime? DateTo = null,
+    bool ExactOrderNumber = true
 );
 
 /// <summary>One row in the Order Requests list. Deliberately excludes
