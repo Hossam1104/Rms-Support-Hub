@@ -6,5 +6,6 @@ automatically read every plan.
 
 ## Current active plan
 
-None. The U0-U8 UI rework programme is complete locally. The completed U8
-verification plan is archived under `.ai/archive/` for audit history.
+None. The U0-U8 UI rework programme is complete locally, and its executed
+session prompts have been removed from the tree. `.ai/HISTORY.md` indexes the
+milestones; `.ai/archive/` keeps only the plans with lasting audit value.
