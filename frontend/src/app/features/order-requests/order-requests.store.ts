@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { Subscription, timeout } from 'rxjs';
 import { ApiService, ApiParams } from '../../core/services/api.service';
 import { BranchOptionsService } from '../../core/services/branch-options.service';
 import {
@@ -32,6 +33,7 @@ export const EMPTY_FILTERS: OrderRequestsFilterState = {
  */
 @Injectable()
 export class OrderRequestsStore {
+  private static readonly requestTimeoutMs = 15000;
   private api = inject(ApiService);
   private branchOptions = inject(BranchOptionsService);
 
@@ -80,6 +82,9 @@ export class OrderRequestsStore {
   private requestToken = 0;
   private detailToken = 0;
   private branchLoadToken = 0;
+  private listSubscription: Subscription | null = null;
+  private detailSubscription: Subscription | null = null;
+  private branchSubscription: Subscription | null = null;
 
   init(moduleKey: string, envKey: string | null, filters: OrderRequestsFilterState, page: number, pageSize: number) {
     this.moduleKey.set(moduleKey);
@@ -92,13 +97,24 @@ export class OrderRequestsStore {
   }
 
   setFilters(patch: Partial<OrderRequestsFilterState>) {
-    this.filters.update(f => ({ ...f, ...patch }));
+    const normalizedPatch: Partial<OrderRequestsFilterState> = { ...patch };
+    if (patch.search !== undefined) normalizedPatch.search = patch.search.trim();
+    if (patch.phone !== undefined) normalizedPatch.phone = patch.phone.trim();
+    if (patch.branchCode !== undefined) normalizedPatch.branchCode = patch.branchCode?.trim() || null;
+    if (patch.statuses !== undefined) normalizedPatch.statuses = [...new Set(patch.statuses)];
+
+    const next = { ...this.filters(), ...normalizedPatch };
+    if (this.sameFilters(this.filters(), next)) return;
+
+    this.filters.set(next);
     this.page.set(1);
     this.load();
   }
 
   clearFilters() {
-    this.filters.set(EMPTY_FILTERS);
+    const changed = !this.sameFilters(this.filters(), EMPTY_FILTERS) || this.page() !== 1;
+    if (!changed) return;
+    this.filters.set({ ...EMPTY_FILTERS, statuses: [] });
     this.page.set(1);
     this.load();
   }
@@ -138,8 +154,20 @@ export class OrderRequestsStore {
     this.setFilters({ outcome: 'all', statuses: [6, 7] });
   }
 
-  setPage(page: number) { this.page.set(page); this.load(); }
-  setPageSize(size: number) { this.pageSize.set(size); this.page.set(1); this.load(); }
+  setPage(page: number) {
+    const nextPage = Math.max(1, Math.min(Math.trunc(page) || 1, this.totalPages()));
+    if (nextPage === this.page()) return;
+    this.page.set(nextPage);
+    this.load();
+  }
+
+  setPageSize(size: number) {
+    const nextSize = [25, 50, 100, 200].includes(Number(size)) ? Number(size) : 25;
+    if (nextSize === this.pageSize() && this.page() === 1) return;
+    this.pageSize.set(nextSize);
+    this.page.set(1);
+    this.load();
+  }
   setEnvKey(envKey: string | null) { this.envKey.set(envKey); this.load(); this.loadBranches(); }
 
   refresh() { this.load(); }
@@ -148,6 +176,7 @@ export class OrderRequestsStore {
     const key = this.moduleKey();
     if (!key) return;
 
+    this.listSubscription?.unsubscribe();
     const token = ++this.requestToken;
     this.status.set('loading');
 
@@ -166,17 +195,21 @@ export class OrderRequestsStore {
       envKey: this.envKey() || undefined
     };
 
-    this.api.get<OrderRequestListResponse>(`modules/${key}/order-requests`, params).subscribe({
+    this.listSubscription = this.api.get<OrderRequestListResponse>(`modules/${key}/order-requests`, params).pipe(
+      timeout({ each: OrderRequestsStore.requestTimeoutMs })
+    ).subscribe({
       next: res => {
         if (token !== this.requestToken) return; // a newer request already superseded this one
         this.items.set(res.items);
         this.stats.set(res.stats);
         this.total.set(res.total);
         this.status.set(res.items.length === 0 ? 'empty' : 'ready');
+        this.listSubscription = null;
       },
       error: () => {
         if (token !== this.requestToken) return;
         this.status.set('error');
+        this.listSubscription = null;
       }
     });
   }
@@ -185,10 +218,13 @@ export class OrderRequestsStore {
     const key = this.moduleKey();
     if (!key) return;
 
+    this.branchSubscription?.unsubscribe();
     const token = ++this.branchLoadToken;
     this.branchStatus.set('loading');
     this.branchError.set(null);
-    this.branchOptions.list(key, this.envKey(), refresh).subscribe({
+    this.branchSubscription = this.branchOptions.list(key, this.envKey(), refresh).pipe(
+      timeout({ each: OrderRequestsStore.requestTimeoutMs })
+    ).subscribe({
       next: response => {
         if (token !== this.branchLoadToken) return;
         if (response.success) {
@@ -199,11 +235,13 @@ export class OrderRequestsStore {
           this.branchStatus.set('error');
           this.branchError.set(response.message || 'Branches could not be loaded.');
         }
+        this.branchSubscription = null;
       },
       error: () => {
         if (token !== this.branchLoadToken) return;
         this.branchStatus.set('error');
         this.branchError.set('Branches could not be loaded.');
+        this.branchSubscription = null;
       }
     });
   }
@@ -212,15 +250,19 @@ export class OrderRequestsStore {
     this.selectedId.set(id);
     const key = this.moduleKey();
     const token = ++this.detailToken;
+    this.detailSubscription?.unsubscribe();
     this.detailStatus.set('loading');
     this.detailError.set(null);
     this.selected.set(null);
 
-    this.api.get<OrderRequestDetailResponse>(`modules/${key}/order-requests/${id}`, { envKey: this.envKey() || undefined }).subscribe({
+    this.detailSubscription = this.api.get<OrderRequestDetailResponse>(`modules/${key}/order-requests/${id}`, { envKey: this.envKey() || undefined }).pipe(
+      timeout({ each: OrderRequestsStore.requestTimeoutMs })
+    ).subscribe({
       next: res => {
         if (token !== this.detailToken) return;
         this.selected.set(res);
         this.detailStatus.set('ready');
+        this.detailSubscription = null;
       },
       error: (err) => {
         if (token !== this.detailToken) return;
@@ -228,6 +270,7 @@ export class OrderRequestsStore {
         this.detailError.set(err?.status === 404
           ? 'This request was not found in the selected environment.'
           : err?.message || 'The order request could not be loaded.');
+        this.detailSubscription = null;
       }
     });
   }
@@ -249,6 +292,17 @@ export class OrderRequestsStore {
       isSucceeded: detail.request.isSucceeded,
       orderStatus: detail.request.header?.orderStatus ?? item.orderStatus,
       orderStatusLabel: detail.request.header?.orderStatusLabel ?? item.orderStatusLabel
-    } : item));
+      } : item));
+  }
+
+  private sameFilters(left: OrderRequestsFilterState, right: OrderRequestsFilterState): boolean {
+    return left.search === right.search
+      && left.phone === right.phone
+      && left.branchCode === right.branchCode
+      && left.outcome === right.outcome
+      && left.dateFrom === right.dateFrom
+      && left.dateTo === right.dateTo
+      && left.statuses.length === right.statuses.length
+      && left.statuses.every((status, index) => status === right.statuses[index]);
   }
 }

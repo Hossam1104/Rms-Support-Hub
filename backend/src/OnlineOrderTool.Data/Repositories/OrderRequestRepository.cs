@@ -25,20 +25,25 @@ public class OrderRequestRepository : IOrderRequestRepository
     // Invoices is 1:1 with OrderNumber (retries and re-invoicing both create
     // extra rows), so both are joined via OUTER APPLY TOP 1 -- never a plain
     // JOIN, which would multiply a single OrderRequests row into duplicates.
-    private const string FromClause = @"
-        FROM dbo.OrderRequests AS R
+    private const string HeaderApplyClause = @"
             OUTER APPLY (
-                SELECT TOP 1 Id, BranchCode, BranchName, OrderStatus, ParentOrderNumber
+                SELECT TOP 1 Id, BranchCode, BranchName, OrderStatus, ParentOrderNumber, ConsumerMobile
                 FROM dbo.RequestOrderHeaders
                 WHERE OrderNumber = R.OrderNumber
                 ORDER BY Id DESC
-            ) AS H
+            ) AS H";
+
+    private const string InvoiceApplyClause = @"
             OUTER APPLY (
                 SELECT TOP 1 Barcode, CloseDateLocalTime
                 FROM dbo.Invoices
                 WHERE OnlineOrderNumber = R.OrderNumber
                 ORDER BY Id DESC
             ) AS I";
+
+    private const string FromClause = @"FROM dbo.OrderRequests AS R" + HeaderApplyClause + InvoiceApplyClause;
+    private const string StatsFromClause = @"FROM dbo.OrderRequests AS R" + HeaderApplyClause;
+    private const int ListCommandTimeoutSeconds = 15;
 
     private static readonly Dictionary<string, string> SortColumns = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -127,10 +132,44 @@ public class OrderRequestRepository : IOrderRequestRepository
     /// DATALENGTH/IS NULL, never selected as raw columns, and that paging is
     /// bound via @Skip/@Take rather than interpolated literals.</summary>
     internal static string BuildListSql(string whereSql, string? sort)
+        => BuildListSql(whereSql, sort, applyHeaderJoinsAfterPaging: false);
+
+    /// <summary>Builds the list query with a fast path for filters that only
+    /// touch OrderRequests. The base rows are sorted and paged before the
+    /// unindexed header/invoice lookups run, so the normal first page does not
+    /// scan those tables once per historical request. Header-derived filters
+    /// keep the original query shape because they must be applied before
+    /// paging.</summary>
+    internal static string BuildListSql(string whereSql, string? sort, bool applyHeaderJoinsAfterPaging)
     {
         // RequestJson/ResponseJson are never selected here -- only
         // DATALENGTH/existence, so the list stays fast at any row count.
-        // GetDetailAsync is the only place the blobs are read.
+        // GetDetailAsync is the only place the raw blobs are read.
+        if (applyHeaderJoinsAfterPaging)
+        {
+            var orderBy = ResolveSortColumn(sort);
+            return $@"
+                WITH PagedRequests AS (
+                    SELECT
+                        R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
+                        DATALENGTH(R.RequestJson) AS RequestBytes,
+                        CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse
+                    FROM dbo.OrderRequests AS R
+                    {whereSql}
+                    ORDER BY {orderBy}, R.Id DESC
+                    OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+                )
+                SELECT
+                    R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
+                    R.RequestBytes, R.HasResponse,
+                    H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber,
+                    I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
+                FROM PagedRequests AS R
+                {HeaderApplyClause}
+                {InvoiceApplyClause}
+                ORDER BY {orderBy}, R.Id DESC";
+        }
+
         return $@"
             SELECT
                 R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
@@ -153,10 +192,10 @@ public class OrderRequestRepository : IOrderRequestRepository
         p.Add("Skip", (safePage - 1) * safePageSize);
         p.Add("Take", safePageSize);
 
-        var sql = BuildListSql(whereSql, sort);
+        var sql = BuildListSql(whereSql, sort, applyHeaderJoinsAfterPaging: !RequiresHeaderJoin(filters));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var rows = await connection.QueryAsync<ListRow>(sql, p);
+        var rows = await connection.QueryAsync<ListRow>(sql, p, commandTimeout: ListCommandTimeoutSeconds);
 
         return rows.Select(r => new OrderRequestListItemDto(
             r.Id, r.OrderNumber ?? "", r.OrderDate, r.NetTotal ?? 0m, r.ItemCount ?? 0, r.IsSucceeded,
@@ -170,10 +209,11 @@ public class OrderRequestRepository : IOrderRequestRepository
     public async Task<int> CountAsync(string connectionString, OrderRequestFilters filters)
     {
         var (whereSql, p) = BuildFilters(filters);
-        var sql = $"SELECT COUNT(*) {FromClause} {whereSql}";
+        var fromClause = RequiresHeaderJoin(filters) ? FromClause : @"FROM dbo.OrderRequests AS R";
+        var sql = $"SELECT COUNT(*) {fromClause} {whereSql}";
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        return await connection.ExecuteScalarAsync<int>(sql, p);
+        return await connection.ExecuteScalarAsync<int>(sql, p, commandTimeout: ListCommandTimeoutSeconds);
     }
 
     public async Task<OrderRequestStatsDto> StatsAsync(string connectionString, OrderRequestFilters filters)
@@ -185,13 +225,19 @@ public class OrderRequestRepository : IOrderRequestRepository
                 SUM(CASE WHEN R.IsSucceeded = 1 THEN 1 ELSE 0 END) AS Succeeded,
                 SUM(CASE WHEN R.IsSucceeded = 0 OR R.ExceptionMessage IS NOT NULL THEN 1 ELSE 0 END) AS Failed,
                 SUM(CASE WHEN H.OrderStatus IN (6, 7) THEN 1 ELSE 0 END) AS Cancelled
-            {FromClause}
+            {StatsFromClause}
             {whereSql}";
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var row = await connection.QuerySingleAsync<StatsRow>(sql, p);
+        var row = await connection.QuerySingleAsync<StatsRow>(sql, p, commandTimeout: ListCommandTimeoutSeconds);
         return new OrderRequestStatsDto(row.Total, row.Succeeded ?? 0, row.Failed ?? 0, row.Cancelled ?? 0);
     }
+
+    private static bool RequiresHeaderJoin(OrderRequestFilters filters)
+        => !string.IsNullOrWhiteSpace(filters.Phone)
+            || !string.IsNullOrWhiteSpace(filters.BranchCode)
+            || filters.Status.HasValue
+            || filters.Statuses is { Count: > 0 };
 
     /// <summary>The only method in this repository that reads RequestJson,
     /// ResponseJson and ExceptionMessage -- the two columns (ResponseJson,

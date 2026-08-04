@@ -34,7 +34,7 @@ export type UiControlSize = 'sm' | 'md';
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .ui-input { display: flex; align-items: center; min-width: 0; min-height: 42px; padding: 0 12px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-md); color: var(--text-primary); transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast); }
+    .ui-input { display: flex; align-items: center; min-width: 0; min-height: 44px; padding: 0 13px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-md); box-shadow: inset 0 1px 0 var(--input-highlight); color: var(--text-primary); transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform var(--transition-fast); }
     .ui-input:focus-within { border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     .ui-input--invalid { border-color: var(--state-danger-border); }
     .ui-input--invalid:focus-within { box-shadow: var(--focus-ring-danger); }
@@ -42,7 +42,7 @@ export type UiControlSize = 'sm' | 'md';
     input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
     input::placeholder { color: var(--text-muted); }
     input:read-only { cursor: default; }
-    .ui-input--sm { min-height: 34px; padding-inline: 10px; border-radius: var(--radius-sm); font-size: .86rem; }
+    .ui-input--sm { min-height: 36px; padding-inline: 10px; border-radius: var(--radius-sm); font-size: .86rem; }
     .ui-input__prefix, .ui-input__suffix { display: inline-flex; align-items: center; flex: 0 0 auto; color: var(--text-muted); }
     .ui-input__prefix:empty, .ui-input__suffix:empty { display: none; }
     .ui-input__prefix { margin-right: 8px; } .ui-input__suffix { margin-left: 8px; }

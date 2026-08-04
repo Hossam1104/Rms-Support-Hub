@@ -14,18 +14,18 @@ const CANCELLED_STATUSES = new Set([6, 7]);
   imports: [CommonModule, ScrollingModule, StatusPillComponent, RiyalComponent, SkeletonComponent, EmptyStateComponent, UiCardComponent],
   template: `
     <ui-card variant="raised" class="table-card">
-      <div class="table-shell">
+      <div class="table-shell" [class.is-refreshing]="store.status() === 'loading'">
       <div class="table-head">
-        <span></span>
-        <span>Order #</span>
-        <span>Date</span>
-        <span>Branch</span>
-        <span>Status</span>
-        <span>Items</span>
-        <span class="align-right">Net total</span>
-        <span>Invoice</span>
-        <span>Payload</span>
-        <span></span>
+        <span class="col-outcome"></span>
+        <span class="col-order">Order #</span>
+        <span class="col-date">Date</span>
+        <span class="col-branch">Branch</span>
+        <span class="col-status">Status</span>
+        <span class="col-items">Items</span>
+        <span class="col-total align-right">Net total</span>
+        <span class="col-invoice">Invoice</span>
+        <span class="col-payload">Payload</span>
+        <span class="col-action"></span>
       </div>
 
       @if (store.status() === 'loading' && store.items().length === 0) {
@@ -48,7 +48,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
           <button type="button" class="retry-btn" *ngIf="store.hasActiveFilters()" (click)="store.clearFilters()">Clear filters</button>
         </app-empty-state>
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="56" class="table-body" [class.dimmed]="store.status() === 'loading'">
+        <cdk-virtual-scroll-viewport itemSize="56" class="table-body" [style.height.px]="tableHeight()" [class.dimmed]="store.status() === 'loading'">
           <button
             type="button"
             *cdkVirtualFor="let row of store.items(); let i = index"
@@ -58,28 +58,28 @@ const CANCELLED_STATUSES = new Set([6, 7]);
             [class.row-cancelled]="isCancelled(row)"
             [style.animationDelay.ms]="Math.min(i, 20) * 30"
             (click)="openDetail(row)">
-            <span class="outcome-dot" [class.dot-success]="row.isSucceeded === true" [class.dot-danger]="row.isSucceeded === false"></span>
-            <span class="order-number" [class.struck]="isCancelled(row)">{{ row.orderNumber }}</span>
-            <span class="cell-date">
+            <span class="outcome-dot col-outcome" [class.dot-success]="row.isSucceeded === true" [class.dot-danger]="row.isSucceeded === false"></span>
+            <span class="order-number col-order" [class.struck]="isCancelled(row)">{{ row.orderNumber }}</span>
+            <span class="cell-date col-date">
               <span class="date-abs">{{ row.orderDate | date:'short' }}</span>
               <span class="date-rel">{{ relativeTime(row.orderDate) }}</span>
             </span>
-            <span class="cell-branch">
+            <span class="cell-branch col-branch">
               <span>{{ row.branchCode || '—' }}</span>
               <span class="branch-name" *ngIf="row.branchName">{{ row.branchName }}</span>
             </span>
-            <span>
+            <span class="col-status">
               <app-status-pill *ngIf="row.orderStatus as s" [status]="s" [label]="row.orderStatusLabel || undefined"></app-status-pill>
               <span *ngIf="!row.orderStatus" class="no-header">No header</span>
             </span>
-            <span>{{ row.itemCount }}</span>
-            <span class="align-right net-total">{{ row.netTotal | number:'1.2-2' }} <app-riyal [size]="0.85"></app-riyal></span>
-            <span class="cell-invoice">{{ row.invoiceBarcode || '—' }}</span>
-            <span class="payload-badges">
+            <span class="col-items">{{ row.itemCount }}</span>
+            <span class="align-right net-total col-total">{{ row.netTotal | number:'1.2-2' }} <app-riyal [size]="0.85"></app-riyal></span>
+            <span class="cell-invoice col-invoice">{{ row.invoiceBarcode || '—' }}</span>
+            <span class="payload-badges col-payload">
               <span class="badge">REQ</span>
               <span class="badge" [class.badge-lit]="row.hasResponse">RES</span>
             </span>
-            <span class="row-action"><i class="bi bi-chevron-right"></i></span>
+            <span class="row-action col-action"><i class="bi bi-chevron-right"></i></span>
           </button>
         </cdk-virtual-scroll-viewport>
       }
@@ -87,16 +87,18 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     </ui-card>
   `,
   styles: [`
-    .table-shell { overflow: hidden; border-radius: var(--radius-md); background: var(--surface-panel); }
+    .table-shell { overflow-x: auto; overflow-y: hidden; border-radius: var(--radius-md); background: var(--surface-panel); scrollbar-color: var(--border-strong) transparent; }
+    .table-shell.is-refreshing { cursor: progress; }
     .table-head, .table-row {
       display: grid;
-      grid-template-columns: 20px 1.1fr 1.1fr 1fr 1.1fr 0.6fr 1fr 1fr 0.9fr 24px;
+      grid-template-columns: 18px minmax(150px, 1.25fr) minmax(135px, 1.05fr) minmax(120px, 1fr) minmax(132px, 1.1fr) 58px minmax(125px, 1fr) minmax(120px, 1fr) 82px 28px;
       align-items: center;
       gap: 10px;
       padding: 0 16px;
+      min-width: 1090px;
     }
-    .table-head { height: 42px; background: var(--surface-raised); font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .02em; }
-    .table-body { height: 560px; transition: opacity var(--transition-normal); }
+    .table-head { height: 44px; background: var(--surface-raised); font-size: 0.7rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; }
+    .table-body { min-width: 1090px; transition: opacity var(--transition-normal); }
     .table-body.dimmed { opacity: 0.55; }
     .table-row {
       height: 56px;
@@ -115,12 +117,14 @@ const CANCELLED_STATUSES = new Set([6, 7]);
       transition: background var(--transition-fast);
       animation: rowStaggerIn var(--d-slow) var(--ease-spring) backwards;
     }
+    .table-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .table-row:hover { background: var(--table-row-hover); }
     .table-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .table-row.row-failed { border-left: 3px solid var(--state-danger-border); background: var(--state-danger-bg); }
     .table-row.row-cancelled { opacity: 0.65; }
     @keyframes rowStaggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .skeleton-row { display: flex; align-items: center; }
+    .skeleton-row app-skeleton { flex: 1; }
     .outcome-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
     .dot-success { background: var(--state-success-fg); box-shadow: 0 0 8px var(--state-success-fg); }
     .dot-danger { background: var(--state-danger-fg); box-shadow: 0 0 8px var(--state-danger-fg); }
@@ -148,6 +152,13 @@ export class RequestsTableComponent {
   private route = inject(ActivatedRoute);
 
   readonly Math = Math;
+
+  tableHeight(): number {
+    // Keep short result sets compact while retaining a stable viewport for
+    // the normal 25-row page. The virtual scroller still caps the table at
+    // the existing 560px rail height for larger pages.
+    return Math.min(560, Math.max(168, Math.max(this.store.items().length, 3) * 56));
+  }
 
   isCancelled(row: OrderRequestListItem): boolean {
     return row.orderStatus != null && CANCELLED_STATUSES.has(row.orderStatus);

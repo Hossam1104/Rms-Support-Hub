@@ -35,12 +35,12 @@ export interface UiSelectOption {
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .ui-select { width: 100%; min-height: 42px; padding: 0 34px 0 12px; appearance: none; background-color: var(--input-bg); background-image: var(--select-chevron); background-position: right 12px center; background-repeat: no-repeat; background-size: 12px; border: 1px solid var(--input-border); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer; font: inherit; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+    .ui-select { width: 100%; min-height: 44px; padding: 0 34px 0 13px; appearance: none; background-color: var(--input-bg); background-image: var(--select-chevron); background-position: right 12px center; background-repeat: no-repeat; background-size: 12px; border: 1px solid var(--input-border); border-radius: var(--radius-md); box-shadow: inset 0 1px 0 var(--input-highlight); color: var(--text-primary); cursor: pointer; font: inherit; transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast); }
     .ui-select:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     .ui-select--invalid { border-color: var(--state-danger-border); }
     .ui-select--invalid:focus-visible { box-shadow: var(--focus-ring-danger); }
     .ui-select--disabled { cursor: not-allowed; background-color: var(--surface-muted); opacity: .68; }
-    .ui-select--sm { min-height: 34px; padding-left: 10px; border-radius: var(--radius-sm); font-size: .86rem; }
+    .ui-select--sm { min-height: 36px; padding-left: 10px; border-radius: var(--radius-sm); font-size: .86rem; }
   `]
 })
 export class UiSelectComponent implements ControlValueAccessor {

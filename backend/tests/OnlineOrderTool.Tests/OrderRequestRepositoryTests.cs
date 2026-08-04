@@ -26,6 +26,18 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
+    public void ListSql_FastPathPagesBaseRowsBeforeHeaderAndInvoiceLookups()
+    {
+        var sql = OrderRequestRepository.BuildListSql("", null, applyHeaderJoinsAfterPaging: true);
+
+        Assert.Contains("WITH PagedRequests AS", sql);
+        Assert.Contains("FROM PagedRequests AS R", sql);
+        Assert.Contains("OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY", sql);
+        Assert.True(sql.IndexOf("OFFSET @Skip", StringComparison.Ordinal)
+            < sql.IndexOf("OUTER APPLY", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ListSql_NeverSelectsTheRawBlobs_OnlyLengthAndExistence()
     {
         var sql = OrderRequestRepository.BuildListSql("", null);
@@ -106,6 +118,14 @@ public class OrderRequestRepositoryTests
 
         // Phone is normalized to its last 9 digits before binding.
         Assert.Equal("556028080", (string)p.Get<object>("Phone9"));
+    }
+
+    [Fact]
+    public void ListSql_ProjectsConsumerMobileForPhoneFiltering()
+    {
+        var sql = OrderRequestRepository.BuildListSql("WHERE RIGHT(H.ConsumerMobile, 9) = @Phone9", null);
+
+        Assert.Contains("ConsumerMobile", sql);
     }
 
     [Fact]

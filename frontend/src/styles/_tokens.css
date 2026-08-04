@@ -6,17 +6,20 @@
  * or future brand adjustment does not require a feature-by-feature rewrite.
  */
 :root {
-  /* ---- Palette: ink/navy surfaces, one violet action accent ---- */
-  --ink-950: #080d18;
-  --ink-900: #0e1626;
-  --ink-850: #142037;
-  --slate-800: #1b2a44;
-  --slate-700: #263957;
-  --violet-500: #8b5cf6;
-  --violet-400: #a78bfa;
-  --accent: var(--violet-500);
-  --accent-hover: var(--violet-400);
-  --accent-soft: rgba(139, 92, 246, .16);
+  /* ---- Palette: deep Atlantic surfaces with sea-glass and citrus accents ---- */
+  --ink-950: #08121f;
+  --ink-900: #0e1d2d;
+  --ink-850: #15283e;
+  --slate-800: #1b3850;
+  --slate-700: #244a63;
+  --teal-500: #18c5b4;
+  --teal-400: #6fe2d7;
+  /* Legacy names stay as aliases so feature styles remain token-only. */
+  --violet-500: var(--teal-500);
+  --violet-400: var(--teal-400);
+  --accent: var(--teal-500);
+  --accent-hover: var(--teal-400);
+  --accent-soft: rgba(24, 197, 180, .16);
   --on-gradient: #ffffff;
 
   /* ---- Surface hierarchy ---- */
@@ -24,10 +27,10 @@
   --surface-panel: var(--ink-900);
   --surface-raised: var(--ink-850);
   --surface-interactive: var(--slate-800);
-  --surface-overlay: #101b2e;
-  --surface-muted: #0b1424;
+  --surface-overlay: #102337;
+  --surface-muted: #0b1726;
   --surface-hover: var(--slate-700);
-  --surface-selected: rgba(139, 92, 246, .18);
+  --surface-selected: rgba(24, 197, 180, .16);
 
   /* ---- Text ramp ---- */
   --text-primary: #f4f7fb;
@@ -35,19 +38,20 @@
   --text-muted: #7f8da5;
   --text-disabled: #5c6a80;
   --text-inverse: #0b1020;
-  --text-accent: var(--violet-400);
+  --text-accent: var(--teal-400);
 
   /* ---- Borders, inputs, focus, and tables ---- */
-  --border-subtle: rgba(193, 207, 230, .14);
-  --border-strong: rgba(193, 207, 230, .28);
+  --border-subtle: rgba(170, 211, 218, .15);
+  --border-strong: rgba(170, 211, 218, .30);
   --border-focus: var(--accent-hover);
-  --divider: rgba(193, 207, 230, .10);
-  --input-bg: #0b1424;
-  --input-border: rgba(193, 207, 230, .22);
-  --table-row-hover: rgba(139, 92, 246, .10);
-  --table-row-zebra: rgba(193, 207, 230, .035);
+  --divider: rgba(170, 211, 218, .10);
+  --input-bg: #0b1726;
+  --input-border: rgba(170, 211, 218, .24);
+  --input-highlight: rgba(255, 255, 255, .06);
+  --table-row-hover: rgba(24, 197, 180, .11);
+  --table-row-zebra: rgba(170, 211, 218, .035);
   --backdrop: rgba(2, 6, 15, .72);
-  --focus-ring: 0 0 0 3px rgba(139, 92, 246, .34);
+  --focus-ring: 0 0 0 3px rgba(24, 197, 180, .34);
   --focus-ring-danger: 0 0 0 3px rgba(248, 113, 113, .28);
 
   /* ---- Semantic states ---- */
@@ -70,12 +74,12 @@
 
   /* Legacy gradient stop aliases. Gradient definitions live in _gradients.css. */
   --brand-500: var(--violet-500);
-  --brand-600: #7048d8;
-  --accent-500: #d946ef;
-  --hot-500: #fb923c;
-  --accent-amber: #fbbf24;
-  --accent-violet: var(--violet-400);
-  --accent-indigo: #818cf8;
+  --brand-600: #0f8f86;
+  --accent-500: #4fb4ff;
+  --hot-500: #f0a268;
+  --accent-amber: #f4c75e;
+  --accent-violet: var(--teal-400);
+  --accent-indigo: #78a9ff;
 
   /* ---- JSON tree type colors ---- */
   --code-string: #6ee7b7;
@@ -95,17 +99,17 @@
   --font-mono: 'JetBrains Mono', monospace;
 
   /* ---- Radius scale ---- */
-  --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 26px;
-  --radius-xl: 34px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-pill: 999px;
 
   /* ---- Shadow scale ---- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .22);
   --shadow-md: 0 14px 32px -16px rgba(0, 0, 0, .62);
   --shadow-lg: 0 26px 56px -22px rgba(0, 0, 0, .76);
-  --shadow-glow: 0 16px 42px -18px rgba(139, 92, 246, .48);
+  --shadow-glow: 0 16px 42px -18px rgba(24, 197, 180, .42);
 
   /* ---- Motion scale ---- */
   --d-fast: 140ms;
@@ -119,32 +123,36 @@
 }
 
 [data-theme="light"] {
-  --surface-page: #f3f6fb;
+  --accent: #0e9f91;
+  --accent-hover: #087f76;
+  --accent-soft: rgba(14, 159, 145, .12);
+  --surface-page: #edf6f5;
   --surface-panel: #ffffff;
-  --surface-raised: #f8faff;
-  --surface-interactive: #edf2f9;
+  --surface-raised: #f7fbfb;
+  --surface-interactive: #e8f2f1;
   --surface-overlay: #ffffff;
-  --surface-muted: #e8eef7;
-  --surface-hover: #e2e9f3;
-  --surface-selected: rgba(109, 40, 217, .10);
+  --surface-muted: #e0eceb;
+  --surface-hover: #dcebea;
+  --surface-selected: rgba(14, 159, 145, .10);
 
-  --text-primary: #152238;
-  --text-secondary: #40516b;
-  --text-muted: #71819a;
-  --text-disabled: #9aa8bb;
+  --text-primary: #12283b;
+  --text-secondary: #405d6a;
+  --text-muted: #708793;
+  --text-disabled: #a0b1ba;
   --text-inverse: #ffffff;
-  --text-accent: #6d28d9;
+  --text-accent: #087f76;
 
-  --border-subtle: rgba(30, 49, 79, .14);
-  --border-strong: rgba(30, 49, 79, .28);
-  --border-focus: #6d28d9;
-  --divider: rgba(30, 49, 79, .10);
+  --border-subtle: rgba(18, 40, 59, .14);
+  --border-strong: rgba(18, 40, 59, .27);
+  --border-focus: #087f76;
+  --divider: rgba(18, 40, 59, .10);
   --input-bg: #ffffff;
-  --input-border: rgba(30, 49, 79, .22);
-  --table-row-hover: rgba(109, 40, 217, .08);
-  --table-row-zebra: rgba(30, 49, 79, .025);
+  --input-border: rgba(18, 40, 59, .21);
+  --input-highlight: rgba(255, 255, 255, .85);
+  --table-row-hover: rgba(14, 159, 145, .08);
+  --table-row-zebra: rgba(18, 40, 59, .025);
   --backdrop: rgba(15, 23, 42, .42);
-  --focus-ring: 0 0 0 3px rgba(109, 40, 217, .22);
+  --focus-ring: 0 0 0 3px rgba(14, 159, 145, .22);
   --focus-ring-danger: 0 0 0 3px rgba(190, 24, 93, .18);
 
   --state-success-fg: #047857;
@@ -167,7 +175,7 @@
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, .08);
   --shadow-md: 0 14px 32px -16px rgba(15, 23, 42, .20);
   --shadow-lg: 0 26px 56px -22px rgba(15, 23, 42, .24);
-  --shadow-glow: 0 16px 42px -18px rgba(109, 40, 217, .28);
+  --shadow-glow: 0 16px 42px -18px rgba(14, 159, 145, .28);
 }
 
 @media (prefers-reduced-motion: reduce) {

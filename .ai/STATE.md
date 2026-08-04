@@ -20,8 +20,9 @@
 - The superseded `frontend/src/app/features/order-validation` component tree
   is removed. The sidebar exposes one Order Requests entry.
 - `app-searchable-select` submits branch codes only, uses fixed 40px option
-  geometry, and does not alter the active keyboard row while the pointer moves
-  across options.
+  geometry, does not alter the active keyboard row while the pointer moves
+  across options, and closes its overlay on outside clicks without reopening
+  through focus restoration.
 - Every visible currency amount renders through `app-riyal`, which points to
   `/assets/Saudi_Riyal.svg` and inherits `currentColor`. The checked-in asset is
   still a placeholder containing legacy text, so the approved vector asset is
@@ -33,14 +34,22 @@
   not mutate the stored history row.
 - Testing remains the default environment. Production resend/cancel flows
   require typed confirmation, and no Production action is part of local work.
+- The Order Requests list now uses a sea-glass/Atlantic token palette with
+  responsive modern filter inputs, stable horizontal grid geometry, compact
+  short-result viewports, and explicit loading/focus states.
+- Order Requests searches normalize exact order numbers and phone input,
+  cancel superseded list/branch/detail requests, and fail visibly after a
+  15-second request timeout. The backend projects ConsumerMobile correctly,
+  pages base rows before header/invoice lookups when possible, and runs list,
+  count, and stats reads concurrently.
 
 ## Final Local Verification
 
-- Backend tests: 146/146 passed.
-- Frontend tests: 105/105 passed across 21 spec files.
+- Backend tests: 148/148 passed.
+- Frontend tests: 107/107 passed across 22 spec files.
 - `dotnet build backend/OnlineOrderTool.slnx -c Release --nologo`: 0 warnings,
   0 errors.
-- `scripts/build.ps1`: all checks passed; Angular initial bundle 425.91 kB.
+- `npm run build`: passed; Angular initial bundle 426.79 kB.
   Angular emitted two existing/non-blocking style-budget warnings: the flat
   order summary rail and the new Order Requests detail page exceed the 6 kB
   warning budget but remain below the 8 kB error budget.

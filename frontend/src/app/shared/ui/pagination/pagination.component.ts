@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
 
       <div class="pagination-controls">
         <select class="page-size-select" [ngModel]="pageSize" (ngModelChange)="pageSizeChange.emit($event)">
-          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} / page</option>
+          <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }} / page</option>
         </select>
 
         <button type="button" class="page-btn" [disabled]="page <= 1" (click)="pageChange.emit(page - 1)">
@@ -32,17 +32,20 @@ import { FormsModule } from '@angular/forms';
     .pagination-summary { font-size: 0.85rem; color: var(--text-muted); }
     .pagination-controls { display: flex; align-items: center; gap: 10px; }
     .page-size-select {
+      min-height: 36px;
       background: var(--surface-interactive);
       color: var(--text-primary);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      padding: 4px 8px;
+      border-radius: var(--radius-md);
+      box-shadow: inset 0 1px 0 var(--input-highlight);
+      padding: 0 10px;
       font-size: 0.8rem;
     }
+    .page-size-select:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     .page-btn {
       width: 32px; height: 32px;
       display: flex; align-items: center; justify-content: center;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
       background: var(--surface-interactive);
       color: var(--text-primary);
@@ -50,6 +53,7 @@ import { FormsModule } from '@angular/forms';
       transition: background var(--transition-fast), transform var(--transition-fast);
     }
     .page-btn:hover:not(:disabled) { background: var(--surface-hover); transform: translateY(-1px); }
+    .page-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .page-current { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); min-width: 60px; text-align: center; }
   `]

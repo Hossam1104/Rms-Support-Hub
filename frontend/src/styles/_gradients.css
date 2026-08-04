@@ -5,19 +5,19 @@
  */
 :root {
   --grad-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--accent-500) 55%, var(--hot-500) 100%);
-  --grad-success: linear-gradient(135deg, #059669 0%, #34d399 100%);
-  --grad-danger: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
-  --grad-info: linear-gradient(135deg, #2563eb 0%, #22d3ee 100%);
-  --grad-muted: linear-gradient(135deg, #475569 0%, #94a3b8 100%);
-  --grad-indigo: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
-  --grad-teal: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
-  --grad-amber: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
-  --grad-rose: linear-gradient(135deg, #e11d48 0%, #fb7185 100%);
-  --grad-rose-slate: linear-gradient(135deg, #64748b 0%, #fb7185 100%);
+  --grad-success: linear-gradient(135deg, #0f9f8a 0%, #4dd4a8 100%);
+  --grad-danger: linear-gradient(135deg, #c84f65 0%, #f29b78 100%);
+  --grad-info: linear-gradient(135deg, #1679c4 0%, #42c6de 100%);
+  --grad-muted: linear-gradient(135deg, #3b5967 0%, #8aa3a7 100%);
+  --grad-indigo: linear-gradient(135deg, #3b6bc8 0%, #78a9ff 100%);
+  --grad-teal: linear-gradient(135deg, #0f8f86 0%, #53d8c8 100%);
+  --grad-amber: linear-gradient(135deg, #c97c16 0%, #f4c75e 100%);
+  --grad-rose: linear-gradient(135deg, #b74462 0%, #f48b9f 100%);
+  --grad-rose-slate: linear-gradient(135deg, #536e7a 0%, #f48b9f 100%);
   --grad-mesh:
-    radial-gradient(60% 60% at 15% 10%, rgba(124, 58, 237, .35), transparent 60%),
-    radial-gradient(50% 50% at 85% 20%, rgba(219, 39, 119, .30), transparent 60%),
-    radial-gradient(60% 60% at 50% 100%, rgba(249, 115, 22, .22), transparent 60%);
+    radial-gradient(60% 60% at 15% 10%, rgba(24, 197, 180, .30), transparent 60%),
+    radial-gradient(50% 50% at 85% 20%, rgba(79, 180, 255, .26), transparent 60%),
+    radial-gradient(60% 60% at 50% 100%, rgba(240, 162, 104, .20), transparent 60%);
 }
 
 /* Status map for RequestOrderHeaders.OrderStatus 1..9. */
@@ -49,14 +49,14 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 0 0 rgba(124, 58, 237, .55);
+  box-shadow: 0 0 0 0 rgba(24, 197, 180, .55);
   animation: pillPulseRing 1.8s var(--ease-out) infinite;
 }
 
 @keyframes pillPulseRing {
-  0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, .55); }
-  70% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(24, 197, 180, .55); }
+  70% { box-shadow: 0 0 0 8px rgba(24, 197, 180, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(24, 197, 180, 0); }
 }
 
 @keyframes meshDrift {

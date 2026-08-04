@@ -55,9 +55,17 @@ public class OrderRequestsController : ControllerBase
             DateFrom: query.DateFrom,
             DateTo: query.DateTo);
 
-        var items = await _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort);
-        var total = await _repository.CountAsync(connStr!, filters);
-        var stats = await _repository.StatsAsync(connStr!, filters);
+        // These reads share the same filter set but are independent. Run them
+        // together so a slow count or aggregate cannot hold the page data
+        // behind two other sequential database round trips.
+        var itemsTask = _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort);
+        var totalTask = _repository.CountAsync(connStr!, filters);
+        var statsTask = _repository.StatsAsync(connStr!, filters);
+        await Task.WhenAll(itemsTask, totalTask, statsTask);
+
+        var items = await itemsTask;
+        var total = await totalTask;
+        var stats = await statsTask;
         var totalPages = total == 0 ? 0 : (int)Math.Ceiling(total / (double)pageSize);
 
         return Ok(new { items, page, pageSize, total, totalPages, stats });

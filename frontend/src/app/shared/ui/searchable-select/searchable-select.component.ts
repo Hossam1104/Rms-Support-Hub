@@ -31,9 +31,9 @@ let nextSelectId = 0;
 
       <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="origin" [cdkConnectedOverlayOpen]="open"
         [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="searchable-select-backdrop"
-        (backdropClick)="closePanel(true)" (detach)="onOverlayDetach()">
+        (backdropClick)="closePanel(false)" (detach)="onOverlayDetach()">
         <section class="select-overlay" [attr.aria-label]="label + ' options'">
-          <div class="select-state" *ngIf="loading"><i class="bi bi-arrow-repeat spin"></i> Loading branches?</div>
+          <div class="select-state" *ngIf="loading"><i class="bi bi-arrow-repeat spin"></i> Loading branches…</div>
           <div class="select-state error" *ngIf="!loading && error"><span>{{ error }}</span><button type="button" (click)="refresh.emit()">Try again</button></div>
           <div class="select-state" *ngIf="!loading && !error && filteredOptions.length === 0">{{ options.length ? 'No matching branches.' : 'No branches are available.' }}</div>
           <cdk-virtual-scroll-viewport *ngIf="!loading && !error && filteredOptions.length" #viewport class="select-list"
@@ -52,7 +52,7 @@ let nextSelectId = 0;
     :host { display: block; min-width: 0; }
     .searchable-select { min-width: 0; }
     .select-control { position: relative; display: flex; align-items: center; }
-    input { width: 100%; min-width: 0; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 56px 8px 10px; font: inherit; }
+    input { width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-md); box-shadow: inset 0 1px 0 var(--input-highlight); color: var(--text-primary); padding: 0 56px 0 13px; font: inherit; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
     input:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     input:disabled { cursor: not-allowed; opacity: .6; }
     .is-open input { border-color: var(--border-focus); }
