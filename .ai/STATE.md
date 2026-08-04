@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Updated:** 2026-08-04
-- **Branch:** `luna/final-live-acceptance` from synchronized local `main`
+- **Branch:** `main` after the final-live acceptance no-fast-forward merge
 - **Release or milestone:** Final acceptance hardening for Riyal provenance,
   responsive token UI, branch-selector dismissal, and safe UPC Testing gates.
 
@@ -100,5 +100,5 @@
 - U0-U8 and Final Acceptance Hardening remain closed. The final Order Requests
   unification plus acceptance hardening are implemented and merged into local
   `main` with the requested no-fast-forward merge; the final-live acceptance
-  record is being reconciled from a temporary branch.
+  record is complete on `main`.
 - `.ai/HANDOFF.md` is Empty and there is no active implementation plan.
