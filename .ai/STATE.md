@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Updated:** 2026-08-04
-- **Branch:** `main` after the final-acceptance no-fast-forward merge
+- **Branch:** `luna/final-live-acceptance` from synchronized local `main`
 - **Release or milestone:** Final acceptance hardening for Riyal provenance,
   responsive token UI, branch-selector dismissal, and safe UPC Testing gates.
 
@@ -61,19 +61,28 @@
 - `scripts/build.ps1`: all checks passed after stopping the repo's local Debug
   API process that had locked its own DLLs.
 - Local Edge headless desktop/mobile route screenshots loaded successfully.
+- Final local Edge headless screenshots loaded the UPC order-builder at
+  1920x1080, 1280x720, 900x900, and 600x900, plus the Order Requests route.
+- The exact-number Order Requests read returned HTTP 200 with zero results;
+  the unfiltered read returned HTTP 500 after the configured approximately
+  15-second timeout, reproducing the documented missing-index infrastructure
+  gap.
+- The local payment-free draft exported `COD` / `not_payment` with zero
+  payments, paid total zero, and a server-calculated balance.
 - `git diff --check` passed. No Production send, cancel, or resend was
   attempted.
 
 ## Deferred Acceptance
 
 - No connected in-app browser instance was available
-  (`agent.browsers.list()` returned no browsers), so interactive theme and
-  outside-click evidence remains external; local Edge screenshots cover the
-  desktop/mobile layout.
+  (`agent.browsers.list()` returned no browsers), so interactive theme,
+  hover/keyboard, and outside-click evidence remains external; local Edge
+  screenshots cover the required layout viewports.
 - UPC Testing metadata/branch reads were safe and read-only; the item lookup
-  returned HTTP 502. No explicitly approved synthetic QA branch/item was
-  available for a state-changing send/cancel/resend, and no Production action
-  was attempted. The COD `"COD"` acceptance send remains pending.
+  returned HTTP 200 with `success: false` and no data for documented fixture
+  codes. No explicitly approved synthetic QA branch/item was available for a
+  state-changing send/cancel/resend, and no Production action was attempted.
+  The COD `"COD"` acceptance send remains pending.
 
 ## Known Risks
 
@@ -90,5 +99,6 @@
 
 - U0-U8 and Final Acceptance Hardening remain closed. The final Order Requests
   unification plus acceptance hardening are implemented and merged into local
-  `main` with the requested no-fast-forward merge.
+  `main` with the requested no-fast-forward merge; the final-live acceptance
+  record is being reconciled from a temporary branch.
 - `.ai/HANDOFF.md` is Empty and there is no active implementation plan.

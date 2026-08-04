@@ -183,5 +183,6 @@ production navigation and is tree-shaken from the production route graph.
   aliases proven unused. U8 completed local verification and closed the UI
   rework programme. Final acceptance hardening keeps the warning budgets
   unchanged, removes the remaining component style-budget warnings, and adds
-  local desktop/mobile route evidence; connected interactive-browser and safe
-  live Testing evidence remain external gates.
+  local Edge route evidence at the required desktop/tablet/mobile viewports;
+  connected interactive-browser and safe live Testing evidence remain external
+  gates.
