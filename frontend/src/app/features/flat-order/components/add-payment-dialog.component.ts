@@ -1,12 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Payment } from '../../../core/models';
-import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
+import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
 
 @Component({
   selector: 'app-add-payment-dialog',
   standalone: true,
-  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
+  imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
   template: `
     <div class="modal-backdrop" (click)="close.emit()">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
@@ -22,8 +22,10 @@ import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent,
           <ui-field label="Payment Status" forId="payment-status" [required]="true">
             <ui-select selectId="payment-status" [options]="paymentStatusOptions" [value]="payment.paymentStatus" (valueChange)="payment.paymentStatus = $any($event) || ''"></ui-select>
           </ui-field>
-          <ui-field label="Amount (SAR)" forId="payment-amount" [required]="true">
-            <ui-input inputId="payment-amount" type="number" step="0.01" [value]="payment.paymentAmount" (valueChange)="payment.paymentAmount = $any($event) || 0"></ui-input>
+          <ui-field label="Amount" forId="payment-amount" [required]="true">
+            <ui-input inputId="payment-amount" type="number" step="0.01" [value]="payment.paymentAmount" (valueChange)="payment.paymentAmount = $any($event) || 0">
+              <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+            </ui-input>
           </ui-field>
           <ui-field label="Transaction ID" forId="payment-transaction-id">
             <ui-input inputId="payment-transaction-id" placeholder="Optional" [value]="payment.transactionId || ''" (valueChange)="payment.transactionId = $any($event) || ''"></ui-input>

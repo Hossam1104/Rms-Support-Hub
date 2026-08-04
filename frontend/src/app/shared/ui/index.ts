@@ -1,4 +1,3 @@
-export * from './gradient-card/gradient-card.component';
 export * from './stat-tile/stat-tile.component';
 export * from './status-pill/status-pill.component';
 export * from './json-tree/json-tree.component';
@@ -7,7 +6,6 @@ export * from './drawer/drawer.component';
 export * from './confirm-dialog/confirm-dialog.component';
 export * from './empty-state/empty-state.component';
 export * from './skeleton/skeleton.component';
-export * from './data-table/data-table.component';
 export * from './pagination/pagination.component';
 export * from './riyal/riyal.component';
 export * from './copy-button/copy-button.component';

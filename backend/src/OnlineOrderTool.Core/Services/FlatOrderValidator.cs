@@ -52,11 +52,19 @@ public class FlatOrderValidator : IFlatOrderValidator
         if (!payload.TryGetValue("order_products", out var prodsObj) || prodsObj is not List<Dictionary<string, object?>> prods || prods.Count == 0)
             errors.Add("Order must contain at least one product.");
 
-        if (!payload.TryGetValue("payment_methods_with_options", out var paysObj) || paysObj is not List<Dictionary<string, object?>> payments || payments.Count == 0)
-        {
-            errors.Add("Order must contain at least one payment method.");
-            return errors;
-        }
+        // An order with no payment rows is NOT an error: it is the verified
+        // Cash-on-Delivery shape. FlatOrderPayloadBuilder already emits exactly
+        // what the reference COD payload holds for that state --
+        // order_payment_method "COD", order_payment_status "not_payment" and an
+        // empty payment_methods_with_options (see
+        // docs/request_examples/UPC/1- ….json, whose payment list is entirely
+        // commented out). The per-payment rules below simply have nothing to
+        // iterate, and no synthetic zero-value payment is fabricated to stand
+        // in for one.
+        var payments = payload.TryGetValue("payment_methods_with_options", out var paysObj)
+            && paysObj is List<Dictionary<string, object?>> parsedPayments
+                ? parsedPayments
+                : new List<Dictionary<string, object?>>();
 
         var orderFinalTotal = GetDecimal(payload, "order_final_total_value");
         // order_payment_method is a comma-joined string (see

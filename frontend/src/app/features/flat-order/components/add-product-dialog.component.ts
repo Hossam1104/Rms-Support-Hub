@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../../core/models';
-import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
+import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
 
 /** Outcome of the parent's item lookup (U4, UI_Rework_Plan.md D2). */
 export type ItemLookupOutcome =
@@ -23,7 +23,7 @@ function netUnitPriceOf(unitPrice: number, vatPercentage: number): number {
 @Component({
   selector: 'app-add-product-dialog',
   standalone: true,
-  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
+  imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
   template: `
     <div class="modal-backdrop" (click)="close.emit()">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
@@ -56,17 +56,21 @@ function netUnitPriceOf(unitPrice: number, vatPercentage: number): number {
             <ui-field label="Quantity" forId="product-quantity" [required]="true">
               <ui-input inputId="product-quantity" type="number" step="0.01" [value]="product.quantity" (valueChange)="setNumber('quantity', $event)"></ui-input>
             </ui-field>
-            <ui-field label="Unit Price (SAR)" forId="product-unit-price" [required]="true" [labelStatus]="dbFilled.has('unitPrice') ? 'DB' : ''">
-              <ui-input inputId="product-unit-price" type="number" step="0.01" [value]="product.unitPrice" (valueChange)="setNumber('unitPrice', $event)"></ui-input>
+            <ui-field label="Unit Price" forId="product-unit-price" [required]="true" [labelStatus]="dbFilled.has('unitPrice') ? 'DB' : ''">
+              <ui-input inputId="product-unit-price" type="number" step="0.01" [value]="product.unitPrice" (valueChange)="setNumber('unitPrice', $event)">
+                <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+              </ui-input>
             </ui-field>
             <ui-field label="VAT %" forId="product-vat" [labelStatus]="dbFilled.has('vatPercentage') ? 'DB' : ''">
               <ui-input inputId="product-vat" type="number" step="0.01" [value]="product.vatPercentage" (valueChange)="setNumber('vatPercentage', $event)"></ui-input>
             </ui-field>
-            <ui-field label="Discount (SAR)" forId="product-discount">
-              <ui-input inputId="product-discount" type="number" step="0.01" [value]="product.discount" (valueChange)="setNumber('discount', $event)"></ui-input>
+            <ui-field label="Discount" forId="product-discount">
+              <ui-input inputId="product-discount" type="number" step="0.01" [value]="product.discount" (valueChange)="setNumber('discount', $event)">
+                <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+              </ui-input>
             </ui-field>
             <ui-field label="Net Unit Price (incl. VAT)" forId="product-net-price">
-              <div id="product-net-price" class="net-price" data-testid="net-unit-price">{{ netUnitPrice() | number:'1.2-2' }} SAR</div>
+              <div id="product-net-price" class="net-price" data-testid="net-unit-price"><app-riyal [size]=".9"></app-riyal>{{ netUnitPrice() | number:'1.2-2' }}</div>
             </ui-field>
           </div>
         </div>
@@ -91,7 +95,7 @@ function netUnitPriceOf(unitPrice: number, vatPercentage: number): number {
     .lookup-message.lookup-error { color: var(--state-danger-fg); }
     .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
     .db-badge { color: var(--text-accent); border: 1px solid var(--border-focus); border-radius: var(--radius-pill); padding: 0 5px; font-size: .62rem; font-weight: 800; }
-    .net-price { display: flex; align-items: center; min-height: 42px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font-weight: 700; }
+    .net-price { display: flex; align-items: center; gap: 3px; min-height: 42px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font-weight: 700; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
     @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .input-group { align-items: stretch; flex-direction: column; } .input-group ui-button { align-self: flex-start; } }
   `]

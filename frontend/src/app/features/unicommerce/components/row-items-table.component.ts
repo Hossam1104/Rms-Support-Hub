@@ -1,12 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RowItem } from '../../../core/models';
-import { UiButtonComponent, UiCardComponent, UiTableComponent } from '../../../shared/ui';
+import { RiyalComponent, UiButtonComponent, UiCardComponent, UiTableComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-row-items-table',
   standalone: true,
-  imports: [CommonModule, UiButtonComponent, UiCardComponent, UiTableComponent],
+  imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiTableComponent],
   template: `
     <ui-card variant="raised" class="card-section">
       <div uiCardHeader class="section-header">
@@ -31,7 +31,7 @@ import { UiButtonComponent, UiCardComponent, UiTableComponent } from '../../../s
               <td>{{ item.itemDiscount | number:'1.2-2' }}</td>
               <td>{{ getGrossAmount(item) | number:'1.2-2' }}</td>
               <td>{{ getRowVat(item) | number:'1.2-2' }}</td>
-              <td><strong>{{ getRowNet(item) | number:'1.2-2' }}</strong> SAR</td>
+              <td class="money"><app-riyal [size]=".85"></app-riyal><strong>{{ getRowNet(item) | number:'1.2-2' }}</strong></td>
               <td>
                 <button type="button" class="delete-button" (click)="deleteRowItem.emit($index)" title="Remove Item" aria-label="Remove item">
                   <i class="bi bi-trash" aria-hidden="true"></i>
@@ -52,6 +52,8 @@ import { UiButtonComponent, UiCardComponent, UiTableComponent } from '../../../s
   `,
   styles: [`
     .card-section { margin-bottom: 24px; }
+    .money { white-space: nowrap; }
+    .money app-riyal { margin-inline-end: 3px; }
     .section-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
     .section-title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); }
     .section-title i { color: var(--accent); }

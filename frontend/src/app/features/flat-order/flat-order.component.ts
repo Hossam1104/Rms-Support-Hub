@@ -7,6 +7,7 @@ import { BranchOptionsService } from '../../core/services/branch-options.service
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FocusService } from '../../core/services/focus.service';
+import { normalizeLocalPhone } from '../../core/utils/phone.util';
 import { ApiError, BranchOption, LookupResult, ModuleEndpoint, OrderDraft, Product, Payment, Consumer, SendOrderResult, OrderRequestDetailResponse, TotalsSummary } from '../../core/models';
 import { OrderInfoComponent } from './components/order-info.component';
 import { ClientInfoComponent } from './components/client-info.component';
@@ -247,6 +248,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               [environment]="moduleService.activeEnvironment()"
               [endpoint]="activeEndpoint()"
               [sending]="sending()"
+              [isCashOnDelivery]="isCashOnDelivery()"
               [customEndpointEnabled]="customEndpointEnabled()"
               [customEndpointValid]="customEndpointValid()"
               (validate)="onValidate()"
@@ -269,6 +271,7 @@ const TOTALS_DEBOUNCE_MS = 300;
             [environment]="moduleService.activeEnvironment()"
             [endpoint]="activeEndpoint()"
             [sending]="sending()"
+            [isCashOnDelivery]="isCashOnDelivery()"
             [customEndpointEnabled]="customEndpointEnabled()"
             [customEndpointValid]="customEndpointValid()"
             (validate)="onValidate()"
@@ -546,6 +549,14 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Item/quantity counts for the summary header -- counts, not money math. */
   totalQuantity(): number {
     return this.draftStore.draft().products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+  }
+
+  /** An empty payment list is the verified Cash on Delivery state, not a
+   * missing-payment error -- FlatOrderValidator accepts it and
+   * FlatOrderPayloadBuilder emits the COD shape for it. Surfacing it here
+   * keeps the operator informed without fabricating a zero-value payment. */
+  isCashOnDelivery(): boolean {
+    return this.draftStore.draft().payments.length === 0;
   }
 
   loadBranches(refresh = false) {
@@ -827,7 +838,10 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
             ['First Name', 'client_first_name', c.firstName || ''],
             ['Middle Name', 'client_middle_name', c.middleName || ''],
             ['Last Name', 'client_last_name', c.lastName || ''],
-            ['Phone', 'client_phone', c.primaryPhoneNumber || phone]
+            // The lookup row may carry the country code inline; the draft
+            // keeps it in client_country_code, so only the local part lands
+            // in the number field.
+            ['Phone', 'client_phone', normalizeLocalPhone(c.primaryPhoneNumber || phone)]
           ];
           const conditional: [string, string, unknown][] = [
             ['Email', 'client_email', c.email],

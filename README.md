@@ -50,8 +50,8 @@ online_order_tool/
 │   └── src/app/
 │       ├── core/                        # ApiService, ModuleService, ThemeService, ToastService,
 │       │                                #   typed models, HTTP interceptor, route guards
-│       ├── shared/ui/                   # gradient-card, stat-tile, status-pill, json-tree, drawer,
-│       │                                #   confirm-dialog, data-table, pagination, riyal, ...
+│       ├── shared/ui/                   # stat-tile, status-pill, json-tree, drawer, ui-table,
+│       │                                #   confirm-dialog, pagination, riyal, ...
 │       ├── layout/                      # Navbar, Sidebar, Breadcrumb
 │       └── features/
 │           ├── landing/                 # Module picker
@@ -71,8 +71,7 @@ online_order_tool/
 │   ├── dev.ps1                          # Runs the API and `ng serve` together
 │   └── build.ps1                        # dotnet test + dotnet build (Release) + ng build (production)
 │
-├── docs/UI_Rework_Plan.md                # Active UI programme, U4-U8 only
-├── docs/UI_Rework_Prompts.md             # Active execution prompts, U4-U8 only
+├── docs/UI_Rework_Plan.md                # Closed U0-U8 programme; D1-D13 rationale cited by source comments
 └── .ai/HISTORY.md                        # Concise completed-milestone index
 ```
 

@@ -67,7 +67,7 @@ export interface PaymentUpdate {
       </ui-table>
 
       <ng-template #paymentsEmpty>
-        <app-empty-state icon="bi-credit-card-2-front" title="No payments yet" description="Add a payment method to complete the order settlement details.">
+        <app-empty-state icon="bi-cash-coin" title="Cash on Delivery" description="No payment method is selected, so this order is sent as Cash on Delivery. Add a payment only if it was settled up front." data-testid="payments-cod-state">
           <ui-button variant="secondary" size="sm" icon="bi bi-plus-lg" (pressed)="openAddDialog.emit()">Add payment</ui-button>
         </app-empty-state>
       </ng-template>

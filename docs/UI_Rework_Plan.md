@@ -1,7 +1,10 @@
 # UI Rework & Workflow Remediation Plan - Programme Closed Locally
 
-> Companion to [`UI_Rework_Prompts.md`](UI_Rework_Prompts.md). This is the
-> historical closeout record for U0-U8. The .NET rewrite, remediation R0-R10,
+> This is the historical closeout record for U0-U8 and stays in the active
+> tree because source comments across the backend and frontend cite its D1-D13
+> decision numbers as their rationale. The companion execution prompts were
+> removed once every session landed; Git history holds their exact text.
+> The .NET rewrite, remediation R0-R10,
 > and UI sessions U0 through U8 are complete locally. Browser visual
 > verification and full safe UPC Testing order acceptance remain deferred
 > because the required external/browser evidence was unavailable; no active

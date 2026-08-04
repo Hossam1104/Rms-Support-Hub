@@ -17,6 +17,7 @@ in Git; completed plans with lasting audit value live under `.ai/archive/`.
 | UI Rework U6 | Completed locally; browser/live item evidence pending | `dac0cc4` | Rebuilt the flat-order workspace with ordered collapsible sections, capability-aware section navigation, a server-value-only summary rail, dense product/payment tables, real loading/empty/error states, and a responsive bottom action bar. Backend 110/110, frontend 81/81, and the warning-free production build passed with a 429.42 kB initial bundle; browser evidence was unavailable and the Testing item lookup returned HTTP 502. |
 | UI Rework U7 | Completed locally; browser/live evidence pending | `d3219dd` | Migrated the remaining application surfaces to U5/U6 primitives and tokens, removed the navbar dead alert, deleted all legacy glass consumers/definitions and unused aliases, and preserved routes, drawer tabs, capability behavior, and Production safety. Backend 110/110, frontend 85/85, and the warning-free production build passed with a 427.19 kB initial bundle; no in-app browser was available and the Testing item lookup returned HTTP 502. |
 | UI Rework U8 | Completed locally; external verification pending | U8 closeout commit | Reproduced backend/frontend/build gates, completed safe local API and hygiene checks, reconciled the final plan and memory, archived the active U8 plan, and closed the U0-U8 programme locally. Browser visual checks and full safe Testing order population/send/cancel/resend evidence remain deferred; no Production action was attempted. |
+| Final project polish | Completed locally; live send evidence pending | `30bb28e`, `3c65eaa`, `0953f63`, `4aee8cd` | Made an empty payment list a valid Cash-on-Delivery order end to end, split the Saudi country code out of `client_phone`/`order_phone` in the builder with a mirrored entry-side helper, pinned UPC first through `orderModulesForDisplay`, routed every visible Riyal amount through `app-riyal`, and removed stale prompts/plans/archives plus two consumer-free UI components. Backend 127/127, frontend 100/100, Release build clean, `npm run build` succeeded at a 427.35 kB initial bundle with one non-blocking style-budget warning. A payment-free UPC **Testing** send must still confirm the RMS accepts `"COD"`. |
 
 ## Programme Status
 
@@ -29,3 +30,5 @@ in Git; completed plans with lasting audit value live under `.ai/archive/`.
 - Browser visual checks and full safe Testing order population/send/cancel/
   resend evidence remain deferred external acceptance evidence, not active
   implementation work. No active UI rework plan remains.
+- The final project polish task followed U8 and is merged into local `main`.
+  ADR-0006 and ADR-0007 own the two business rules it introduced.

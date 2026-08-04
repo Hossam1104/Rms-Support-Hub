@@ -1,12 +1,12 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BranchOption } from '../../../core/models';
-import { SearchableSelectComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
+import { RiyalComponent, SearchableSelectComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-order-info',
   standalone: true,
-  imports: [CommonModule, SearchableSelectComponent, UiFieldComponent, UiInputComponent],
+  imports: [CommonModule, RiyalComponent, SearchableSelectComponent, UiFieldComponent, UiInputComponent],
   template: `
     <div class="form-panel">
       <div class="form-grid">
@@ -32,9 +32,9 @@ import { SearchableSelectComponent, UiFieldComponent, UiInputComponent } from '.
           <ui-input inputId="field-parent-order-code" [value]="textValue('parent_order_code')" placeholder="Optional" (valueChange)="onFieldChange('parent_order_code', $event)"></ui-input>
         </ui-field>
 
-        <ui-field label="Delivery cost" forId="field-delivery-cost" hint="SAR; server totals remain authoritative.">
+        <ui-field label="Delivery cost" forId="field-delivery-cost" hint="Server totals remain authoritative.">
           <ui-input inputId="field-delivery-cost" type="number" [value]="numberValue('order_delivery_cost')" placeholder="0.00" (valueChange)="onFieldChange('order_delivery_cost', $event)">
-            <span uiInputSuffix>SAR</span>
+            <app-riyal uiInputSuffix [size]=".9"></app-riyal>
           </ui-input>
         </ui-field>
 

@@ -4,8 +4,8 @@ import { ToastService } from '../../core/services/toast.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { BranchOption } from '../../core/models';
 import {
-  CopyButtonComponent, DataTableColumn, DataTableComponent, DrawerComponent,
-  EmptyStateComponent, FilterChipComponent, GradientCardComponent, JsonTreeComponent,
+  CopyButtonComponent, DrawerComponent,
+  EmptyStateComponent, FilterChipComponent, JsonTreeComponent,
   PageHeaderComponent, PaginationComponent, RiyalComponent, SearchableSelectComponent,
   SkeletonComponent, StatTileComponent, StatusPillComponent, UiButtonComponent,
   UiCardComponent, UiFieldComponent, UiInputComponent, UiSectionComponent,
@@ -13,20 +13,13 @@ import {
   ConfirmDialogComponent
 } from '../../shared/ui';
 
-interface DemoRow extends Record<string, unknown> {
-  id: number;
-  orderNumber: string;
-  branch: string;
-  net: number;
-}
-
 /** Development-only visual contract for the shared design system. */
 @Component({
   selector: 'app-kitchen-sink',
   standalone: true,
   imports: [
-    CommonModule, CopyButtonComponent, DataTableComponent, DrawerComponent,
-    EmptyStateComponent, FilterChipComponent, GradientCardComponent, JsonTreeComponent,
+    CommonModule, CopyButtonComponent, DrawerComponent,
+    EmptyStateComponent, FilterChipComponent, JsonTreeComponent,
     PageHeaderComponent, PaginationComponent, RiyalComponent, SearchableSelectComponent,
     SkeletonComponent, StatTileComponent, StatusPillComponent, UiButtonComponent,
     UiCardComponent, UiFieldComponent, UiInputComponent, UiSectionComponent,
@@ -143,14 +136,7 @@ interface DemoRow extends Record<string, unknown> {
         <app-stat-tile label="Cancelled" [value]="3" icon="bi-slash-circle" variant="muted"></app-stat-tile>
       </div>
       <div class="button-row"><ui-button variant="secondary" size="sm" (pressed)="statValue.set(statValue() + 137)">Bump count-up</ui-button></div>
-      <div class="card-grid gradient-grid">
-        <app-gradient-card variant="brand">Brand accent</app-gradient-card>
-        <app-gradient-card variant="success">Success accent</app-gradient-card>
-        <app-gradient-card variant="danger">Danger accent</app-gradient-card>
-        <app-gradient-card variant="info">Info accent</app-gradient-card>
-        <app-gradient-card variant="muted">Muted accent</app-gradient-card>
-      </div>
-      <p class="riyal-demo">1,284.50 <app-riyal [size]="1.1"></app-riyal> <app-copy-button value="Copied from the kitchen sink" label="Copy sample text"></app-copy-button></p>
+      <p class="riyal-demo"><app-riyal [size]="1.1"></app-riyal>1,284.50 <app-copy-button value="Copied from the kitchen sink" label="Copy sample text"></app-copy-button></p>
     </section>
 
     <section class="legacy-showcase sink-section">
@@ -161,7 +147,6 @@ interface DemoRow extends Record<string, unknown> {
       <ng-template #noChips><span class="text-muted">All chips removed.</span></ng-template>
       <app-json-tree title="Valid nested payload" [data]="samplePayload"></app-json-tree>
       <app-json-tree title="Malformed string (danger banner)" [data]="malformedJson"></app-json-tree>
-      <app-data-table [columns]="tableColumns" [rows]="tableRows" height="260px"></app-data-table>
       <app-pagination [page]="page()" [pageSize]="25" [total]="140" (pageChange)="page.set($event)"></app-pagination>
       <div class="skeleton-stack"><app-skeleton height="14px" width="60%"></app-skeleton><app-skeleton height="14px" width="80%"></app-skeleton><app-skeleton height="40px" width="100%" radius="var(--radius-lg)"></app-skeleton></div>
       <app-empty-state icon="bi-inbox" title="No requests yet" description="Orders sent from this module will appear here."></app-empty-state>
@@ -184,7 +169,6 @@ interface DemoRow extends Record<string, unknown> {
     .ui-table-shell + ui-table { margin-top: 14px; }
     .legacy-showcase { display: flex; flex-direction: column; gap: 16px; }
     .tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
-    .gradient-grid app-gradient-card { display: block; min-height: 70px; padding: 22px; color: var(--text-primary); font-weight: 700; }
     .riyal-demo { display: flex; align-items: center; gap: 10px; color: var(--text-primary); font-size: 1.2rem; font-weight: 750; }
     .skeleton-stack { display: grid; gap: 10px; }
     @media (max-width: 720px) { :host { padding: 16px 16px 56px; } .field-grid { grid-template-columns: 1fr; } }
@@ -213,6 +197,12 @@ export class KitchenSinkComponent {
     { value: 'ready', label: 'Ready' },
     { value: 'done', label: 'Done' }
   ];
+  readonly tableRows: { orderNumber: string; branch: string; net: number }[] = [
+    { orderNumber: 'UPC-99812', branch: 'P900', net: 1284.5 },
+    { orderNumber: 'UPC-99813', branch: '101', net: 342.75 },
+    { orderNumber: 'GHC-40021', branch: 'JED-04', net: 96.2 },
+    { orderNumber: 'GHC-40022', branch: 'P900', net: 2410 }
+  ];
 
   readonly samplePayload = {
     order_code: 'UPC-99812', branch_code: 'P900',
@@ -220,15 +210,6 @@ export class KitchenSinkComponent {
     order_gps: [21.5433, 39.1728], is_delivery: true, order_notes: null
   };
   readonly malformedJson = '{"order_code": "UPC-1", "branch_code": ';
-  readonly tableColumns: DataTableColumn[] = [
-    { key: 'orderNumber', label: 'Order #' },
-    { key: 'branch', label: 'Branch' },
-    { key: 'net', label: 'Net Total', align: 'right' }
-  ];
-  readonly tableRows: DemoRow[] = Array.from({ length: 40 }, (_, i) => ({
-    id: i, orderNumber: `UPC-${9000 + i}`, branch: `P${900 + (i % 5)}`,
-    net: Math.round((100 + i * 17.3) * 100) / 100
-  }));
 
   removeChip(chip: string) { this.chips.update(list => list.filter(value => value !== chip)); }
 

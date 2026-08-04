@@ -124,6 +124,123 @@ public class PayloadAndValidationTests
         Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for this module"));
     }
 
+    /// <summary>An order with no payment rows is a valid Cash-on-Delivery
+    /// order, not an incomplete one. The builder already emitted the COD shape
+    /// for that state; the validator used to reject it before the payload ever
+    /// reached the send. Both halves are asserted here so the rule cannot
+    /// regress from either side.</summary>
+    [Theory]
+    [InlineData(true)]  // UPC variant
+    [InlineData(false)] // GHC variant
+    public void NoPayment_BuildsCashOnDeliveryShapeAndPassesValidation(bool upc)
+    {
+        var variant = upc ? FlatVariant.UpcVariant : FlatVariant.GhcVariant;
+        var draft = new OrderDraft
+        {
+            OrderData = new Dictionary<string, object?>
+            {
+                ["branch_code"] = "201",
+                ["order_code"] = "UPC-COD-1",
+                ["client_first_name"] = "Jane",
+                ["client_last_name"] = "Smith",
+                ["client_phone"] = "0559876543",
+                ["order_address"] = "King Road",
+                ["delivery_date"] = "2026-08-04",
+                ["fullfilment_plant"] = "PLANT-1"
+            },
+            Products = new List<Product>
+            {
+                new() { ItemCode = "200002", ItemName = "UPC Item", Quantity = 1m, UnitPrice = 100m, VatPercentage = 15m }
+            },
+            Payments = new List<Payment>()
+        };
+
+        var payload = _flatBuilder.BuildPayload(draft, variant);
+
+        Assert.Equal("COD", payload["order_payment_method"]);
+        Assert.Equal("not_payment", payload["order_payment_status"]);
+        var payments = Assert.IsType<List<Dictionary<string, object?>>>(payload["payment_methods_with_options"]);
+        Assert.Empty(payments);
+
+        // No synthetic zero-value payment is fabricated to stand in for one,
+        // and totalPaid stays 0 without tripping a coverage rule.
+        var errors = _flatValidator.ValidatePayload(payload, variant, totalPaid: 0m);
+        Assert.DoesNotContain(errors, e => e.Contains("payment", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Tolerating an absent/empty payment list must not stop the
+    /// per-payment rules from running once payments ARE present. The empty
+    /// list is now the only thing the Cash-on-Delivery default covers, so
+    /// every rule inside the payments loop is asserted here.
+    ///
+    /// Note what is deliberately NOT asserted: an underpaid digital wallet.
+    /// Visa 1.00 against a 115.00 order resolves to order_payment_status
+    /// "partially_paid" (FlatOrderPayloadBuilder.DeterminePaymentStatus), and
+    /// the full-coverage rule keys off "done_payment" -- so a partial card
+    /// payment is a valid state, not an error, both before and after this
+    /// change.</summary>
+    [Fact]
+    public void ExplicitPayment_StillRunsEveryPerPaymentRule()
+    {
+        var draft = new OrderDraft
+        {
+            OrderData = new Dictionary<string, object?>
+            {
+                ["branch_code"] = "201",
+                ["order_code"] = "UPC-998",
+                ["client_first_name"] = "Jane",
+                ["client_last_name"] = "Smith",
+                ["client_phone"] = "0559876543",
+                ["order_address"] = "King Road"
+            },
+            Products = new List<Product> { new() { ItemCode = "1", ItemName = "P1", Quantity = 1, UnitPrice = 100, VatPercentage = 15 } },
+            Payments = new List<Payment>
+            {
+                new() { PaymentMethod = "Visa", PaymentStatus = "not_payment", PaymentAmount = 50m },
+                new() { PaymentMethod = "Bitcoin", PaymentStatus = "done_payment", PaymentAmount = 65m },
+                new() { PaymentMethod = "PostToCredit", PaymentStatus = "not_payment", PaymentAmount = 0m }
+            }
+        };
+
+        var payload = _flatBuilder.BuildPayload(draft, FlatVariant.UpcVariant);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid: 115m);
+
+        Assert.Contains(errors, e => e.Contains("Unknown payment method 'Bitcoin'"));
+        Assert.Contains(errors, e => e.Contains("Visa payment status must be 'done_payment'"));
+        Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for this module."));
+    }
+
+    /// <summary>The country code lives in its own key, so the number field
+    /// must never repeat it -- including for drafts saved before the rule
+    /// existed, which is why the split happens in the builder.</summary>
+    [Fact]
+    public void BuildPayload_SplitsTheCountryCodeOutOfEveryPhoneField()
+    {
+        var draft = new OrderDraft
+        {
+            OrderData = new Dictionary<string, object?>
+            {
+                ["branch_code"] = "101",
+                ["order_code"] = "ORD-002",
+                ["client_first_name"] = "John",
+                ["client_last_name"] = "Doe",
+                ["client_phone"] = "+966556028080",
+                ["order_country_code"] = "966",
+                ["order_phone"] = "00966556028081",
+                ["order_address"] = "Main St"
+            },
+            Products = new List<Product> { new() { ItemCode = "1", ItemName = "P1", Quantity = 1, UnitPrice = 10 } },
+            Payments = new List<Payment>()
+        };
+
+        var payload = _flatBuilder.BuildPayload(draft, FlatVariant.GhcVariant);
+
+        Assert.Equal("966", payload["client_country_code"]);
+        Assert.Equal("556028080", payload["client_phone"]);
+        Assert.Equal("966", payload["order_country_code"]);
+        Assert.Equal("556028081", payload["order_phone"]);
+    }
+
     [Fact]
     public void UniCommercePayload_CalculatesGrossNetVatAccurately()
     {

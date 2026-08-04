@@ -1,12 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
+import { RiyalComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
 
 @Component({
   selector: 'app-order-fields',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
+  imports: [CommonModule, FormsModule, RiyalComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
   template: `
     <ui-card variant="raised" class="card-section">
       <div uiCardHeader class="section-heading"><span class="section-title"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Invoice Order Headers &amp; Payments</span></div>
@@ -31,11 +31,15 @@ import { UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent,
         <ui-field *ngIf="orderData['is_return']" label="Parent Reference Number" forId="invoice-parent-reference" [required]="true" class="full-width">
           <ui-input inputId="invoice-parent-reference" placeholder="Original invoice ReferenceNumber..." [value]="$any(orderData['parent_reference_number']) || ''" (valueChange)="onFieldChange('parent_reference_number', $event)"></ui-input>
         </ui-field>
-        <ui-field label="Paid Online Amount (SAR)" forId="invoice-paid-online">
-          <ui-input inputId="invoice-paid-online" type="number" step="0.01" [value]="$any(orderData['paid_online_amount']) || 0" (valueChange)="onFieldChange('paid_online_amount', $event)"></ui-input>
+        <ui-field label="Paid Online Amount" forId="invoice-paid-online">
+          <ui-input inputId="invoice-paid-online" type="number" step="0.01" [value]="$any(orderData['paid_online_amount']) || 0" (valueChange)="onFieldChange('paid_online_amount', $event)">
+            <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+          </ui-input>
         </ui-field>
-        <ui-field label="Paid With Points Amount (SAR)" forId="invoice-paid-points">
-          <ui-input inputId="invoice-paid-points" type="number" step="0.01" [value]="$any(orderData['paid_with_points_amount']) || 0" (valueChange)="onFieldChange('paid_with_points_amount', $event)"></ui-input>
+        <ui-field label="Paid With Points Amount" forId="invoice-paid-points">
+          <ui-input inputId="invoice-paid-points" type="number" step="0.01" [value]="$any(orderData['paid_with_points_amount']) || 0" (valueChange)="onFieldChange('paid_with_points_amount', $event)">
+            <app-riyal uiInputSuffix [size]=".9"></app-riyal>
+          </ui-input>
         </ui-field>
       </div>
     </ui-card>
