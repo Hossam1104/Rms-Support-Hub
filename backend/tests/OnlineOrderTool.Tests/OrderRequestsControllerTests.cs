@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using OnlineOrderTool.Api;
 using OnlineOrderTool.Api.Controllers;
@@ -42,7 +43,7 @@ public class OrderRequestsControllerTests
         ItemCount: 1,
         IsSucceeded: true,
         ExceptionMessage: null,
-        RequestJson: "{\"branch_code\":\"100\"}",
+        RequestJson: "{\"order_code\":\"UPC-1\",\"branch_code\":\"100\",\"unknown_field\":{\"keep\":true}}",
         ResponseJson: null,
         Header: new OrderRequestHeaderDto(
             OrderHeaderId: 1,
@@ -62,7 +63,7 @@ public class OrderRequestsControllerTests
             OrderNote: null,
             ParentOrderNumber: null,
             RejectionMessage: null,
-            CanResend: true,
+            CanResend: OnlineOrderTool.Core.OrderRequestStatus.IsResendAllowed(orderStatus),
             CanCancel: true),
         Details: new List<OrderRequestDetailLineDto>(),
         Transactions: new List<OrderRequestTransactionDto>(),
@@ -93,10 +94,14 @@ public class OrderRequestsControllerTests
     private class FakeApiClient : IApiClient
     {
         public string? LastUrl;
+        public string? LastPayloadJson;
+        public int CallCount;
 
         public Task<ApiResponseResult> SendOrderAsync(string url, object payloadJson)
         {
             LastUrl = url;
+            LastPayloadJson = JsonSerializer.Serialize(payloadJson);
+            CallCount++;
             return Task.FromResult(new ApiResponseResult(200, "{\"ok\":true}", url, true));
         }
 
@@ -135,5 +140,84 @@ public class OrderRequestsControllerTests
         var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
         Assert.Equal(409, objectResult.StatusCode);
         Assert.Null(apiClient.LastUrl);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public async Task Resend_BlocksNewAndWithDelegateBeforeCallingApi(int status)
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(status) };
+        var apiClient = new FakeApiClient();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+
+        var result = await controller.Resend(
+            "upc_ecommerce", 42,
+            new OrderRequestResendRequest("200", null),
+            envKey: "UPC Testing");
+
+        var conflict = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
+        Assert.Equal(409, conflict.StatusCode);
+        Assert.Equal(0, apiClient.CallCount);
+    }
+
+    [Fact]
+    public async Task Resend_ReusesStoredNumberAndUnknownFields_WhileChangingOnlyBranch()
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
+        var originalJson = repo.Detail.RequestJson;
+        var apiClient = new FakeApiClient();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+
+        var result = await controller.Resend(
+            "upc_ecommerce", 42,
+            new OrderRequestResendRequest("200", null),
+            envKey: "UPC Testing");
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
+        Assert.Equal(1, apiClient.CallCount);
+        Assert.Equal(originalJson, repo.Detail.RequestJson);
+        using var sent = JsonDocument.Parse(apiClient.LastPayloadJson!);
+        Assert.Equal("UPC-1", sent.RootElement.GetProperty("order_code").GetString());
+        Assert.Equal("200", sent.RootElement.GetProperty("branch_code").GetString());
+        Assert.True(sent.RootElement.GetProperty("unknown_field").GetProperty("keep").GetBoolean());
+        Assert.Contains("CreateAndAssignOrder", apiClient.LastUrl);
+    }
+
+    [Fact]
+    public async Task Resend_UsesOriginalBranchWhenNoOverrideIsProvided()
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
+        var apiClient = new FakeApiClient();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+
+        await controller.Resend(
+            "upc_ecommerce", 42,
+            new OrderRequestResendRequest(null, null),
+            envKey: "UPC Testing");
+
+        using var sent = JsonDocument.Parse(apiClient.LastPayloadJson!);
+        Assert.Equal("100", sent.RootElement.GetProperty("branch_code").GetString());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-json")]
+    [InlineData("{\"branch_code\":\"100\"}")]
+    [InlineData("{\"order_code\":\"OTHER\",\"branch_code\":\"100\"}")]
+    public async Task Resend_FailsSafelyWhenStoredPayloadCannotProveOriginalNumber(string? requestJson)
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) with { RequestJson = requestJson } };
+        var apiClient = new FakeApiClient();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+
+        var result = await controller.Resend(
+            "upc_ecommerce", 42,
+            new OrderRequestResendRequest("200", null),
+            envKey: "UPC Testing");
+
+        var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
+        Assert.NotEqual(200, objectResult.StatusCode);
+        Assert.Equal(0, apiClient.CallCount);
     }
 }

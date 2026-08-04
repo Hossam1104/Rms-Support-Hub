@@ -145,7 +145,7 @@ export interface OrderRequestCancelRequest {
 }
 
 export interface OrderRequestResendRequest {
-  branchCode: string;
+  branchCode?: string | null;
   endpointKey?: string | null;
 }
 

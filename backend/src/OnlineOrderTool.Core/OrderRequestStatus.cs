@@ -1,10 +1,8 @@
 namespace OnlineOrderTool.Core;
 
 /// <summary>The RequestOrderHeaders.OrderStatus decode map (1..9), and the
-/// resend/cancel eligibility rules derived from it. Ported from
-/// UPC_ORDER_STATUS_LABELS / UPC_RESEND_BLOCKED_STATUSES in
-/// _legacy_flask/modules/flat_order.py, plus CancelBlockedStatuses (new --
-/// the legacy app never modeled cancel eligibility by status, only resend).
+/// resend/cancel eligibility rules derived from it. The resend rule is the
+/// current Order Requests contract: New and With_Delegate are blocked.
 /// See docs/database-schema.md §2.</summary>
 public static class OrderRequestStatus
 {
@@ -21,10 +19,10 @@ public static class OrderRequestStatus
         [9] = "Done"
     };
 
-    /// <summary>Already executed/invoiced (With_Delegate, Done) or actively in
-    /// the POS cart (Processing) -- resending to a different branch would be
-    /// meaningless or unsafe.</summary>
-    public static readonly IReadOnlySet<int> ResendBlockedStatuses = new HashSet<int> { 4, 8, 9 };
+    /// <summary>New orders and orders already assigned to a delegate cannot be
+    /// resent. Only known status codes participate in the resend workflow;
+    /// unknown values fail closed.</summary>
+    public static readonly IReadOnlySet<int> ResendBlockedStatuses = new HashSet<int> { 1, 4 };
 
     /// <summary>Already rejected, already cancelled (by either party), or
     /// already done -- nothing left to cancel.</summary>
@@ -33,7 +31,7 @@ public static class OrderRequestStatus
     public static string GetLabel(int status) =>
         Labels.TryGetValue(status, out var label) ? label : $"Unknown ({status})";
 
-    public static bool IsResendAllowed(int status) => !ResendBlockedStatuses.Contains(status);
+    public static bool IsResendAllowed(int status) => Labels.ContainsKey(status) && !ResendBlockedStatuses.Contains(status);
 
     public static bool IsCancelAllowed(int status) => !CancelBlockedStatuses.Contains(status);
 }

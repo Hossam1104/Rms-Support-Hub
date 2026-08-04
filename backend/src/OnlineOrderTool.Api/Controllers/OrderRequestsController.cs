@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using OnlineOrderTool.Core;
 using OnlineOrderTool.Core.DTOs;
@@ -149,9 +150,6 @@ public class OrderRequestsController : ControllerBase
         var (module, connStr, guard) = Resolve(key, envKey, requireResend: true);
         if (guard != null) return guard;
 
-        if (string.IsNullOrWhiteSpace(request.BranchCode))
-            return BadRequest(new { error = "branchCode is required." });
-
         var detail = await _repository.GetDetailAsync(connStr!, id);
         if (detail == null) return NotFound(new { error = $"Order request '{id}' not found." });
         if (detail.Header == null)
@@ -166,10 +164,10 @@ public class OrderRequestsController : ControllerBase
         if (string.IsNullOrWhiteSpace(detail.RequestJson))
             return BadRequest(new { error = "Original request payload not found for this order." });
 
-        Dictionary<string, object?>? payload;
+        JsonObject? payload;
         try
         {
-            payload = JsonSerializer.Deserialize<Dictionary<string, object?>>(detail.RequestJson);
+            payload = JsonNode.Parse(detail.RequestJson) as JsonObject;
         }
         catch (JsonException ex)
         {
@@ -178,9 +176,44 @@ public class OrderRequestsController : ControllerBase
         }
 
         if (payload == null)
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Stored request payload is empty." });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Stored request payload must be a JSON object." });
 
-        payload["branch_code"] = request.BranchCode;
+        string? storedOrderNumber;
+        try
+        {
+            storedOrderNumber = payload["order_code"]?.GetValue<string>();
+        }
+        catch (InvalidOperationException)
+        {
+            return BadRequest(new { error = "Stored request order_code must be a string." });
+        }
+        if (string.IsNullOrWhiteSpace(storedOrderNumber))
+            return BadRequest(new { error = "Stored request payload has no original order_code." });
+
+        if (!string.Equals(storedOrderNumber.Trim(), detail.OrderNumber.Trim(), StringComparison.Ordinal))
+        {
+            return BadRequest(new { error = "Stored request order_code does not match the recorded order number." });
+        }
+
+        string? originalBranchCode;
+        try
+        {
+            originalBranchCode = payload["branch_code"]?.GetValue<string>();
+        }
+        catch (InvalidOperationException)
+        {
+            return BadRequest(new { error = "Stored request branch_code must be a string." });
+        }
+        var targetBranchCode = string.IsNullOrWhiteSpace(request.BranchCode)
+            ? originalBranchCode?.Trim()
+            : request.BranchCode.Trim();
+        if (string.IsNullOrWhiteSpace(targetBranchCode))
+            return BadRequest(new { error = "No original or target branch code is available for this request." });
+
+        // JsonObject is an in-memory copy parsed from the immutable stored
+        // RequestJson string. Only the verified branch override is changed;
+        // order_code and every unknown payload field remain untouched.
+        payload["branch_code"] = targetBranchCode;
 
         var env = module!.GetEnvironment(envKey);
         var url = env.ApiUrl;

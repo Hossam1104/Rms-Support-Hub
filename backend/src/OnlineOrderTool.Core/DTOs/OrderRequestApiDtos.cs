@@ -28,4 +28,4 @@ public record OrderRequestListQuery(
 /// effect beyond falling through to CancelUrl.</summary>
 public record OrderRequestCancelRequest(string Reason, string? EndpointKey, string? CustomUrl);
 
-public record OrderRequestResendRequest(string BranchCode, string? EndpointKey);
+public record OrderRequestResendRequest(string? BranchCode, string? EndpointKey);
