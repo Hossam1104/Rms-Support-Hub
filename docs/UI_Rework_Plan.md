@@ -117,8 +117,10 @@ memory.
 
 - U2 serialized and batched draft writes are complete. U4 consumes that flow;
   U6 must not change it.
-- Order Validation remains routed and is labelled superseded by Order Requests;
-  U7 restyled it without deleting the route.
+- The legacy `/requests` and `/validation` paths remain as compatibility
+  redirects, but the active Order Requests list and detail page are now the
+  single history/inspection surface. The consumer-free Order Validation
+  components were removed during the final order-requests unification.
 - GHC E-Commerce and GHC Uni-Commerce remain capability-gated where live
   database credentials or capabilities are unavailable.
 
@@ -133,6 +135,7 @@ memory.
 | U6 | **Completed locally - builder layout (D11).** Two-column workspace with collapsible sections, sticky section navigation, server-driven summary rail, dense product/payment tables, responsive bottom action bar, and real empty/loading/error states. | Commit `dac0cc4`; flat-order feature and new summary-rail/layout components | Backend 110/110, frontend 81/81, production initial bundle 429.42 kB; browser evidence unavailable |
 | U7 | **Completed locally (D10, D14).** Migrated navbar, sidebar, breadcrumb, landing, Order Requests, Uni-Commerce, and Order Validation to U5/U6 primitives; preserved routes and behavior; removed all legacy `.glass-*` rules and dead aliases. | Remaining layout/features, shared components, and `_gradients.css` compatibility rules | Commit `d3219dd`; backend 110/110, frontend 85/85, production initial bundle 427.19 kB; browser unavailable; Testing item lookup HTTP 502 |
 | U8 | **Completed locally - external verification pending.** Final regression, safe local API checks, documentation reconciliation, hygiene checks, and programme closeout are complete. | Closeout documentation, memory, plan retirement, and verification evidence | Backend 110/110, frontend 85/85, Release build 0 warnings/0 errors, Angular initial bundle 427.19 kB, local read-only API/proxy/routes passed; browser and full safe Testing order evidence deferred |
+| Final Order Requests | **Implemented locally - approved Riyal asset and external Testing/browser evidence pending.** Unified the canonical list/detail route, removed the superseded validation UI, stabilized branch selection, and added same-number resend from the stored request payload. | `features/order-requests/**`, route aliases, resend contract/tests, shared Riyal/selector behavior, reconciled docs | Targeted backend/frontend tests passed; final Release/build gate and local merge recorded in Git; no Production action |
 
 **Dependencies:** U0-U8 are locally complete. Browser inspection and
 database-dependent order acceptance remain external deferred evidence, not

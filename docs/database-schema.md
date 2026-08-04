@@ -65,17 +65,17 @@ into duplicate result rows.
 
 | Code | Label | Resend blocked | Cancel blocked |
 |---|---|---|---|
-| 1 | New | | |
+| 1 | New | ✓ | |
 | 2 | Confirmed | | |
 | 3 | Ready | | |
 | 4 | With_Delegate | ✓ | |
 | 5 | Rejected | | ✓ |
 | 6 | CanceledByClient | | ✓ |
 | 7 | CanceledByAdmin | | ✓ |
-| 8 | Processing | ✓ | |
-| 9 | Done | ✓ | ✓ |
+| 8 | Processing | | |
+| 9 | Done | | ✓ |
 
-`RequestOrderHeaders.OrderStatus` holds this code. Resend-blocked = `{4, 8, 9}`;
+`RequestOrderHeaders.OrderStatus` holds this code. Resend-blocked = `{1, 4}`;
 cancel-blocked = `{5, 6, 7, 9}`.
 
 ---
@@ -247,8 +247,10 @@ recent `Invoices` row by `OnlineOrderNumber`.
 
 **Resend** rebuilds the payload from that specific attempt's own stored
 `RequestJson` (never the live in-progress draft) — the read is simply
-`SELECT RequestJson FROM OrderRequests WHERE Id = @Id`, with only
-`branch_code` overridden before re-sending.
+`SELECT RequestJson FROM OrderRequests WHERE Id = @Id`. The server verifies
+`order_code` against the stored `OrderNumber`, preserves that number and every
+unknown field, and changes only `branch_code` before re-sending; if no target
+branch is supplied, the original branch is reused.
 
 ---
 

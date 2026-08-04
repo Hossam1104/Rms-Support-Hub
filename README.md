@@ -57,8 +57,7 @@ online_order_tool/
 │           ├── landing/                 # Module picker
 │           ├── flat-order/              # GHC/UPC E-Commerce order builder
 │           ├── unicommerce/             # GHC Uni-Commerce invoice builder
-│           ├── order-requests/          # Order Requests: list, filters, detail drawer, cancel/resend
-│           ├── order-validation/        # UPC-only search/detail (superseded by order-requests; kept for now)
+│           ├── order-requests/          # Order Requests: canonical list/detail, cancel/resend
 │           └── kitchen-sink/            # Dev-only /_kitchen-sink showcase of every shared/ui component
 │
 ├── docs/
@@ -192,9 +191,11 @@ cd frontend && npm run build
 3. **Uni-Commerce invoice builder** — invoice headers, consumer details,
    row items, `IsReturn`/parent-reference logic, live calculated totals.
 4. **Order Requests** — reads the real `OrderRequests` table (not a local
-   file): a filterable, paginated list with four live stat tiles, and a
-   route-driven detail drawer (Overview / Request / Response / Line items /
-   Payments / Invoice & lineage) with server-enforced cancel and resend.
+   file): a filterable, paginated list with four live stat tiles and a
+   route-level detail page (Items / Order Info / Transactions / Request JSON /
+   Response JSON) with server-enforced cancel and same-number resend. The
+   historical `/requests` and `/validation` paths redirect to this canonical
+   route.
 5. **Bold-gradient design system** — a shared UI kit
    (`frontend/src/app/shared/ui/`) built on design tokens; see
    `docs/design-system.md`.

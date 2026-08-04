@@ -2,9 +2,8 @@
 
 - **Updated:** 2026-08-04
 - **Branch:** `main`
-- **Release or milestone:** Final project polish merged locally: optional-payment
-  Cash on Delivery, local-only phone numbers, UPC-first dashboard, Riyal asset
-  standardization, and repository cleanup. UI Rework U0-U8 remains complete.
+- **Release or milestone:** Final Order Requests UX, branch-selector stability,
+  Riyal renderer reconciliation, and same-number resend implementation.
 
 ## Working State
 
@@ -12,81 +11,65 @@
   Server data layer, and xUnit/Vitest tests.
 - UPC/GHC flat-order authoring, GHC Uni-Commerce invoice authoring,
   SQL-backed Order Requests, capability-driven routing, and per-session local
-  drafts remain in place; live support varies by module.
-- U2 serialized/batched draft writes, U3 capability-gated branch lookup, U4
-  item lookup/server totals/send lifecycle, U5 shared tokens/primitives, U6
-  flat-order workspace, and U7 app-wide primitive migration are preserved.
-- U7 removed all `.glass-*` definitions, consumers, and dead compatibility
-  aliases. The Order Requests route-driven drawer, six tabs, capability gates,
-  and Production safety paths remain preserved.
-- The API has no standalone validation endpoint. U6 Validate remains a
-  non-sending draft/preview/totals refresh; `send-request` remains the
-  server-authoritative validation/send path.
-- A payment is optional. An empty payment list is the Cash-on-Delivery state
-  and sends successfully (ADR-0006). Phone number fields carry the bare local
-  number; the Saudi country code stays in its own key (ADR-0007).
-- UPC is pinned first on the module dashboard through
-  `orderModulesForDisplay`; everything else keeps the backend's order.
-- Every visible Riyal amount renders through `app-riyal`, which masks
-  `public/assets/Saudi_Riyal.svg`. No visible `SAR` or `ر.س` text remains.
+  drafts remain in place.
+- `/modules/:key/order-requests` is the canonical guarded history route. Its
+  `:orderId` child is a full-page detail view with Items, Order Info,
+  Transactions, Request JSON, and Response JSON sections; the JSON sections
+  start collapsed. `/requests` and `/validation` remain compatibility
+  redirects.
+- The superseded `frontend/src/app/features/order-validation` component tree
+  is removed. The sidebar exposes one Order Requests entry.
+- `app-searchable-select` submits branch codes only, uses fixed 40px option
+  geometry, and does not alter the active keyboard row while the pointer moves
+  across options.
+- Every visible currency amount renders through `app-riyal`, which points to
+  `/assets/Saudi_Riyal.svg` and inherits `currentColor`. The checked-in asset is
+  still a placeholder containing legacy text, so the approved vector asset is
+  an external completion dependency; no glyph was fabricated or downloaded.
+- Resend is allowed for known statuses 2, 3, 5, 6, 7, 8, and 9, and blocked
+  for New (1), With_Delegate (4), and unknown values. The server reads the
+  selected row's stored RequestJson, verifies `order_code`, changes only
+  `branch_code`, preserves unknown fields and the original number, and does
+  not mutate the stored history row.
+- Testing remains the default environment. Production resend/cancel flows
+  require typed confirmation, and no Production action is part of local work.
 
 ## Final Local Verification
 
-- Backend tests: 127/127 passed (`dotnet test OnlineOrderTool.slnx -c Release`).
-- Frontend tests: 100/100 passed across 20 spec files.
-- Release build 0 warnings/errors; `npm run build` succeeded, initial Angular
-  bundle 427.35 kB, with one non-blocking `anyComponentStyle` budget warning
-  on `order-summary-rail.component.ts` (6.33 kB against a 6 kB warning and
-  8 kB error threshold).
-- Static cleanup: no legacy glass tokens/classes, no raw color literals in
-  components, no focused/skipped tests, no whitespace errors.
-- Business rules verified end-to-end against a local API instance built from
-  these sources: `GET export-json` on a payment-free draft returned
-  `order_payment_method` `"COD"`, `order_payment_status` `"not_payment"` and
-  an empty payment list, and phone inputs in `+966`/`00966`/`0` forms were
-  reduced to the bare local number on both UPC and GHC variants. Synthetic
-  numbers only; no customer data was used or stored.
+- Backend tests: 145/145 passed.
+- Frontend tests: 105/105 passed across 21 spec files.
+- `dotnet build backend/OnlineOrderTool.slnx -c Release --nologo`: 0 warnings,
+  0 errors.
+- `scripts/build.ps1`: all checks passed; Angular initial bundle 425.91 kB.
+  Angular emitted two existing/non-blocking style-budget warnings: the flat
+  order summary rail and the new Order Requests detail page exceed the 6 kB
+  warning budget but remain below the 8 kB error budget.
+- `git diff --check` passed. No Production send, cancel, or resend was
+  attempted.
 
 ## Deferred Acceptance
 
-- No in-app browser instance was available; responsive/theme/visual checks at
-  1920/1280/900/600 remain unperformed, including visual confirmation of the
-  Riyal glyph and the module logos.
-- Full safe Testing order population, send, Order Requests UI inspection,
-  cancel, and resend remain unperformed because no approved real Testing item
-  was available. Prior U4/U7 item-lookup HTTP 502 evidence remains an external
-  dependency limitation; the current synthetic probe did not prove item
-  population.
-- No Production action was attempted.
+- No in-app browser instance was available (`agent.browsers.list()` returned
+  no browsers), so responsive/theme/visual checks and visual confirmation of
+  the Riyal glyph remain unperformed.
+- No approved live Testing order was available for safe list/detail/send,
+  cancel, or resend verification. Local tests cover the status, payload, and
+  duplicate-submit guards.
 
 ## Known Risks
 
-- Cash on Delivery sends `order_payment_method` `"COD"`, but the verified
-  reference payloads carry `"cash"`. The divergence predates this work and is
-  systemic (the builder emits `"Visa"` where fixtures say `"visa"`), but it was
-  unreachable until payment-free orders became sendable. One payment-free send
-  against UPC **Testing** must confirm the RMS accepts `"COD"` before Cash on
-  Delivery is relied on in Production. See ADR-0006.
-- `public/assets/Saudi_Riyal.svg`, `upc_logo.svg` and `whites_logo.svg` are
-  unverified placeholders: the Riyal asset draws the text `ر.س` rather than a
-  true vector glyph, and both logos are generated text-in-gradient marks. No
-  logo was fabricated or downloaded. Each is a one-file drop-in replacement
-  once an approved asset is supplied.
-- Controllers expose operational and order/customer data without an
-  application authentication or authorization scheme.
-- Outbound TLS certificate verification defaults to disabled for the shared RMS
-  HTTP client.
-- Local draft JSON may contain customer/order data and has no confirmed
-  cleanup, encryption, or multi-instance strategy.
-- Live SQL/API behavior, GHC schemas, production hosting, monitoring, backup,
-  and secret-rotation ownership are not established by local tests.
-- Documented missing indexes on request-header/invoice order-number joins can
-  make history filters time out on large live datasets.
+- `public/assets/Saudi_Riyal.svg`, `upc_logo.svg`, and `whites_logo.svg` need
+  approved asset replacements. The Riyal component path and color behavior are
+  ready, but the current Riyal file is not the approved glyph.
+- Controllers do not provide application authentication/authorization, the
+  shared RMS client defaults TLS verification off, and live SQL/API behavior
+  remains environment-dependent.
+- The canonical resend contract deliberately reuses the original number;
+  the upstream Testing RMS must accept duplicate-number resend semantics when
+  a real safe verification fixture is available.
 
 ## Programme Status
 
-- U0-U8 are complete locally. No next UI implementation session or active UI
-  rework plan exists.
-- The final polish task is complete and merged into local `main`. Nothing is
-  pushed or deployed.
-- `.ai/HANDOFF.md` is Empty.
+- U0-U8 remain closed. The final Order Requests unification is implemented and
+  merged into local `main` with the requested no-fast-forward merge.
+- `.ai/HANDOFF.md` is Empty and there is no active implementation plan.

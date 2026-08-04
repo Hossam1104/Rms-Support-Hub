@@ -12,3 +12,4 @@ Keep this as a compact index; detailed rationale belongs in individual ADR files
 | ADR-0005 | Accepted | Testing is the default environment and Production is visibly gated | Environment resolution and actions | `.ai/decisions/ADR-0005-testing-default-safety.md` |
 | ADR-0006 | Accepted | An empty payment list is Cash on Delivery, not a validation error | Flat-order validation, payload, summary UI | `.ai/decisions/ADR-0006-optional-payment-cash-on-delivery.md` |
 | ADR-0007 | Accepted | The phone field carries the local number only; the country code has its own key | Phone normalization, payload, client UI | `.ai/decisions/ADR-0007-local-phone-country-code-split.md` |
+| ADR-0008 | Accepted | Order Requests is the canonical history/detail route; resend reuses the selected stored payload and original number | Order Requests UI, resend API, route compatibility | `.ai/decisions/ADR-0008-order-requests-canonical-route-and-resend.md` |
