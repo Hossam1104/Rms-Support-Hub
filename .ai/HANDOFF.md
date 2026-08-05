@@ -4,7 +4,8 @@
 - **Task ID:** PROD-INDEX-AND-UPC-COD-ACCEPTANCE
 - **From:** Codex
 - **To:** Next owner after approvals are supplied
-- **Checkpoint commit:** pending documentation commit
+- **Checkpoint commit:** `159271d` (merged as `110e2a4`); state follow-up
+  `e40c763` (merged as `a65b4ed`)
 
 ## Completed in this run
 
