@@ -147,6 +147,7 @@ drawer surfaces.
 - The list query never selects `RequestJson`/`ResponseJson` — only `DATALENGTH(RequestJson) AS requestBytes` and a `hasResponse` flag, so the grid stays fast regardless of blob size.
 - Exact order searches use `R.OrderNumber = @OrderNumber` by default. `exactMatch=false` uses an escaped contains predicate for the supported partial-search behavior. Phone input is normalized to its last nine digits and matches `RIGHT(H.ConsumerMobile, 9)`; branch and status use canonical `BranchCode`/`OrderStatus` values from the latest matching header. Date bounds use `R.OrderDate >= @DateFrom` and an exclusive next-day `R.OrderDate < DATEADD(day, 1, @DateTo)` boundary.
 - The list, count, and stats reads share one normalized filter model. Header-derived filters use the ranked latest-header CTE; base-only list filters page `OrderRequests` before applying the latest header/invoice projections. Count and stats use distinct request IDs, and the list never returns raw request/response JSON.
+- The Angular route keeps one canonical applied-filter model. Clear All resets that model to its fresh defaults on page 1, removes canonical and legacy route-filter aliases through the router's null merge (`orderNumber`, `q`, `request`, `branch`, and `statuses` included), preserves the selected page size, and issues one unfiltered list request. Reload, manual refresh, auto-refresh, and browser history consume the cleared model rather than restoring the removed filters.
 
 ### Detail
 - **`GET /api/modules/{key}/order-requests/{id}`**

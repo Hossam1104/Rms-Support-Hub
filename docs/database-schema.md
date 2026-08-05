@@ -307,8 +307,12 @@ IX_Invoices_OnlineOrderNumber_Id
 ```
 
 The script was applied only to the approved UPC Testing database during the
-2026-08-04 read-only verification. The unfiltered API read then returned HTTP
-200 in roughly 2.4 seconds instead of the prior timeout/HTTP 500; branch
-filtering returned in roughly 0.6 seconds. Production remains untouched and
+2026-08-04 read-only verification. A follow-up read-only API matrix on
+2026-08-05 returned HTTP 200 for the combined list/count/stats endpoint: two
+unfiltered page-25 reads took 1.45-1.80 seconds, page-200 reads took
+1.45-2.57 seconds, branch filtering took 0.66-1.06 seconds, and the broad
+status-3 filter took 3.14-3.70 seconds. A known exact fixture took
+0.30-0.53 seconds. These timings are evidence for the bounded API path, not a
+promise about every future data distribution. Production remains untouched and
 requires separate database-owner approval. The script includes guarded
 rollback statements; it is not part of the application migration pipeline.
