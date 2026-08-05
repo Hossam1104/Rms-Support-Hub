@@ -19,10 +19,10 @@
   missing evidence must identify the Production database, approved script and
   checksum, approver/date, active maintenance window, and backup/rollback
   readiness. No Production SQL or prechecks were run.
-- No approved synthetic UPC Testing fixture package was supplied. Branch,
-  item, consumer, owner, allowed operations, and retention/cleanup policy are
-  not authorized. No state-changing Testing send, resend, or cancellation was
-  run; the repository's real-looking reference payloads were not reused.
+- The new attachment is an unfilled UPC Testing approval request, not an
+  approval. It supplies no fixture name/owner/reference, branch/item/consumer,
+  permitted operations, or retention policy. No state-changing Testing send,
+  resend, or cancellation was run; reference payloads were not reused.
 
 ## Exact next action
 
