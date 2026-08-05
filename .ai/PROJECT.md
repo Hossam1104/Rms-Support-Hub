@@ -138,8 +138,9 @@ Do not copy facts that can be cheaply discovered from the repository.
   viewport with a compact labelled sidebar rail.
 - The final Order Requests unification owns the canonical route-level detail
   page, compatibility redirects, same-number resend contract, and removal of
-  the superseded validation component tree. Final local Edge headless checks
-  cover the order-builder and Order Requests route at the required viewports;
-  the connected interactive browser and full safe Testing order
-  population/send/cancel/resend evidence remain deferred; there is no active
-  UI rework plan.
+  the superseded validation component tree. Final local Edge checks cover the
+  Order Requests route at 1920, 1440, 1280, 900, 768, 600, and 390px widths
+  in dark and light themes, including Clear All, outside-click dismissal, and
+  reload/history behavior. The connected in-app browser was unavailable;
+  state-changing Testing order population/send/cancel/resend evidence remains
+  deferred; there is no active UI rework plan.

@@ -1,71 +1,57 @@
 # Current Project State
 
-- **Updated:** 2026-08-04
-- **Branch:** `main`, pushed to `origin/main` at `6255ea4`; the merged
-  temporary branch `luna/order-requests-filter-fix` has been deleted.
-- **Release or milestone:** Order Requests database-filter correction and
-  modern search-workbench closeout.
+- **Updated:** 2026-08-05
+- **Branch:** `luna/order-requests-final-stabilization` (closeout pending
+  merge/push at this checkpoint)
+- **Release or milestone:** Final Order Requests stabilization
 
 ## Working State
 
-- The repository contains a .NET 10 Web API, Angular 22 SPA, Dapper SQL
+- The repository contains the .NET 10 Web API, Angular 22 SPA, Dapper SQL
   Server data layer, and xUnit/Vitest tests. Existing order authoring,
   payment, detail, cancel, resend, payload, and Production-safety contracts
   remain unchanged.
-- `/modules/:key/order-requests` remains the canonical guarded history route;
-  its detail route and compatibility redirects are unchanged.
-- Order Requests now has one normalized filter model shared by list, count,
-  and stats. Exact order-number matching is the default; escaped contains
-  matching is opt-in. Phone values use the last nine digits, branch/status
-  values use the latest matching header, and date-to is end-exclusive.
-- The repository pages base `OrderRequests` rows before related lookups when
-  possible, uses a ranked latest-header CTE for header-derived filters, keeps
-  raw JSON out of list projections, counts distinct request IDs, and passes
-  cancellation tokens through bounded 15-second list/count/stats commands.
-- The Angular filter workbench uses explicit Apply, order-number Enter,
-  token-based modern controls, a dedicated nine-status row, active chips,
-  refresh/auto-refresh controls, responsive narrow-screen layout, and
-  separate loading/error/retry states. Superseded list requests are cancelled
-  and stale responses cannot overwrite newer results; existing rows remain
-  visible during a failed refresh.
-- The CDK branch selector has a backdrop and closes without focus restoration
-  when the operator clicks outside it. The app shell and table keep wide grid
-  scrolling inside the table surface instead of creating page-level overflow.
-- `docs/sql/order-requests-performance-indexes.sql` is the guarded,
-  idempotent external support script for the two related-table join indexes.
-  It was applied only to the approved UPC Testing database on 2026-08-04;
-  Production was not accessed or changed.
+- Order Requests uses one normalized filter contract for list/count/stats:
+  exact order matching by default, escaped partial matching when requested,
+  last-nine-digit phone matching, latest-header branch/status semantics,
+  end-exclusive date bounds, explicit Apply state, bounded cancellation-aware
+  loading, and retryable errors.
+- Clear All now uses a fresh default-filter factory and one reset transaction.
+  It clears draft/applied filters and the visible result snapshot, returns to
+  page 1, preserves page size and refresh preferences, removes canonical and
+  legacy route aliases, invalidates older request generations, and makes one
+  unfiltered request. Refresh, reload, and browser history remain cleared.
+- The branch selector has both the CDK outside-click path and a document-level
+  pointer guard for real outside clicks, without focus restoration. The grid
+  keeps wide content inside its table surface rather than creating page-level
+  horizontal overflow.
+- `docs/sql/order-requests-performance-indexes.sql` is a guarded, idempotent
+  external support script. It was applied only to the approved UPC Testing
+  database; Production was not accessed or changed.
 
 ## Local Verification
 
-- Focused backend Order Requests tests: 47 passed.
-- Focused frontend Order Requests/searchable-select tests: 20 passed.
-- Full backend suite: 160/160 passed with no skipped tests.
-- Full frontend suite: 114/114 passed across 23 spec files.
-- `dotnet build backend/OnlineOrderTool.slnx -c Release --nologo`: 0
-  warnings, 0 errors.
-- `npm run build`: passed with a 438.35 kB initial bundle and no
+- Focused frontend Order Requests/searchable-select tests: 43 passed across
+  four spec files; full frontend suite: 141 passed across 24 files.
+- Focused backend Order Requests tests: 35 passed; full backend suite: 161
+  passed with no skipped tests.
+- `scripts/build.ps1` passed the backend test, Release build, and Angular
+  production-build gates. The production bundle is 438.35 kB with no
   style-budget warning.
-- `scripts/build.ps1`: passed all backend test, Release build, and Angular
-  production-build gates.
-- Riyal asset verification, link validation, generated-path hygiene, raw
-  color scan, secret scan, and debug-test hygiene checks passed.
-- UPC Testing filter matrix passed after the index script was applied:
-  unfiltered, exact/partial order, phone variants, branch, status, outcome,
-  date bounds, paging, sorting, combined filters, validation errors, and
-  retry/error behavior. No send, cancel, resend, or Production operation was
-  attempted.
-- Installed Edge headless renders covered the Order Requests route at
-  desktop, tablet, and 390px mobile widths. The connected in-app browser was
-  unavailable, so interactive pointer/keyboard/theme evidence remains an
-  external acceptance item.
+- `npm run test:riyal-asset` passed with the provenance-verified asset.
+  `git diff --check` passed and no generated/runtime paths are in the task
+  diff.
+- Read-only UPC Testing API timings for the combined list/count/stats path
+  were: unfiltered page 25 1.45-1.80 seconds, page 200 1.45-2.57 seconds,
+  branch 0.66-1.06 seconds, status 3 3.14-3.70 seconds, and exact fixture
+  0.30-0.53 seconds over two runs.
+- Installed Edge fallback verification covered Clear All, outside-click
+  dismissal, reload/back/forward, dark/light themes, and 1920, 1440, 1280,
+  900, 768, 600, and 390px viewports. The connected in-app browser was
+  unavailable in this environment.
 
 ## Known Risks and Deferred Acceptance
 
-- The broad status-3 Testing scan was approximately 14.8 seconds against the
-  bounded 15-second command limit; the current verified matrix is successful,
-  but further query/index tuning should be separately approved if that broad
-  status remains a common operational query.
 - The join-index script still needs separate database-owner approval before
   any Production application. The application does not own external-schema
   migrations.
@@ -77,5 +63,5 @@
 ## Programme Status
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
-  hardening remain closed. This task is merged and synchronized on `main`;
-  `.ai/HANDOFF.md` remains Empty and there is no active implementation plan.
+  hardening are closed. After synchronization, `.ai/HANDOFF.md` remains Empty
+  and there is no active implementation plan.

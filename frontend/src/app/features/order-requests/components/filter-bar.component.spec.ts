@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { BranchOptionsService } from '../../../core/services/branch-options.service';
-import { EMPTY_FILTERS, OrderRequestsStore } from '../order-requests.store';
+import { createDefaultOrderRequestFilters, OrderRequestsStore } from '../order-requests.store';
 import { FilterBarComponent } from './filter-bar.component';
 
 describe('FilterBarComponent', () => {
@@ -26,7 +26,7 @@ describe('FilterBarComponent', () => {
     fixture = TestBed.createComponent(FilterBarComponent);
     component = fixture.componentInstance;
     store = TestBed.inject(OrderRequestsStore);
-    store.init('upc_ecommerce', 'UPC Testing', { ...EMPTY_FILTERS }, 1, 25);
+    store.init('upc_ecommerce', 'UPC Testing', createDefaultOrderRequestFilters(), 1, 25);
     fixture.detectChanges();
   });
 
@@ -45,7 +45,7 @@ describe('FilterBarComponent', () => {
     const requestCount = apiGet.mock.calls.filter(([path]) => path.endsWith('/order-requests')).length;
     component.patchDraft({ search: '  ORD-42  ', exactMatch: false, statuses: [9, 1] });
 
-    expect(store.filters()).toEqual(EMPTY_FILTERS);
+    expect(store.filters()).toEqual(createDefaultOrderRequestFilters());
     expect(apiGet.mock.calls.filter(([path]) => path.endsWith('/order-requests'))).toHaveLength(requestCount);
 
     component.apply();
@@ -72,5 +72,18 @@ describe('FilterBarComponent', () => {
     expect(component.collapsed()).toBe(true);
     expect(store.filters().branchCode).toBe('P001');
     expect(fixture.nativeElement.querySelector('.primary-filter-grid')).toBeNull();
+  });
+
+  it('Clear All resets a dirty draft and starts exactly one unfiltered request', () => {
+    const requestCount = apiGet.mock.calls.filter(([path]) => path.endsWith('/order-requests')).length;
+    component.patchDraft({ search: 'ORD-42', branchCode: 'P001', statuses: [3] });
+
+    component.clearAll();
+
+    expect(component.draft()).toEqual(createDefaultOrderRequestFilters());
+    expect(component.draftDirty()).toBe(false);
+    expect(store.filters()).toEqual(createDefaultOrderRequestFilters());
+    expect(store.activeFilterChips()).toEqual([]);
+    expect(apiGet.mock.calls.filter(([path]) => path.endsWith('/order-requests'))).toHaveLength(requestCount + 1);
   });
 });

@@ -89,6 +89,22 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
+    public void BuildFilters_WhitespaceAndEmptyOptionalValues_AreEquivalentToOmittedValues()
+    {
+        var omitted = OrderRequestRepository.BuildFilters(new OrderRequestFilters());
+        var empty = OrderRequestRepository.BuildFilters(new OrderRequestFilters(
+            OrderNumber: "  ",
+            Phone: " \t",
+            BranchCode: " ",
+            Statuses: Array.Empty<int>(),
+            DateFrom: null,
+            DateTo: null));
+
+        Assert.Equal(omitted.WhereSql, empty.WhereSql);
+        Assert.Empty(empty.Params.ParameterNames);
+    }
+
+    [Fact]
     public void BuildFilters_BindsEveryValueAsAParameter_NeverInterpolatesIt()
     {
         var filters = new OrderRequestFilters(

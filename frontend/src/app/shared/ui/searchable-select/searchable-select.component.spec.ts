@@ -94,14 +94,14 @@ describe('SearchableSelectComponent', () => {
     expect(component.activeIndex).toBe(-1);
   });
 
-  it('closes from an outside click without reopening through focus restoration', () => {
+  it('closes from a real outside pointer event without reopening through focus restoration', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;
     const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
     const focusSpy = vi.spyOn(input, 'focus');
 
     component.openPanel();
-    component.closePanel(false);
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 
     expect(component.open).toBe(false);
     expect(focusSpy).not.toHaveBeenCalled();
