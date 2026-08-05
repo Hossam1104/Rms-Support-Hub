@@ -1,8 +1,8 @@
 # Current Project State
 
 - **Updated:** 2026-08-05
-- **Branch:** `luna/order-requests-final-stabilization` (closeout pending
-  merge/push at this checkpoint)
+- **Branch:** `main`, synchronized with `origin/main` after the final
+  stabilization closeout
 - **Release or milestone:** Final Order Requests stabilization
 
 ## Working State
