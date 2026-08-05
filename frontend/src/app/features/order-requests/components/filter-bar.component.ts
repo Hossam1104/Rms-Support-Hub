@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, inject, signal } from '@angular/core';
-import { EMPTY_FILTERS, OrderRequestsFilterState, OrderRequestsStore, QuickRange } from '../order-requests.store';
+import { createDefaultOrderRequestFilters, OrderRequestsFilterState, OrderRequestsStore, QuickRange } from '../order-requests.store';
 import { ORDER_REQUEST_STATUSES } from '../../../core/models';
 import {
   FilterChipComponent,
@@ -301,8 +301,8 @@ export class FilterBarComponent {
   clearAll() {
     this.dateRangeError.set(null);
     this.draftDirty.set(false);
-    this.draft.set(this.cloneFilters({ ...EMPTY_FILTERS, statuses: [] }));
-    this.store.clearFilters();
+    this.draft.set(this.cloneFilters(createDefaultOrderRequestFilters()));
+    this.store.clearFilters(true);
   }
 
   toggleCollapsed() { this.collapsed.update(value => !value); }

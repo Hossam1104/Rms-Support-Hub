@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { OrderRequestsStore, OrderRequestsFilterState, EMPTY_FILTERS } from './order-requests.store';
+import { createDefaultOrderRequestFilters, OrderRequestsStore, OrderRequestsFilterState } from './order-requests.store';
 import { ModuleService } from '../../core/services/module.service';
 import { PageHeaderComponent, StatTileComponent, PaginationComponent } from '../../shared/ui';
 import { FilterBarComponent } from './components/filter-bar.component';
@@ -112,13 +112,17 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
 
     this.syncingFromUrl = true;
     const filters: OrderRequestsFilterState = {
-      ...EMPTY_FILTERS,
+      ...createDefaultOrderRequestFilters(),
       search: qp.get('search') || qp.get('orderNumber') || qp.get('q') || qp.get('request') || '',
       exactMatch: qp.get('exactMatch') !== 'false',
       phone: qp.get('phone') || '',
-      branchCode: qp.get('branchCode'),
-      statuses: qp.getAll('status').map(Number).filter(n => Number.isFinite(n)),
-      outcome: (qp.get('outcome') as OrderRequestsFilterState['outcome']) || 'all',
+      branchCode: qp.get('branchCode') || qp.get('branch'),
+      statuses: [...qp.getAll('status'), ...qp.getAll('statuses')]
+        .map(Number)
+        .filter(n => Number.isInteger(n) && n >= 1 && n <= 9),
+      outcome: ['all', 'succeeded', 'failed'].includes(qp.get('outcome') || '')
+        ? qp.get('outcome') as OrderRequestsFilterState['outcome']
+        : 'all',
       dateFrom: qp.get('dateFrom'),
       dateTo: qp.get('dateTo')
     };
@@ -151,17 +155,38 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
   }
 
   private toQueryParams(f: OrderRequestsFilterState, page: number, pageSize: number): Record<string, string | string[] | null> {
-    return {
-      search: f.search || null,
-      exactMatch: f.exactMatch ? null : 'false',
-      phone: f.phone || null,
-      branchCode: f.branchCode || null,
-      status: f.statuses.length ? f.statuses.map(String) : null,
-      outcome: f.outcome !== 'all' ? f.outcome : null,
-      dateFrom: f.dateFrom || null,
-      dateTo: f.dateTo || null,
-      page: page > 1 ? String(page) : null,
-      pageSize: pageSize !== 25 ? String(pageSize) : null
-    };
+    return buildOrderRequestsQueryParams(f, page, pageSize);
   }
+}
+
+/**
+ * Serializes only the canonical UI state and explicitly removes all legacy
+ * aliases. With queryParamsHandling='merge', null values are required here:
+ * otherwise a pre-existing q/orderNumber/statuses/branch URL key survives a
+ * Clear All and can reappear after reload.
+ */
+export function buildOrderRequestsQueryParams(
+  f: OrderRequestsFilterState,
+  page: number,
+  pageSize: number
+): Record<string, string | string[] | null> {
+  return {
+    search: f.search || null,
+    orderNumber: null,
+    q: null,
+    request: null,
+    exactMatch: f.search && !f.exactMatch ? 'false' : null,
+    phone: f.phone || null,
+    branchCode: f.branchCode || null,
+    branch: null,
+    status: f.statuses.length ? f.statuses.map(String) : null,
+    statuses: null,
+    outcome: f.outcome !== 'all' ? f.outcome : null,
+    succeeded: null,
+    hasException: null,
+    dateFrom: f.dateFrom || null,
+    dateTo: f.dateTo || null,
+    page: page > 1 ? String(page) : null,
+    pageSize: pageSize !== 25 ? String(pageSize) : null
+  };
 }

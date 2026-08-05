@@ -22,9 +22,23 @@ export interface OrderRequestsFilterState {
   dateTo: string | null;
 }
 
-export const EMPTY_FILTERS: OrderRequestsFilterState = {
-  search: '', exactMatch: true, phone: '', branchCode: null, statuses: [], outcome: 'all', dateFrom: null, dateTo: null
-};
+/**
+ * The only source of default filter state. A fresh object and status array
+ * are returned for every caller so a draft/reset can never share mutable
+ * state with the applied filters or another component instance.
+ */
+export function createDefaultOrderRequestFilters(): OrderRequestsFilterState {
+  return {
+    search: '',
+    exactMatch: true,
+    phone: '',
+    branchCode: null,
+    statuses: [],
+    outcome: 'all',
+    dateFrom: null,
+    dateTo: null
+  };
+}
 
 /**
  * Route-scoped signal store for the Order Requests page (R9,
@@ -41,7 +55,7 @@ export class OrderRequestsStore {
   moduleKey = signal('');
   envKey = signal<string | null>(null);
 
-  filters = signal<OrderRequestsFilterState>(EMPTY_FILTERS);
+  filters = signal<OrderRequestsFilterState>(createDefaultOrderRequestFilters());
   page = signal(1);
   pageSize = signal(25);
   sort = signal<string | null>(null);
@@ -123,10 +137,25 @@ export class OrderRequestsStore {
     this.load();
   }
 
-  clearFilters() {
-    const changed = !this.sameFilters(this.filters(), EMPTY_FILTERS) || this.page() !== 1;
-    if (!changed) return;
-    this.filters.set({ ...EMPTY_FILTERS, statuses: [] });
+  /**
+   * Resets the applied state and starts one unfiltered request. The explicit
+   * force flag is used by the filter-bar Clear All action so a dirty draft is
+   * still committed even when the applied store is already on page one with
+   * no filters.
+   */
+  clearFilters(forceReload = false) {
+    const defaults = createDefaultOrderRequestFilters();
+    const changed = !this.sameFilters(this.filters(), defaults) || this.page() !== 1;
+    if (!changed && !forceReload) return;
+
+    // A clear is a new result generation. Drop the old rows/stats before the
+    // request starts so a failed reset cannot present filtered data as the
+    // current unfiltered result.
+    this.items.set([]);
+    this.stats.set(null);
+    this.total.set(0);
+    this.lastUpdatedAt.set(null);
+    this.filters.set(defaults);
     this.page.set(1);
     this.load();
   }
