@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
@@ -89,6 +89,8 @@ export class SearchableSelectComponent {
   @ViewChild('trigger') private trigger?: ElementRef<HTMLInputElement>;
   @ViewChild(CdkVirtualScrollViewport) private viewport?: CdkVirtualScrollViewport;
 
+  constructor(private hostElement: ElementRef<HTMLElement>) {}
+
   readonly listboxId = `searchable-select-${nextSelectId++}`;
   open = false;
   query = '';
@@ -131,6 +133,27 @@ export class SearchableSelectComponent {
     this.open = false;
     this.query = '';
     this.activeIndex = -1;
+  }
+
+  /**
+   * The CDK backdrop is the primary outside-click surface. Keep a document
+   * guard as well because a pointer can land on a page area while the overlay
+   * is detaching or when a host layout supplies its own stacking context.
+   * Events from the trigger and the connected overlay remain interactive.
+   */
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentPointerDown(event: Event) {
+    if (!this.open) return;
+    const target = event.target as Node | null;
+    if (!target) return;
+
+    const targetElement = target.nodeType === Node.ELEMENT_NODE
+      ? target as Element
+      : target.parentElement;
+    if (this.hostElement.nativeElement.contains(target)
+      || !!targetElement?.closest('.cdk-overlay-pane')) return;
+
+    this.closePanel(false);
   }
 
   onInput(value: string) {
