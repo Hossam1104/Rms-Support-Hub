@@ -63,5 +63,6 @@
 ## Programme Status
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
-  hardening are closed. After synchronization, `.ai/HANDOFF.md` remains Empty
-  and there is no active implementation plan.
+  hardening are closed. The current handoff records the external approval
+  blockers for Production index deployment and the UPC Testing fixture; there
+  is no active implementation plan.
