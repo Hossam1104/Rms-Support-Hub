@@ -1,39 +1,36 @@
 # Active Handoff
 
 - **Status:** Blocked
-- **Task ID:** PROD-INDEX-AND-UPC-COD-ACCEPTANCE
+- **Task ID:** APPLICATION-SERVER-DEPLOYMENT
 - **From:** Codex
-- **To:** Next owner after approvals are supplied
-- **Checkpoint commit:** `159271d` (merged as `110e2a4`); state follow-up
-  `e40c763` (merged as `a65b4ed`)
+- **To:** Next owner after the existing target and deployment mechanism are
+  identified
+- **Checkpoint commit:** `bf58fe918ea5ba63025d1d86c433053b1af37b34` (last
+  synchronized baseline before the deployment-state documentation changes)
 
-## Completed in this run
+## Scope
 
-- Verified clean synchronized baseline `e3034f6` on `main` and reviewed the guarded index script. SHA-256 is `2239E6597FD65DA005A5616271BA14A87154297A37ABE7706E64141E0A888428`.
-- Ran backend 161/161 tests, frontend 141/141 tests, Release build, Angular
-  production build, Riyal asset verification, memory checks, and diff checks.
+- Application deployment is authorized only through an existing, verified
+  mechanism.
+- UPC Testing fixture acceptance is deferred for missing completed approval;
+  it does not block deployment and remains in `.ai/STATE.md`.
+- Production index work is deferred by the user; no database action is
+  authorized and it is not a deployment blocker.
 
-## Blockers
+## Blocker
 
-- No explicit written Production database-owner approval was supplied. The
-  missing evidence must identify the Production database, approved script and
-  checksum, approver/date, active maintenance window, and backup/rollback
-  readiness. No Production SQL or prechecks were run.
-- The new attachment is an unfilled UPC Testing approval request, not an
-  approval. It supplies no fixture name/owner/reference, branch/item/consumer,
-  permitted operations, or retention policy. No state-changing Testing send,
-  resend, or cancellation was run; reference payloads were not reused.
+- No authoritative deployment documentation, target configuration, CI/CD
+  workflow, transfer script, or IIS/Docker/systemd/service definition exists in
+  the repository.
+- Missing target details: environment, server identity, deployment folder,
+  service/site/container, URL/port, health endpoint, secure access method, and
+  rollback procedure.
+- The hard-coded UPC RMS addresses are upstream API endpoints, not an
+  application-server deployment target and must not be used as one.
 
 ## Exact next action
 
-Obtain both approval packages, re-verify the script checksum and target
-identity, then perform the separately authorized Production index and
-Testing-only fixture workflows. Preserve sanitized evidence and run the full
-regression gates again before any merge or release decision.
-
-## Validation note
-
-The wrapper's Debug compile was blocked by a pre-existing local
-`OnlineOrderTool.Api` process holding Debug DLLs. Equivalent no-build Debug
-tests, Release build, and Angular production build passed; the process was
-left running because it was not authorized to be stopped.
+Provide or restore the authoritative existing deployment target and mechanism.
+Then verify secure access and the current server baseline before building or
+transferring an artifact. Do not guess, deploy, run SQL, or perform live API
+actions while these details are absent.

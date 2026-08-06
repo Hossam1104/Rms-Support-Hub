@@ -1,9 +1,9 @@
 # Current Project State
 
-- **Updated:** 2026-08-05
-- **Branch:** `main`, synchronized with `origin/main` after the final
-  stabilization closeout
-- **Release or milestone:** Final Order Requests stabilization
+- **Updated:** 2026-08-06
+- **Branch:** `main`, synchronized with `origin/main` at the pre-deployment
+  documentation baseline `bf58fe918ea5ba63025d1d86c433053b1af37b34`
+- **Release or milestone:** Application server deployment discovery
 
 ## Working State
 
@@ -11,23 +11,23 @@
   Server data layer, and xUnit/Vitest tests. Existing order authoring,
   payment, detail, cancel, resend, payload, and Production-safety contracts
   remain unchanged.
-- Order Requests uses one normalized filter contract for list/count/stats:
-  exact order matching by default, escaped partial matching when requested,
-  last-nine-digit phone matching, latest-header branch/status semantics,
-  end-exclusive date bounds, explicit Apply state, bounded cancellation-aware
-  loading, and retryable errors.
-- Clear All now uses a fresh default-filter factory and one reset transaction.
-  It clears draft/applied filters and the visible result snapshot, returns to
-  page 1, preserves page size and refresh preferences, removes canonical and
-  legacy route aliases, invalidates older request generations, and makes one
-  unfiltered request. Refresh, reload, and browser history remain cleared.
-- The branch selector has both the CDK outside-click path and a document-level
-  pointer guard for real outside clicks, without focus restoration. The grid
-  keeps wide content inside its table surface rather than creating page-level
-  horizontal overflow.
-- `docs/sql/order-requests-performance-indexes.sql` is a guarded, idempotent
-  external support script. It was applied only to the approved UPC Testing
-  database; Production was not accessed or changed.
+- Production API calls use same-origin `/api`; the repository has local
+  development and validation scripts but no documented hosting/deployment
+  topology or server target.
+- The active task is `APPLICATION-SERVER-DEPLOYMENT`. No application
+  deployment, server mutation, SQL change, migration, or state-changing API
+  verification has been performed.
+
+## Deferred Acceptance and Database Scope
+
+- UPC Testing fixture acceptance: **Deferred - Testing approval required**.
+  It does not block application deployment, but it blocks any live COD
+  acceptance claim, send, resend, or cancellation.
+- Production index work: **Deferred by user**. It is a separate future,
+  database-owner-approved task, does not block application deployment, and no
+  Production database change is authorized in this session.
+- No false fixture approval, COD acceptance, or Production index deployment is
+  recorded.
 
 ## Local Verification
 
@@ -39,30 +39,23 @@
   production-build gates. The production bundle is 438.35 kB with no
   style-budget warning.
 - `npm run test:riyal-asset` passed with the provenance-verified asset.
-  `git diff --check` passed and no generated/runtime paths are in the task
-  diff.
-- Read-only UPC Testing API timings for the combined list/count/stats path
-  were: unfiltered page 25 1.45-1.80 seconds, page 200 1.45-2.57 seconds,
-  branch 0.66-1.06 seconds, status 3 3.14-3.70 seconds, and exact fixture
-  0.30-0.53 seconds over two runs.
-- Installed Edge fallback verification covered Clear All, outside-click
-  dismissal, reload/back/forward, dark/light themes, and 1920, 1440, 1280,
-  900, 768, 600, and 390px viewports. The connected in-app browser was
-  unavailable in this environment.
+- Read-only browser and Testing metadata evidence remains historical evidence;
+  no state-changing workflow was run.
 
-## Known Risks and Deferred Acceptance
+## Deployment Discovery Blocker
 
-- The join-index script still needs separate database-owner approval before
-  any Production application. The application does not own external-schema
-  migrations.
-- No safe synthetic fixture was authorized for a state-changing Testing
-  send/cancel/resend workflow, and no Production action was attempted.
-- Controllers still have no application authentication/authorization scheme;
-  this existing project boundary is outside the current filter task.
+- README and `.ai/PROJECT.md` state that hosting/deployment topology is not
+  documented.
+- The repository contains no authoritative IIS, Docker, systemd, CI/CD,
+  transfer, service, deployment-folder, target-server, or health-endpoint
+  configuration.
+- The exact target environment, server identity, deployment mechanism, secure
+  access method, rollback location, and health checks are therefore unknown.
 
 ## Programme Status
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
-  hardening are closed. The current handoff records the external approval
-  blockers for Production index deployment and the UPC Testing fixture; there
-  is no active implementation plan.
+  hardening are closed.
+- The active deployment task is blocked only by missing authoritative target
+  and mechanism details. The UPC fixture and Production index deferrals remain
+  separate and non-blocking for application deployment.

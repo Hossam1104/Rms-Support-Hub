@@ -1,54 +1,41 @@
 # Current Task
 
-- **Task ID:** ORDER-REQUESTS-FINAL-STABILIZATION
-- **Status:** Completed - Production Database Approval Pending
-- **Role:** Closed
+- **Task ID:** APPLICATION-SERVER-DEPLOYMENT
+- **Status:** Blocked - deployment target and mechanism are not documented
+- **Role:** Release
 
 ## Objective
 
-Close the remaining Order Requests acceptance issues: make Clear All a single
-canonical reset transaction, remove stale route filters, prevent stale or
-hanging searches, close the branch selector on a genuine outside pointer, and
-verify the modern search header/grid without changing payment, ordering,
-details, cancel, resend, payload, or Production-safety contracts.
+Deploy the currently validated Online Order Tool application to the existing
+configured application server through its authoritative deployment mechanism.
+Preserve server-owned configuration and secrets, create a rollback copy, run
+read-only health and smoke checks, and record the deployed commit only after
+acceptance succeeds.
 
-## Delivered
+## Scope and safety gate
 
-- A fresh default-filter factory is shared by the store and filter bar. Clear
-  All resets visible fields, chips/count, page, rows, stats, and error state;
-  preserves page size and refresh preferences; cancels the prior request;
-  removes canonical and legacy URL filter aliases; and starts exactly one
-  unfiltered request.
-- Store request generations and cancellation guards prevent a superseded
-  response or error from changing the cleared state. Manual refresh, auto
-  refresh, retry, reload, and browser history remain on the cleared model.
-- URL parsing accepts the supported legacy aliases for compatibility while
-  serialization nulls those aliases during Clear All. Empty optional values
-  are omitted from API query parameters.
-- The branch selector closes from a real document-level outside pointer while
-  retaining the CDK overlay/backdrop behavior and avoiding focus restoration.
-- Repository coverage now proves whitespace/empty filter normalization; the
-  frontend covers the exact 20 Clear All scenarios and URL serialization.
+- Application deployment only; no SQL, schema migration, index script, or
+  state-changing API operation is authorized.
+- UPC Testing fixture acceptance remains deferred because completed approval is
+  missing. It does not block application deployment, but it blocks any live COD
+  acceptance claim, send, resend, or cancellation.
+- Production index work remains deferred by the user, does not block
+  application deployment, and is not authorized in this task.
+- Never guess a server, service/site, port, deployment folder, health endpoint,
+  credential, or deployment architecture.
 
-## Validation evidence
+## Current blocker
 
-- Focused frontend Order Requests/searchable-select tests: 43 passed across
-  four spec files; full frontend suite: 141 passed across 24 files.
-- Focused backend Order Requests tests: 35 passed; full backend suite: 161
-  passed with no skipped tests.
-- `scripts/build.ps1`, Release build, Angular production build, Riyal asset
-  verification, and diff/hygiene checks passed. The production bundle is
-  438.35 kB with no style-budget warning.
-- Read-only UPC Testing API timings remained below the 15-second bound;
-  status 3 completed in 3.14-3.70 seconds over two runs. No send, cancel,
-  resend, or Production operation was attempted.
-- Installed Edge browser verification covered Clear All, outside-click
-  dismissal, reload/back/forward, dark/light themes, and all requested
-  desktop/tablet/mobile viewports. The connected in-app browser was
-  unavailable in this environment.
+The repository contains no authoritative deployment documentation, target
+configuration, CI/CD workflow, transfer script, IIS/Docker/systemd definition,
+or server-management procedure. README and `.ai/PROJECT.md` explicitly state
+that hosting/deployment topology is not documented. Deployment cannot proceed
+until the existing target and mechanism are identified.
 
-## Closeout
+## Current evidence
 
-The feature branch is committed as logical code/test and documentation changes,
-merged into `main` with a no-fast-forward merge, pushed to `origin/main`, and
-deleted after synchronization. No deploy.
+- Baseline: `main` at `bf58fe918ea5ba63025d1d86c433053b1af37b34`, synchronized
+  with `origin/main` before the pending documentation commit.
+- No application source, SQL, payload, fixture, generated, or secret changes
+  are pending.
+- No application deployment or server mutation has been performed.
