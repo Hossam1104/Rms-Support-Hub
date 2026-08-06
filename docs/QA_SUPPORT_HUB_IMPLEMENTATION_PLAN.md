@@ -1249,3 +1249,48 @@ The unified QA Support Hub is complete when:
 15. Final regression and release preparation.
 
 The POS implementation sessions must remain deferred until the standalone source project is available.
+
+---
+
+## 23. Repository Map (Session 00 Baseline)
+
+Verified against the repository on 2026-08-06 at commit `eaeb43e`. The Session 00 architecture decisions are recorded in `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`.
+
+### 23.1 Frontend Anchors
+
+- Routes: `frontend/src/app/app.routes.ts` — all lazy `loadComponent` routes. `''` renders `features/landing`; `modules/:key` renders `features/module-shell` with `order`, `unicommerce`, and `order-requests` children (the last guarded by `core/guards/capability.guard.ts`); legacy `requests*` redirects are preserved; `_kitchen-sink` is development-only.
+- Application root: `frontend/src/app/app.ts` — `RouterOutlet` plus global toast only; no global chrome.
+- Shell: `frontend/src/app/features/module-shell/` composing `layout/navbar`, `layout/sidebar`, and `layout/breadcrumb`; sidebar offset via `core/services/sidebar-state.service.ts`.
+- Theme: `frontend/src/app/core/services/theme.service.ts` writes `data-theme` on `<html>` and persists to `localStorage` (default dark). Tokens live in `frontend/src/styles/_tokens.css` with `_gradients.css`, `_typography.css`, and `_animations.css` partials imported by `frontend/src/styles.css`.
+- Shared UI: `frontend/src/app/shared/ui/` design-system primitives (button, input, select, card, table, dialogs, status pill, copy button, skeletons, etc.), plus `shared/components/` (toast, status badge, JSON viewer) and `shared/directives/`.
+- Existing Online Order features: `features/flat-order/`, `features/order-requests/`, `features/unicommerce/`, each with co-located components and stores.
+
+### 23.2 Backend Anchors
+
+- `backend/src/OnlineOrderTool.Core/` — `Modules/` (`IOrderModule`, `ModuleCapabilities`, `ModuleRegistry`, GHC/UPC/Uni-Commerce implementations), `Services/` (payload builders, validators, totals, drafts, API client), `Models/`, `DTOs/`, and repository interfaces.
+- `backend/src/OnlineOrderTool.Data/` — Dapper repositories and `SqlServerConnectionFactory`.
+- `backend/src/OnlineOrderTool.Api/` — composition root (`Program.cs`), capability guard, middleware, and controllers (Lookup, Module, Order, OrderRequests, Payment, Product).
+- Tests: `backend/tests/OnlineOrderTool.Tests/` (xUnit, including contract tests mirroring `docs/request_examples/`) and co-located frontend `*.spec.ts` files (Vitest via `ng test`).
+- Build/test wrappers: `scripts/build.ps1` (backend tests, Release build, Angular production build) and `scripts/dev.ps1` (API on :5200, `ng serve` on :4200 with `/api` proxy).
+
+### 23.3 Future Feature Placement
+
+| Feature | Frontend home | Backend home |
+|---|---|---|
+| Hub dashboard | `frontend/src/app/features/hub/` (Session 03) | None for MVP |
+| QA Prompt Studio | `frontend/src/app/features/prompt-studio/` (Sessions 04-08) | Client-side MVP; a backend module only when shared history, team templates, or AI integration require it |
+| Online Order Tool | Existing `features/flat-order`, `features/order-requests`, `features/unicommerce`, re-parented under `/tools/online-orders` (Session 09) | Unchanged: Core `Modules/` and existing controllers |
+| POS Maintenance | `frontend/src/app/features/pos-maintenance/` placeholder (Session 10) | Deferred: secured module and/or Windows agent after source review (Sessions 11-13) |
+| Shared shell/theme/motion | `frontend/src/app/core/layout` evolution of `module-shell` plus `shared/` and `design-system/` additions (Sessions 01-02) | N/A |
+
+### 23.4 Migration Source Confirmation
+
+`prompt_generator/index.html` is present in the repository as migration reference only — it is never served at runtime and is never embedded through an iframe. Confirmed contents:
+
+- Bug Report generator (`generateBugPrompt`).
+- Test Case generator (`generateTestCasePrompt`, sample loader, clear form).
+- Theme persistence (`localStorage['studio_theme']`, light-theme overrides).
+- Per-field `localStorage` form persistence (`studio_*` keys).
+- Three.js effects (`initThree`, particle background, per-card renderers).
+- Copy-to-clipboard actions (`navigator.clipboard.writeText` with toast feedback).
+- `Ctrl/Cmd + Enter` generation keyboard shortcut.

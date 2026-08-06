@@ -39,73 +39,59 @@ Execution rules:
 
 ---
 
-# Session 00 — Repository Baseline and Architecture Decision
+# Session 01 — Shared Route Skeleton and Product Rename
 
 ## Objective
 
-Establish the QA Support Hub implementation baseline without changing application behavior.
+Introduce the QA Support Hub route structure and product identity while preserving existing routes.
 
 ## Prompt
 
 ```text
-# Session 00 — Baseline and Architecture
+# Session 01 — Shared Route Skeleton and Product Rename
 
 Execute the shared execution contract.
 
 Goal:
-Prepare the repository for the QA Support Hub implementation and record the architecture decisions.
+Create the route skeleton for QA Support Hub without migrating feature internals yet.
 
 Tasks:
 
-1. Inspect the current frontend and backend structure.
-2. Locate:
-   - Angular app routes
-   - Current application shell/layout
-   - Theme implementation
-   - Shared components
-   - Online Order feature routes
-   - Existing backend feature boundaries
-   - Existing build/test scripts
-3. Locate the attached or copied QA Prompt Studio source if it has been added to the repository.
-4. Confirm the Prompt Studio currently contains:
-   - Bug generator
-   - Test Case generator
-   - Theme persistence
-   - localStorage persistence
-   - Three.js effects
-   - Copy actions
-   - Keyboard shortcut
-5. Do not migrate the HTML yet.
-6. Create or update:
-   - `QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`
-   - `TASK.md`
-   - `.ai/STATE.md`
-   - `.ai/HANDOFF.md` only if the project uses them
-7. Record these decisions:
-   - Current Angular + .NET project is the host.
-   - Main product name is QA Support Hub.
-   - Routes will be feature-based and lazy-loaded.
-   - Prompt Studio will be rebuilt natively in Angular.
-   - Online Orders behavior must be preserved.
-   - POS Maintenance remains migration-pending until source arrival.
-   - No iframe will be used as the final integration.
-8. Produce a concise repository map showing where each future feature belongs.
-9. Do not make broad code or UI changes.
+1. Inspect the existing Angular route configuration and root layout.
+2. Introduce or confirm these routes:
+   - `/` → QA Support Hub dashboard placeholder
+   - `/tools/prompt-studio`
+   - `/tools/online-orders`
+   - `/tools/pos-maintenance`
+3. Lazy-load each tool route.
+4. Preserve existing Online Order URLs using redirects or compatibility routes.
+5. Rename visible top-level product branding from Online Order Tool to QA Support Hub where it represents the whole application.
+6. Do not rename Online Order feature-specific headings that should remain Online Orders.
+7. Add typed route metadata for:
+   - tool title
+   - breadcrumb
+   - status
+   - accent
+8. Add placeholder pages for Prompt Studio and POS Maintenance.
+9. The POS page must clearly show `Migration Pending`; it must not contain fake actions.
+10. Ensure direct route refresh continues to work with the existing backend SPA fallback.
+11. Do not restyle the entire application in this session.
 
 Validation:
-- Documentation links are valid.
-- No generated artifacts are added.
-- `git diff --check` passes.
-- Working tree contains only expected documentation/state changes.
+- Targeted Angular route tests.
+- Angular type check/build.
+- Direct navigation to all three routes.
+- Existing Online Order route compatibility.
+- No backend contract changes.
 
 Commit message:
-`docs(architecture): define QA Support Hub integration plan`
+`feat(shell): add QA Support Hub route structure`
 ```
 
 ## Completion Gate
 
-- Architecture is documented.
-- Active task is clear.
-- No application behavior changed.
+- All tool routes resolve.
+- Existing Online Order navigation still works.
+- POS is clearly pending.
 
 ---
