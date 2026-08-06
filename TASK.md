@@ -35,9 +35,7 @@ Execution rules:
 - Commit with the requested commit message when all validation passes.
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
-```
 
----
 
 # Session 01 — Shared Route Skeleton and Product Rename
 
@@ -47,7 +45,7 @@ Introduce the QA Support Hub route structure and product identity while preservi
 
 ## Prompt
 
-```text
+
 # Session 01 — Shared Route Skeleton and Product Rename
 
 Execute the shared execution contract.
@@ -86,12 +84,10 @@ Validation:
 
 Commit message:
 `feat(shell): add QA Support Hub route structure`
-```
+
 
 ## Completion Gate
 
 - All tool routes resolve.
 - Existing Online Order navigation still works.
 - POS is clearly pending.
-
----
