@@ -1,44 +1,111 @@
-# Current Task
 
-- **Task ID:** APPLICATION-SERVER-DEPLOYMENT
-- **Status:** Blocked - deployment target and mechanism are not documented
-- **Role:** Release
+# Execution Contract
+
+You are implementing one scoped session in the existing QA Support Hub repository.
+
+Before changing code:
+
+1. Read `AGENTS.md` completely.
+2. Read `QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`.
+3. Read `QA_SUPPORT_HUB_SESSION_PROMPTS.md` only for the current session.
+4. Read `TASK.md`, `.ai/STATE.md`, and `.ai/HANDOFF.md` when they exist.
+5. Inspect the current Git branch, status, diff, and recent commits.
+6. Inspect the actual code related to this session.
+7. Preserve unrelated user work.
+8. Do not reset, discard, or overwrite changes you do not own.
+
+Execution rules:
+
+- Execute the session through completion; do not stop after planning.
+- Keep the change limited to the current session.
+- Follow the existing Angular and .NET architecture.
+- Preserve existing Online Order behavior unless this session explicitly changes it.
+- Do not deploy to IIS or any server.
+- Do not run Production SQL or state-changing Production operations.
+- Do not add credentials, connection strings, secrets, private addresses, or customer data.
+- Do not commit generated artifacts, `dist`, `node_modules`, backups, logs, or screenshots.
+- Do not introduce an iframe as the final integration mechanism.
+- Do not add arbitrary command, PowerShell, or SQL execution fields.
+- Use typed models and deterministic behavior.
+- Maintain accessibility and reduced-motion support.
+- Use targeted validation for the current change.
+- Run the full repository suite only when the session explicitly requests it or when a change affects application-wide routing/build behavior.
+- Review the final diff.
+- Update project state documentation only when materially required.
+- Commit with the requested commit message when all validation passes.
+- Push only when repository policy and the user’s current workflow allow it.
+- Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
+```
+
+---
+
+# Session 00 — Repository Baseline and Architecture Decision
 
 ## Objective
 
-Deploy the currently validated Online Order Tool application to the existing
-configured application server through its authoritative deployment mechanism.
-Preserve server-owned configuration and secrets, create a rollback copy, run
-read-only health and smoke checks, and record the deployed commit only after
-acceptance succeeds.
+Establish the QA Support Hub implementation baseline without changing application behavior.
 
-## Scope and safety gate
+## Prompt
 
-- Application deployment only; no SQL, schema migration, index script, or
-  state-changing API operation is authorized.
-- UPC Testing fixture acceptance remains deferred because completed approval is
-  missing. It does not block application deployment, but it blocks any live COD
-  acceptance claim, send, resend, or cancellation.
-- Production index work remains deferred by the user, does not block
-  application deployment, and is not authorized in this task.
-- Never guess a server, service/site, port, deployment folder, health endpoint,
-  credential, or deployment architecture.
+```text
+# Session 00 — Baseline and Architecture
 
-## Current blocker
+Execute the shared execution contract.
 
-The repository contains no authoritative deployment documentation, target
-configuration, CI/CD workflow, transfer script, IIS/Docker/systemd definition,
-or server-management procedure. README and `.ai/PROJECT.md` explicitly state
-that hosting/deployment topology is not documented. Deployment cannot proceed
-until the existing target and mechanism are identified.
+Goal:
+Prepare the repository for the QA Support Hub implementation and record the architecture decisions.
 
-## Current evidence
+Tasks:
 
-- Baseline: `main` at `9f1e561ace01898875a421030a69d4ea591026a1`, synchronized
-  with `origin/main` after `docs(project): separate deployment from deferred
-  UPC acceptance`.
-- Backend tests, frontend tests, Release build, Angular production build,
-  Riyal verification, wrapper build, memory checks, and diff checks passed.
-- No application source, SQL, payload, fixture, generated, or secret changes
-  are pending.
-- No application deployment or server mutation has been performed.
+1. Inspect the current frontend and backend structure.
+2. Locate:
+   - Angular app routes
+   - Current application shell/layout
+   - Theme implementation
+   - Shared components
+   - Online Order feature routes
+   - Existing backend feature boundaries
+   - Existing build/test scripts
+3. Locate the attached or copied QA Prompt Studio source if it has been added to the repository.
+4. Confirm the Prompt Studio currently contains:
+   - Bug generator
+   - Test Case generator
+   - Theme persistence
+   - localStorage persistence
+   - Three.js effects
+   - Copy actions
+   - Keyboard shortcut
+5. Do not migrate the HTML yet.
+6. Create or update:
+   - `QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`
+   - `TASK.md`
+   - `.ai/STATE.md`
+   - `.ai/HANDOFF.md` only if the project uses them
+7. Record these decisions:
+   - Current Angular + .NET project is the host.
+   - Main product name is QA Support Hub.
+   - Routes will be feature-based and lazy-loaded.
+   - Prompt Studio will be rebuilt natively in Angular.
+   - Online Orders behavior must be preserved.
+   - POS Maintenance remains migration-pending until source arrival.
+   - No iframe will be used as the final integration.
+8. Produce a concise repository map showing where each future feature belongs.
+9. Do not make broad code or UI changes.
+
+Validation:
+- Documentation links are valid.
+- No generated artifacts are added.
+- `git diff --check` passes.
+- Working tree contains only expected documentation/state changes.
+
+Commit message:
+`docs(architecture): define QA Support Hub integration plan`
+```
+
+## Completion Gate
+
+- Architecture is documented.
+- Active task is clear.
+- No application behavior changed.
+
+---
