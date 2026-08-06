@@ -1,8 +1,8 @@
 # Current Project State
 
 - **Updated:** 2026-08-06
-- **Branch:** `main`, synchronized with `origin/main` at the pre-deployment
-  documentation baseline `bf58fe918ea5ba63025d1d86c433053b1af37b34`
+- **Branch:** `main`, synchronized with `origin/main` at
+  `9f1e561ace01898875a421030a69d4ea591026a1`
 - **Release or milestone:** Application server deployment discovery
 
 ## Working State
@@ -17,6 +17,8 @@
 - The active task is `APPLICATION-SERVER-DEPLOYMENT`. No application
   deployment, server mutation, SQL change, migration, or state-changing API
   verification has been performed.
+- The deployment-state documentation is committed and pushed in
+  `9f1e561ace01898875a421030a69d4ea591026a1`.
 
 ## Deferred Acceptance and Database Scope
 
@@ -39,6 +41,10 @@
   production-build gates. The production bundle is 438.35 kB with no
   style-budget warning.
 - `npm run test:riyal-asset` passed with the provenance-verified asset.
+- On 2026-08-06 the full backend/frontend tests, Release build, Angular
+  production build, Riyal verifier, repository wrapper, memory checks, and
+  diff checks passed. The Angular initial bundle was 438.35 kB with no
+  style-budget warning.
 - Read-only browser and Testing metadata evidence remains historical evidence;
   no state-changing workflow was run.
 

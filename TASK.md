@@ -34,8 +34,11 @@ until the existing target and mechanism are identified.
 
 ## Current evidence
 
-- Baseline: `main` at `bf58fe918ea5ba63025d1d86c433053b1af37b34`, synchronized
-  with `origin/main` before the pending documentation commit.
+- Baseline: `main` at `9f1e561ace01898875a421030a69d4ea591026a1`, synchronized
+  with `origin/main` after `docs(project): separate deployment from deferred
+  UPC acceptance`.
+- Backend tests, frontend tests, Release build, Angular production build,
+  Riyal verification, wrapper build, memory checks, and diff checks passed.
 - No application source, SQL, payload, fixture, generated, or secret changes
   are pending.
 - No application deployment or server mutation has been performed.

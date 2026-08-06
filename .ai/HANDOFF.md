@@ -5,8 +5,7 @@
 - **From:** Codex
 - **To:** Next owner after the existing target and deployment mechanism are
   identified
-- **Checkpoint commit:** `bf58fe918ea5ba63025d1d86c433053b1af37b34` (last
-  synchronized baseline before the deployment-state documentation changes)
+- **Checkpoint commit:** `9f1e561ace01898875a421030a69d4ea591026a1`
 
 ## Scope
 
@@ -27,6 +26,9 @@
   rollback procedure.
 - The hard-coded UPC RMS addresses are upstream API endpoints, not an
   application-server deployment target and must not be used as one.
+- Local validation completed after the documentation push: backend/frontend
+  tests, Release build, Angular production build, Riyal verifier, wrapper,
+  memory checks, and diff checks passed.
 
 ## Exact next action
 
