@@ -27,6 +27,6 @@ export function capabilityGuard(capability: keyof ModuleCapabilities): CanActiva
     }
 
     toast.showWarning(`This feature isn't available for ${module?.label ?? key} yet.`);
-    return router.createUrlTree(['/modules', key, 'order']);
+    return router.createUrlTree(['/tools/online-orders/modules', key, 'order']);
   };
 }

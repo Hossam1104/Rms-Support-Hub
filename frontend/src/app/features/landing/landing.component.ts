@@ -48,6 +48,6 @@ export class LandingComponent {
   onEnvironmentSelected(moduleKey: string, env: EnvironmentDto) {
     this.moduleService.selectEnvironment(env);
     const targetTab = moduleKey === 'ghc_unicommerce' ? 'unicommerce' : 'order';
-    this.router.navigate(['/modules', moduleKey, targetTab]);
+    this.router.navigate(['/tools/online-orders/modules', moduleKey, targetTab]);
   }
 }

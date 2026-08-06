@@ -43,7 +43,7 @@ import { UiButtonComponent } from '../../shared/ui';
       </nav>
 
       <div class="sidebar-footer" *ngIf="!collapsed()">
-        <a routerLink="/" class="back-link">
+        <a routerLink="/tools/online-orders" class="back-link">
           <i class="bi bi-arrow-left"></i>
           <span>Back to Modules</span>
         </a>

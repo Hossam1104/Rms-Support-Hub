@@ -13,8 +13,8 @@ describe('ModuleCardComponent', () => {
   it('keeps module-specific routes and logo selection', () => {
     const component = new ModuleCardComponent();
 
-    expect(component.getModuleRoute('ghc_unicommerce')).toEqual(['/modules', 'ghc_unicommerce', 'unicommerce']);
-    expect(component.getModuleRoute('upc_ecommerce')).toEqual(['/modules', 'upc_ecommerce', 'order']);
+    expect(component.getModuleRoute('ghc_unicommerce')).toEqual(['/tools/online-orders/modules', 'ghc_unicommerce', 'unicommerce']);
+    expect(component.getModuleRoute('upc_ecommerce')).toEqual(['/tools/online-orders/modules', 'upc_ecommerce', 'order']);
     expect(component.getLogoUrl('upc_ecommerce')).toBe('assets/upc_logo.svg');
     expect(component.getLogoUrl('ghc_ecommerce')).toBe('assets/whites_logo.svg');
     expect(component.getLogoUrl('ghc_unicommerce')).toBe('assets/whites_logo.svg');

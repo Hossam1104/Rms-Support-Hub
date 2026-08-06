@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-06
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 00 baseline
+- **Release or milestone:** QA Support Hub — Session 01 route skeleton
 
 ## Working State
 
@@ -10,6 +10,15 @@
   Server data layer, and xUnit/Vitest tests. Existing order authoring,
   payment, detail, cancel, resend, payload, and Production-safety contracts
   remain unchanged.
+- Session 01 added the QA Support Hub route skeleton: `/` serves the hub
+  dashboard placeholder; `/tools/prompt-studio`, `/tools/online-orders`, and
+  `/tools/pos-maintenance` are lazy-loaded with typed route metadata
+  (`ToolRouteData` in `frontend/src/app/core/models/tool.model.ts`). The
+  Online Order workspace moved canonically under `/tools/online-orders` and
+  is re-mounted at the legacy `/modules/:key` path so existing URLs still
+  resolve. Top-level branding is now QA Support Hub; the POS placeholder
+  shows `Migration Pending` with no actions. Prompt Studio and POS internals
+  are not migrated yet.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -17,11 +26,10 @@
   `prompt_generator/index.html`.
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
-  section 23 of the implementation plan. Session 00 changed documentation and
-  project memory only; no application behavior changed.
-- The active task is QA Support Hub **Session 01 — Shared Route Skeleton and
-  Product Rename** (see `TASK.md`). POS Sessions 11-13 remain blocked until
-  the standalone POS source project is supplied.
+  section 23 of the implementation plan.
+- The active task is QA Support Hub **Session 02 — Design System
+  Foundation** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
+  standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -47,6 +55,12 @@
 - Session 00 required documentation validation only: documentation links and
   referenced paths verified, `git diff --check` clean, and the working tree
   limited to documentation and project-memory changes.
+- Session 01: targeted route/branding specs passed (12 tests), full frontend
+  suite 147 passed across 24 files, Angular production build passed with
+  per-tool lazy chunks, and direct navigation to `/`, all three tool routes,
+  a canonical Online Order deep link, and a legacy `/modules/:key` deep link
+  returned HTTP 200 from the dev server. Backend untouched; no backend
+  contract changed.
 
 ## Deployment Discovery Blocker
 
@@ -64,5 +78,5 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Session 00 completed; Sessions 01-10 and 14-16 not started;
-  Sessions 11-13 blocked until the POS source is supplied.
+- QA Support Hub: Sessions 00 and 01 completed; Sessions 02-10 and 14-16 not
+  started; Sessions 11-13 blocked until the POS source is supplied.

@@ -78,9 +78,9 @@ export class ModuleCardComponent {
 
   getModuleRoute(key: string): string[] {
     if (key === 'ghc_unicommerce') {
-      return ['/modules', key, 'unicommerce'];
+      return ['/tools/online-orders/modules', key, 'unicommerce'];
     }
-    return ['/modules', key, 'order'];
+    return ['/tools/online-orders/modules', key, 'order'];
   }
 
   getLogoUrl(key: string): string {

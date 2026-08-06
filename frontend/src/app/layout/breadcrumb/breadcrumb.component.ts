@@ -8,7 +8,9 @@ import { RouterLink } from '@angular/router';
   imports: [CommonModule, RouterLink],
   template: `
     <nav class="breadcrumb-nav">
-      <a routerLink="/" class="crumb-item">Module Picker</a>
+      <a routerLink="/" class="crumb-item">Dashboard</a>
+      <span class="crumb-separator">/</span>
+      <a routerLink="/tools/online-orders" class="crumb-item">Online Orders</a>
       <span class="crumb-separator">/</span>
       <span class="crumb-item active">{{ moduleLabel }}</span>
       <span class="crumb-separator" *ngIf="currentTab">/</span>

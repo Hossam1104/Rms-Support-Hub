@@ -12,8 +12,8 @@ import { EnvironmentDto } from '../../core/models';
   template: `
     <header class="navbar">
       <div class="navbar-brand">
-        <span class="brand-title">Online Order Tool</span>
-        <span class="brand-subtitle">Multi-Client Order System</span>
+        <span class="brand-title">QA Support Hub</span>
+        <span class="brand-subtitle">Unified QA & Support Workspace</span>
       </div>
       <div class="navbar-actions">
         <app-env-badge class="navbar-environment"

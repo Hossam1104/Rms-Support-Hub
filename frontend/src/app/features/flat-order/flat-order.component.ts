@@ -229,7 +229,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               <div class="landed-card" *ngIf="landedRequestId() as id">
                 <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
                 <span>Order recorded as request #{{ id }} in the OrderRequests table.</span>
-                <a [routerLink]="['/modules', moduleKey(), 'requests', id]" class="landed-link">
+                <a [routerLink]="['/tools/online-orders/modules', moduleKey(), 'order-requests', id]" class="landed-link">
                   Open in Order Requests <i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
               </div>

@@ -37,57 +37,71 @@ Execution rules:
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
 
-# Session 01 — Shared Route Skeleton and Product Rename
+# Session 02 — Design System Foundation
 
 ## Objective
 
-Introduce the QA Support Hub route structure and product identity while preserving existing routes.
+Build a shared design-token, theme, and motion foundation without broadly rewriting feature pages.
 
 ## Prompt
 
 
-# Session 01 — Shared Route Skeleton and Product Rename
+# Session 02 — Design System Foundation
 
 Execute the shared execution contract.
 
 Goal:
-Create the route skeleton for QA Support Hub without migrating feature internals yet.
+Build a shared design-token, theme, and motion foundation without broadly rewriting feature pages.
 
 Tasks:
 
-1. Inspect the existing Angular route configuration and root layout.
-2. Introduce or confirm these routes:
-   - `/` → QA Support Hub dashboard placeholder
-   - `/tools/prompt-studio`
-   - `/tools/online-orders`
-   - `/tools/pos-maintenance`
-3. Lazy-load each tool route.
-4. Preserve existing Online Order URLs using redirects or compatibility routes.
-5. Rename visible top-level product branding from Online Order Tool to QA Support Hub where it represents the whole application.
-6. Do not rename Online Order feature-specific headings that should remain Online Orders.
-7. Add typed route metadata for:
-   - tool title
-   - breadcrumb
-   - status
-   - accent
-8. Add placeholder pages for Prompt Studio and POS Maintenance.
-9. The POS page must clearly show `Migration Pending`; it must not contain fake actions.
-10. Ensure direct route refresh continues to work with the existing backend SPA fallback.
-11. Do not restyle the entire application in this session.
+1. Inspect current global styles and theme services.
+2. Create a maintainable design-system structure for:
+   - colors
+   - typography
+   - spacing
+   - radius
+   - shadows
+   - z-index
+   - motion durations/easing
+3. Use the Prompt Studio visual direction:
+   - deep neutral surfaces
+   - subtle glass panels
+   - controlled gradients
+   - clear status colors
+   - modern cards
+4. Preserve the existing official assets and established app branding rules.
+5. Implement one global light/dark theme service.
+6. Persist the theme under a namespaced storage key.
+7. Add reduced-motion preference:
+   - honor `prefers-reduced-motion`
+   - optional user override
+8. Create shared primitives only where needed:
+   - button
+   - icon button
+   - status badge
+   - tool card base
+   - page header
+   - empty state
+   - toast
+9. Do not migrate the Prompt Studio form yet.
+10. Do not bulk-replace all existing Online Order styles.
+11. Remove duplicated new styles created in this session.
+12. Ensure text remains sharp during hover animations.
 
 Validation:
-- Targeted Angular route tests.
-- Angular type check/build.
-- Direct navigation to all three routes.
-- Existing Online Order route compatibility.
-- No backend contract changes.
+- Targeted component tests.
+- Theme persistence check.
+- Reduced-motion check.
+- Light/dark visual check.
+- Angular production build.
 
 Commit message:
-`feat(shell): add QA Support Hub route structure`
+`feat(design-system): add shared themes and motion tokens`
 
 
 ## Completion Gate
 
-- All tool routes resolve.
-- Existing Online Order navigation still works.
-- POS is clearly pending.
+- One global theme exists.
+- Shared cards and controls are available.
+- Reduced motion works.
