@@ -25,11 +25,11 @@ export const QA_TOOL_REGISTRY = [
     {
         id: 'pos-maintenance',
         ...TOOL_ROUTE_DATA.posMaintenance,
-        description: 'Centralized POS diagnostics, configuration, backup, service, and maintenance workflows.',
+        description: 'A future POS support workspace for approved diagnostics, backups, and service visibility.',
         route: '/tools/pos-maintenance',
         icon: 'bi-pc-display',
-        actionLabel: 'View Migration Status',
+        actionLabel: 'View Status',
         capabilities: ['Diagnostics', 'Backup', 'Services'],
-        availabilityMessage: 'The standalone POS source is required before migration can begin.'
+        availabilityMessage: 'The POS Maintenance Tool is under development and will be integrated when ready.'
     }
 ] as const satisfies readonly QaToolDefinition[];

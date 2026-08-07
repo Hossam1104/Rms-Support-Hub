@@ -33,14 +33,14 @@ describe('PosMaintenancePlaceholderComponent', () => {
         return fixture.nativeElement as HTMLElement;
     }
 
-    it('keeps the POS route lazy and renders the migration identity', () => {
+    it('keeps the POS route lazy and renders the Coming Soon identity', () => {
         const route = routes.find(candidate => candidate.path === 'tools/pos-maintenance');
         expect(route?.loadComponent).toBeTruthy();
 
         const page = render();
         expect(page.querySelectorAll('h1')).toHaveLength(1);
         expect(page.querySelector('h1')?.textContent?.trim()).toBe('POS Maintenance Tool');
-        expect(page.querySelector('[role="status"]')?.textContent).toContain('Migration Pending');
+        expect(page.querySelector('[role="status"]')?.textContent).toContain('Coming Soon');
         expect(page.querySelector('.status-panel [role="status"]')?.textContent).not.toContain('Available');
     });
 
@@ -58,24 +58,19 @@ describe('PosMaintenancePlaceholderComponent', () => {
         ]);
         expect(cards.every(card => card.querySelectorAll('button, a, input, select, textarea').length === 0)).toBe(true);
         expect(page.querySelectorAll('.capability-card app-status-badge')).toHaveLength(5);
-        expect(page.textContent).toContain('Requires source review');
+        expect(page.textContent).toContain('Planned');
     });
 
-    it('shows migration information, source requirements, and honest readiness states', () => {
+    it('shows a simple informational status without presenting a blocker', () => {
         const page = render();
         const text = page.textContent || '';
 
         expect(text).toContain('Available now');
-        expect(text).toContain('Migration information only');
-        expect(text).toContain('Source required before migration');
-        expect(text).toContain('Original POS Maintenance Tool source code');
-        expect(text).toContain('Source Code');
-        expect(text).toContain('Operation Inventory');
-        expect(text).toContain('Pending Source Review');
-        expect(text).toContain('Target Architecture');
-        expect(text).toContain('Defined');
-        expect(text).toContain('Implementation');
-        expect(text).toContain('Not Started');
+        expect(text).toContain('Information only');
+        expect(text).toContain('Planned capability areas');
+        expect(text).toContain('No POS operations or maintenance controls are available.');
+        expect(text).not.toContain('Source required before migration');
+        expect(text).not.toContain('Pending Source Review');
     });
 
     it('offers Hub navigation without operational or generic execution controls', () => {

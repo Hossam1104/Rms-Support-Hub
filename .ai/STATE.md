@@ -1,8 +1,8 @@
 # Current Project State
 
-- **Updated:** 2026-08-07
+- **Updated:** 2026-08-08
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 10 POS Maintenance Placeholder and Migration Intake
+- **Release or milestone:** QA Support Hub — Session 14 Cross-Tool UI and Responsive Hardening
 
 ## Working State
 
@@ -17,8 +17,8 @@
   Online Order workspace moved canonically under `/tools/online-orders` and
   is re-mounted at the legacy `/modules/:key` path so existing URLs still
   resolve. Top-level branding is now QA Support Hub; the POS placeholder
-  shows `Migration Pending` with no actions. Prompt Studio and POS internals
-  are not migrated yet.
+  shows `Coming Soon` with no actions. Prompt Studio and POS internals are not
+  migrated yet.
 - Session 02 built the shared design-token, theme, and motion foundation:
   `_tokens.css` now owns typography, spacing (`--space-1..8`), and z-index
   (`--z-*`) scales alongside the existing color/radius/shadow/motion tokens.
@@ -39,8 +39,7 @@
   preview, clipboard/download actions, counters, samples, clear actions, and
   Ctrl/Cmd+Enter generation are implemented; the shared `ui-select` primitive
   now honors restored reactive-form values. Prompt Studio is available in the
-  hub registry; Online Orders remains available and POS remains
-  migration-pending.
+  hub registry; Online Orders remains available and POS remains Coming Soon.
 - Session 05 expanded Bug Refinement into a grouped typed form with safe legacy
   draft normalization, deterministic Concise/Standard/Deep and
   Generic/Jira/Azure DevOps prompt modes, configurable report sections, safe
@@ -79,12 +78,12 @@
   landing now uses the shared page-header and tokenized shell spacing. Existing
   Online Order business behavior, capability guarding, API calls, and official
   assets remain unchanged.
-- Session 10 completed the POS migration-pending workspace at
-  `/tools/pos-maintenance`. The page now shows planned capability areas,
-  migration information only, source intake requirements, honest readiness
-  states, and a return path to the Hub. A typed `PosCapability` model and
-  `docs/POS_MAINTENANCE_MIGRATION_INTAKE.md` define the future review boundary;
-  no POS operation, backend contract, or generic execution surface was added.
+- Session 10 completed the POS informational workspace at
+  `/tools/pos-maintenance`. The page shows `Coming Soon`, planned capability
+  areas, and a return path to the Hub. A typed `PosCapability` model and
+  `docs/POS_MAINTENANCE_MIGRATION_INTAKE.md` preserve the future integration
+  security boundary; no POS operation, backend contract, or generic execution
+  surface was added.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -93,10 +92,12 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 11 — POS Source Assessment** (see
-  `TASK.md`). It is **Blocked Pending Source Intake** because no standalone POS
-  source project or confirmed source path is present in the repository. POS
-  remains migration-pending; Prompt Studio and Online Orders remain available.
+- The active task is QA Support Hub **Session 14 — Cross-Tool UI and Responsive
+  Hardening** (see `TASK.md`). The POS Maintenance Tool is being developed
+  independently outside this repository, so POS integration is intentionally
+  deferred. Sessions 11-13 are deferred by design and are not blockers. POS
+  remains Coming Soon and non-operational; Prompt Studio and Online Orders
+  remain available.
 
 ## Deferred Acceptance and Database Scope
 
@@ -192,12 +193,11 @@
   passed with 235 tests across 43 files; editor diagnostics and `git diff
   --check` were clean; the Angular production build passed at 442.00 kB
   initial with no budget warnings. Browser checks verified Hub/POS navigation,
-  Migration Pending status, planned capabilities, readiness, source intake,
-  light/dark theme, reduced motion, keyboard-reachable return navigation, and
-  responsive 1440px, 900px, and 390px layouts without horizontal overflow.
-  Console error checks were clean; backend, Online Orders, Prompt Studio, and
-  generated artifacts were unchanged. The standalone POS source was not
-  present in the repository.
+  the non-operational placeholder, planned capabilities, light/dark theme,
+  reduced motion, keyboard-reachable return navigation, and responsive 1440px,
+  900px, and 390px layouts without horizontal overflow. Console error checks
+  were clean; backend, Online Orders, Prompt Studio, and generated artifacts
+  were unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -215,6 +215,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 10 completed; Session 11 active but
-  blocked pending POS source intake; Sessions 12-13 remain blocked until
-  assessment and approval; Sessions 14-16 not started.
+- QA Support Hub: Sessions 00 through 10 completed; Sessions 11-13 deferred
+  while the independent POS project is developed; Session 14 active; Sessions
+  15-16 not started.

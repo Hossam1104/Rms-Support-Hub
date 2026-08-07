@@ -11,7 +11,7 @@ Before every session:
 3. Let the session finish completely.
 4. Review the diff before starting the next session.
 5. Do not combine multiple sessions unless the model has enough context and quota.
-6. Keep the POS implementation sessions deferred until the standalone POS source project is available.
+6. Keep Sessions 11-13 deferred while the independent POS Maintenance Tool project is developed; do not inspect its external source.
 
 The implementation plan is:
 
@@ -112,7 +112,8 @@ Tasks:
    - Routes will be feature-based and lazy-loaded.
    - Prompt Studio will be rebuilt natively in Angular.
    - Online Orders behavior must be preserved.
-   - POS Maintenance remains migration-pending until source arrival.
+    - POS Maintenance remains a visible, non-operational Coming Soon placeholder
+       while its independent project is developed externally.
    - No iframe will be used as the final integration.
 8. Produce a concise repository map showing where each future feature belongs.
 9. Do not make broad code or UI changes.
@@ -854,7 +855,7 @@ Prepare the POS Maintenance feature boundary before the standalone project sourc
 
 Tasks:
 
-1. Implement `/tools/pos-maintenance` as a high-quality migration-pending page.
+1. Implement `/tools/pos-maintenance` as a high-quality Coming Soon informational page.
 2. Show:
    - status
    - intended capabilities
@@ -883,7 +884,7 @@ Tasks:
    - tests
 6. Create a draft operation-classification table.
 7. Create a draft API/agent contract document without inventing endpoints.
-8. Keep the dashboard card status `Migration Pending`.
+8. Keep the dashboard card non-operational with the user-facing status `Coming Soon`.
 9. Do not implement any machine operation.
 10. Do not add an arbitrary command field.
 
@@ -906,11 +907,19 @@ Commit message:
 
 ---
 
-# Session 11 — POS Source Assessment
+# Session 11 — Deferred — External POS Development
+
+## Status
+
+Deferred by design. The independent POS Maintenance Tool project is still under
+development. Do not execute this session or inspect any external POS source from
+QA Support Hub.
 
 ## Prerequisite
 
-The standalone POS Maintenance source project must be available locally or added as a read-only migration source.
+The independently developed POS Maintenance project must be complete and
+available as an authorized, read-only migration source before this future
+assessment can begin.
 
 ## Prompt
 
@@ -989,7 +998,12 @@ Commit message:
 
 ---
 
-# Session 12 — POS Maintenance Backend and Agent Contracts
+# Session 12 — Deferred — External POS Development
+
+## Status
+
+Deferred by design until the independently developed POS project is ready for a
+dedicated integration session.
 
 ## Prerequisite
 
@@ -1048,7 +1062,12 @@ Commit message:
 
 ---
 
-# Session 13 — POS Maintenance Operation Migration
+# Session 13 — Deferred — External POS Development
+
+## Status
+
+Deferred by design until the independently developed POS project is ready and an
+approved operation group exists.
 
 ## Prerequisite
 
@@ -1115,7 +1134,7 @@ Commit message:
 
 ---
 
-# Session 14 — Cross-Tool UI Consistency and Responsive Hardening
+# Session 14 — Cross-Tool UI and Responsive Hardening
 
 ## Objective
 
@@ -1293,8 +1312,8 @@ Tasks:
    - details
    - current status rules
 4. Verify POS:
-   - migration-pending state when not migrated, or
-   - all approved migrated capabilities when available
+   - Coming Soon, non-operational state while external development continues, or
+   - all approved migrated capabilities after a future integration
 5. Verify:
    - light theme
    - dark theme
@@ -1358,10 +1377,10 @@ Session 07 — Completed
 Session 08 — Completed
 Session 09 — Completed
 Session 10 — Completed
-Session 11 — Active; Blocked Pending Source Intake
-Session 12 — Blocked until Session 11 approval
-Session 13 — Blocked until approved operation group is selected
-Session 14 — Not Started
+Session 11 — Deferred — External POS Development
+Session 12 — Deferred — External POS Development
+Session 13 — Deferred — External POS Development
+Session 14 — Active
 Session 15 — Not Started
 Session 16 — Not Started
 ```
@@ -1371,6 +1390,7 @@ Allowed statuses:
 ```text
 Not Started
 In Progress
+Active
 Completed
 Completed with Follow-up
 Blocked
@@ -1416,4 +1436,7 @@ Final integration review:
 Strongest available reasoning model
 ```
 
-Do not let the model execute a later session when the previous completion gate is not satisfied.
+Do not execute Sessions 11-13 while the independent POS project is under
+development. Those sessions are intentionally deferred and do not block Session
+14. Execute them only after the external project is complete and a dedicated
+integration session is authorized.

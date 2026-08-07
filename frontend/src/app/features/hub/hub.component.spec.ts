@@ -38,7 +38,7 @@ describe('HubComponent', () => {
         expect(cards.map(card => card.querySelector('.tool-card__status')?.textContent?.trim())).toEqual([
             'Available',
             'Available',
-            'Migration Pending'
+            'Coming Soon'
         ]);
         expect(cards.map(card => card.querySelector('a')?.getAttribute('href'))).toEqual([
             '/tools/prompt-studio',

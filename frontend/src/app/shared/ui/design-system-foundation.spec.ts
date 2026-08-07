@@ -71,7 +71,7 @@ describe('Session 02 design-system primitives', () => {
     expect(el.querySelector('.tool-card__title')?.textContent).toContain('Prompt Studio');
     expect(el.querySelector('.tool-card__description')?.textContent).toContain('Generate test cases.');
     const status = el.querySelector('.tool-card__status') as HTMLElement;
-    expect(status.textContent?.trim()).toBe('Migration Pending');
+    expect(status.textContent?.trim()).toBe('Coming Soon');
     expect(status.classList.contains('tool-card__status--pending')).toBe(true);
   });
 

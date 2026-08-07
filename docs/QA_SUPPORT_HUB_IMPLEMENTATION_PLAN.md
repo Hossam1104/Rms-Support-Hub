@@ -100,9 +100,14 @@ The migration must preserve the valuable behavior while replacing the single-fil
 
 ### 4.3 POS Maintenance Tool
 
-The POS Maintenance Tool is currently a separate project and has not yet been supplied for migration.
+The POS Maintenance Tool is being developed independently outside this
+repository. QA Support Hub must not inspect, reverse-engineer, or implement that
+project during the deferred POS sessions.
 
-The main dashboard can include its card in an explicit **Coming Soon** or **Migration Pending** state until the source project is available.
+The main dashboard and `/tools/pos-maintenance` page remain visible, safe, and
+informational with the user-facing status **Coming Soon**. The external project
+will be integrated only after it is complete in a future dedicated migration
+session.
 
 Because maintenance operations may stop services, read configuration, create backups, execute approved scripts, or access machine resources, the final integration must not rely on browser-only code. It will require one of these patterns after source review:
 
@@ -140,11 +145,11 @@ The dashboard contains three primary cards:
 
 ### POS Maintenance Tool
 
-- Status: Migration Pending initially.
+- Status: Coming Soon.
 - Route: `/tools/pos-maintenance`
-- Purpose: Approved POS support and maintenance workflows.
+- Purpose: Informational placeholder for the future POS support tool.
 - Accent: Amber/orange.
-- Card action before migration: `Migration Pending`
+- Card action: `View Status`
 - Card action after migration: `Open POS Maintenance`
 
 ### Dashboard Behavior
@@ -195,12 +200,7 @@ Recommended routes:
 └── Existing Online Order routes
 
 /tools/pos-maintenance
-├── /overview
-├── /machine-status
-├── /backup
-├── /configuration
-├── /services
-└── Other approved operations after migration analysis
+└── Informational Coming Soon page
 ```
 
 All routes should be lazy-loaded.
@@ -985,7 +985,7 @@ Do not delete existing tests merely to reduce quota. Avoid regenerating large te
 - Card status model.
 - Modern animation.
 - Keyboard support.
-- POS migration-pending state.
+- POS Coming Soon informational state.
 - Tool metadata configuration.
 
 ### Exit Criteria
@@ -1041,27 +1041,29 @@ Do not delete existing tests merely to reduce quota. Avoid regenerating large te
 
 ---
 
-## Phase E — POS Migration Preparation
+## Phase E — POS Placeholder and Future Integration Reference
 
 ### Deliverables
 
 - Placeholder feature.
-- Migration intake checklist.
-- Security classification template.
-- Agent/API contract draft.
+- Future integration intake checklist.
+- Security classification reference.
+- Future agent/API contract guidance.
 - UI route and shared components ready.
 
 ### Exit Criteria
 
 - No guessed POS behavior.
-- Source-project dependencies documented.
-- Migration can begin immediately after source arrival.
+- Future security principles are documented without creating a current blocker.
+- POS remains visible and non-operational.
 
 ---
 
-## Phase F — POS Migration
+## Phase F — Future POS Integration
 
-Begins only after the source project is supplied.
+Begins only after the independent POS project is complete and a dedicated
+migration session is authorized. Sessions 11-13 are deferred by design and do
+not block the active Session 14 UI hardening work.
 
 ### Deliverables
 
@@ -1214,7 +1216,7 @@ The unified QA Support Hub is complete when:
 - The root page is a modern, animated, accessible card dashboard.
 - QA Prompt Studio opens from its card.
 - Online Order Tool opens from its card.
-- POS Maintenance opens from its card after migration, or is clearly marked pending beforehand.
+- POS Maintenance opens from its card as a clearly marked Coming Soon informational page until future integration.
 - All tools use the same shell, theme, typography, controls, spacing, and motion rules.
 - Bug prompts are more complete and developer-ready.
 - Story prompts generate testable, implementation-ready stories.
@@ -1248,7 +1250,8 @@ The unified QA Support Hub is complete when:
 14. Accessibility, performance, and security hardening.
 15. Final regression and release preparation.
 
-The POS implementation sessions must remain deferred until the standalone source project is available.
+Session 10 is complete. Sessions 11-13 are deferred while the independent POS
+project is developed. Session 14 is the active implementation session.
 
 ---
 
@@ -1280,7 +1283,7 @@ Verified against the repository on 2026-08-06 at commit `eaeb43e`. The Session 0
 | Hub dashboard | `frontend/src/app/features/hub/` (Session 03) | None for MVP |
 | QA Prompt Studio | `frontend/src/app/features/prompt-studio/` (Sessions 04-08) | Client-side MVP; a backend module only when shared history, team templates, or AI integration require it |
 | Online Order Tool | Existing `features/flat-order`, `features/order-requests`, `features/unicommerce`, re-parented under `/tools/online-orders` (Session 09) | Unchanged: Core `Modules/` and existing controllers |
-| POS Maintenance | `frontend/src/app/features/pos-maintenance/` placeholder (Session 10) | Deferred: secured module and/or Windows agent after source review (Sessions 11-13) |
+| POS Maintenance | `frontend/src/app/features/pos-maintenance/` informational placeholder (Session 10) | Future secured module and/or Windows agent after external development and source review; Sessions 11-13 are deferred |
 | Shared shell/theme/motion | `frontend/src/app/core/layout` evolution of `module-shell` plus `shared/` and `design-system/` additions (Sessions 01-02) | N/A |
 
 ### 23.4 Migration Source Confirmation

@@ -30,9 +30,11 @@ unified target architecture delivered through Sessions 00-16 in
    shortcut) are preserved as Angular components, services, and typed models.
 5. Online Orders business behavior and API contracts are preserved; integration
    changes routes, shell, and styles only.
-6. POS Maintenance remains migration-pending until its standalone source is
-   supplied and reviewed; only a placeholder page and migration intake contract
-   are built beforehand.
+6. POS Maintenance remains a visible, non-operational **Coming Soon** page
+   while its independent project is developed externally. Integration is
+   intentionally deferred until that project is complete and a dedicated
+   migration session is authorized; only the future integration reference and
+   informational placeholder are maintained beforehand.
 7. No iframe is used as the final integration mechanism for any tool.
 
 ## Consequences

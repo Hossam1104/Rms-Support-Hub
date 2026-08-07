@@ -1,22 +1,23 @@
-# POS Maintenance Migration Intake
+# POS Maintenance Tool - Future Integration Reference
 
 ## Purpose
 
-This document defines the minimum intake contract for Session 11, when the
-standalone POS Maintenance Tool is assessed for migration into the QA Support
-Hub. Session 10 provides only migration information. It does not implement,
-connect to, or infer POS operations.
+This document preserves the security and architecture questions for a future
+dedicated POS integration session. The POS Maintenance Tool is being developed
+independently outside this repository, so source assessment and integration are
+intentionally deferred. QA Support Hub does not implement, connect to, or infer
+POS operations today.
 
 ## Source Availability
 
-**Source not present in repository.** The repository contains the QA Support Hub
-placeholder at `frontend/src/app/features/pos-maintenance/`, but no standalone
-POS Maintenance source project. Session 11 assessment is blocked until a
-confirmed source project or repository path is supplied.
+**External development in progress.** The repository contains the QA Support Hub
+informational placeholder at `frontend/src/app/features/pos-maintenance/`. The
+independent POS project will be considered for integration after development is
+complete and a future migration session is authorized.
 
 ## Required Source Inputs
 
-Provide the following before source assessment:
+When the external project is ready for a future source assessment, provide:
 
 - Original POS Maintenance Tool source code.
 - Confirmed repository, archive, or filesystem path and project ownership.
@@ -138,9 +139,10 @@ future contract may expose `BackupDatabase(request)` or
 `ExecuteCommand(...)` or `RunPowerShell(...)` surface. The concrete contracts
 must wait for source assessment and Session 12 architecture work.
 
-## Session 11 Entry Criteria
+## Future Integration Entry Criteria
 
-Session 11 is executable only when all of the following are available:
+The future integration assessment is executable only when all of the following
+are available:
 
 - Source project supplied.
 - Repository or filesystem path confirmed.
@@ -149,5 +151,6 @@ Session 11 is executable only when all of the following are available:
 - UI assets required by the source application available.
 - No credentials committed to the supplied source or intake materials.
 
-If any item is missing, Session 11 must report that exact missing intake item
-rather than inventing source facts, operations, dependencies, or privileges.
+If any item is missing, the future assessment must report that exact missing
+intake item rather than inventing source facts, operations, dependencies, or
+privileges.

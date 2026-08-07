@@ -104,9 +104,9 @@ export class ToolCardComponent {
   readonly activated = output<void>();
 
   readonly statusLabel = computed(() =>
-    this.status() === 'migration-pending' ? 'Migration Pending' : 'Available');
-  readonly statusVariant = computed<'success' | 'warning'>(() =>
-    this.status() === 'migration-pending' ? 'warning' : 'success');
+    this.status() === 'migration-pending' ? 'Coming Soon' : 'Available');
+  readonly statusVariant = computed<'success' | 'info'>(() =>
+    this.status() === 'migration-pending' ? 'info' : 'success');
   readonly accessibleLabel = computed(() => this.ariaLabel() || [
     `${this.actionLabel()}: ${this.title()}`,
     this.statusLabel(),
