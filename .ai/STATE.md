@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 07 Test Case Generator
+- **Release or milestone:** QA Support Hub — Session 08 Prompt Quality and Productivity
 
 ## Working State
 
@@ -63,6 +63,16 @@
   for missing information, vague steps/results, duplicate steps, missing
   observable outcomes, and per-step result mismatches. Legacy drafts and the
   existing copy/download workflow remain compatible.
+- Session 08 simplified the Bug, Story, and Test Case source models and
+  deterministic builders to their canonical headings while preserving legacy
+  semantic draft normalization and existing namespaced draft keys. Prompt Studio
+  now has a deterministic, advisory-only `PromptQualityService` and compact
+  quality panel for missing facts, vague or duplicate steps, observability,
+  equality/contradiction, evidence, triage, actor, assumption, and sensitive-data
+  guidance. `PromptHistoryService` stores at most ten newest generated prompts
+  under `qa-support-hub.prompt-studio.history`, retaining only type, title,
+  timestamp, and prompt text; storage failures and malformed records are
+  non-blocking and attachment contents are never stored.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -71,9 +81,9 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 08 — Prompt Quality and
-  Productivity** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
-  standalone POS source project is supplied.
+- The active task is QA Support Hub **Session 09 — Online Order Tool Integration
+  with Shared Shell** (see `TASK.md`). POS Sessions 11-13 remain blocked until
+  the standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -148,6 +158,15 @@
   budget warnings; and the direct `/tools/prompt-studio/test-cases` route
   returned HTTP 200 from the local dev server. Backend, Online Orders, Bug,
   and Story behavior remained unchanged.
+- Session 08: focused Prompt Studio specs passed with 46 tests across 11 files;
+  the full frontend suite passed with 224 tests across 39 files; editor
+  diagnostics were clean; the Angular production build passed at 440.44 kB
+  initial with no budget warnings; quality findings remained advisory; bounded
+  local history, malformed/blocked storage handling, Open/Copy/Delete/Clear,
+  existing draft persistence, Ctrl/Cmd+Enter, and Markdown/plain-text exports
+  were verified. Browser checks passed at 1440px, 900px, and 390px with no
+  horizontal overflow, and light/dark plus reduced-motion persistence were
+  verified. Backend, Online Orders, and POS behavior remained unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -165,6 +184,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 07 completed; Session 08 active; Sessions
-  09-10 and 14-16 not started; Sessions 11-13 blocked until the POS source is
+- QA Support Hub: Sessions 00 through 08 completed; Session 09 active; Sessions
+  10 and 14-16 not started; Sessions 11-13 blocked until the POS source is
   supplied.

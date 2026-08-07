@@ -35,22 +35,22 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 08 — Prompt Quality and Productivity
+# Session 09 — Online Order Tool Integration with Shared Shell
 
 ## Objective
 
-Add deterministic quality guidance, local prompt history, and export features
-to the native Prompt Studio generators while preserving the completed Bug,
-Story, and Test Case workflows.
+Integrate the existing Online Order Tool into the QA Support Hub shell without
+business regression.
 
 ## Scope
 
-Implement the Prompt Quality Service and bounded local history for the Bug,
-Story, and Test Case generators. Keep quality findings non-blocking, preserve
-the existing namespaced storage behavior, avoid storing attachment contents,
-and keep the Bug, Story, Test Case, and Online Order workflows production-ready.
+Map the existing feature under `/tools/online-orders`, preserve practical
+legacy-route redirects, and add shared navigation, page-header, breadcrumbs,
+theme, and safe shared primitives without rewriting business workflows.
+Preserve filters, pagination, exact search, Clear All, statistics, status
+mapping, request details, same-number resend rules, performance behavior, and
+official assets. Add route integration coverage and run the full frontend
+suite because this session changes application-wide shell and routing.
 
 The detailed execution prompt and validation contract are maintained in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior, the completed
-Bug and Story Refiners, and the POS migration-pending state remain unchanged
-unless a shared Prompt Studio compatibility adjustment is required.
+`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`.

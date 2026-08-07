@@ -1,6 +1,7 @@
 ﻿import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EMPTY_BUG_PROMPT_INPUT, SAMPLE_BUG_PROMPT_INPUT } from '../models/bug-prompt.model';
+import { PROMPT_STUDIO_HISTORY_KEY } from '../services/prompt-history.service';
 import { PROMPT_STUDIO_DRAFT_KEYS } from '../services/prompt-storage.service';
 import { BugRefinerComponent } from './bug-refiner.component';
 
@@ -19,7 +20,7 @@ describe('BugRefinerComponent', () => {
     return fixture;
   }
 
-  it('renders all logical bug sections and output controls', () => {
+  it('renders useful source fields without retired output controls', () => {
     const fixture = create();
 
     expect(fixture.nativeElement.querySelector('#bug-raw-notes')).toBeTruthy();
@@ -27,19 +28,14 @@ describe('BugRefinerComponent', () => {
     expect(fixture.nativeElement.querySelector('#bug-module')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#bug-environment')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#bug-build-version')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-test-data')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#bug-steps')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-frequency')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#bug-severity')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#bug-priority')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-impact')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-error-message')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-logs')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#bug-attachments')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-related-reference')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-detail-level')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#bug-target-format')).toBeTruthy();
-    expect(fixture.nativeElement.querySelectorAll('input[type="checkbox"]').length).toBe(4);
+    expect(fixture.nativeElement.querySelector('#bug-test-data')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#bug-detail-level')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#bug-target-format')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('input[type="checkbox"]').length).toBe(0);
     expect(fixture.nativeElement.textContent).toContain('Complete the form and generate a prompt to preview it here.');
   });
 
@@ -76,23 +72,21 @@ describe('BugRefinerComponent', () => {
     expect(value.steps).toBe('Legacy step');
     expect(value.attachments).toBe('legacy.png');
     expect(value.rawNotes).toBe('');
-    expect(value.detailLevel).toBe('Standard');
-    expect(value.targetFormat).toBe('Generic Markdown');
-    expect(value.includeMissingInformation).toBe(true);
+    expect(value.attachments).toBe('legacy.png');
   });
 
-  it('debounces normal expanded draft changes into the existing namespaced key', () => {
+  it('debounces simplified draft changes into the existing namespaced key', () => {
     vi.useFakeTimers();
     try {
       const fixture = create();
-      fixture.componentInstance.form.patchValue({ module: 'Filtering', logs: 'logs-reference.txt' });
+      fixture.componentInstance.form.patchValue({ module: 'Filtering', attachments: 'screenshot.png' });
 
       expect(localStorage.getItem(PROMPT_STUDIO_DRAFT_KEYS.bug)).toBeNull();
       vi.advanceTimersByTime(300);
 
       expect(JSON.parse(localStorage.getItem(PROMPT_STUDIO_DRAFT_KEYS.bug) as string)).toMatchObject({
         module: 'Filtering',
-        logs: 'logs-reference.txt'
+        attachments: 'screenshot.png'
       });
     } finally {
       vi.useRealTimers();
@@ -113,40 +107,6 @@ describe('BugRefinerComponent', () => {
     expect(fixture.nativeElement.querySelector('ui-button[ariaLabel="Download generated prompt as plain text"]')).toBeTruthy();
   });
 
-  it('changes the generated prompt for detail level and target format selections', () => {
-    const fixture = create();
-    fixture.componentInstance.form.setValue(SAMPLE_BUG_PROMPT_INPUT);
-
-    fixture.componentInstance.generate();
-    const standard = fixture.componentInstance.generatedPrompt();
-
-    fixture.componentInstance.form.controls.detailLevel.setValue('Deep');
-    fixture.componentInstance.form.controls.targetFormat.setValue('Jira');
-    fixture.componentInstance.generate();
-    const deepJira = fixture.componentInstance.generatedPrompt();
-
-    expect(deepJira).not.toBe(standard);
-    expect(deepJira).toContain('Detail level: Deep');
-    expect(deepJira).toContain('Target Format: Jira');
-  });
-
-  it('applies detail-level optional-section defaults while keeping them configurable', () => {
-    const fixture = create();
-    const controls = fixture.componentInstance.form.controls;
-
-    controls.detailLevel.setValue('Deep');
-    expect(controls.includeAcceptanceCriteria.value).toBe(true);
-    expect(controls.includeRetestChecklist.value).toBe(true);
-    expect(controls.includeRegressionScope.value).toBe(true);
-
-    controls.includeRegressionScope.setValue(false);
-    expect(controls.includeRegressionScope.value).toBe(false);
-
-    controls.detailLevel.setValue('Concise');
-    expect(controls.includeAcceptanceCriteria.value).toBe(false);
-    expect(controls.includeRetestChecklist.value).toBe(false);
-  });
-
   it('generates from Ctrl+Enter and Cmd+Enter through the workspace shortcut', () => {
     const fixture = create();
     const workspace = fixture.debugElement.children[0].componentInstance;
@@ -161,5 +121,35 @@ describe('BugRefinerComponent', () => {
     expect(cmdEvent.defaultPrevented).toBe(true);
     expect(first).toContain('# Role');
     expect(fixture.componentInstance.generatedPrompt()).toBe(first);
+  });
+
+  it('shows advisory quality and manages generated prompt history', () => {
+    const fixture = create();
+
+    fixture.componentInstance.generate();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Prompt Quality');
+    expect(fixture.nativeElement.textContent).toContain('advisory only');
+    expect(fixture.nativeElement.textContent).toContain('Recent Prompts');
+    expect(fixture.nativeElement.querySelector('ui-button[ariaLabel="Clear prompt history"]')).toBeTruthy();
+
+    const workspace = fixture.debugElement.children[0].componentInstance;
+    const record = workspace.history.records()[0];
+    expect(JSON.parse(localStorage.getItem(PROMPT_STUDIO_HISTORY_KEY) as string)[0]).toEqual(record);
+
+    workspace.openHistory(record);
+    expect(fixture.componentInstance.generatedPrompt()).toBe(record.prompt);
+
+    workspace.history.delete(record);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Recent Prompts');
+
+    fixture.componentInstance.generate();
+    fixture.detectChanges();
+    workspace.history.clear();
+    fixture.detectChanges();
+    expect(workspace.history.records()).toEqual([]);
+    expect(localStorage.getItem(PROMPT_STUDIO_HISTORY_KEY)).toBe('[]');
   });
 });

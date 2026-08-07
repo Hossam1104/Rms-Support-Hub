@@ -46,6 +46,11 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Angular uses standalone lazy-loaded components, typed API models, signals,
   relative `/api`, and a dev proxy. Production API calls are same-origin; the
   hosting/deployment topology is not documented.
+- Prompt Studio generators use typed reactive forms with feature-local
+  namespaced drafts, deterministic builders, advisory `PromptQualityService`
+  analysis, and `PromptHistoryService` local history capped at ten records.
+  History stores generated prompt text and labels only; it never stores
+  attachment contents or sends data to an external provider.
 - U4 exposes only the resolved send environment's key, label, and API URL via
   `GET /api/modules/{key}/endpoint`; module catalog responses do not disclose
   URLs or connection metadata.

@@ -1354,9 +1354,9 @@ Session 03 — Completed
 Session 04 — Completed
 Session 05 — Completed
 Session 06 — Completed
-Session 07 — Active
-Session 08 — Not Started
-Session 09 — Not Started
+Session 07 — Completed
+Session 08 — Completed
+Session 09 — In Progress
 Session 10 — Not Started
 Session 11 — Blocked until POS source is supplied
 Session 12 — Blocked until Session 11 approval

@@ -1,12 +1,16 @@
-﻿import { Component, HostListener, input, output } from '@angular/core';
+﻿import { Component, HostListener, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { UiButtonComponent } from '../../../../shared/ui';
+import { ClipboardService } from '../../services/clipboard.service';
+import { PromptHistoryService, PromptHistoryRecord } from '../../services/prompt-history.service';
+import { PromptQualityPanelComponent } from '../prompt-quality-panel/prompt-quality-panel.component';
+import { PromptQualityResult } from '../../services/prompt-quality.service';
 import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.component';
 
 @Component({
   selector: 'app-generator-workspace',
   standalone: true,
-  imports: [RouterLink, UiButtonComponent, PromptPreviewComponent],
+  imports: [RouterLink, UiButtonComponent, PromptPreviewComponent, PromptQualityPanelComponent],
   template: `
     <main class="generator-page">
       <header class="generator-header">
@@ -38,9 +42,42 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
             <ng-content></ng-content>
           </div>
 
+          @if (quality(); as qualityResult) {
+            <div class="generator-workspace__quality">
+              <app-prompt-quality-panel [result]="qualityResult"></app-prompt-quality-panel>
+            </div>
+          }
+
           <footer class="generator-workspace__actions">
             <ui-button icon="bi-stars" ariaLabel="Generate prompt" (pressed)="generate.emit()">Generate Prompt</ui-button>
           </footer>
+
+          @if (history.records().length) {
+            <section class="generator-history" aria-labelledby="recent-prompts-title">
+              <header class="generator-history__header">
+                <div>
+                  <h2 id="recent-prompts-title">Recent Prompts</h2>
+                  <p>Stored locally on this device.</p>
+                </div>
+                <ui-button variant="ghost" size="sm" icon="bi-trash3" ariaLabel="Clear prompt history" (pressed)="history.clear()">Clear History</ui-button>
+              </header>
+              <ul class="generator-history__list">
+                @for (record of history.records(); track record.timestamp + record.title + $index) {
+                  <li class="generator-history__item">
+                    <div class="generator-history__meta">
+                      <strong>{{ record.title }}</strong>
+                      <span>{{ record.type }} · {{ formatTimestamp(record.timestamp) }}</span>
+                    </div>
+                    <div class="generator-history__actions">
+                      <ui-button variant="ghost" size="sm" icon="bi-box-arrow-up-right" [ariaLabel]="'Open ' + record.title" (pressed)="openHistory(record)">Open</ui-button>
+                      <ui-button variant="ghost" size="sm" icon="bi-clipboard" [ariaLabel]="'Copy ' + record.title" (pressed)="copyHistory(record)">Copy</ui-button>
+                      <ui-button variant="ghost" size="sm" icon="bi-x-lg" [ariaLabel]="'Delete ' + record.title" (pressed)="history.delete(record)">Delete</ui-button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
         </div>
 
         <app-prompt-preview [prompt]="prompt()" [subtitle]="previewSubtitle()" [filename]="filename()"></app-prompt-preview>
@@ -64,7 +101,18 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
     .generator-workspace__panel-header p { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
     .generator-workspace__panel-actions { display: flex; flex-shrink: 0; gap: var(--space-2); }
     .generator-workspace__form { display: flex; min-width: 0; flex-direction: column; gap: var(--space-4); padding: var(--space-5); }
+    .generator-workspace__quality { padding: 0 var(--space-5) var(--space-4); }
     .generator-workspace__actions { display: flex; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--divider); }
+    .generator-history { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--divider); }
+    .generator-history__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+    .generator-history__header h2 { margin: 0 0 3px; font-size: var(--text-sm); }
+    .generator-history__header p { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
+    .generator-history__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+    .generator-history__item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; padding: var(--space-2) 0; border-top: 1px solid var(--divider); }
+    .generator-history__meta { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+    .generator-history__meta strong { overflow: hidden; color: var(--text-primary); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+    .generator-history__meta span { color: var(--text-muted); font-size: .7rem; }
+    .generator-history__actions { display: flex; flex: 0 0 auto; gap: 2px; }
     @media (max-width: 1080px) { .generator-workspace { grid-template-columns: 1fr; } }
     @media (max-width: 680px) {
       .generator-page { padding: calc(var(--navbar-height) + var(--space-4)) var(--space-4) var(--space-6); }
@@ -73,6 +121,11 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
       .generator-workspace__panel-actions { width: 100%; }
       .generator-workspace__panel-actions ui-button { flex: 1; }
       .generator-workspace__form { padding: var(--space-4); }
+      .generator-workspace__quality { padding: 0 var(--space-4) var(--space-4); }
+      .generator-history { padding-inline: var(--space-4); }
+      .generator-history__item { align-items: flex-start; flex-direction: column; }
+      .generator-history__actions { width: 100%; }
+      .generator-history__actions ui-button { flex: 1; }
     }
   `]
 })
@@ -83,11 +136,16 @@ export class GeneratorWorkspaceComponent {
   readonly formTitle = input.required<string>();
   readonly formSubtitle = input.required<string>();
   readonly prompt = input('');
+  readonly quality = input<PromptQualityResult | null>(null);
   readonly previewSubtitle = input('Copy and paste this prompt into your approved AI workflow.');
   readonly filename = input('prompt');
   readonly generate = output<void>();
   readonly sample = output<void>();
   readonly clear = output<void>();
+  readonly historyOpen = output<string>();
+
+  readonly history = inject(PromptHistoryService);
+  private readonly clipboard = inject(ClipboardService);
 
   @HostListener('document:keydown', ['$event'])
   onGenerateShortcut(event: KeyboardEvent): void {
@@ -95,5 +153,17 @@ export class GeneratorWorkspaceComponent {
     if (event.key !== 'Enter') return;
     if (event.cancelable) event.preventDefault();
     this.generate.emit();
+  }
+
+  openHistory(record: PromptHistoryRecord): void {
+    this.historyOpen.emit(record.prompt);
+  }
+
+  copyHistory(record: PromptHistoryRecord): void {
+    void this.clipboard.copy(record.prompt);
+  }
+
+  formatTimestamp(timestamp: string): string {
+    return timestamp.slice(0, 16).replace('T', ' ');
   }
 }

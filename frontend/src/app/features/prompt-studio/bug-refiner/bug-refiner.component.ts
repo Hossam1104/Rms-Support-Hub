@@ -2,24 +2,24 @@
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { ToastService } from '../../../core/services/toast.service';
-import { UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
+import { UiFieldComponent, UiInputComponent } from '../../../shared/ui';
 import { BugPromptBuilder } from '../builders/bug-prompt.builder';
 import {
-  BUG_DETAIL_LEVELS,
-  BUG_TARGET_FORMATS,
   BugPromptInput,
   EMPTY_BUG_PROMPT_INPUT,
   SAMPLE_BUG_PROMPT_INPUT,
   normalizeBugPromptInput
 } from '../models/bug-prompt.model';
 import { PromptStorageService } from '../services/prompt-storage.service';
+import { PromptHistoryService } from '../services/prompt-history.service';
+import { PromptQualityResult, PromptQualityService } from '../services/prompt-quality.service';
 import { GeneratorWorkspaceComponent } from '../components/generator-workspace/generator-workspace.component';
 import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-textarea.component';
 
 @Component({
   selector: 'app-bug-refiner',
   standalone: true,
-  imports: [ReactiveFormsModule, GeneratorWorkspaceComponent, PromptTextareaComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
+  imports: [ReactiveFormsModule, GeneratorWorkspaceComponent, PromptTextareaComponent, UiFieldComponent, UiInputComponent],
   template: `
     <app-generator-workspace
       title="Bug Refinement"
@@ -30,7 +30,9 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
       [prompt]="generatedPrompt()"
       (generate)="generate()"
       (sample)="loadSample()"
-      (clear)="clearForm()">
+      (clear)="clearForm()"
+      [quality]="qualityResult()"
+      (historyOpen)="openHistory($event)">
 
       <form [formGroup]="form" autocomplete="off" class="bug-form">
         <section class="bug-form__section" aria-labelledby="bug-issue-heading">
@@ -72,9 +74,6 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             <ui-field label="Preconditions" forId="bug-preconditions">
               <ui-input inputId="bug-preconditions" formControlName="preconditions" placeholder="Required account, state, or setup"></ui-input>
             </ui-field>
-            <ui-field label="Test Data" forId="bug-test-data">
-              <ui-input inputId="bug-test-data" formControlName="testData" placeholder="Non-sensitive data or input values used"></ui-input>
-            </ui-field>
           </div>
         </section>
 
@@ -96,18 +95,15 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             <ui-field label="Actual Result" forId="bug-actual" [hint]="actualCounter()">
               <app-prompt-textarea textareaId="bug-actual" formControlName="actualResult" [rows]="5" placeholder="What actually happened in observable terms"></app-prompt-textarea>
             </ui-field>
-            <ui-field class="bug-form__field--full" label="Frequency / Reproducibility" forId="bug-frequency">
-              <ui-input inputId="bug-frequency" formControlName="frequency" placeholder="Always, intermittent, once, or conditions that affect reproduction"></ui-input>
-            </ui-field>
           </div>
         </section>
 
-        <section class="bug-form__section" aria-labelledby="bug-impact-heading">
+        <section class="bug-form__section" aria-labelledby="bug-triage-heading">
           <header class="bug-form__section-header">
             <span class="bug-form__section-kicker">D</span>
             <div>
-              <h3 id="bug-impact-heading">Impact</h3>
-              <p>Preserve supplied triage values and explain who or what is affected.</p>
+              <h3 id="bug-triage-heading">Triage</h3>
+              <p>Keep severity and priority simple, preserving supplied values exactly.</p>
             </div>
           </header>
           <div class="bug-form__grid">
@@ -116,9 +112,6 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </ui-field>
             <ui-field label="Priority" forId="bug-priority">
               <ui-input inputId="bug-priority" formControlName="priority" placeholder="Reporter value, if known"></ui-input>
-            </ui-field>
-            <ui-field class="bug-form__field--full" label="Business / User Impact" forId="bug-impact" [hint]="impactCounter()">
-              <app-prompt-textarea textareaId="bug-impact" formControlName="impact" [rows]="4" placeholder="Describe user, operational, or business impact without adding unsupported scope"></app-prompt-textarea>
             </ui-field>
           </div>
         </section>
@@ -132,46 +125,10 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="bug-form__grid">
-            <ui-field label="Error Message" forId="bug-error-message">
-              <ui-input inputId="bug-error-message" formControlName="errorMessage" placeholder="Exact visible error or state message"></ui-input>
-            </ui-field>
-            <ui-field label="Related Ticket / Reference" forId="bug-related-reference">
-              <ui-input inputId="bug-related-reference" formControlName="relatedReference" placeholder="Ticket, URL, filename, or reference"></ui-input>
-            </ui-field>
-            <ui-field class="bug-form__field--full" label="Logs / Technical Evidence" forId="bug-logs" [hint]="logsCounter()">
-              <app-prompt-textarea textareaId="bug-logs" formControlName="logs" [rows]="4" placeholder="Paste log references or short technical observations, not sensitive file contents"></app-prompt-textarea>
-            </ui-field>
             <ui-field class="bug-form__field--full" label="Attachments" forId="bug-attachments">
               <ui-input inputId="bug-attachments" formControlName="attachments" placeholder="Screenshot, recording, log, or filename references"></ui-input>
             </ui-field>
           </div>
-        </section>
-
-        <section class="bug-form__section" aria-labelledby="bug-output-heading">
-          <header class="bug-form__section-header">
-            <span class="bug-form__section-kicker">F</span>
-            <div>
-              <h3 id="bug-output-heading">Output Options</h3>
-              <p>Choose the prompt depth, paste target, and optional report sections.</p>
-            </div>
-          </header>
-          <div class="bug-form__grid">
-            <ui-field label="Detail Level" forId="bug-detail-level">
-              <ui-select selectId="bug-detail-level" formControlName="detailLevel" [options]="detailLevelOptions"></ui-select>
-            </ui-field>
-            <ui-field label="Target Format" forId="bug-target-format">
-              <ui-select selectId="bug-target-format" formControlName="targetFormat" [options]="targetFormatOptions"></ui-select>
-            </ui-field>
-          </div>
-          <fieldset class="bug-form__options">
-            <legend>Optional output sections</legend>
-            <div class="bug-form__checks">
-              <label class="bug-form__check"><input type="checkbox" formControlName="includeMissingInformation"> <span>Missing Information</span></label>
-              <label class="bug-form__check"><input type="checkbox" formControlName="includeAcceptanceCriteria"> <span>Fix Acceptance Criteria</span></label>
-              <label class="bug-form__check"><input type="checkbox" formControlName="includeRetestChecklist"> <span>Retest Checklist</span></label>
-              <label class="bug-form__check"><input type="checkbox" formControlName="includeRegressionScope"> <span>Regression Scope</span></label>
-            </div>
-          </fieldset>
         </section>
       </form>
     </app-generator-workspace>
@@ -185,31 +142,25 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
     .bug-form__section-header p { margin: 3px 0 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
     .bug-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
     .bug-form__field--full { grid-column: 1 / -1; }
-    .bug-form__options { margin: 0; padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
-    .bug-form__options legend { padding: 0 var(--space-2); color: var(--text-secondary); font-size: var(--text-sm); font-weight: var(--weight-bold); }
-    .bug-form__checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-    .bug-form__check { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--text-secondary); font-size: var(--text-sm); cursor: pointer; }
-    .bug-form__check input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: var(--accent); }
-    @media (max-width: 760px) { .bug-form__grid, .bug-form__checks { grid-template-columns: 1fr; } .bug-form__field--full { grid-column: auto; } }
+    @media (max-width: 760px) { .bug-form__grid { grid-template-columns: 1fr; } .bug-form__field--full { grid-column: auto; } }
   `]
 })
 export class BugRefinerComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly storage = inject(PromptStorageService);
   private readonly toast = inject(ToastService);
+  private readonly history = inject(PromptHistoryService);
+  private readonly quality = inject(PromptQualityService);
   private readonly builder = new BugPromptBuilder();
   private readonly destroy$ = new Subject<void>();
   private readonly draftChanges$ = new Subject<BugPromptInput>();
 
   readonly generatedPrompt = signal('');
+  readonly qualityResult = signal<PromptQualityResult | null>(null);
   readonly rawNotesCounter = signal('0 chars');
   readonly stepsCounter = signal('0 chars');
   readonly expectedCounter = signal('0 chars');
   readonly actualCounter = signal('0 chars');
-  readonly impactCounter = signal('0 chars');
-  readonly logsCounter = signal('0 chars');
-  readonly detailLevelOptions: UiSelectOption[] = BUG_DETAIL_LEVELS.map(value => ({ value, label: value }));
-  readonly targetFormatOptions: UiSelectOption[] = BUG_TARGET_FORMATS.map(value => ({ value, label: value }));
 
   readonly form = this.fb.nonNullable.group({
     rawNotes: [''],
@@ -218,41 +169,23 @@ export class BugRefinerComponent implements OnInit, OnDestroy {
     environment: [''],
     buildVersion: [''],
     preconditions: [''],
-    testData: [''],
     steps: [''],
     expectedResult: [''],
     actualResult: [''],
-    frequency: [''],
     severity: [''],
     priority: [''],
-    impact: [''],
-    errorMessage: [''],
-    logs: [''],
-    attachments: [''],
-    relatedReference: [''],
-    detailLevel: ['Standard' as BugPromptInput['detailLevel']],
-    targetFormat: ['Generic Markdown' as BugPromptInput['targetFormat']],
-    includeMissingInformation: [true],
-    includeAcceptanceCriteria: [true],
-    includeRetestChecklist: [false],
-    includeRegressionScope: [false]
+    attachments: ['']
   });
 
   ngOnInit(): void {
     const draft = this.storage.load<BugPromptInput>('bug');
     this.form.setValue(normalizeBugPromptInput(draft));
     this.updateCounters();
-
-    this.form.controls.detailLevel.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(detailLevel => {
-      this.form.patchValue({
-        includeAcceptanceCriteria: detailLevel !== 'Concise',
-        includeRetestChecklist: detailLevel === 'Deep',
-        includeRegressionScope: detailLevel === 'Deep'
-      }, { emitEvent: false });
-    });
+    this.updateQuality();
 
     this.form.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.updateCounters();
+      this.updateQuality();
       this.draftChanges$.next(this.form.getRawValue());
     });
     this.draftChanges$.pipe(
@@ -267,8 +200,15 @@ export class BugRefinerComponent implements OnInit, OnDestroy {
   }
 
   generate(): void {
-    this.generatedPrompt.set(this.builder.build(this.form.getRawValue()));
+    const input = this.form.getRawValue();
+    const prompt = this.builder.build(input);
+    this.generatedPrompt.set(prompt);
+    this.history.add('Bug', input.title, prompt);
     this.toast.showSuccess('Bug prompt compiled!');
+  }
+
+  openHistory(prompt: string): void {
+    this.generatedPrompt.set(prompt);
   }
 
   loadSample(): void {
@@ -282,6 +222,7 @@ export class BugRefinerComponent implements OnInit, OnDestroy {
     this.form.setValue(EMPTY_BUG_PROMPT_INPUT);
     this.storage.clear('bug');
     this.generatedPrompt.set('');
+    this.updateQuality();
     this.toast.showSuccess('Bug form cleared');
   }
 
@@ -290,7 +231,9 @@ export class BugRefinerComponent implements OnInit, OnDestroy {
     this.stepsCounter.set(`${this.form.controls.steps.value.length} chars`);
     this.expectedCounter.set(`${this.form.controls.expectedResult.value.length} chars`);
     this.actualCounter.set(`${this.form.controls.actualResult.value.length} chars`);
-    this.impactCounter.set(`${this.form.controls.impact.value.length} chars`);
-    this.logsCounter.set(`${this.form.controls.logs.value.length} chars`);
+  }
+
+  private updateQuality(): void {
+    this.qualityResult.set(this.quality.analyze('bug', this.form.getRawValue()));
   }
 }
