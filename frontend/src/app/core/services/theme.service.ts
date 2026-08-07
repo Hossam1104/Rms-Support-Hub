@@ -28,7 +28,11 @@ export class ThemeService {
 
   /** Explicit user choice; persists and overrides the system preference. */
   setTheme(theme: Theme) {
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Theme selection remains available when browser storage is blocked.
+    }
     this.theme.set(theme);
   }
 
@@ -41,8 +45,12 @@ export class ThemeService {
   }
 
   private getUserPreference(): Theme | null {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    return saved === 'dark' || saved === 'light' ? saved : null;
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      return saved === 'dark' || saved === 'light' ? saved : null;
+    } catch {
+      return null;
+    }
   }
 
   private systemTheme(): Theme {

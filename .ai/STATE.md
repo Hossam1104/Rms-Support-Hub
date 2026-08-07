@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-08
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 14 Cross-Tool UI and Responsive Hardening
+- **Release or milestone:** QA Support Hub — Session 15 Accessibility, Security, and Performance Hardening
 
 ## Working State
 
@@ -98,6 +98,13 @@
   intentionally deferred. Sessions 11-13 are deferred by design and are not
   blockers. POS remains Coming Soon and non-operational; Prompt Studio and
   Online Orders remain available.
+- QA Support Hub **Session 15 — Accessibility, Security, and Performance
+  Hardening** is complete. Theme, motion, and environment storage failures are
+  non-fatal; Prompt Studio downloads and JSON rendering use safe text and
+  bounded filenames; native keyboard controls, associated descriptions,
+  restrained announcements, route teardown, and the final landmark/control
+  fixes are in place. Prompt Studio and Online Orders remain available; POS
+  remains Coming Soon and non-operational.
 
 ## Deferred Acceptance and Database Scope
 
@@ -209,6 +216,19 @@
   themes, system/reduced/full motion, and keyboard-visible focus rings. Prompt
   Studio narrow-screen interaction and the informational, non-operational POS
   route were verified; backend and business logic were unchanged.
+- Session 15: focused Prompt Studio and Flat Order accessibility tests passed;
+  the full frontend suite passed with 244 tests across 45 files; backend tests
+  passed with 161/161 and the Release build passed through `scripts/build.ps1`.
+  The standard production build passed at 436.68 kB initial, while the
+  reproducible `production-offline` profile passed at 422.03 kB with external
+  font inlining disabled. Touched-file diagnostics and `git diff --check` were
+  clean. Browser checks passed for 27 route/viewport combinations with one H1
+  and one main landmark per route, no overflow, unlabeled controls, console
+  errors, page errors, or failed requests; keyboard generation/clearing,
+  theme toggling, reduced motion, and non-operational POS behavior were also
+  verified. No Online Order state-changing action or Production operation was
+  attempted. RequestAnimationFrame, draft debounce, and short-lived feedback
+  timers remain accepted risks because no confirmed lifecycle defect was found.
 
 ## Deployment Discovery Blocker
 
@@ -226,6 +246,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 10 and 14 completed; Sessions 11-13
-  deferred while the independent POS project is developed; Sessions 15-16 not
-  started.
+- QA Support Hub: Sessions 00 through 10, 14, and 15 completed; Sessions
+  11-13 deferred while the independent POS project is developed; Session 16 is
+  active.

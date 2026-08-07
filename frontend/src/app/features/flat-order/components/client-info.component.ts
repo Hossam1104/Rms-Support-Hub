@@ -15,7 +15,7 @@ import { normalizeLocalPhone } from '../../../core/utils/phone.util';
           <span>Prefill from consumer lookup</span>
         </div>
         <div uiToolbarCenter class="lookup-input">
-          <ui-input inputId="consumer-lookup-phone" type="tel" [value]="lookupPhone" placeholder="Mobile number" autocomplete="tel" (valueChange)="onLookupPhoneChange($event)"></ui-input>
+          <ui-input inputId="consumer-lookup-phone" type="tel" ariaLabel="Consumer phone number for lookup" [value]="lookupPhone" placeholder="Mobile number" autocomplete="tel" (valueChange)="onLookupPhoneChange($event)"></ui-input>
         </div>
         <div uiToolbarEnd>
           <ui-button variant="secondary" size="sm" icon="bi bi-person-check" [disabled]="!lookupPhone.trim()" (pressed)="onLookup()">Lookup consumer</ui-button>

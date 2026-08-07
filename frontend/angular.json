@@ -51,6 +51,19 @@
               ],
               "outputHashing": "all"
             },
+            "production-offline": {
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true,
+                  "removeSpecialComments": true
+                },
+                "fonts": {
+                  "inline": false
+                }
+              }
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,

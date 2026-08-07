@@ -39,6 +39,22 @@ describe('BugRefinerComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Complete the form and generate a prompt to preview it here.');
   });
 
+  it('associates counters with their Prompt Studio controls without a live region', () => {
+    const fixture = create();
+
+    for (const controlId of ['bug-raw-notes', 'bug-steps', 'bug-expected', 'bug-actual']) {
+      const control = fixture.nativeElement.querySelector(`#${controlId}`) as HTMLElement;
+      const describedBy = control.getAttribute('aria-describedby');
+
+      expect(describedBy).toBeTruthy();
+      expect(fixture.nativeElement.querySelector(`[id="${describedBy}"]`)).toBeTruthy();
+    }
+
+    const qualityPanel = fixture.nativeElement.querySelector('.quality-panel');
+    expect(qualityPanel.getAttribute('aria-live')).toBeNull();
+    expect(qualityPanel.querySelector('.quality-panel__findings')).toBeTruthy();
+  });
+
   it('loads the safe sample, persists all expanded fields immediately, and clears the draft', () => {
     const fixture = create();
 

@@ -1,5 +1,6 @@
 ﻿import { Component, inject, input } from '@angular/core';
 import { EmptyStateComponent, UiButtonComponent } from '../../../../shared/ui';
+import { sanitizeDownloadFilename } from '../../../../core/utils/download-filename.util';
 import { ClipboardService } from '../../services/clipboard.service';
 
 let nextPreviewId = 0;
@@ -65,7 +66,7 @@ export class PromptPreviewComponent {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${this.filename()}.${format}`;
+    link.download = `${sanitizeDownloadFilename(this.filename(), 'prompt')}.${format}`;
     link.click();
     URL.revokeObjectURL(url);
   }

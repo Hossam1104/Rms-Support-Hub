@@ -69,11 +69,11 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="test-case-form__grid">
-            <ui-field class="test-case-form__field--full" label="Preconditions" forId="tc-preconditions" [hint]="preconditionsCounter()">
-              <app-prompt-textarea textareaId="tc-preconditions" formControlName="preconditions" [rows]="4" placeholder="Account, state, permissions, or setup"></app-prompt-textarea>
+            <ui-field #preconditionsField class="test-case-form__field--full" label="Preconditions" forId="tc-preconditions" [hint]="preconditionsCounter()">
+              <app-prompt-textarea textareaId="tc-preconditions" formControlName="preconditions" [rows]="4" placeholder="Account, state, permissions, or setup" [ariaDescribedBy]="preconditionsField.describedBy()"></app-prompt-textarea>
             </ui-field>
-            <ui-field class="test-case-form__field--full" label="Test Data" forId="tc-test-data" [hint]="testDataCounter()">
-              <app-prompt-textarea textareaId="tc-test-data" formControlName="testData" [rows]="4" placeholder="Non-sensitive values, records, files, or inputs required"></app-prompt-textarea>
+            <ui-field #testDataField class="test-case-form__field--full" label="Test Data" forId="tc-test-data" [hint]="testDataCounter()">
+              <app-prompt-textarea textareaId="tc-test-data" formControlName="testData" [rows]="4" placeholder="Non-sensitive values, records, files, or inputs required" [ariaDescribedBy]="testDataField.describedBy()"></app-prompt-textarea>
             </ui-field>
           </div>
         </section>
@@ -87,11 +87,11 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="test-case-form__grid">
-            <ui-field class="test-case-form__field--full" label="Steps" forId="tc-steps" [hint]="stepsCounter()">
-              <app-prompt-textarea textareaId="tc-steps" formControlName="steps" [rows]="8" placeholder="1. Navigate to the target screen&#10;2. Perform one action&#10;3. Observe the resulting state"></app-prompt-textarea>
+            <ui-field #stepsField class="test-case-form__field--full" label="Steps" forId="tc-steps" [hint]="stepsCounter()">
+              <app-prompt-textarea textareaId="tc-steps" formControlName="steps" [rows]="8" placeholder="1. Navigate to the target screen&#10;2. Perform one action&#10;3. Observe the resulting state" [ariaDescribedBy]="stepsField.describedBy()"></app-prompt-textarea>
             </ui-field>
-            <ui-field class="test-case-form__field--full" label="Expected Result" forId="tc-expected" [hint]="expectedCounter()">
-              <app-prompt-textarea textareaId="tc-expected" formControlName="expectedResult" [rows]="5" placeholder="State the visible, measurable, or recorded outcome"></app-prompt-textarea>
+            <ui-field #expectedField class="test-case-form__field--full" label="Expected Result" forId="tc-expected" [hint]="expectedCounter()">
+              <app-prompt-textarea textareaId="tc-expected" formControlName="expectedResult" [rows]="5" placeholder="State the visible, measurable, or recorded outcome" [ariaDescribedBy]="expectedField.describedBy()"></app-prompt-textarea>
             </ui-field>
           </div>
         </section>

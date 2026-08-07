@@ -116,4 +116,25 @@ describe('ThemeService', () => {
     service.toggleTheme();
     expect(service.theme()).toBe('dark');
   });
+
+  it('keeps theme selection usable when browser storage is blocked', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('storage blocked');
+    });
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage blocked');
+    });
+
+    try {
+      stubSystemTheme(false);
+      const service = TestBed.inject(ThemeService);
+
+      expect(service.theme()).toBe('dark');
+      expect(() => service.setTheme('light')).not.toThrow();
+      expect(service.theme()).toBe('light');
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+    }
+  });
 });

@@ -80,7 +80,11 @@ export class ModuleService {
     this.activeEnvironment.set(env);
     const moduleKey = this.activeModule()?.key;
     if (moduleKey) {
-      localStorage.setItem(ENV_STORAGE_PREFIX + moduleKey, env.key);
+      try {
+        localStorage.setItem(ENV_STORAGE_PREFIX + moduleKey, env.key);
+      } catch {
+        // Environment selection remains available for the current session.
+      }
     }
   }
 
@@ -91,7 +95,12 @@ export class ModuleService {
    * real environment on this module -- otherwise it's discarded rather than
    * silently applied to the wrong module. */
   private restoreEnvironment(module: ModuleDto) {
-    const storedKey = localStorage.getItem(ENV_STORAGE_PREFIX + module.key);
+    let storedKey: string | null = null;
+    try {
+      storedKey = localStorage.getItem(ENV_STORAGE_PREFIX + module.key);
+    } catch {
+      // Fall back to the module's declared default when storage is blocked.
+    }
     const stored = storedKey ? module.environments.find(e => e.key === storedKey) : undefined;
     const fallbackDefault = module.environments.find(e => e.isDefault);
     this.activeEnvironment.set(stored ?? fallbackDefault ?? module.environments[0] ?? null);

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JsonTreeNodeComponent, JsonValue } from './json-tree-node.component';
 import { CopyButtonComponent } from '../copy-button/copy-button.component';
+import { sanitizeDownloadFilename } from '../../../core/utils/download-filename.util';
 
 /**
  * Renders arbitrary JSON (or a raw JSON string, e.g. OrderRequestDetail's
@@ -25,12 +26,13 @@ import { CopyButtonComponent } from '../copy-button/copy-button.component';
             type="text"
             class="search-input"
             placeholder="Search keys/values..."
+            aria-label="Search JSON keys and values"
             [(ngModel)]="searchTerm">
-          <button type="button" class="toolbar-btn" (click)="rawMode.set(!rawMode())" *ngIf="parsed() !== undefined">
+          <button type="button" class="toolbar-btn" [attr.aria-pressed]="rawMode()" (click)="rawMode.set(!rawMode())" *ngIf="parsed() !== undefined">
             {{ rawMode() ? 'Tree view' : 'Raw view' }}
           </button>
           <app-copy-button *ngIf="rawText() !== null" [value]="rawText()!" label="Copy"></app-copy-button>
-          <button type="button" class="toolbar-btn" (click)="download()" *ngIf="rawText() !== null">
+          <button type="button" class="toolbar-btn" aria-label="Download JSON data" (click)="download()" *ngIf="rawText() !== null">
             <i class="bi bi-download"></i>
           </button>
         </div>
@@ -120,7 +122,7 @@ export class JsonTreeComponent {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${this.title.replace(/\s+/g, '-').toLowerCase()}.json`;
+    a.download = `${sanitizeDownloadFilename(this.title, 'json').toLowerCase()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

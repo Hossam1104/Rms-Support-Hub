@@ -44,8 +44,8 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="bug-form__grid">
-            <ui-field class="bug-form__field--full" label="Raw Bug Notes" forId="bug-raw-notes" [hint]="rawNotesCounter()">
-              <app-prompt-textarea textareaId="bug-raw-notes" formControlName="rawNotes" [rows]="5" placeholder="Paste rough notes, observations, or a short defect description"></app-prompt-textarea>
+            <ui-field #rawNotesField class="bug-form__field--full" label="Raw Bug Notes" forId="bug-raw-notes" [hint]="rawNotesCounter()">
+              <app-prompt-textarea textareaId="bug-raw-notes" formControlName="rawNotes" [rows]="5" placeholder="Paste rough notes, observations, or a short defect description" [ariaDescribedBy]="rawNotesField.describedBy()"></app-prompt-textarea>
             </ui-field>
             <ui-field label="Existing Bug Title" forId="bug-title">
               <ui-input inputId="bug-title" formControlName="title" placeholder="Short description of the issue"></ui-input>
@@ -86,14 +86,14 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="bug-form__grid">
-            <ui-field class="bug-form__field--full" label="Steps to Reproduce" forId="bug-steps" [hint]="stepsCounter()">
-              <app-prompt-textarea textareaId="bug-steps" formControlName="steps" [rows]="7" placeholder="1. Open the target screen&#10;2. Perform the action&#10;3. Observe the result"></app-prompt-textarea>
+            <ui-field #stepsField class="bug-form__field--full" label="Steps to Reproduce" forId="bug-steps" [hint]="stepsCounter()">
+              <app-prompt-textarea textareaId="bug-steps" formControlName="steps" [rows]="7" placeholder="1. Open the target screen&#10;2. Perform the action&#10;3. Observe the result" [ariaDescribedBy]="stepsField.describedBy()"></app-prompt-textarea>
             </ui-field>
-            <ui-field label="Expected Result" forId="bug-expected" [hint]="expectedCounter()">
-              <app-prompt-textarea textareaId="bug-expected" formControlName="expectedResult" [rows]="5" placeholder="What should have happened in observable terms"></app-prompt-textarea>
+            <ui-field #expectedField label="Expected Result" forId="bug-expected" [hint]="expectedCounter()">
+              <app-prompt-textarea textareaId="bug-expected" formControlName="expectedResult" [rows]="5" placeholder="What should have happened in observable terms" [ariaDescribedBy]="expectedField.describedBy()"></app-prompt-textarea>
             </ui-field>
-            <ui-field label="Actual Result" forId="bug-actual" [hint]="actualCounter()">
-              <app-prompt-textarea textareaId="bug-actual" formControlName="actualResult" [rows]="5" placeholder="What actually happened in observable terms"></app-prompt-textarea>
+            <ui-field #actualField label="Actual Result" forId="bug-actual" [hint]="actualCounter()">
+              <app-prompt-textarea textareaId="bug-actual" formControlName="actualResult" [rows]="5" placeholder="What actually happened in observable terms" [ariaDescribedBy]="actualField.describedBy()"></app-prompt-textarea>
             </ui-field>
           </div>
         </section>

@@ -13,16 +13,16 @@ import { FormsModule } from '@angular/forms';
       </span>
 
       <div class="pagination-controls">
-        <select class="page-size-select" [ngModel]="pageSize" (ngModelChange)="pageSizeChange.emit($event)">
+        <select class="page-size-select" aria-label="Items per page" [ngModel]="pageSize" (ngModelChange)="pageSizeChange.emit($event)">
           <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }} / page</option>
         </select>
 
-        <button type="button" class="page-btn" [disabled]="page <= 1" (click)="pageChange.emit(page - 1)">
-          <i class="bi bi-chevron-left"></i>
+        <button type="button" class="page-btn" aria-label="Previous page" [disabled]="page <= 1" (click)="pageChange.emit(page - 1)">
+          <i class="bi bi-chevron-left" aria-hidden="true"></i>
         </button>
         <span class="page-current">{{ page }} / {{ totalPages() || 1 }}</span>
-        <button type="button" class="page-btn" [disabled]="page >= totalPages()" (click)="pageChange.emit(page + 1)">
-          <i class="bi bi-chevron-right"></i>
+        <button type="button" class="page-btn" aria-label="Next page" [disabled]="page >= totalPages()" (click)="pageChange.emit(page + 1)">
+          <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </button>
       </div>
     </div>

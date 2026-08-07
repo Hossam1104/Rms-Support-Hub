@@ -35,7 +35,7 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 15 — Accessibility, Security, and Performance Hardening
+# Session 16 — Final Integration Regression and Release Preparation
 
 ## Objective
 
@@ -43,12 +43,11 @@ Complete non-functional hardening before final regression.
 
 ## Status
 
-Not Started. Session 14 cross-tool UI and responsive hardening is complete.
-POS implementation remains deferred while the independent POS Maintenance
-Tool project is under development.
+Active. Session 15 accessibility, security, and performance hardening is
+complete. POS implementation remains deferred while the independent POS
+Maintenance Tool project is under development.
 
 ## Scope
 
-Use the Session 15 prompt and validation contract maintained in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Do not begin Session 15 work until
-it is explicitly opened.
+Use the Session 16 prompt and validation contract maintained in
+`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Do not deploy in this session.

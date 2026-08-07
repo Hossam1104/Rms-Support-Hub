@@ -44,8 +44,8 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="story-form__grid">
-            <ui-field class="story-form__field--full" label="Raw Story / Requirement" forId="story-raw" [hint]="rawStoryCounter()">
-              <app-prompt-textarea textareaId="story-raw" formControlName="rawStory" [rows]="6" placeholder="Paste the rough request, notes, or stakeholder wording"></app-prompt-textarea>
+            <ui-field #rawStoryField class="story-form__field--full" label="Raw Story / Requirement" forId="story-raw" [hint]="rawStoryCounter()">
+              <app-prompt-textarea textareaId="story-raw" formControlName="rawStory" [rows]="6" placeholder="Paste the rough request, notes, or stakeholder wording" [ariaDescribedBy]="rawStoryField.describedBy()"></app-prompt-textarea>
             </ui-field>
             <ui-field label="Story Title" forId="story-title">
               <ui-input inputId="story-title" formControlName="title" placeholder="Capability-focused title"></ui-input>
@@ -68,8 +68,8 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="story-form__grid">
-            <ui-field class="story-form__field--full" label="Requirement / Description" forId="story-requirement" [hint]="requirementCounter()">
-              <app-prompt-textarea textareaId="story-requirement" formControlName="requirement" [rows]="8" placeholder="What should the product or workflow do?"></app-prompt-textarea>
+            <ui-field #requirementField class="story-form__field--full" label="Requirement / Description" forId="story-requirement" [hint]="requirementCounter()">
+              <app-prompt-textarea textareaId="story-requirement" formControlName="requirement" [rows]="8" placeholder="What should the product or workflow do?" [ariaDescribedBy]="requirementField.describedBy()"></app-prompt-textarea>
             </ui-field>
           </div>
         </section>
@@ -83,8 +83,8 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
             </div>
           </header>
           <div class="story-form__grid">
-            <ui-field class="story-form__field--full" label="Business Rules" forId="story-rules" [hint]="businessRulesCounter()">
-              <app-prompt-textarea textareaId="story-rules" formControlName="businessRules" [rows]="6" placeholder="List confirmed rules; leave unknown rules for clarification"></app-prompt-textarea>
+            <ui-field #businessRulesField class="story-form__field--full" label="Business Rules" forId="story-rules" [hint]="businessRulesCounter()">
+              <app-prompt-textarea textareaId="story-rules" formControlName="businessRules" [rows]="6" placeholder="List confirmed rules; leave unknown rules for clarification" [ariaDescribedBy]="businessRulesField.describedBy()"></app-prompt-textarea>
             </ui-field>
             <ui-field class="story-form__field--full" label="Evidence / References" forId="story-evidence">
               <app-prompt-textarea textareaId="story-evidence" formControlName="evidenceReferences" [rows]="4" placeholder="Screens, links, filenames, or reference notes"></app-prompt-textarea>

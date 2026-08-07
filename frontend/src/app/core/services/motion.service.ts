@@ -41,7 +41,11 @@ export class MotionService {
 
   /** Explicit user choice; persists and overrides the system preference. */
   setPreference(preference: MotionPreference) {
-    localStorage.setItem(MOTION_STORAGE_KEY, preference);
+    try {
+      localStorage.setItem(MOTION_STORAGE_KEY, preference);
+    } catch {
+      // Motion selection remains available when browser storage is blocked.
+    }
     this.preference.set(preference);
   }
 
@@ -53,8 +57,12 @@ export class MotionService {
   }
 
   private getStoredPreference(): MotionPreference {
-    const saved = localStorage.getItem(MOTION_STORAGE_KEY);
-    return saved === 'reduce' || saved === 'full' ? saved : 'system';
+    try {
+      const saved = localStorage.getItem(MOTION_STORAGE_KEY);
+      return saved === 'reduce' || saved === 'full' ? saved : 'system';
+    } catch {
+      return 'system';
+    }
   }
 
   private readSystemReduced(): boolean {

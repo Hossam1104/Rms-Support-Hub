@@ -1,6 +1,7 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren, computed, effect, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, finalize } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { BranchOptionsService } from '../../core/services/branch-options.service';
@@ -112,7 +113,7 @@ const TOTALS_DEBOUNCE_MS = 300;
 
       <ng-template #builderWorkspace>
         <div class="builder-grid">
-          <main class="workflow-column">
+          <section class="workflow-column" aria-label="Order workflow">
             <app-order-section-navigation
               [sections]="sections()"
               [activeSectionId]="activeSectionId()"
@@ -234,7 +235,7 @@ const TOTALS_DEBOUNCE_MS = 300;
                 </a>
               </div>
             </div>
-          </main>
+          </section>
 
           <aside class="summary-column">
             <app-order-summary-rail
@@ -375,6 +376,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   private toast = inject(ToastService);
   private route = inject(ActivatedRoute);
   private focus = inject(FocusService);
+  private readonly destroyRef = inject(DestroyRef);
   draftStore = inject(DraftStore);
 
   moduleKey = signal<string>('ghc_ecommerce');
@@ -460,11 +462,13 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.route.parent?.paramMap.subscribe(params => {
-      const key = params.get('key') || 'ghc_ecommerce';
-      this.moduleKey.set(key);
-      this.loadState();
-    });
+    this.route.parent?.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const key = params.get('key') || 'ghc_ecommerce';
+        this.moduleKey.set(key);
+        this.loadState();
+      });
   }
 
   hasDeliveryFields(): boolean {
@@ -692,7 +696,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.moduleKey();
     this.api.post<{ success: boolean, products: Product[], totals: TotalsSummary }>(`modules/${key}/products`, product).subscribe({
       next: res => this.applyServerTotals(res.totals),
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -704,7 +708,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.moduleKey();
     this.api.delete<{ success: boolean, products: Product[], totals: TotalsSummary }>(`modules/${key}/products/${index}`).subscribe({
       next: res => this.applyServerTotals(res.totals),
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -743,7 +747,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.moduleKey();
     this.api.post<{ success: boolean, payments: Payment[], totals: TotalsSummary }>(`modules/${key}/payments`, payment).subscribe({
       next: res => this.applyServerTotals(res.totals),
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -755,7 +759,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.moduleKey();
     this.api.delete<{ success: boolean, payments: Payment[], totals: TotalsSummary }>(`modules/${key}/payments/${index}`).subscribe({
       next: res => this.applyServerTotals(res.totals),
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -880,7 +884,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
           this.toast.showInfo(`No consumer record found for phone ${phone}.`);
         }
       },
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -1005,7 +1009,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
       envKey: this.moduleService.activeEnvironment()?.key
     }).subscribe({
       next: res => this.landedRequestId.set(res.request.id),
-      error: () => {} // Not fatal -- the OrderRequests row may take a moment to land, or this send failed upstream before ever reaching it.
+      error: () => { } // Not fatal -- the OrderRequests row may take a moment to land, or this send failed upstream before ever reaching it.
     });
   }
 
@@ -1063,7 +1067,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.moduleKey();
     this.api.get<Record<string, unknown>>(`modules/${key}/export-json`).subscribe({
       next: json => this.compiledJson.set(json),
-      error: () => {}
+      error: () => { }
     });
   }
 

@@ -132,4 +132,25 @@ describe('MotionService', () => {
     service.cyclePreference();
     expect(service.preference()).toBe('system');
   });
+
+  it('keeps motion selection usable when browser storage is blocked', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('storage blocked');
+    });
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage blocked');
+    });
+
+    try {
+      stubSystemMotion(false);
+      const service = TestBed.inject(MotionService);
+
+      expect(service.preference()).toBe('system');
+      expect(() => service.setPreference('reduce')).not.toThrow();
+      expect(service.reducedMotion()).toBe(true);
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+    }
+  });
 });

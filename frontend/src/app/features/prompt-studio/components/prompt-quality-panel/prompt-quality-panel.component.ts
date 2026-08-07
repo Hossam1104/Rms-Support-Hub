@@ -2,16 +2,16 @@ import { Component, input } from '@angular/core';
 import { PromptQualityResult } from '../../services/prompt-quality.service';
 
 @Component({
-    selector: 'app-prompt-quality-panel',
-    standalone: true,
-    template: `
-    <section class="quality-panel" aria-labelledby="prompt-quality-title" aria-live="polite">
+  selector: 'app-prompt-quality-panel',
+  standalone: true,
+  template: `
+    <section class="quality-panel" aria-labelledby="prompt-quality-title">
       <header class="quality-panel__header">
         <div>
           <h2 id="prompt-quality-title">Prompt Quality</h2>
           <p>{{ result().findings.length }} suggestion{{ result().findings.length === 1 ? '' : 's' }} · advisory only</p>
         </div>
-        <strong>{{ result().score }}%</strong>
+        <strong [attr.aria-label]="'Prompt quality score: ' + result().score + ' percent'">{{ result().score }}%</strong>
       </header>
       <progress class="quality-panel__progress" max="100" [value]="result().score" aria-label="Prompt quality score"></progress>
       <div class="quality-panel__facts">
@@ -42,7 +42,7 @@ import { PromptQualityResult } from '../../services/prompt-quality.service';
       }
     </section>
   `,
-    styles: [`
+  styles: [`
     :host { display: block; }
     .quality-panel { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-muted); }
     .quality-panel__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
@@ -64,9 +64,9 @@ import { PromptQualityResult } from '../../services/prompt-quality.service';
   `]
 })
 export class PromptQualityPanelComponent {
-    readonly result = input.required<PromptQualityResult>();
+  readonly result = input.required<PromptQualityResult>();
 
-    visibleFindings() {
-        return this.result().findings.slice(0, 4);
-    }
+  visibleFindings() {
+    return this.result().findings.slice(0, 4);
+  }
 }

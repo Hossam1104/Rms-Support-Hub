@@ -1263,7 +1263,7 @@ Tasks:
 7. Run production build and bundle review.
 
 Commit message:
-`fix(platform): harden accessibility security and performance`
+`refactor(hardening): improve accessibility security and performance`
 ```
 
 ## Completion Gate
@@ -1381,8 +1381,8 @@ Session 11 — Deferred — External POS Development
 Session 12 — Deferred — External POS Development
 Session 13 — Deferred — External POS Development
 Session 14 — Completed
-Session 15 — Not Started
-Session 16 — Not Started
+Session 15 — Completed
+Session 16 — Active
 ```
 
 Allowed statuses:

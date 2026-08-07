@@ -15,6 +15,11 @@ function containsMatch(value: JsonValue, term: string): boolean {
   return Object.entries(value).some(([k, v]) => k.toLowerCase().includes(term) || containsMatch(v, term));
 }
 
+interface HighlightPart {
+  text: string;
+  match: boolean;
+}
+
 @Component({
   selector: 'app-json-tree-node',
   standalone: true,
@@ -23,20 +28,38 @@ function containsMatch(value: JsonValue, term: string): boolean {
   imports: [CommonModule, JsonTreeNodeComponent],
   template: `
     <div class="node">
-      <div class="node-row" [class.is-container]="isContainer" (click)="isContainer && toggle()">
-        <i *ngIf="isContainer" class="bi toggle-icon" [class.bi-chevron-down]="expanded()" [class.bi-chevron-right]="!expanded()"></i>
+      <div class="node-row" [class.is-container]="isContainer">
+        <button *ngIf="isContainer" type="button" class="toggle-button"
+          [attr.aria-expanded]="expanded()"
+          [attr.aria-label]="(expanded() ? 'Collapse ' : 'Expand ') + (keyLabel ?? 'root')"
+          (click)="toggle()">
+          <i class="bi toggle-icon" [class.bi-chevron-down]="expanded()" [class.bi-chevron-right]="!expanded()" aria-hidden="true"></i>
+        </button>
         <span *ngIf="!isContainer" class="toggle-spacer"></span>
 
-        <span class="node-key" *ngIf="keyLabel !== null" (click)="copyPath($event)" [title]="'Copy path: ' + path">
-          <span [innerHTML]="highlight(keyLabel)"></span>:
-        </span>
+        <button type="button" class="node-key" *ngIf="keyLabel !== null" (click)="copyPath($event)" [title]="'Copy path: ' + path">
+          @for (part of highlightParts(keyLabel ?? ''); track $index) {
+            @if (part.match) {
+              <mark>{{ part.text }}</mark>
+            } @else {
+              {{ part.text }}
+            }
+          }
+        </button>
+        <span class="node-key-suffix" *ngIf="keyLabel !== null">:</span>
 
         <span *ngIf="isContainer" class="node-summary">
           {{ isArray ? '[' : '{' }}{{ childCount }}{{ isArray ? ']' : '}' }}
         </span>
 
         <span *ngIf="!isContainer" class="node-value" [class]="'type-' + valueType">
-          <span [innerHTML]="highlight(displayValue)"></span>
+          @for (part of highlightParts(displayValue); track $index) {
+            @if (part.match) {
+              <mark>{{ part.text }}</mark>
+            } @else {
+              {{ part.text }}
+            }
+          }
         </span>
 
         <i *ngIf="justCopied()" class="bi bi-check2 copied-flash"></i>
@@ -64,11 +87,16 @@ function containsMatch(value: JsonValue, term: string): boolean {
       font-size: 0.82rem;
       cursor: default;
     }
-    .node-row.is-container { cursor: pointer; }
-    .toggle-icon { width: 14px; font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0; }
+    .node-row.is-container { cursor: default; }
+    .toggle-button { display: grid; flex: 0 0 18px; place-items: center; width: 18px; height: 22px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
+    .toggle-button:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .toggle-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .toggle-icon { width: 14px; font-size: 0.7rem; flex-shrink: 0; }
     .toggle-spacer { width: 14px; flex-shrink: 0; }
-    .node-key { color: var(--accent-violet); cursor: pointer; }
+    .node-key { padding: 0; border: 0; background: transparent; color: var(--accent-violet); cursor: pointer; font: inherit; text-align: left; }
     .node-key:hover { text-decoration: underline; }
+    .node-key:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }
+    .node-key-suffix { color: var(--text-primary); }
     .node-summary { color: var(--text-muted); }
     .type-string { color: var(--code-string); }
     .type-number { color: var(--code-number); }
@@ -125,15 +153,28 @@ export class JsonTreeNodeComponent {
 
   copyPath(event: Event) {
     event.stopPropagation();
-    navigator.clipboard.writeText(this.path);
+    void navigator.clipboard.writeText(this.path).catch(() => undefined);
     this.justCopied.set(true);
     setTimeout(() => this.justCopied.set(false), 1200);
   }
 
-  highlight(text: string): string {
-    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    if (!this.searchTerm) return escaped;
-    const term = this.searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return escaped.replace(new RegExp(`(${term})`, 'ig'), '<mark>$1</mark>');
+  highlightParts(text: string): HighlightPart[] {
+    const term = this.searchTerm.trim().toLocaleLowerCase();
+    if (!term) return [{ text, match: false }];
+
+    const normalizedText = text.toLocaleLowerCase();
+    const parts: HighlightPart[] = [];
+    let cursor = 0;
+    let matchIndex = normalizedText.indexOf(term, cursor);
+
+    while (matchIndex >= 0) {
+      if (matchIndex > cursor) parts.push({ text: text.slice(cursor, matchIndex), match: false });
+      parts.push({ text: text.slice(matchIndex, matchIndex + term.length), match: true });
+      cursor = matchIndex + term.length;
+      matchIndex = normalizedText.indexOf(term, cursor);
+    }
+
+    if (cursor < text.length) parts.push({ text: text.slice(cursor), match: false });
+    return parts.length ? parts : [{ text, match: false }];
   }
 }
