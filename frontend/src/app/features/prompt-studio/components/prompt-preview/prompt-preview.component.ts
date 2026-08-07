@@ -22,7 +22,8 @@ let nextPreviewId = 0;
         <pre class="prompt-preview__output" tabindex="0">{{ prompt() }}</pre>
         <div class="prompt-preview__actions">
           <ui-button variant="secondary" icon="bi-clipboard" ariaLabel="Copy generated prompt" (pressed)="copy()">Copy Prompt</ui-button>
-          <ui-button variant="ghost" icon="bi-download" ariaLabel="Download generated prompt as Markdown" (pressed)="download()">Download .md</ui-button>
+          <ui-button variant="ghost" icon="bi-download" ariaLabel="Download generated prompt as Markdown" (pressed)="download('md')">Download .md</ui-button>
+          <ui-button variant="ghost" icon="bi-file-earmark-text" ariaLabel="Download generated prompt as plain text" (pressed)="download('txt')">Download .txt</ui-button>
         </div>
       } @else {
         <app-empty-state
@@ -58,12 +59,13 @@ export class PromptPreviewComponent {
     void this.clipboard.copy(this.prompt());
   }
 
-  download(): void {
-    const blob = new Blob([this.prompt()], { type: 'text/markdown;charset=utf-8' });
+  download(format: 'md' | 'txt' = 'md'): void {
+    const mimeType = format === 'md' ? 'text/markdown' : 'text/plain';
+    const blob = new Blob([this.prompt()], { type: `${mimeType};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${this.filename()}.md`;
+    link.download = `${this.filename()}.${format}`;
     link.click();
     URL.revokeObjectURL(url);
   }

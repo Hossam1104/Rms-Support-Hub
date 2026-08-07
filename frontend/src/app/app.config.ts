@@ -5,12 +5,18 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { ModuleService } from './core/services/module.service';
 import { errorEnvelopeInterceptor } from './core/interceptors/error-envelope.interceptor';
+import { MotionService } from './core/services/motion.service';
+import { ThemeService } from './core/services/theme.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(withInterceptors([errorEnvelopeInterceptor])),
+    provideAppInitializer(() => {
+      inject(ThemeService);
+      inject(MotionService);
+    }),
     // Loads /api/modules once, before the app renders, so ModuleService.modules()
     // is never a stale hardcoded list (see remediation_plan.md B25).
     provideAppInitializer(() => inject(ModuleService).initialize())

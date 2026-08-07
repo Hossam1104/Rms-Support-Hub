@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 04 Prompt Studio foundation
+- **Release or milestone:** QA Support Hub — Session 05 enhanced Bug Refiner
 
 ## Working State
 
@@ -41,17 +41,23 @@
   now honors restored reactive-form values. Prompt Studio is available in the
   hub registry; Online Orders remains available and POS remains
   migration-pending.
+- Session 05 expanded Bug Refinement into a grouped typed form with safe legacy
+  draft normalization, deterministic Concise/Standard/Deep and
+  Generic/Jira/Azure DevOps prompt modes, configurable report sections, safe
+  sample data, Markdown/plain-text export, and focused coverage. The former
+  standalone Prompt Generator was reviewed for parity and retired; Story and
+  Test Case foundations remain unchanged.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
-  `docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`; Prompt Studio migration source:
-  `prompt_generator/index.html`.
+  `docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`; the former standalone Prompt
+  Studio source was migration reference only and is now retired.
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 05 — Enhanced Bug Refinement
-  Generator** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
-  standalone POS source project is supplied.
+- The active task is QA Support Hub **Session 06 — Story Refinement Generator**
+  (see `TASK.md`). POS Sessions 11-13 remain blocked until the standalone POS
+  source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -105,6 +111,13 @@
   draft restore after reload, dark/light theme, reduced motion, and responsive
   layouts at 1440px, 900px, and 390px without horizontal overflow. Backend and
   Online Order business code were unchanged.
+- Session 05: focused Prompt Studio specs passed with 33 tests across 9 files;
+  the full frontend suite passed with 211 tests across 37 files; the Angular
+  production build passed at 440.44 kB initial with no budget warnings; the
+  former standalone generator was deleted after parity audit; persisted theme
+  and motion preferences were verified on direct Bug-route loads; and the
+  post-deletion legacy-reference scan found no frontend dependency. Backend,
+  Online Orders, Story, and Test Case behavior were unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -122,6 +135,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00, 01, 02, 03, and 04 completed; Session 05 active;
-  Sessions 06-10 and 14-16 not started; Sessions 11-13 blocked until the POS
-  source is supplied.
+- QA Support Hub: Sessions 00, 01, 02, 03, 04, and 05 completed; Session 06
+  active; Sessions 07-10 and 14-16 not started; Sessions 11-13 blocked until
+  the POS source is supplied.

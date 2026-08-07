@@ -35,21 +35,20 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 05 — Enhanced Bug Refinement Generator
+# Session 06 — Story Refinement Generator
 
 ## Objective
 
-Implement the production-ready Bug Refiner and deterministic enhanced prompt builder
-inside the native Prompt Studio workspace created in Session 04.
+Implement the Story Refiner as the next native Prompt Studio generator while
+preserving the completed Bug Refiner and existing Test Case foundation.
 
 ## Scope
 
-Expand the Bug form and `BugPromptBuilder` to separate supplied facts, requested
-inference, and missing information; preserve confirmed facts; mark unsupported
-fields as `[NEEDS INVESTIGATION]`; and add concise/standard/deep plus generic,
-Jira-friendly, and Azure DevOps-friendly output modes. Add safe generic sample
-input, copy/download behavior, and focused builder/form tests.
+Add typed Story input, a grouped reactive form, a deterministic StoryPromptBuilder,
+safe sample data, copy/download behavior, and focused Story tests. Keep the Bug
+Refiner production-ready and leave the Test Case foundation unchanged.
 
 The detailed execution prompt and validation contract are maintained in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior, the Story and
-Test Case foundations, and the POS migration-pending state remain unchanged.
+`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior, the completed
+Bug Refiner, the Test Case foundation, and the POS migration-pending state remain
+unchanged unless a shared Prompt Studio compatibility adjustment is required.

@@ -1285,7 +1285,10 @@ Verified against the repository on 2026-08-06 at commit `eaeb43e`. The Session 0
 
 ### 23.4 Migration Source Confirmation
 
-`prompt_generator/index.html` is present in the repository as migration reference only — it is never served at runtime and is never embedded through an iframe. Confirmed contents:
+The former `prompt_generator/index.html` source was reviewed during Session 05
+as migration reference only and was never served at runtime or embedded through
+an iframe. It was retired after Angular parity was verified. Confirmed audit
+contents before retirement:
 
 - Bug Report generator (`generateBugPrompt`).
 - Test Case generator (`generateTestCasePrompt`, sample loader, clear form).
