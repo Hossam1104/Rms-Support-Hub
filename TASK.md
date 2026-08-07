@@ -1,4 +1,3 @@
-
 # Execution Contract
 
 You are implementing one scoped session in the existing QA Support Hub repository.
@@ -36,78 +35,21 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-
-# Session 03 — QA Support Hub Dashboard
+# Session 04 — Prompt Studio Angular Migration Foundation
 
 ## Objective
 
-Build the main external dashboard with three selectable tool cards.
+Rebuild the standalone QA Prompt Studio structure as native Angular feature routes
+without implementing the enhanced prompt-generation logic yet.
 
-## Prompt
+## Scope
 
+Preserve the Prompt Studio landing, generator entry points, back navigation,
+theme integration, draft persistence, character counters, sample loading,
+preview, copy action, and `Ctrl/Cmd + Enter` behavior. Add typed reactive-form
+models and placeholder builders for Bug, Story, and Test Case generators under
+the existing `/tools/prompt-studio` route.
 
-# Session 03 — QA Support Hub Dashboard
-
-Execute the shared execution contract.
-
-Goal:
-Implement the root QA Support Hub dashboard with three modern selectable cards.
-
-Cards:
-
-1. QA Prompt Studio
-   - route: `/tools/prompt-studio`
-   - status: Available
-   - action: Open Prompt Studio
-
-2. Online Order Tool
-   - route: `/tools/online-orders`
-   - status: Available
-   - action: Open Online Orders
-
-3. POS Maintenance Tool
-   - route: `/tools/pos-maintenance`
-   - status: Migration Pending
-   - action: View Migration Status or disabled based on the architecture plan
-
-Tasks:
-
-1. Create a typed tool registry as the single source of card metadata.
-2. Build the responsive dashboard using the shared Tool Card component.
-3. Add:
-   - title
-   - description
-   - icon
-   - status badge
-   - capability summary
-   - action
-4. Make cards keyboard accessible.
-5. Add subtle entrance, hover, focus, and selection animations.
-6. Honor reduced-motion mode.
-7. Lazy-load Three.js only if the project can support it without affecting the main bundle.
-8. When Three.js is used:
-   - hub only
-   - pause when page hidden
-   - cap pixel ratio
-   - provide non-WebGL fallback
-9. Do not add continuous heavy animation to tool pages.
-10. Add empty/error fallback when tool metadata cannot load.
-11. Add targeted tests for navigation and card status.
-
-Validation:
-- Desktop, tablet, and mobile layouts.
-- Keyboard navigation.
-- Reduced-motion behavior.
-- Card routing.
-- POS card cannot invoke non-existent operations.
-- Angular production build.
-
-Commit message:
-`feat(hub): add animated QA tool dashboard`
-
-
-## Completion Gate
-
-- The root dashboard is complete.
-- All cards represent the correct availability state.
-- Available cards navigate correctly.
+The detailed execution prompt and validation contract are maintained in
+`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior and the
+POS migration-pending state remain unchanged.

@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 02 design system foundation
+- **Release or milestone:** QA Support Hub — Session 03 dashboard
 
 ## Working State
 
@@ -11,7 +11,7 @@
   payment, detail, cancel, resend, payload, and Production-safety contracts
   remain unchanged.
 - Session 01 added the QA Support Hub route skeleton: `/` serves the hub
-  dashboard placeholder; `/tools/prompt-studio`, `/tools/online-orders`, and
+  dashboard; `/tools/prompt-studio`, `/tools/online-orders`, and
   `/tools/pos-maintenance` are lazy-loaded with typed route metadata
   (`ToolRouteData` in `frontend/src/app/core/models/tool.model.ts`). The
   Online Order workspace moved canonically under `/tools/online-orders` and
@@ -40,9 +40,9 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 03 — QA Support Hub
-  Dashboard** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
-  standalone POS source project is supplied.
+- The active task is QA Support Hub **Session 04 — Prompt Studio Angular
+  Migration Foundation** (see `TASK.md`). POS Sessions 11-13 remain blocked
+  until the standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -81,6 +81,13 @@
   HTTP 200 from the dev server. Backend Release build and 161 tests passed
   unchanged; the `build.ps1` Debug-copy step was blocked only by the user's
   locally running `OnlineOrderTool.Api` process locking Debug DLLs.
+- Session 03: focused Hub and shared-card specs passed (5 and 7 tests), full
+  frontend suite passed with 178 tests across 28 files, Angular production
+  build passed at 438.47 kB initial with no budget warnings, and responsive
+  browser checks passed at 1440px, 900px, and 390px with no horizontal
+  overflow. Dark theme, reduced motion, direct navigation to all three tool
+  routes, and the empty-registry fallback were verified; backend and Online
+  Order business code were unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -98,5 +105,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00, 01, and 02 completed; Sessions 03-10 and 14-16 not
-  started (Session 03 active); Sessions 11-13 blocked until the POS source is supplied.
+- QA Support Hub: Sessions 00, 01, 02, and 03 completed; Session 04 active;
+  Sessions 05-10 and 14-16 not started; Sessions 11-13 blocked until the POS
+  source is supplied.

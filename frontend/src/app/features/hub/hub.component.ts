@@ -1,114 +1,103 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { EmptyStateComponent, ToolCardComponent } from '../../shared/ui';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
-import { PageHeaderComponent } from '../../shared/ui';
-import { TOOL_ROUTE_DATA, ToolRouteData } from '../../core/models';
+import { QaToolDefinition } from '../../core/models';
+import { QA_TOOL_REGISTRY } from './tool-registry';
 
-interface HubToolEntry {
-  route: string;
-  icon: string;
-  accentClass: string;
-  description: string;
-  meta: ToolRouteData;
-}
-
-/** Session 01 placeholder for the QA Support Hub dashboard: a working,
- * keyboard-accessible entry point for every tool route. The full card grid,
- * status model, and motion language arrive with Phase B. */
 @Component({
   selector: 'app-hub',
   standalone: true,
-  imports: [CommonModule, RouterLink, NavbarComponent, PageHeaderComponent],
+  imports: [NavbarComponent, ToolCardComponent, EmptyStateComponent],
   template: `
     <app-navbar></app-navbar>
 
-    <main class="hub-container">
-      <app-page-header title="QA Support Hub" subtitle="One workspace for prompt engineering, online order operations, and POS maintenance."></app-page-header>
+    <main class="hub-page" aria-labelledby="hub-title">
+      <div class="hub-page__inner">
+        <header class="hub-intro">
+          <p class="hub-eyebrow"><span aria-hidden="true"></span>QA Engineering Workspace</p>
+          <h1 id="hub-title">QA Support Hub</h1>
+          <p class="hub-intro__description">
+            One workspace for QA engineering, online-order support, prompt engineering, and POS maintenance.
+          </p>
+        </header>
 
-      <nav class="tool-list slide-up" aria-label="Tools">
-        @for (tool of tools; track tool.route) {
-          <a class="tool-row" [routerLink]="tool.route">
-            <i class="bi tool-icon" [class]="tool.icon + ' ' + tool.accentClass"></i>
-            <span class="tool-text">
-              <span class="tool-name">{{ tool.meta.title }}</span>
-              <span class="tool-desc">{{ tool.description }}</span>
-            </span>
-            <span class="tool-status" [class.status-available]="tool.meta.status === 'available'" [class.status-pending]="tool.meta.status === 'migration-pending'">
-              {{ tool.meta.status === 'available' ? 'Available' : 'Migration Pending' }}
-            </span>
-          </a>
-        }
-      </nav>
+        <section class="hub-tools" aria-labelledby="hub-tools-title">
+          <div class="hub-tools__heading">
+            <div>
+              <p class="hub-tools__eyebrow">Workspace directory</p>
+              <h2 id="hub-tools-title">Choose a tool</h2>
+            </div>
+            <p class="hub-tools__hint">Select a workspace to continue.</p>
+          </div>
+
+          @if (tools.length > 0) {
+            <div class="hub-tools__grid">
+              @for (tool of tools; track tool.id) {
+                <app-tool-card
+                  [title]="tool.title"
+                  [description]="tool.description"
+                  [route]="tool.route"
+                  [icon]="tool.icon"
+                  [accent]="tool.accent"
+                  [status]="tool.status"
+                  [actionLabel]="tool.actionLabel"
+                  [capabilities]="tool.capabilities"
+                  [availabilityMessage]="tool.availabilityMessage">
+                </app-tool-card>
+              }
+            </div>
+          } @else {
+            <div class="hub-tools__empty">
+              <app-empty-state
+                icon="bi-grid-3x3-gap"
+                title="No QA tools are currently configured.">
+              </app-empty-state>
+            </div>
+          }
+        </section>
+      </div>
     </main>
   `,
   styles: [`
-    .hub-container {
-      margin-top: var(--navbar-height);
-      padding: 40px 40px 60px;
-      max-width: 1300px;
-      margin-left: auto;
-      margin-right: auto;
+    :host { display: block; min-height: 100%; }
+    .hub-page { min-height: 100vh; padding: calc(var(--navbar-height) + var(--space-7)) var(--space-6) var(--space-8); background: var(--surface-page); }
+    .hub-page__inner { width: min(100%, 1240px); margin: 0 auto; }
+    .hub-intro { position: relative; margin-bottom: var(--space-7); padding: var(--space-5) 0 var(--space-6); border-bottom: 1px solid var(--divider); }
+    .hub-intro::after { content: ''; position: absolute; right: 0; bottom: -1px; left: 0; width: 120px; height: 2px; border-radius: var(--radius-pill); background: var(--grad-brand); }
+    .hub-eyebrow, .hub-tools__eyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); text-transform: uppercase; }
+    .hub-eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+    .hub-intro h1 { margin: 0; color: var(--text-primary); font-size: 3rem; font-weight: var(--weight-heavy); line-height: 1.08; }
+    .hub-intro__description { max-width: 680px; margin: var(--space-3) 0 0; color: var(--text-secondary); font-size: var(--text-md); line-height: var(--leading-normal); }
+    .hub-tools__heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-5); }
+    .hub-tools__eyebrow { margin-bottom: var(--space-1); color: var(--text-muted); }
+    .hub-tools h2 { margin: 0; color: var(--text-primary); font-size: var(--text-xl); line-height: var(--leading-tight); }
+    .hub-tools__hint { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
+    .hub-tools__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; gap: var(--space-5); }
+    .hub-tools__grid > app-tool-card { opacity: 0; animation: hub-card-in var(--d-slow) var(--ease-out) forwards; }
+    .hub-tools__grid > app-tool-card:nth-child(1) { animation-delay: 0ms; }
+    .hub-tools__grid > app-tool-card:nth-child(2) { animation-delay: 70ms; }
+    .hub-tools__grid > app-tool-card:nth-child(3) { animation-delay: 140ms; }
+    .hub-tools__empty { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-panel); }
+    @keyframes hub-card-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .tool-list { display: flex; flex-direction: column; gap: 16px; }
-    .tool-row {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 20px 24px;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      background: var(--surface-panel);
-      color: var(--text-primary);
-      text-decoration: none;
-      transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--d-fast) var(--ease-spring);
+    @media (max-width: 1024px) {
+      .hub-tools__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-    .tool-row:hover { border-color: var(--border-strong); background: var(--surface-raised); transform: translateX(4px); }
-    .tool-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .tool-icon { font-size: 1.6rem; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .tool-icon.accent-brand { background: var(--grad-brand); -webkit-background-clip: text; }
-    .tool-icon.accent-info { background: var(--grad-info); -webkit-background-clip: text; }
-    .tool-icon.accent-amber { background: var(--grad-amber); -webkit-background-clip: text; }
-    .tool-text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
-    .tool-name { font-size: 1.05rem; font-weight: 700; }
-    .tool-desc { color: var(--text-secondary); font-size: 0.88rem; }
-    .tool-status {
-      flex-shrink: 0;
-      padding: 5px 14px;
-      border-radius: var(--radius-pill);
-      font-size: 0.78rem;
-      font-weight: 700;
+    @media (max-width: 680px) {
+      .hub-page { padding: calc(var(--navbar-height) + var(--space-5)) var(--space-4) var(--space-7); }
+      .hub-intro { margin-bottom: var(--space-6); padding-top: var(--space-3); }
+      .hub-intro h1 { font-size: 2.2rem; }
+      .hub-tools__heading { align-items: flex-start; flex-direction: column; gap: var(--space-2); }
+      .hub-tools__grid { grid-template-columns: 1fr; gap: var(--space-4); }
     }
-    .tool-status.status-available { color: var(--state-success-fg); background: var(--state-success-bg); border: 1px solid var(--state-success-border); }
-    .tool-status.status-pending { color: var(--state-warning-fg); background: var(--state-warning-bg); border: 1px solid var(--state-warning-border); }
-    @media (max-width: 640px) {
-      .hub-container { padding: 24px 16px 40px; }
-      .tool-row { flex-wrap: wrap; gap: 12px; padding: 16px; }
+    @media (prefers-reduced-motion: reduce) {
+      :host-context(html:not([data-motion="full"])) .hub-tools__grid > app-tool-card { animation: none; opacity: 1; transform: none; }
     }
+    :host-context(html[data-motion="reduce"]) .hub-tools__grid > app-tool-card { animation: none; opacity: 1; transform: none; }
   `]
 })
 export class HubComponent {
-  readonly tools: HubToolEntry[] = [
-    {
-      route: '/tools/prompt-studio',
-      icon: 'bi-magic',
-      accentClass: 'accent-brand',
-      description: 'Refine bugs and stories, generate test cases. Workspace migration in progress.',
-      meta: TOOL_ROUTE_DATA.promptStudio
-    },
-    {
-      route: '/tools/online-orders',
-      icon: 'bi-bag-check',
-      accentClass: 'accent-info',
-      description: 'Monitor order requests and build order payloads for connected clients.',
-      meta: TOOL_ROUTE_DATA.onlineOrders
-    },
-    {
-      route: '/tools/pos-maintenance',
-      icon: 'bi-pc-display',
-      accentClass: 'accent-amber',
-      description: 'Approved POS support and maintenance workflows.',
-      meta: TOOL_ROUTE_DATA.posMaintenance
-    }
-  ];
+  tools: readonly QaToolDefinition[] = QA_TOOL_REGISTRY;
 }
