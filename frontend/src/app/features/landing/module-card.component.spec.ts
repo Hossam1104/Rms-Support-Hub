@@ -1,5 +1,7 @@
 import { ModuleCardComponent } from './module-card.component';
 import { EnvironmentDto, ModuleDto } from '../../core/models';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 describe('ModuleCardComponent', () => {
   const module = {
@@ -30,5 +32,24 @@ describe('ModuleCardComponent', () => {
     component.onSelectEnv(environment);
 
     expect(emitted).toEqual([environment]);
+  });
+
+  it('uses the shared Coming Soon status label for unavailable modules', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ModuleCardComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ModuleCardComponent);
+    fixture.componentInstance.module = {
+      ...module,
+      available: false,
+      environments: []
+    } as ModuleDto;
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector('.status-badge');
+    expect(status?.textContent?.trim()).toBe('Coming Soon');
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
   });
 });

@@ -40,10 +40,10 @@ import { RouterLink } from '@angular/router';
     </nav>
   `,
   styles: [`
-    .breadcrumb-nav { margin-bottom: var(--space-5); color: var(--text-muted); font-size: var(--text-sm); }
-    .breadcrumb-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-    .breadcrumb-segment { display: inline-flex; min-width: 0; }
-    .crumb-item { color: var(--text-secondary); text-decoration: none; }
+    .breadcrumb-nav { min-width: 0; margin-bottom: var(--space-5); color: var(--text-muted); font-size: var(--text-sm); }
+    .breadcrumb-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; margin: 0; padding: 0; list-style: none; }
+    .breadcrumb-segment { display: inline-flex; min-width: 0; max-width: 100%; }
+    .crumb-item { min-width: 0; max-width: 100%; color: var(--text-secondary); overflow-wrap: anywhere; text-decoration: none; }
     .crumb-item:hover { color: var(--text-accent); }
     .crumb-item.current { color: var(--text-primary); font-weight: 600; }
     .crumb-separator { color: var(--text-muted); }

@@ -52,6 +52,7 @@ import { EnvironmentDto } from '../../../core/models';
     .env-pill:disabled { cursor: default; }
     .env-pill--test { background: var(--grad-info); }
     .env-pill--prod { background: var(--grad-danger); }
+    .env-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .chevron { font-size: 0.65rem; }
     .env-menu {
       position: absolute; top: calc(100% + 6px); right: 0; z-index: 1200;
@@ -67,6 +68,7 @@ import { EnvironmentDto } from '../../../core/models';
       font-size: 0.85rem; color: var(--text-primary);
     }
     .env-option:hover { background: var(--surface-hover); }
+    .env-option:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .env-option.active { font-weight: 700; }
     .option-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
     .option-dot.dot-prod { background: var(--state-danger-fg); }

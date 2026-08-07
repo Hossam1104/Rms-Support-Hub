@@ -34,7 +34,7 @@ export type UiCardVariant = 'default' | 'raised' | 'interactive';
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm);
       color: var(--text-primary);
-      transition: border-color var(--transition-fast), box-shadow var(--transition-normal), transform var(--transition-normal);
+      transition: border-color var(--transition-fast), transform var(--transition-normal);
     }
     .ui-card::before {
       content: '';

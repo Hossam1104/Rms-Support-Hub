@@ -35,25 +35,20 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 14 — Cross-Tool UI and Responsive Hardening
+# Session 15 — Accessibility, Security, and Performance Hardening
 
 ## Objective
 
-Apply the shared QA Support Hub design system consistently across the Hub,
-Prompt Studio, Online Orders, and the informational POS page while hardening
-responsive behavior without changing business logic.
+Complete non-functional hardening before final regression.
 
 ## Status
 
-Active. POS implementation remains deferred while the independent POS
-Maintenance Tool project is under development.
+Not Started. Session 14 cross-tool UI and responsive hardening is complete.
+POS implementation remains deferred while the independent POS Maintenance
+Tool project is under development.
 
 ## Scope
 
-Audit shared typography, spacing, controls, cards, status presentation,
-navigation, themes, motion, keyboard access, responsive layouts, and 200% zoom
-usability. Preserve the POS route as a visible, non-operational `Coming Soon`
-page. Do not implement POS operations or inspect any external POS project.
-
-The detailed execution prompt and validation contract are maintained in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`.
+Use the Session 15 prompt and validation contract maintained in
+`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Do not begin Session 15 work until
+it is explicitly opened.

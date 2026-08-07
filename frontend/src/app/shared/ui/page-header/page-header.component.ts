@@ -22,33 +22,37 @@ import { CommonModule } from '@angular/common';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 24px;
-      padding: 40px 32px;
+      gap: var(--space-5);
+      padding: var(--space-6) var(--space-5);
       border-radius: var(--radius-xl);
       overflow: hidden;
       background-image: var(--grad-mesh);
       background-size: 180% 180%;
       background-color: var(--surface-panel);
       animation: meshDrift 18s ease-in-out infinite;
-      margin-bottom: 28px;
+      margin-bottom: var(--space-6);
     }
-    .header-content { min-width: 0; }
+    .header-content { flex: 1 1 auto; min-width: 0; }
     .header-content h1 {
       margin: 0 0 6px;
-      font-size: 2rem;
+      font-size: var(--text-2xl);
       font-weight: 800;
+      overflow-wrap: anywhere;
       background: var(--grad-brand);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .header-content p { margin: 0; color: var(--text-secondary); max-width: 560px; }
-    .header-actions { display: flex; gap: 12px; min-width: 0; flex-shrink: 0; }
+    .header-actions { display: flex; flex: 0 1 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); min-width: 0; }
+    @media (max-width: 900px) {
+      .page-header { align-items: flex-start; flex-direction: column; }
+      .header-actions { width: 100%; justify-content: flex-start; }
+    }
     @media (max-width: 620px) {
-      .page-header { align-items: flex-start; flex-direction: column; gap: 16px; padding: 28px 20px; }
+      .page-header { gap: var(--space-4); padding: var(--space-5) var(--space-4); }
       .header-content { width: 100%; }
-      .header-content h1 { font-size: clamp(1.45rem, 8vw, 2rem); overflow-wrap: anywhere; }
+      .header-content h1 { font-size: var(--text-xl); }
       .header-content p { max-width: 100%; }
-      .header-actions { width: 100%; flex-wrap: wrap; }
     }
   `]
 })

@@ -1,5 +1,6 @@
 ﻿import { Component, HostListener, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NavbarComponent } from '../../../../layout/navbar/navbar.component';
 import { UiButtonComponent } from '../../../../shared/ui';
 import { ClipboardService } from '../../services/clipboard.service';
 import { PromptHistoryService, PromptHistoryRecord } from '../../services/prompt-history.service';
@@ -10,8 +11,10 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
 @Component({
   selector: 'app-generator-workspace',
   standalone: true,
-  imports: [RouterLink, UiButtonComponent, PromptPreviewComponent, PromptQualityPanelComponent],
+  imports: [RouterLink, NavbarComponent, UiButtonComponent, PromptPreviewComponent, PromptQualityPanelComponent],
   template: `
+    <app-navbar></app-navbar>
+
     <main class="generator-page">
       <header class="generator-header">
         <a routerLink="/tools/prompt-studio" class="generator-back">
@@ -92,7 +95,7 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
     .generator-back:hover { color: var(--text-accent); }
     .generator-back:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .generator-header__eyebrow { margin: 0 0 var(--space-1); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); text-transform: uppercase; }
-    .generator-header h1 { margin: 0; font-size: 2.25rem; font-weight: var(--weight-heavy); line-height: 1.1; }
+    .generator-header h1 { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-heavy); line-height: 1.1; }
     .generator-header__text > p:last-child { max-width: 760px; margin: var(--space-2) 0 0; color: var(--text-secondary); }
     .generator-workspace { display: grid; width: min(100%, 1440px); margin: 0 auto; grid-template-columns: minmax(360px, 1.02fr) minmax(400px, .98fr); align-items: stretch; gap: var(--space-5); }
     .generator-workspace__input { display: flex; min-width: 0; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-panel); box-shadow: var(--shadow-sm); overflow: hidden; }
@@ -116,7 +119,7 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
     @media (max-width: 1080px) { .generator-workspace { grid-template-columns: 1fr; } }
     @media (max-width: 680px) {
       .generator-page { padding: calc(var(--navbar-height) + var(--space-4)) var(--space-4) var(--space-6); }
-      .generator-header h1 { font-size: 1.75rem; }
+      .generator-header h1 { font-size: var(--text-xl); }
       .generator-workspace__panel-header { align-items: flex-start; flex-direction: column; }
       .generator-workspace__panel-actions { width: 100%; }
       .generator-workspace__panel-actions ui-button { flex: 1; }

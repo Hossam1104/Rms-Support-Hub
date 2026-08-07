@@ -92,12 +92,12 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 14 — Cross-Tool UI and Responsive
-  Hardening** (see `TASK.md`). The POS Maintenance Tool is being developed
-  independently outside this repository, so POS integration is intentionally
-  deferred. Sessions 11-13 are deferred by design and are not blockers. POS
-  remains Coming Soon and non-operational; Prompt Studio and Online Orders
-  remain available.
+- QA Support Hub **Session 14 — Cross-Tool UI and Responsive Hardening** is
+  complete (see `TASK.md` and the session tracker). The POS Maintenance Tool is
+  being developed independently outside this repository, so POS integration is
+  intentionally deferred. Sessions 11-13 are deferred by design and are not
+  blockers. POS remains Coming Soon and non-operational; Prompt Studio and
+  Online Orders remain available.
 
 ## Deferred Acceptance and Database Scope
 
@@ -198,6 +198,17 @@
   900px, and 390px layouts without horizontal overflow. Console error checks
   were clean; backend, Online Orders, Prompt Studio, and generated artifacts
   were unchanged.
+- Session 14: the full frontend suite passed with 236 tests across 43 files;
+  the optimized production configuration passed at 427.35 kB initial with no
+  budget warnings while external font inlining was disabled for offline
+  verification. The standard production build was also attempted but could
+  not retrieve Google Fonts because `fonts.googleapis.com` was unavailable;
+  touched-file diagnostics and `git diff --check` were clean. Browser checks
+  passed for 45 route/viewport combinations at 1440px, 1024px, 900px, 768px,
+  and 390px with no shell overflow, one H1 per route, consistent light/dark
+  themes, system/reduced/full motion, and keyboard-visible focus rings. Prompt
+  Studio narrow-screen interaction and the informational, non-operational POS
+  route were verified; backend and business logic were unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -215,6 +226,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 10 completed; Sessions 11-13 deferred
-  while the independent POS project is developed; Session 14 active; Sessions
-  15-16 not started.
+- QA Support Hub: Sessions 00 through 10 and 14 completed; Sessions 11-13
+  deferred while the independent POS project is developed; Sessions 15-16 not
+  started.

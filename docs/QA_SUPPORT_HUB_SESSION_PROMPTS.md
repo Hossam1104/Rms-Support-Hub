@@ -1188,7 +1188,7 @@ Validation:
 - Full frontend production build.
 
 Commit message:
-`refactor(ui): unify QA Support Hub tool experiences`
+`refactor(ui): harden cross-tool responsive consistency`
 ```
 
 ## Completion Gate
@@ -1380,7 +1380,7 @@ Session 10 — Completed
 Session 11 — Deferred — External POS Development
 Session 12 — Deferred — External POS Development
 Session 13 — Deferred — External POS Development
-Session 14 — Active
+Session 14 — Completed
 Session 15 — Not Started
 Session 16 — Not Started
 ```

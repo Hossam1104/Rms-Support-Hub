@@ -21,11 +21,13 @@ import { CommonModule } from '@angular/common';
       color: var(--text-secondary);
       cursor: pointer;
       font-size: 0.85rem;
-      padding: 2px 6px;
+      min-height: 34px;
+      padding: 0 8px;
       border-radius: var(--radius-sm);
       transition: color var(--transition-fast), background var(--transition-fast);
     }
     .copy-btn:hover { color: var(--text-primary); background: var(--surface-hover); }
+    .copy-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   `]
 })
 export class CopyButtonComponent {

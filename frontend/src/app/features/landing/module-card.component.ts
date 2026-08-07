@@ -19,8 +19,8 @@ import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
             <span class="client-name">{{ module.client }}</span>
           </div>
         </div>
-        <app-status-badge *ngIf="!module.available" label="Coming soon" variant="secondary"></app-status-badge>
-        <app-status-badge *ngIf="module.available" label="Active Module" variant="success"></app-status-badge>
+        <app-status-badge *ngIf="!module.available" label="Coming Soon" variant="secondary" role="status"></app-status-badge>
+        <app-status-badge *ngIf="module.available" label="Active Module" variant="success" role="status"></app-status-badge>
       </div>
 
       <div class="card-envs" *ngIf="module.available && module.environments.length > 0">
@@ -32,7 +32,7 @@ import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
               <span class="env-key">{{ env.key }}</span>
               <span class="env-desc">{{ env.description }}</span>
               </span>
-              <app-status-badge [label]="env.statusLabel" [variant]="env.environment === 'Production' ? 'success' : 'info'"></app-status-badge>
+              <app-status-badge [label]="env.statusLabel" [variant]="env.environment === 'Production' ? 'success' : 'info'" role="status"></app-status-badge>
             </span>
           </ui-button>
         }
@@ -57,12 +57,13 @@ import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
     .card-envs { display: flex; flex-direction: column; gap: 10px; }
     :host ::ng-deep ui-button.env-btn { display: block; width: 100%; }
     :host ::ng-deep ui-button.env-btn .ui-button { width: 100%; min-height: 68px; justify-content: flex-start; text-align: left; border-color: var(--border-subtle); background: var(--surface-interactive); }
+    :host ::ng-deep ui-button.env-btn .ui-button__projected { overflow: visible; text-overflow: clip; white-space: normal; }
     :host ::ng-deep ui-button.env-btn .ui-button:hover:not(:disabled) { transform: translateX(4px); border-color: var(--module-accent); background: var(--surface-hover); }
     .env-content { display: flex; align-items: center; width: 100%; gap: 12px; }
     .env-icon { flex: 0 0 auto; font-size: 1.25rem; color: var(--module-accent); }
-    .env-meta { flex: 1; display: flex; flex-direction: column; }
-    .env-key { font-weight: 700; font-size: 0.88rem; color: var(--text-primary); }
-    .env-desc { font-size: 0.75rem; color: var(--text-secondary); }
+    .env-meta { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+    .env-key { color: var(--text-primary); font-size: 0.88rem; font-weight: 700; overflow-wrap: anywhere; }
+    .env-desc { color: var(--text-secondary); font-size: 0.75rem; overflow-wrap: anywhere; }
     .card-footer { display: flex; justify-content: flex-end; padding-top: 8px; }
     .enter-link { display: flex; align-items: center; gap: 8px; color: var(--text-accent); text-decoration: none; font-weight: 700; font-size: 0.95rem; transition: gap var(--transition-fast); }
     .enter-link:hover { gap: 12px; color: var(--accent-hover); }

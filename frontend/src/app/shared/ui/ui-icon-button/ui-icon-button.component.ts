@@ -30,7 +30,7 @@ export type UiIconButtonSize = 'sm' | 'md';
   `,
   styles: [`
     :host { display: inline-flex; }
-    .ui-icon-button { display: inline-grid; width: 42px; height: 42px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: 1.05rem; line-height: 1; color: var(--text-secondary); background: transparent; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast); }
+    .ui-icon-button { display: inline-grid; width: 42px; height: 42px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: 1.05rem; line-height: 1; color: var(--text-secondary); background: transparent; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast); }
     .ui-icon-button:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
     .ui-icon-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .ui-icon-button:disabled { cursor: not-allowed; opacity: .55; }

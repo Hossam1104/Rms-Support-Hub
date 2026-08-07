@@ -67,7 +67,7 @@ export type ToolCardStatus = 'available' | 'migration-pending';
   `,
   styles: [`
     :host { display: block; min-width: 0; height: 100%; }
-    .tool-card__link { display: block; height: 100%; color: inherit; text-decoration: none; border-radius: var(--radius-lg); transition: transform var(--transition-normal), box-shadow var(--transition-normal); }
+    .tool-card__link { display: block; height: 100%; color: inherit; text-decoration: none; border-radius: var(--radius-lg); transition: transform var(--transition-normal); }
     .tool-card__link:hover { transform: translateY(-3px); }
     .tool-card__link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .tool-card { height: 100%; }

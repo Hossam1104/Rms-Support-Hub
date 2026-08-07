@@ -28,7 +28,7 @@ export type UiButtonSize = 'sm' | 'md';
   `,
   styles: [`
     :host { display: inline-flex; max-width: 100%; }
-    .ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; max-width: 100%; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: .88rem; font-weight: 750; line-height: 1; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast); }
+    .ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; max-width: 100%; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: .88rem; font-weight: 750; line-height: 1; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast); }
     .ui-button:hover:not(:disabled) { transform: translateY(-1px); }
     .ui-button:active:not(:disabled) { transform: translateY(0); }
     .ui-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
