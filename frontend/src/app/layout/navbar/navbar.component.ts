@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { MotionPreference, MotionService } from '../../core/services/motion.service';
 import { ModuleService } from '../../core/services/module.service';
@@ -9,13 +10,13 @@ import { EnvironmentDto } from '../../core/models';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent],
+  imports: [CommonModule, RouterLink, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent],
   template: `
     <header class="navbar">
-      <div class="navbar-brand">
+      <a routerLink="/" class="navbar-brand" aria-label="Return to QA Support Hub">
         <span class="brand-title">QA Support Hub</span>
         <span class="brand-subtitle">Unified QA & Support Workspace</span>
-      </div>
+      </a>
       <div class="navbar-actions">
         <app-env-badge class="navbar-environment"
           *ngIf="moduleService.activeModule() as m"
@@ -50,7 +51,7 @@ import { EnvironmentDto } from '../../core/models';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 24px;
+      padding: 0 var(--space-5);
       background: var(--surface-panel);
       border-bottom: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-sm);
@@ -58,6 +59,12 @@ import { EnvironmentDto } from '../../core/models';
     .navbar-brand {
       display: flex;
       flex-direction: column;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+    }
+    .navbar-brand:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
     }
     .brand-title {
       font-size: 1.25rem;
@@ -72,11 +79,11 @@ import { EnvironmentDto } from '../../core/models';
     }
     .navbar-actions {
       display: flex;
-      gap: 12px;
+      gap: var(--space-3);
     }
     .theme-toggle { color: var(--text-secondary); }
     @media (max-width: 560px) {
-      .navbar { padding-inline: 14px; }
+      .navbar { padding-inline: var(--space-3); }
       .brand-subtitle { display: none; }
       :host ::ng-deep .navbar-environment { display: none; }
       :host ::ng-deep .theme-toggle .ui-button__projected { display: none; }

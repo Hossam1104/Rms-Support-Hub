@@ -35,22 +35,19 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 09 — Online Order Tool Integration with Shared Shell
+# Session 10 — POS Maintenance Placeholder and Migration Intake
 
 ## Objective
 
-Integrate the existing Online Order Tool into the QA Support Hub shell without
-business regression.
+Prepare the application for the future POS project without inventing
+implementation details.
 
 ## Scope
 
-Map the existing feature under `/tools/online-orders`, preserve practical
-legacy-route redirects, and add shared navigation, page-header, breadcrumbs,
-theme, and safe shared primitives without rewriting business workflows.
-Preserve filters, pagination, exact search, Clear All, statistics, status
-mapping, request details, same-number resend rules, performance behavior, and
-official assets. Add route integration coverage and run the full frontend
-suite because this session changes application-wide shell and routing.
+Implement `/tools/pos-maintenance` as a high-quality migration-pending page.
+Show status, intended capabilities, migration prerequisites, and no fake
+execution controls. Add the typed POS capability model and migration intake
+documentation without implementing machine operations or arbitrary commands.
 
 The detailed execution prompt and validation contract are maintained in
 `docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`.

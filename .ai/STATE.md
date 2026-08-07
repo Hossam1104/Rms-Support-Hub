@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 08 Prompt Quality and Productivity
+- **Release or milestone:** QA Support Hub — Session 10 POS Maintenance Placeholder and Migration Intake
 
 ## Working State
 
@@ -73,6 +73,12 @@
   under `qa-support-hub.prompt-studio.history`, retaining only type, title,
   timestamp, and prompt text; storage failures and malformed records are
   non-blocking and attachment contents are never stored.
+- Session 09 integrated Online Orders with the shared QA Support Hub shell.
+  `/tools/online-orders` remains canonical, `/modules/:key` remains compatible,
+  breadcrumbs and Hub/module navigation are shared, and the Online Order
+  landing now uses the shared page-header and tokenized shell spacing. Existing
+  Online Order business behavior, capability guarding, API calls, and official
+  assets remain unchanged.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -81,9 +87,9 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 09 — Online Order Tool Integration
-  with Shared Shell** (see `TASK.md`). POS Sessions 11-13 remain blocked until
-  the standalone POS source project is supplied.
+- The active task is QA Support Hub **Session 10 — POS Maintenance Placeholder
+  and Migration Intake** (see `TASK.md`). POS Sessions 11-13 remain blocked
+  until the standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -167,6 +173,14 @@
   were verified. Browser checks passed at 1440px, 900px, and 390px with no
   horizontal overflow, and light/dark plus reduced-motion persistence were
   verified. Backend, Online Orders, and POS behavior remained unchanged.
+- Session 09: focused shell/routing specs passed with 14 tests across four
+  files; the full frontend suite passed with 230 tests across 42 files; editor
+  diagnostics were clean; the Angular production build passed at 440.55 kB
+  initial with no budget warnings. Browser checks verified Hub to Online Orders
+  and return navigation, canonical and legacy route refreshes, breadcrumb
+  hierarchy, capability guards, light/dark theme, reduced motion, and shell
+  layouts at 1440px, 900px, and 390px without horizontal overflow. Backend,
+  Online Order business logic, and generated artifacts were unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -184,6 +198,5 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 08 completed; Session 09 active; Sessions
-  10 and 14-16 not started; Sessions 11-13 blocked until the POS source is
-  supplied.
+- QA Support Hub: Sessions 00 through 09 completed; Session 10 active; Sessions
+  14-16 not started; Sessions 11-13 blocked until the POS source is supplied.

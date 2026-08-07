@@ -24,14 +24,17 @@ const onlineOrdersWorkspaceRoute = (): Route => ({
     { path: '', redirectTo: 'order', pathMatch: 'full' },
     {
       path: 'order',
+      data: { breadcrumb: 'Order Builder' },
       loadComponent: () => import('./features/flat-order/flat-order.component').then(m => m.FlatOrderComponent)
     },
     {
       path: 'unicommerce',
+      data: { breadcrumb: 'Invoice Builder' },
       loadComponent: () => import('./features/unicommerce/unicommerce.component').then(m => m.UnicommerceComponent)
     },
     {
       path: 'order-requests',
+      data: { breadcrumb: 'Order Requests' },
       canActivate: [capabilityGuard('orderRequests')],
       loadComponent: () => import('./features/order-requests/order-requests.component').then(m => m.OrderRequestsComponent),
       children: [

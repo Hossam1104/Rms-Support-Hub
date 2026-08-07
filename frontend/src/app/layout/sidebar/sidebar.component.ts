@@ -25,7 +25,7 @@ import { UiButtonComponent } from '../../shared/ui';
           (pressed)="toggleCollapse()"></ui-button>
       </div>
 
-      <nav class="sidebar-nav" aria-label="Module navigation">
+      <nav class="sidebar-nav" aria-label="Online Order module navigation">
         <a *ngIf="moduleKey !== 'ghc_unicommerce'" routerLink="order" routerLinkActive="active" class="nav-item" aria-label="Order Builder" title="Order Builder">
           <i class="bi bi-speedometer2"></i>
           <span class="nav-label" *ngIf="!collapsed()">Order Builder</span>
@@ -43,9 +43,13 @@ import { UiButtonComponent } from '../../shared/ui';
       </nav>
 
       <div class="sidebar-footer" *ngIf="!collapsed()">
-        <a routerLink="/tools/online-orders" class="back-link">
+        <a routerLink="/tools/online-orders" class="back-link" aria-label="Back to Online Order modules">
           <i class="bi bi-arrow-left"></i>
-          <span>Back to Modules</span>
+          <span>All Modules</span>
+        </a>
+        <a routerLink="/" class="back-link" aria-label="Back to QA Support Hub">
+          <i class="bi bi-grid-3x3-gap"></i>
+          <span>QA Support Hub</span>
         </a>
       </div>
     </aside>
@@ -71,7 +75,7 @@ import { UiButtonComponent } from '../../shared/ui';
     .nav-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .nav-item.active { background: var(--surface-selected); color: var(--text-accent); font-weight: 700; transform: translateX(0); }
     .nav-item.active::before { background: var(--accent); }
-    .sidebar-footer { padding: 16px; border-top: 1px solid var(--divider); }
+    .sidebar-footer { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-top: 1px solid var(--divider); }
     .back-link { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .85rem; font-weight: 500; text-decoration: none; }
     .back-link:hover { color: var(--text-accent); }
     .back-link:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }

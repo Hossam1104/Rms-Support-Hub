@@ -11,8 +11,14 @@ describe('application order-request routing contract', () => {
   it('exposes one guarded canonical list and a route-level order id', () => {
     const list = moduleChildren().find(route => route.path === 'order-requests');
     expect(list).toBeTruthy();
+    expect(list?.data).toEqual({ breadcrumb: 'Order Requests' });
     expect(list?.canActivate).toBeTruthy();
     expect(list?.children?.map(route => route.path)).toEqual([':orderId']);
+  });
+
+  it('keeps workspace tab labels in route metadata for shared shell breadcrumbs', () => {
+    expect(moduleChildren().find(route => route.path === 'order')?.data).toEqual({ breadcrumb: 'Order Builder' });
+    expect(moduleChildren().find(route => route.path === 'unicommerce')?.data).toEqual({ breadcrumb: 'Invoice Builder' });
   });
 
   it('keeps old requests and validation links as compatibility redirects', () => {
@@ -86,6 +92,18 @@ describe('QA Support Hub route skeleton', () => {
     const legacy = routeAt('modules/:key');
     expect(legacy?.loadComponent).toBeTruthy();
     expect(legacy?.children?.map(route => route.path)).toContain('order-requests');
+  });
+
+  it('keeps capability guarding on Order Requests in both mounts', () => {
+    const mounts = [
+      routeAt('tools/online-orders')?.children?.find(route => route.path === 'modules/:key'),
+      routeAt('modules/:key')
+    ];
+
+    for (const mount of mounts) {
+      const requests = mount?.children?.find(route => route.path === 'order-requests');
+      expect(requests?.canActivate).toBeTruthy();
+    }
   });
 
   it('keeps the wildcard redirect last', () => {

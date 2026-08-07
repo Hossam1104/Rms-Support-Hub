@@ -5,6 +5,7 @@ import { ModuleService } from '../../core/services/module.service';
 import { EnvironmentDto } from '../../core/models';
 import { ModuleCardComponent } from './module-card.component';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
+import { BreadcrumbComponent } from '../../layout/breadcrumb/breadcrumb.component';
 import { PageHeaderComponent } from '../../shared/ui';
 
 /** Restyled onto the R8 token system (remediation_plan.md B24): the hero
@@ -14,14 +15,15 @@ import { PageHeaderComponent } from '../../shared/ui';
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, ModuleCardComponent, NavbarComponent, PageHeaderComponent],
+  imports: [CommonModule, ModuleCardComponent, NavbarComponent, BreadcrumbComponent, PageHeaderComponent],
   template: `
     <app-navbar></app-navbar>
 
     <main class="landing-container">
-      <app-page-header title="Choose a Module" subtitle="Select an active module and environment to start building an order payload."></app-page-header>
+      <app-breadcrumb></app-breadcrumb>
+      <app-page-header title="Online Order Tool" subtitle="Select an active module and environment to start building an order payload."></app-page-header>
 
-      <section class="modules-grid slide-up">
+      <section class="modules-grid slide-up" aria-label="Online Order modules">
         @for (module of moduleService.modules(); track module.key) {
           <app-module-card [module]="module" (selectEnv)="onEnvironmentSelected(module.key, $event)"></app-module-card>
         }
@@ -31,12 +33,16 @@ import { PageHeaderComponent } from '../../shared/ui';
   styles: [`
     .landing-container {
       margin-top: var(--navbar-height);
-      padding: 40px 40px 60px;
-      max-width: 1300px;
+      width: min(100%, 1300px);
+      box-sizing: border-box;
+      padding: var(--space-6) var(--space-6) var(--space-8);
       margin-left: auto;
       margin-right: auto;
     }
-    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 28px; }
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-5); }
+    @media (max-width: 768px) {
+      .landing-container { padding: var(--space-5) var(--space-4) var(--space-7); }
+    }
   `]
 })
 export class LandingComponent {
