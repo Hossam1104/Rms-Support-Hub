@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 05 enhanced Bug Refiner
+- **Release or milestone:** QA Support Hub — Session 06 Story Refiner
 
 ## Working State
 
@@ -45,8 +45,15 @@
   draft normalization, deterministic Concise/Standard/Deep and
   Generic/Jira/Azure DevOps prompt modes, configurable report sections, safe
   sample data, Markdown/plain-text export, and focused coverage. The former
-  standalone Prompt Generator was reviewed for parity and retired; Story and
-  Test Case foundations remain unchanged.
+  standalone Prompt Generator was reviewed for parity and retired.
+- Session 06 expanded Story Refinement into a production-ready grouped typed
+  reactive form with safe legacy draft normalization, deterministic
+  Checklist/Given-When-Then/Both acceptance criteria modes, Concise/Standard/
+  Deep detail levels, Generic Markdown/Jira/Azure DevOps formats, optional Open
+  Questions/QA Impact/Definition of Ready/Suggested Test Coverage sections,
+  sample data, counters, copy/download behavior, keyboard generation, and
+  pending-write-safe draft persistence. The enhanced Bug Refiner remains
+  available and the Test Case foundation remains unchanged.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -55,7 +62,7 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 06 — Story Refinement Generator**
+- The active task is QA Support Hub **Session 07 — Enhanced Test Case Generator**
   (see `TASK.md`). POS Sessions 11-13 remain blocked until the standalone POS
   source project is supplied.
 
@@ -118,6 +125,14 @@
   and motion preferences were verified on direct Bug-route loads; and the
   post-deletion legacy-reference scan found no frontend dependency. Backend,
   Online Orders, Story, and Test Case behavior were unchanged.
+- Session 06: Story-focused specs passed with 26 tests; the full Prompt Studio
+  suite passed with 55 tests across 9 files; the full frontend suite passed
+  with 233 tests across 37 files; the Angular production build passed at
+  440.44 kB initial with no budget warnings; browser checks passed for the
+  Story route at 1440px, 900px, and 390px without horizontal overflow; Sample,
+  Clear, reload persistence, Generate, all acceptance/detail/format modes,
+  Copy, Markdown/plain-text export, Ctrl/Cmd+Enter, light/dark theme, and
+  reduced motion were verified; no backend or Online Order files changed.
 
 ## Deployment Discovery Blocker
 
@@ -135,6 +150,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00, 01, 02, 03, 04, and 05 completed; Session 06
-  active; Sessions 07-10 and 14-16 not started; Sessions 11-13 blocked until
+- QA Support Hub: Sessions 00, 01, 02, 03, 04, 05, and 06 completed; Session
+  07 active; Sessions 08-10 and 14-16 not started; Sessions 11-13 blocked until
   the POS source is supplied.

@@ -35,20 +35,20 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 06 — Story Refinement Generator
+# Session 07 — Enhanced Test Case Generator
 
 ## Objective
 
-Implement the Story Refiner as the next native Prompt Studio generator while
-preserving the completed Bug Refiner and existing Test Case foundation.
+Implement the enhanced Test Case Generator as the next native Prompt Studio
+feature while preserving the completed Bug Refiner and Story Refiner.
 
 ## Scope
 
-Add typed Story input, a grouped reactive form, a deterministic StoryPromptBuilder,
-safe sample data, copy/download behavior, and focused Story tests. Keep the Bug
-Refiner production-ready and leave the Test Case foundation unchanged.
+Upgrade the Test Case Generator with typed inputs, grouped reactive form controls,
+deterministic prompt generation, safe sample data, copy/download behavior, and
+focused Test Case tests. Keep the Bug and Story Refiners production-ready.
 
 The detailed execution prompt and validation contract are maintained in
 `docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior, the completed
-Bug Refiner, the Test Case foundation, and the POS migration-pending state remain
-unchanged unless a shared Prompt Studio compatibility adjustment is required.
+Bug and Story Refiners, and the POS migration-pending state remain unchanged
+unless a shared Prompt Studio compatibility adjustment is required.
