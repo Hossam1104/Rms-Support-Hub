@@ -36,7 +36,7 @@ describe('HubComponent', () => {
             'POS Maintenance Tool'
         ]);
         expect(cards.map(card => card.querySelector('.tool-card__status')?.textContent?.trim())).toEqual([
-            'Migration Pending',
+            'Available',
             'Available',
             'Migration Pending'
         ]);
@@ -54,8 +54,8 @@ describe('HubComponent', () => {
         const links = Array.from(fixture.nativeElement.querySelectorAll('.tool-card__link')) as HTMLAnchorElement[];
         expect(links).toHaveLength(3);
         expect(links.every(link => link.getAttribute('role') === null && link.tabIndex === 0)).toBe(true);
-        expect(links[0].getAttribute('aria-label')).toContain('View Prompt Studio: QA Prompt Studio');
-        expect(links[0].getAttribute('aria-label')).toContain('Migration Pending');
+        expect(links[0].getAttribute('aria-label')).toContain('Open Prompt Studio: QA Prompt Studio');
+        expect(links[0].getAttribute('aria-label')).toContain('Available');
     });
 
     it('keeps navigation available when reduced motion is selected', () => {

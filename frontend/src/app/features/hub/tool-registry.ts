@@ -8,9 +8,9 @@ export const QA_TOOL_REGISTRY = [
         description: 'Generate and refine structured QA prompts for bugs, stories, and test cases.',
         route: '/tools/prompt-studio',
         icon: 'bi-magic',
-        actionLabel: 'View Prompt Studio',
+        actionLabel: 'Open Prompt Studio',
         capabilities: ['Bug Refinement', 'Story Refinement', 'Test Cases'],
-        availabilityMessage: 'The Angular workspace migration is in progress.'
+        availabilityMessage: 'Available for deterministic prompt generation.'
     },
     {
         id: 'online-orders',

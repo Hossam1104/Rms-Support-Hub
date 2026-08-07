@@ -1351,8 +1351,8 @@ Session 00 — Completed
 Session 01 — Completed
 Session 02 — Completed
 Session 03 — Completed
-Session 04 — Active
-Session 05 — Not Started
+Session 04 — Completed
+Session 05 — Active
 Session 06 — Not Started
 Session 07 — Not Started
 Session 08 — Not Started

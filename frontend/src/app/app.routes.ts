@@ -1,4 +1,4 @@
-import { Route, Routes } from '@angular/router';
+﻿import { Route, Routes } from '@angular/router';
 import { capabilityGuard } from './core/guards/capability.guard';
 import { TOOL_ROUTE_DATA, ToolRouteData } from './core/models';
 import { environment } from '../environments/environment';
@@ -73,7 +73,7 @@ export const routes: Routes = [
   },
   {
     path: 'tools/prompt-studio',
-    loadComponent: () => import('./features/prompt-studio/prompt-studio-placeholder.component').then(m => m.PromptStudioPlaceholderComponent),
+    loadChildren: () => import('./features/prompt-studio/prompt-studio.routes').then(m => m.promptStudioRoutes),
     data: { ...TOOL_ROUTE_DATA.promptStudio } satisfies ToolRouteData
   },
   {

@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 03 dashboard
+- **Release or milestone:** QA Support Hub — Session 04 Prompt Studio foundation
 
 ## Working State
 
@@ -32,6 +32,15 @@
   either direction. New shared primitives: `ui-icon-button` and
   `app-tool-card` (composed on `ui-card`); the navbar exposes a motion
   cycle toggle. Existing Online Order feature pages were not restyled.
+- Session 04 replaced the Prompt Studio route placeholder with a native lazy
+  Angular feature: `/tools/prompt-studio` renders three generator cards, and
+  `/bugs`, `/stories`, and `/test-cases` render typed reactive-form workspaces.
+  Feature-local builders, namespaced debounced draft persistence, plain-text
+  preview, clipboard/download actions, counters, samples, clear actions, and
+  Ctrl/Cmd+Enter generation are implemented; the shared `ui-select` primitive
+  now honors restored reactive-form values. Prompt Studio is available in the
+  hub registry; Online Orders remains available and POS remains
+  migration-pending.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -40,9 +49,9 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 04 — Prompt Studio Angular
-  Migration Foundation** (see `TASK.md`). POS Sessions 11-13 remain blocked
-  until the standalone POS source project is supplied.
+- The active task is QA Support Hub **Session 05 — Enhanced Bug Refinement
+  Generator** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
+  standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -88,6 +97,14 @@
   overflow. Dark theme, reduced motion, direct navigation to all three tool
   routes, and the empty-registry fallback were verified; backend and Online
   Order business code were unchanged.
+- Session 04: focused Prompt Studio specs passed with 21 tests across 8 files;
+  route and hub status checks passed; full frontend suite passed with 199
+  tests across 36 files; Angular production build passed at 438.51 kB initial
+  with no budget warnings; and browser checks verified landing, all three
+  generator routes, sample/generate/preview/copy affordances, Ctrl+Enter,
+  draft restore after reload, dark/light theme, reduced motion, and responsive
+  layouts at 1440px, 900px, and 390px without horizontal overflow. Backend and
+  Online Order business code were unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -105,6 +122,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00, 01, 02, and 03 completed; Session 04 active;
-  Sessions 05-10 and 14-16 not started; Sessions 11-13 blocked until the POS
+- QA Support Hub: Sessions 00, 01, 02, 03, and 04 completed; Session 05 active;
+  Sessions 06-10 and 14-16 not started; Sessions 11-13 blocked until the POS
   source is supplied.

@@ -33,7 +33,7 @@ export const TOOL_ROUTE_DATA = {
   promptStudio: {
     title: 'QA Prompt Studio',
     breadcrumb: 'Prompt Studio',
-    status: 'migration-pending',
+    status: 'available',
     accent: 'brand'
   },
   onlineOrders: {

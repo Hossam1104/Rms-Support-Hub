@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { UiControlSize } from '../ui-input/ui-input.component';
@@ -22,15 +22,14 @@ export interface UiSelectOption {
       [class.ui-select--disabled]="effectiveDisabled()"
       [id]="selectId() || null"
       [name]="name() || null"
-      [value]="currentValue() ?? ''"
       [disabled]="effectiveDisabled()"
       [attr.aria-label]="ariaLabel() || null"
       [attr.aria-describedby]="ariaDescribedBy() || null"
       [attr.aria-invalid]="invalid()"
       (change)="onSelect($event)"
       (blur)="onBlur()">
-      <option *ngIf="placeholder()" value="" disabled>{{ placeholder() }}</option>
-      <option *ngFor="let option of options()" [value]="option.value" [disabled]="!!option.disabled">{{ option.label }}</option>
+      <option *ngIf="placeholder()" value="" [selected]="currentValue() === ''" disabled>{{ placeholder() }}</option>
+      <option *ngFor="let option of options()" [value]="option.value" [selected]="currentValue() === option.value" [disabled]="!!option.disabled">{{ option.label }}</option>
     </select>
   `,
   styles: [`

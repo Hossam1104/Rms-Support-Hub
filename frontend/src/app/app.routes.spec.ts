@@ -59,17 +59,17 @@ describe('QA Support Hub route skeleton', () => {
       expect(['available', 'migration-pending'], path).toContain(data.status);
       expect(['brand', 'info', 'amber'], path).toContain(data.accent);
     }
-    // Prompt Studio and POS Maintenance are component routes; Online Orders
+    // Prompt Studio and POS Maintenance are lazy feature routes; Online Orders
     // is a componentless parent whose children lazy-load individually.
-    expect(routeAt('tools/prompt-studio')?.loadComponent).toBeTruthy();
+    expect(routeAt('tools/prompt-studio')?.loadChildren).toBeTruthy();
     expect(routeAt('tools/pos-maintenance')?.loadComponent).toBeTruthy();
   });
 
-  it('marks POS Maintenance and Prompt Studio as migration pending', () => {
+  it('keeps POS Maintenance pending while migrated tools are available', () => {
     expect(toolData('tools/pos-maintenance')).toEqual({ ...TOOL_ROUTE_DATA.posMaintenance });
     expect(toolData('tools/pos-maintenance').status).toBe('migration-pending');
     expect(toolData('tools/prompt-studio')).toEqual({ ...TOOL_ROUTE_DATA.promptStudio });
-    expect(toolData('tools/prompt-studio').status).toBe('migration-pending');
+    expect(toolData('tools/prompt-studio').status).toBe('available');
     expect(toolData('tools/online-orders').status).toBe('available');
   });
 

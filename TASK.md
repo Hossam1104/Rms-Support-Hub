@@ -35,21 +35,21 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 04 — Prompt Studio Angular Migration Foundation
+# Session 05 — Enhanced Bug Refinement Generator
 
 ## Objective
 
-Rebuild the standalone QA Prompt Studio structure as native Angular feature routes
-without implementing the enhanced prompt-generation logic yet.
+Implement the production-ready Bug Refiner and deterministic enhanced prompt builder
+inside the native Prompt Studio workspace created in Session 04.
 
 ## Scope
 
-Preserve the Prompt Studio landing, generator entry points, back navigation,
-theme integration, draft persistence, character counters, sample loading,
-preview, copy action, and `Ctrl/Cmd + Enter` behavior. Add typed reactive-form
-models and placeholder builders for Bug, Story, and Test Case generators under
-the existing `/tools/prompt-studio` route.
+Expand the Bug form and `BugPromptBuilder` to separate supplied facts, requested
+inference, and missing information; preserve confirmed facts; mark unsupported
+fields as `[NEEDS INVESTIGATION]`; and add concise/standard/deep plus generic,
+Jira-friendly, and Azure DevOps-friendly output modes. Add safe generic sample
+input, copy/download behavior, and focused builder/form tests.
 
 The detailed execution prompt and validation contract are maintained in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior and the
-POS migration-pending state remain unchanged.
+`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior, the Story and
+Test Case foundations, and the POS migration-pending state remain unchanged.
