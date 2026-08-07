@@ -35,19 +35,23 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 10 — POS Maintenance Placeholder and Migration Intake
+# Session 11 — POS Source Assessment
 
 ## Objective
 
-Prepare the application for the future POS project without inventing
-implementation details.
+Assess the standalone POS Maintenance Tool source before any migration or
+operation implementation is proposed.
+
+## Status
+
+Blocked Pending Source Intake. The standalone POS Maintenance source project or
+a confirmed source repository/filesystem path is not present in this repository.
 
 ## Scope
 
-Implement `/tools/pos-maintenance` as a high-quality migration-pending page.
-Show status, intended capabilities, migration prerequisites, and no fake
-execution controls. Add the typed POS capability model and migration intake
-documentation without implementing machine operations or arbitrary commands.
+Review the supplied POS source, build and dependency files, safe configuration
+samples, assets, actual operations, and privilege requirements once the source
+intake is available. Do not invent source facts or implement POS operations.
 
 The detailed execution prompt and validation contract are maintained in
 `docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`.

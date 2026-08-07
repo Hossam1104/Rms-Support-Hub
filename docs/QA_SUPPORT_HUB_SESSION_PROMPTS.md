@@ -1357,8 +1357,8 @@ Session 06 — Completed
 Session 07 — Completed
 Session 08 — Completed
 Session 09 — Completed
-Session 10 — Active
-Session 11 — Blocked until POS source is supplied
+Session 10 — Completed
+Session 11 — Active; Blocked Pending Source Intake
 Session 12 — Blocked until Session 11 approval
 Session 13 — Blocked until approved operation group is selected
 Session 14 — Not Started

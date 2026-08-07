@@ -79,6 +79,12 @@
   landing now uses the shared page-header and tokenized shell spacing. Existing
   Online Order business behavior, capability guarding, API calls, and official
   assets remain unchanged.
+- Session 10 completed the POS migration-pending workspace at
+  `/tools/pos-maintenance`. The page now shows planned capability areas,
+  migration information only, source intake requirements, honest readiness
+  states, and a return path to the Hub. A typed `PosCapability` model and
+  `docs/POS_MAINTENANCE_MIGRATION_INTAKE.md` define the future review boundary;
+  no POS operation, backend contract, or generic execution surface was added.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -87,9 +93,10 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 10 — POS Maintenance Placeholder
-  and Migration Intake** (see `TASK.md`). POS Sessions 11-13 remain blocked
-  until the standalone POS source project is supplied.
+- The active task is QA Support Hub **Session 11 — POS Source Assessment** (see
+  `TASK.md`). It is **Blocked Pending Source Intake** because no standalone POS
+  source project or confirmed source path is present in the repository. POS
+  remains migration-pending; Prompt Studio and Online Orders remain available.
 
 ## Deferred Acceptance and Database Scope
 
@@ -181,6 +188,16 @@
   hierarchy, capability guards, light/dark theme, reduced motion, and shell
   layouts at 1440px, 900px, and 390px without horizontal overflow. Backend,
   Online Order business logic, and generated artifacts were unchanged.
+- Session 10: focused POS tests passed with 5 tests; the full frontend suite
+  passed with 235 tests across 43 files; editor diagnostics and `git diff
+  --check` were clean; the Angular production build passed at 442.00 kB
+  initial with no budget warnings. Browser checks verified Hub/POS navigation,
+  Migration Pending status, planned capabilities, readiness, source intake,
+  light/dark theme, reduced motion, keyboard-reachable return navigation, and
+  responsive 1440px, 900px, and 390px layouts without horizontal overflow.
+  Console error checks were clean; backend, Online Orders, Prompt Studio, and
+  generated artifacts were unchanged. The standalone POS source was not
+  present in the repository.
 
 ## Deployment Discovery Blocker
 
@@ -198,5 +215,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 09 completed; Session 10 active; Sessions
-  14-16 not started; Sessions 11-13 blocked until the POS source is supplied.
+- QA Support Hub: Sessions 00 through 10 completed; Session 11 active but
+  blocked pending POS source intake; Sessions 12-13 remain blocked until
+  assessment and approval; Sessions 14-16 not started.
