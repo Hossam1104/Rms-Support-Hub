@@ -35,18 +35,20 @@ Execution rules:
 - Push only when repository policy and the user’s current workflow allow it.
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
-# Session 07 — Enhanced Test Case Generator
+# Session 08 — Prompt Quality and Productivity
 
 ## Objective
 
-Implement the enhanced Test Case Generator as the next native Prompt Studio
-feature while preserving the completed Bug Refiner and Story Refiner.
+Add deterministic quality guidance, local prompt history, and export features
+to the native Prompt Studio generators while preserving the completed Bug,
+Story, and Test Case workflows.
 
 ## Scope
 
-Upgrade the Test Case Generator with typed inputs, grouped reactive form controls,
-deterministic prompt generation, safe sample data, copy/download behavior, and
-focused Test Case tests. Keep the Bug and Story Refiners production-ready.
+Implement the Prompt Quality Service and bounded local history for the Bug,
+Story, and Test Case generators. Keep quality findings non-blocking, preserve
+the existing namespaced storage behavior, avoid storing attachment contents,
+and keep the Bug, Story, Test Case, and Online Order workflows production-ready.
 
 The detailed execution prompt and validation contract are maintained in
 `docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Online Orders behavior, the completed

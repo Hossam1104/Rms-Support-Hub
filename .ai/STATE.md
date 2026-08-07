@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 06 Story Refiner
+- **Release or milestone:** QA Support Hub — Session 07 Test Case Generator
 
 ## Working State
 
@@ -54,6 +54,15 @@
   sample data, counters, copy/download behavior, keyboard generation, and
   pending-write-safe draft persistence. The enhanced Bug Refiner remains
   available and the Test Case foundation remains unchanged.
+- Session 07 expanded Test Case Generation into a grouped typed reactive form
+  with requirement/story reference, scenario categories, environment, test
+  data, postconditions, cleanup, automation candidacy, regression tags,
+  expected-result modes, and Single Test Case/Scenario Matrix/Jira-friendly/
+  Spreadsheet-friendly output types. The deterministic builder preserves
+  screenshot/evidence inference, labels suggested values, and emits warnings
+  for missing information, vague steps/results, duplicate steps, missing
+  observable outcomes, and per-step result mismatches. Legacy drafts and the
+  existing copy/download workflow remain compatible.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -62,9 +71,9 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 07 — Enhanced Test Case Generator**
-  (see `TASK.md`). POS Sessions 11-13 remain blocked until the standalone POS
-  source project is supplied.
+- The active task is QA Support Hub **Session 08 — Prompt Quality and
+  Productivity** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
+  standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
 
@@ -133,6 +142,12 @@
   Clear, reload persistence, Generate, all acceptance/detail/format modes,
   Copy, Markdown/plain-text export, Ctrl/Cmd+Enter, light/dark theme, and
   reduced motion were verified; no backend or Online Order files changed.
+- Session 07: Test Case-focused specs passed with 17 tests across 2 files; the
+  full frontend suite passed with 244 tests across 37 files; editor diagnostics
+  were clean; the Angular production build passed at 440.44 kB initial with no
+  budget warnings; and the direct `/tools/prompt-studio/test-cases` route
+  returned HTTP 200 from the local dev server. Backend, Online Orders, Bug,
+  and Story behavior remained unchanged.
 
 ## Deployment Discovery Blocker
 
@@ -150,6 +165,6 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00, 01, 02, 03, 04, 05, and 06 completed; Session
-  07 active; Sessions 08-10 and 14-16 not started; Sessions 11-13 blocked until
-  the POS source is supplied.
+- QA Support Hub: Sessions 00 through 07 completed; Session 08 active; Sessions
+  09-10 and 14-16 not started; Sessions 11-13 blocked until the POS source is
+  supplied.
