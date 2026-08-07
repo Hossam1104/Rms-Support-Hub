@@ -62,13 +62,28 @@
 /* Global reduced-motion catch-all -- collapses every CSS animation/transition
  * to effectively-instant, including ones (like the two above) that don't
  * read a duration token directly. JS-driven motion (the stat-tile count-up
- * directive) checks this media query itself and short-circuits to the
- * final value -- see shared/ui/stat-tile. */
+ * directive) checks the same data-motion attribute / media query itself and
+ * short-circuits to the final value -- see shared/ui/stat-tile.
+ *
+ * The media query applies until MotionService stamps `data-motion` on <html>;
+ * an explicit user `full` choice then wins over the system preference, and an
+ * explicit `reduce` choice wins over a system no-preference. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  html:not([data-motion="full"]) *,
+  html:not([data-motion="full"]) *::before,
+  html:not([data-motion="full"]) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

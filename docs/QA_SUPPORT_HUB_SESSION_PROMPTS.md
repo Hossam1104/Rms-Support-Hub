@@ -1349,8 +1349,8 @@ Update this section after each session.
 ```text
 Session 00 — Completed
 Session 01 — Completed
-Session 02 — Not Started
-Session 03 — Not Started
+Session 02 — Completed
+Session 03 — Active
 Session 04 — Not Started
 Session 05 — Not Started
 Session 06 — Not Started

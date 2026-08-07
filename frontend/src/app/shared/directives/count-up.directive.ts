@@ -8,8 +8,9 @@ function easeOutCubic(t: number): number {
  * Animates the host element's text content from its current numeric value
  * up to `appCountUp` over ~900ms using requestAnimationFrame + easeOutCubic,
  * thousands-separated via toLocaleString(). Short-circuits to the final
- * value immediately under prefers-reduced-motion (see
- * shared/ui/stat-tile and docs/design-system.md).
+ * value immediately when reduced motion is active -- an explicit
+ * `data-motion` choice from MotionService wins over the
+ * `prefers-reduced-motion` media query (see core/services/motion.service.ts).
  */
 @Directive({
   selector: '[appCountUp]',
@@ -39,8 +40,11 @@ export class CountUpDirective implements OnChanges {
   }
 
   private prefersReducedMotion(): boolean {
-    return typeof window !== 'undefined'
-      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (typeof window === 'undefined') return false;
+    const motion = document.documentElement.getAttribute('data-motion');
+    if (motion === 'reduce') return true;
+    if (motion === 'full') return false;
+    return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   }
 
   private animate(from: number, to: number) {

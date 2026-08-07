@@ -1,8 +1,8 @@
 # Current Project State
 
-- **Updated:** 2026-08-06
+- **Updated:** 2026-08-07
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 01 route skeleton
+- **Release or milestone:** QA Support Hub — Session 02 design system foundation
 
 ## Working State
 
@@ -19,6 +19,19 @@
   resolve. Top-level branding is now QA Support Hub; the POS placeholder
   shows `Migration Pending` with no actions. Prompt Studio and POS internals
   are not migrated yet.
+- Session 02 built the shared design-token, theme, and motion foundation:
+  `_tokens.css` now owns typography, spacing (`--space-1..8`), and z-index
+  (`--z-*`) scales alongside the existing color/radius/shadow/motion tokens.
+  `ThemeService` remains the single global light/dark theme, now with a
+  `prefers-color-scheme` fallback and persistence under the namespaced
+  `qa-support-hub:theme` key. A new `MotionService` (`core/services/motion.service.ts`)
+  resolves `system`/`reduce`/`full`, persists explicit choices under
+  `qa-support-hub:motion`, and stamps `data-motion` on `<html>`; the
+  reduced-motion CSS rules key off that attribute with the media query as
+  the pre-bootstrap fallback, so a user choice overrides the system in
+  either direction. New shared primitives: `ui-icon-button` and
+  `app-tool-card` (composed on `ui-card`); the navbar exposes a motion
+  cycle toggle. Existing Online Order feature pages were not restyled.
 - The QA Support Hub programme started with Session 00 (repository baseline
   and architecture decision), which is complete. Implementation plan:
   `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`; session prompts:
@@ -27,8 +40,8 @@
 - Baseline architecture decisions are recorded in
   `.ai/decisions/ADR-0011-qa-support-hub-baseline.md`; the repository map is
   section 23 of the implementation plan.
-- The active task is QA Support Hub **Session 02 — Design System
-  Foundation** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
+- The active task is QA Support Hub **Session 03 — QA Support Hub
+  Dashboard** (see `TASK.md`). POS Sessions 11-13 remain blocked until the
   standalone POS source project is supplied.
 
 ## Deferred Acceptance and Database Scope
@@ -61,6 +74,13 @@
   a canonical Online Order deep link, and a legacy `/modules/:key` deep link
   returned HTTP 200 from the dev server. Backend untouched; no backend
   contract changed.
+- Session 02: targeted theme/motion/primitive specs passed (26 tests), full
+  frontend suite 173 passed across 27 files, Angular production build passed
+  (440.63 kB initial, no style-budget warning), light/dark token-contract
+  and duplicate-token checks passed, and hub/tool/legacy routes returned
+  HTTP 200 from the dev server. Backend Release build and 161 tests passed
+  unchanged; the `build.ps1` Debug-copy step was blocked only by the user's
+  locally running `OnlineOrderTool.Api` process locking Debug DLLs.
 
 ## Deployment Discovery Blocker
 
@@ -78,5 +98,5 @@
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 and 01 completed; Sessions 02-10 and 14-16 not
-  started; Sessions 11-13 blocked until the POS source is supplied.
+- QA Support Hub: Sessions 00, 01, and 02 completed; Sessions 03-10 and 14-16 not
+  started (Session 03 active); Sessions 11-13 blocked until the POS source is supplied.

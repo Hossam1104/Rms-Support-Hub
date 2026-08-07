@@ -30,7 +30,7 @@ import { ToastMessage, ToastService } from '../../../core/services/toast.service
   `,
   styles: [`
     :host { display: contents; }
-    .toast-container { position: fixed; right: 20px; bottom: 20px; z-index: 9999; display: flex; width: min(390px, calc(100vw - 32px)); flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast-container { position: fixed; right: 20px; bottom: 20px; z-index: var(--z-toast); display: flex; width: min(390px, calc(100vw - 32px)); flex-direction: column; gap: 10px; pointer-events: none; }
     .toast-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 13px 14px; border: 1px solid var(--border-subtle); border-left: 3px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface-overlay); box-shadow: var(--shadow-lg); color: var(--text-primary); pointer-events: auto; animation: slideInRight var(--d) var(--ease-out); }
     .toast-item:focus-visible { outline: none; box-shadow: var(--focus-ring), var(--shadow-lg); }
     .toast-item--success { border-left-color: var(--state-success-fg); }

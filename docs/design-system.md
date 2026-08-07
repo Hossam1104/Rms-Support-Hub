@@ -41,6 +41,9 @@ semantic states, borders, focus, layout, radius, shadow, and motion.
 | Controls | `--input-bg`, `--input-border`, `--border-focus`, `--focus-ring`, `--focus-ring-danger`, `--divider` | Form fields, keyboard focus, table rules, and section rhythm |
 | Tables | `--table-row-hover`, `--table-row-zebra` | Data density without raw colors in feature styles |
 | Layout | `--sidebar-expanded-width`, `--sidebar-collapsed-width`, `--sidebar-width`, `--navbar-height` | Shell geometry and sidebar reflow |
+| Typography | `--font-main`, `--font-mono`, `--text-xs`–`--text-2xl`, `--weight-regular/semibold/bold/heavy`, `--leading-tight/normal` | Shared type scale for new primitives |
+| Spacing | `--space-1`–`--space-8` (4px base) | Shared rhythm for new primitives |
+| Z-index | `--z-sticky`, `--z-sidebar`, `--z-navbar`, `--z-dropdown`, `--z-overlay`, `--z-dialog`, `--z-toast` | One layering scale; toast stays above dialogs |
 | Shape/elevation | `--radius-sm/md/lg/xl/pill`, `--shadow-sm/md/lg`, `--shadow-glow` | Consistent shape and depth scale |
 | Motion | `--d-fast`, `--d`, `--d-slow`, `--ease-spring`, `--ease-out`, `--transition-*` | Shared timing and easing; reduced motion collapses durations |
 
@@ -90,6 +93,13 @@ The standalone signal-based components are exported through
 - `ui-button`: primary, secondary, ghost, and danger variants; small/medium
   sizes; icons; loading; disabled; submit/reset/button semantics; and a
   `pressed` output that ignores duplicate activation while busy.
+- `ui-icon-button`: icon-only action button with a mandatory accessible
+  label, ghost/secondary/danger variants, small/medium sizes, and an
+  `active` toggle state exposed through `aria-pressed`.
+- `app-tool-card`: base card for a hub tool entry — gradient-accent icon,
+  title, description, and an `available` / `migration-pending` status badge,
+  composed on the interactive `ui-card` so keyboard activation and the
+  shared focus ring come from the same contract.
 - `ui-table`: native table markup with dense, sticky-header, zebra, wide-table,
   horizontal overflow, accessible/visually-hidden caption, and empty-state
   projection.
@@ -175,12 +185,26 @@ navigation surface.
 
 ## Themes and reduced motion
 
-`ThemeService` continues to set `data-theme="dark"` or `data-theme="light"`
-and persist the choice. Both selectors define the complete surface, text,
-border, input, semantic, focus, table, and shadow values needed by the shared
-kit. `_animations.css` remains the global safety net: `prefers-reduced-motion`
-collapses CSS animations/transitions, disables smooth scrolling, and the
-token-level duration collapse covers components that use token aliases.
+`ThemeService` is the single global light/dark theme. It sets
+`data-theme="dark"` or `data-theme="light"` on `<html>` and resolves in this
+order: an explicit user choice persisted under the namespaced
+`qa-support-hub:theme` storage key wins; otherwise the system
+`prefers-color-scheme` is followed live until the user picks a theme. Only
+explicit choices are persisted. Both theme selectors define the complete
+surface, text, border, input, semantic, focus, table, and shadow values
+needed by the shared kit.
+
+`MotionService` is the single global motion preference with three states:
+`system` (default, follows `prefers-reduced-motion` live), `reduce`, and
+`full`. An explicit choice is persisted under `qa-support-hub:motion` and
+overrides the system preference in either direction. The service stamps
+`data-motion="reduce" | "full"` on `<html>`; the reduced-motion rules in
+`_tokens.css` (duration collapse), `_animations.css` (global catch-all), and
+`_gradients.css` (status-pill pulse) key off that attribute, with the media
+query as the pre-bootstrap fallback (`html:not([data-motion="full"])`).
+JS-driven motion (the stat-tile count-up directive) reads the same attribute
+first, then the media query. The navbar exposes a cycle toggle
+(system -> reduce -> full) through `ui-icon-button`.
 
 ## Kitchen sink
 

@@ -97,6 +97,37 @@
   /* ---- Typography ---- */
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --text-xs: .75rem;
+  --text-sm: .86rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.45rem;
+  --text-2xl: 2rem;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* ---- Spacing scale (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- Z-index scale ---- */
+  --z-sticky: 10;
+  --z-sidebar: 900;
+  --z-navbar: 1000;
+  --z-dropdown: 1200;
+  --z-overlay: 2000;
+  --z-dialog: 2100;
+  --z-toast: 2200;
 
   /* ---- Radius scale ---- */
   --radius-sm: 10px;
@@ -178,10 +209,22 @@
   --shadow-glow: 0 16px 42px -18px rgba(14, 159, 145, .28);
 }
 
+/*
+ * Reduced motion collapses every duration token. The media query covers the
+ * system preference until MotionService writes `data-motion` on <html>;
+ * afterwards the attribute rules take over so an explicit user choice
+ * (`full`) can override the system preference.
+ */
 @media (prefers-reduced-motion: reduce) {
-  :root {
+  :root:not([data-motion="full"]) {
     --d-fast: 0.01ms;
     --d: 0.01ms;
     --d-slow: 0.01ms;
   }
+}
+
+:root[data-motion="reduce"] {
+  --d-fast: 0.01ms;
+  --d: 0.01ms;
+  --d-slow: 0.01ms;
 }

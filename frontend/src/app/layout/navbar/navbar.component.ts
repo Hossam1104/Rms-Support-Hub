@@ -1,14 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
+import { MotionPreference, MotionService } from '../../core/services/motion.service';
 import { ModuleService } from '../../core/services/module.service';
-import { EnvBadgeComponent, UiButtonComponent } from '../../shared/ui';
+import { EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent } from '../../shared/ui';
 import { EnvironmentDto } from '../../core/models';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, EnvBadgeComponent, UiButtonComponent],
+  imports: [CommonModule, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent],
   template: `
     <header class="navbar">
       <div class="navbar-brand">
@@ -22,6 +23,13 @@ import { EnvironmentDto } from '../../core/models';
           [options]="m.environments"
           (select)="onSelectEnvironment($event)">
         </app-env-badge>
+        <ui-icon-button class="motion-toggle" size="sm"
+          icon="bi-universal-access"
+          [active]="motionService.preference() !== 'system'"
+          [ariaLabel]="motionToggleLabel()"
+          [title]="motionToggleLabel()"
+          (pressed)="motionService.cyclePreference()">
+        </ui-icon-button>
         <ui-button class="theme-toggle" variant="ghost" size="sm"
           [icon]="themeService.theme() === 'dark' ? 'bi-sun-fill' : 'bi-moon-fill'"
           [ariaLabel]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -38,7 +46,7 @@ import { EnvironmentDto } from '../../core/models';
       top: 0;
       left: 0;
       right: 0;
-      z-index: 1000;
+      z-index: var(--z-navbar);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -77,7 +85,16 @@ import { EnvironmentDto } from '../../core/models';
 })
 export class NavbarComponent {
   themeService = inject(ThemeService);
+  motionService = inject(MotionService);
   moduleService = inject(ModuleService);
+
+  private readonly motionLabels: Record<MotionPreference, string> = {
+    system: 'Motion: follows system preference. Activate to reduce motion.',
+    reduce: 'Motion: reduced. Activate for full motion.',
+    full: 'Motion: full. Activate to follow the system preference.'
+  };
+
+  motionToggleLabel = computed(() => this.motionLabels[this.motionService.preference()]);
 
   onSelectEnvironment(env: EnvironmentDto) {
     this.moduleService.selectEnvironment(env);

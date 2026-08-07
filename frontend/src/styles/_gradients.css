@@ -71,5 +71,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-pill--8::after { animation: none; }
+  html:not([data-motion="full"]) .status-pill--8::after { animation: none; }
 }
+
+html[data-motion="reduce"] .status-pill--8::after { animation: none; }

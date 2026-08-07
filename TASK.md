@@ -37,71 +37,77 @@ Execution rules:
 - Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
 
 
-# Session 02 — Design System Foundation
+# Session 03 — QA Support Hub Dashboard
 
 ## Objective
 
-Build a shared design-token, theme, and motion foundation without broadly rewriting feature pages.
+Build the main external dashboard with three selectable tool cards.
 
 ## Prompt
 
 
-# Session 02 — Design System Foundation
+# Session 03 — QA Support Hub Dashboard
 
 Execute the shared execution contract.
 
 Goal:
-Build a shared design-token, theme, and motion foundation without broadly rewriting feature pages.
+Implement the root QA Support Hub dashboard with three modern selectable cards.
+
+Cards:
+
+1. QA Prompt Studio
+   - route: `/tools/prompt-studio`
+   - status: Available
+   - action: Open Prompt Studio
+
+2. Online Order Tool
+   - route: `/tools/online-orders`
+   - status: Available
+   - action: Open Online Orders
+
+3. POS Maintenance Tool
+   - route: `/tools/pos-maintenance`
+   - status: Migration Pending
+   - action: View Migration Status or disabled based on the architecture plan
 
 Tasks:
 
-1. Inspect current global styles and theme services.
-2. Create a maintainable design-system structure for:
-   - colors
-   - typography
-   - spacing
-   - radius
-   - shadows
-   - z-index
-   - motion durations/easing
-3. Use the Prompt Studio visual direction:
-   - deep neutral surfaces
-   - subtle glass panels
-   - controlled gradients
-   - clear status colors
-   - modern cards
-4. Preserve the existing official assets and established app branding rules.
-5. Implement one global light/dark theme service.
-6. Persist the theme under a namespaced storage key.
-7. Add reduced-motion preference:
-   - honor `prefers-reduced-motion`
-   - optional user override
-8. Create shared primitives only where needed:
-   - button
-   - icon button
+1. Create a typed tool registry as the single source of card metadata.
+2. Build the responsive dashboard using the shared Tool Card component.
+3. Add:
+   - title
+   - description
+   - icon
    - status badge
-   - tool card base
-   - page header
-   - empty state
-   - toast
-9. Do not migrate the Prompt Studio form yet.
-10. Do not bulk-replace all existing Online Order styles.
-11. Remove duplicated new styles created in this session.
-12. Ensure text remains sharp during hover animations.
+   - capability summary
+   - action
+4. Make cards keyboard accessible.
+5. Add subtle entrance, hover, focus, and selection animations.
+6. Honor reduced-motion mode.
+7. Lazy-load Three.js only if the project can support it without affecting the main bundle.
+8. When Three.js is used:
+   - hub only
+   - pause when page hidden
+   - cap pixel ratio
+   - provide non-WebGL fallback
+9. Do not add continuous heavy animation to tool pages.
+10. Add empty/error fallback when tool metadata cannot load.
+11. Add targeted tests for navigation and card status.
 
 Validation:
-- Targeted component tests.
-- Theme persistence check.
-- Reduced-motion check.
-- Light/dark visual check.
+- Desktop, tablet, and mobile layouts.
+- Keyboard navigation.
+- Reduced-motion behavior.
+- Card routing.
+- POS card cannot invoke non-existent operations.
 - Angular production build.
 
 Commit message:
-`feat(design-system): add shared themes and motion tokens`
+`feat(hub): add animated QA tool dashboard`
 
 
 ## Completion Gate
 
-- One global theme exists.
-- Shared cards and controls are available.
-- Reduced motion works.
+- The root dashboard is complete.
+- All cards represent the correct availability state.
+- Available cards navigate correctly.
