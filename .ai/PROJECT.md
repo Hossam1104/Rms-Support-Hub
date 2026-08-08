@@ -46,6 +46,13 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Angular uses standalone lazy-loaded components, typed API models, signals,
   relative `/api`, and a dev proxy. Production API calls are same-origin; the
   hosting/deployment topology is not documented.
+- Supplied visual assets are exposed through the typed
+  `frontend/src/app/core/config/app-assets.ts` catalog. Public copies use
+  semantic `brand`, `modules`, `payments`, `commerce`, and `system` folders;
+  `frontend/public/assets/Saudi_Riyal.svg` remains the verifier-required
+  compatibility path. Shared identity marks use the standalone
+  `app-brand-mark` primitive with contain-fit sizing and explicit decorative
+  accessibility state.
 - Prompt Studio generators use typed reactive forms with feature-local
   namespaced drafts, deterministic builders, advisory `PromptQualityService`
   analysis, and `PromptHistoryService` local history capped at ten records.

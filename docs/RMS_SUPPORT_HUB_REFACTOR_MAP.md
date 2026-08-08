@@ -27,9 +27,12 @@ Future GitHub repository: Hossam1104/Rms-Support-Hub (Session 08)
 
 ## Asset map
 
-The real tracked asset directory contains 17 files. All supplied assets are
-under the exact root path `assets/`; `frontend/public/` currently contains only
-`favicon.ico`, so no root asset is yet a working Angular public copy.
+The real tracked asset directory contains 17 files. All supplied assets remain
+under the exact root path `assets/`; the Angular public copies now use semantic
+folders under `frontend/public/assets/`. The Riyal SVG remains at the public
+root as a deliberate compatibility path for the existing verifier and currency
+component. The table below records the Session 00 inventory; current integration
+is summarized after it.
 
 | Exact file | Format and measured geometry | Transparency / semantic reading | Current copy/reference status |
 |---|---|---|---|
@@ -51,10 +54,25 @@ under the exact root path `assets/`; `frontend/public/` currently contains only
 | `assets/CustomMessageBox/success.svg` | SVG; `287px × 240px`; `viewBox="0 0 287 240"` | Same grouped illustration family; internal artwork requires render review. Success message art. | No current frontend copy/reference. |
 | `assets/CustomMessageBox/warrning.svg` | SVG; `287px × 240px`; `viewBox="0 0 287 240"` | Same grouped illustration family; filename preserves the supplied `warrning` spelling. Warning art. | No current frontend copy/reference; spelling and semantics require an explicit Session 02 decision. |
 
-No exact duplicate SHA-256 hashes were found among the 17 root assets. There is
-no typed asset catalog yet. Existing module logo references and the Riyal
-reference are integration gaps for Session 02, not reasons to modify assets in
-this baseline session.
+No exact duplicate SHA-256 hashes were found among the 17 root assets. Session
+02 created the typed catalog at `frontend/src/app/core/config/app-assets.ts`
+and the reusable `app-brand-mark` primitive. New UI references use catalog
+entries; the Riyal root path is the only deliberate compatibility location.
+
+### Session 02 asset integration
+
+- `brand/`: RMS and DBS copies. RMS is used by the navbar and Hub identity;
+  DBS is a small Hub attribution on a neutral plate.
+- `modules/`: UPC and GHC/Whites copies. UPC is used by module cards and the
+  module sidebar; GHC/Whites is used only for the confirmed GHC module keys.
+- `payments/`: Visa, MasterCard, MADA, Tabby, and Tamara copies, catalogued for
+  the later payment presentation session without changing payment values.
+- `commerce/`: the offer asset, catalogued for existing offer contexts.
+- `system/`: the loader and confirmed CustomMessageBox family, catalogued with
+  no new message functionality. The supplied `warrning.svg` spelling remains
+  the public filename and is exposed as semantic `warning`.
+- `Saudi_Riyal.svg` remains at `frontend/public/assets/Saudi_Riyal.svg`; the
+  existing verifier passes and `app-riyal` consumes the catalog reference.
 
 ## UI touch map
 

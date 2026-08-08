@@ -2,6 +2,7 @@ import { ModuleCardComponent } from './module-card.component';
 import { EnvironmentDto, ModuleDto } from '../../core/models';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { APP_ASSETS } from '../../core/config/app-assets';
 
 describe('ModuleCardComponent', () => {
   const module = {
@@ -17,9 +18,12 @@ describe('ModuleCardComponent', () => {
 
     expect(component.getModuleRoute('ghc_unicommerce')).toEqual(['/tools/online-orders/modules', 'ghc_unicommerce', 'unicommerce']);
     expect(component.getModuleRoute('upc_ecommerce')).toEqual(['/tools/online-orders/modules', 'upc_ecommerce', 'order']);
-    expect(component.getLogoUrl('upc_ecommerce')).toBe('assets/upc_logo.svg');
-    expect(component.getLogoUrl('ghc_ecommerce')).toBe('assets/whites_logo.svg');
-    expect(component.getLogoUrl('ghc_unicommerce')).toBe('assets/whites_logo.svg');
+    expect(component.getLogoUrl('upc_ecommerce')).toBe(APP_ASSETS.modules.upc);
+    expect(component.getLogoUrl('ghc_ecommerce')).toBe(APP_ASSETS.modules.ghc);
+    expect(component.getLogoUrl('ghc_unicommerce')).toBe(APP_ASSETS.modules.ghc);
+    expect(component.getLogoUrl('unknown_module')).toBe('');
+    expect(component.getLogoAlt('upc_ecommerce')).toBe('UPC');
+    expect(component.getLogoAlt('ghc_ecommerce')).toBe('GHC / Whites');
   });
 
   it('emits the selected environment from a card action', () => {

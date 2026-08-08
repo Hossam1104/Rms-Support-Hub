@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { APP_ASSETS } from '../../../core/config/app-assets';
 
 /**
  * The single Saudi Riyal currency glyph for the whole app. Every human-visible
@@ -22,19 +23,20 @@ import { CommonModule } from '@angular/common';
   selector: 'app-riyal',
   standalone: true,
   imports: [CommonModule],
-  template: `<span class="riyal" [class.is-decorative]="decorative"><span class="riyal-icon" data-asset-path="/assets/Saudi_Riyal.svg" [style.width.em]="size" [style.height.em]="size" aria-hidden="true"></span><span class="sr-only" *ngIf="!decorative">Saudi Riyal</span></span>`,
+  template: `<span class="riyal" [class.is-decorative]="decorative"><span class="riyal-icon" [attr.data-asset-path]="assets.currency.riyal" [style.--riyal-asset]="'url(' + assets.currency.riyal + ')'" [style.width.em]="size" [style.height.em]="size" aria-hidden="true"></span><span class="sr-only" *ngIf="!decorative">Saudi Riyal</span></span>`,
   styles: [`
     .riyal { display: inline-flex; align-items: center; }
     .riyal-icon {
       display: inline-block;
       vertical-align: -0.125em;
       background-color: currentColor;
-      -webkit-mask: url('/assets/Saudi_Riyal.svg') no-repeat center / contain;
-      mask: url('/assets/Saudi_Riyal.svg') no-repeat center / contain;
+      -webkit-mask: var(--riyal-asset) no-repeat center / contain;
+      mask: var(--riyal-asset) no-repeat center / contain;
     }
   `]
 })
 export class RiyalComponent {
+  readonly assets = APP_ASSETS;
   @Input() size: number = 1;
   /** Suppresses the visually-hidden "Saudi Riyal" label when an adjacent
    * label already names the currency. */

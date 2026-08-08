@@ -4,18 +4,22 @@ import { RouterLink } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { MotionPreference, MotionService } from '../../core/services/motion.service';
 import { ModuleService } from '../../core/services/module.service';
-import { EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent } from '../../shared/ui';
+import { BrandMarkComponent, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent } from '../../shared/ui';
 import { EnvironmentDto } from '../../core/models';
+import { APP_ASSETS } from '../../core/config/app-assets';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent],
+  imports: [CommonModule, RouterLink, BrandMarkComponent, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent],
   template: `
     <header class="navbar">
       <a routerLink="/" class="navbar-brand" aria-label="Return to RMS+ Support Hub">
-        <span class="brand-title">RMS+ Support Hub</span>
-        <span class="brand-subtitle">Unified QA & Support Workspace</span>
+        <app-brand-mark class="navbar-logo" [src]="assets.brand.rms" size="2.5rem" [decorative]="true"></app-brand-mark>
+        <span class="brand-copy">
+          <span class="brand-title">RMS+ Support Hub</span>
+          <span class="brand-subtitle">Unified QA & Support Workspace</span>
+        </span>
       </a>
       <div class="navbar-actions">
         <app-env-badge class="navbar-environment"
@@ -58,10 +62,13 @@ import { EnvironmentDto } from '../../core/models';
     }
     .navbar-brand {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
       border-radius: var(--radius-sm);
       text-decoration: none;
     }
+    .navbar-logo { flex: 0 0 auto; }
+    .brand-copy { display: flex; flex-direction: column; min-width: 0; }
     .navbar-brand:focus-visible {
       outline: none;
       box-shadow: var(--focus-ring);
@@ -91,6 +98,7 @@ import { EnvironmentDto } from '../../core/models';
   `]
 })
 export class NavbarComponent {
+  readonly assets = APP_ASSETS;
   themeService = inject(ThemeService);
   motionService = inject(MotionService);
   moduleService = inject(ModuleService);

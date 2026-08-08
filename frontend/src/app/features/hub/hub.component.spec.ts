@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { EmptyStateComponent, ToolCardComponent } from '../../shared/ui';
+import { BrandMarkComponent, EmptyStateComponent, ToolCardComponent } from '../../shared/ui';
 import { HubComponent } from './hub.component';
 import { QA_TOOL_REGISTRY } from './tool-registry';
 
@@ -28,7 +28,7 @@ describe('HubComponent', () => {
             providers: [provideRouter([])]
         }).overrideComponent(HubComponent, {
             set: {
-                imports: [StubNavbarComponent, ToolCardComponent, EmptyStateComponent, StubHubSceneComponent]
+                imports: [StubNavbarComponent, BrandMarkComponent, ToolCardComponent, EmptyStateComponent, StubHubSceneComponent]
             }
         }).compileComponents();
     });
@@ -54,6 +54,16 @@ describe('HubComponent', () => {
             '/tools/online-orders',
             '/tools/pos-maintenance'
         ]);
+    });
+
+    it('renders the RMS product mark and secondary DBS attribution', () => {
+        const fixture = TestBed.createComponent(HubComponent);
+        fixture.detectChanges();
+
+        const marks = Array.from(fixture.nativeElement.querySelectorAll('app-brand-mark img')) as HTMLImageElement[];
+        expect(marks.map(mark => mark.getAttribute('alt'))).toEqual(['RMS+', 'DBS']);
+        expect(marks[0].getAttribute('src')).toContain('/assets/brand/RMS_Logo.svg');
+        expect(marks[1].getAttribute('src')).toContain('/assets/brand/DBS_Logo.svg');
     });
 
     it('uses native links for keyboard-reachable card navigation', () => {

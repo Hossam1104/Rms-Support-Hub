@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-08
-- **Branch:** `main` after Session 01 merge
+- **Branch:** `main` after Session 02 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 01 completed; Session 02 active and ready
+- **Session status:** Session 02 completed; Session 03 active
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
 - **Product target:** `RMS+ Support Hub`
@@ -73,9 +73,27 @@ Session 00 map.
 - The stale-name audit found no old technical/host names in current source,
   scripts, README, or current technical docs. Remaining matches are justified
   historical ADRs, baseline/map records, and the active execution prompt.
-- The canonical `assets/Saudi_Riyal.svg` remains one of the 17 root assets, but
-  `frontend/public/assets/Saudi_Riyal.svg` is still missing; asset integration
-  is active Session 02 scope.
+- Session 02 resolved the asset integration gap described above; the canonical
+  Riyal SVG is now present at the verifier-required public path.
+
+## Session 02 asset pipeline
+
+- Session 02 completed with the typed catalog at
+  `frontend/src/app/core/config/app-assets.ts` and semantic public folders under
+  `frontend/public/assets/brand`, `modules`, `payments`, `commerce`, and
+  `system`; `frontend/public/assets/Saudi_Riyal.svg` remains as a deliberate
+  compatibility path.
+- RMS is integrated into the navbar and Hub identity; DBS is a small Hub
+  attribution; UPC and confirmed GHC/Whites context are integrated into module
+  cards and the module sidebar. The reusable primitive is
+  `frontend/src/app/shared/ui/brand-mark/brand-mark.component.ts`.
+- Payment, offer, loader, and confirmed CustomMessageBox assets are catalogued.
+  The supplied `warrning.svg` filename is preserved under the semantic
+  `warning` key; no new message behavior was added.
+- Session 02 validation passed: 48 frontend test files / 255 tests, 161 backend
+  tests, Release build with 0 warnings and 0 errors, production initial bundle
+  439.28 kB raw / 101.39 kB estimated transfer, lazy Three.js 734.66 kB raw /
+  153.89 kB estimated transfer, Riyal verifier, and `git diff --check`.
 
 ## Deferred scope
 

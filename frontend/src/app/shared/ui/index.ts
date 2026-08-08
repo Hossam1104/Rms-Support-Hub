@@ -8,6 +8,7 @@ export * from './empty-state/empty-state.component';
 export * from './skeleton/skeleton.component';
 export * from './pagination/pagination.component';
 export * from './riyal/riyal.component';
+export * from './brand-mark/brand-mark.component';
 export * from './copy-button/copy-button.component';
 export * from './filter-chip/filter-chip.component';
 export * from './page-header/page-header.component';

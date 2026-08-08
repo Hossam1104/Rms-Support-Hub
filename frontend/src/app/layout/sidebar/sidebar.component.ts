@@ -2,17 +2,19 @@ import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SidebarStateService } from '../../core/services/sidebar-state.service';
-import { UiButtonComponent } from '../../shared/ui';
+import { BrandMarkComponent, UiButtonComponent } from '../../shared/ui';
+import { APP_ASSETS } from '../../core/config/app-assets';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, UiButtonComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, BrandMarkComponent, UiButtonComponent],
   template: `
     <aside class="sidebar" [class.collapsed]="collapsed()">
       <div class="sidebar-header">
         <div class="brand-logo" *ngIf="!collapsed()">
-          <i class="bi bi-layers-half brand-icon"></i>
+          <app-brand-mark *ngIf="getLogoUrl(moduleKey) as logoUrl" [src]="logoUrl" [alt]="getLogoAlt(moduleKey)" size="2.5rem" [framed]="true"></app-brand-mark>
+          <i *ngIf="!getLogoUrl(moduleKey)" class="bi bi-layers-half brand-icon" aria-hidden="true"></i>
           <div class="brand-text">
             <span class="module-title">{{ moduleLabel || 'Order Tool' }}</span>
             <span class="client-title">{{ clientName || 'Client' }}</span>
@@ -90,12 +92,21 @@ import { UiButtonComponent } from '../../shared/ui';
   `]
 })
 export class SidebarComponent {
+  readonly assets = APP_ASSETS;
   @Input() moduleKey = '';
   @Input() moduleLabel = '';
   @Input() clientName = '';
 
   private readonly sidebarState = inject(SidebarStateService);
   readonly collapsed = this.sidebarState.collapsed;
+
+  getLogoUrl(key: string): string {
+    return this.assets.modules.byKey[key] ?? '';
+  }
+
+  getLogoAlt(key: string): string {
+    return this.assets.modules.altByKey[key] ?? '';
+  }
 
   toggleCollapse() { this.sidebarState.toggle(); }
 }

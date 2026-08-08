@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ModuleDto, EnvironmentDto } from '../../core/models';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
-import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
+import { BrandMarkComponent, UiButtonComponent, UiCardComponent } from '../../shared/ui';
+import { APP_ASSETS } from '../../core/config/app-assets';
 
 /**
  * Online Order module card. Shares the `--card-*` geometry, border, and hover
@@ -16,12 +17,16 @@ import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
 @Component({
   selector: 'app-module-card',
   standalone: true,
-  imports: [CommonModule, RouterLink, StatusBadgeComponent, UiButtonComponent, UiCardComponent],
+  imports: [CommonModule, RouterLink, StatusBadgeComponent, BrandMarkComponent, UiButtonComponent, UiCardComponent],
   template: `
     <ui-card variant="raised" class="module-card" [disabled]="!module.available" [style.--module-accent]="getAccentColor(module.key)">
       <div class="card-head" uiCardHeader>
         <div class="identity">
-          <img [src]="getLogoUrl(module.key)" [alt]="module.label" class="module-logo" />
+          @if (getLogoUrl(module.key); as logoUrl) {
+            <app-brand-mark class="module-logo" [src]="logoUrl" [alt]="getLogoAlt(module.key)" size="46px" [framed]="true"></app-brand-mark>
+          } @else {
+            <span class="module-logo-fallback" aria-hidden="true"><i class="bi bi-layers-half"></i></span>
+          }
           <div class="identity__text">
             <h3 class="module-title">{{ module.label }}</h3>
             <span class="client-name">{{ module.client }}</span>
@@ -83,7 +88,8 @@ import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
     .card-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
     .identity { display: flex; min-width: 0; align-items: center; gap: var(--space-4); }
     .identity__text { min-width: 0; }
-    .module-logo { width: 46px; height: 46px; flex: 0 0 46px; padding: 4px; border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--surface-interactive); object-fit: contain; }
+    .module-logo { flex: 0 0 46px; }
+    .module-logo-fallback { display: inline-flex; width: 46px; height: 46px; flex: 0 0 46px; align-items: center; justify-content: center; border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--surface-interactive); color: var(--text-muted); font-size: 1.35rem; }
     .module-title { margin: 0; color: var(--text-primary); font-size: var(--text-lg); font-weight: var(--weight-bold); line-height: var(--leading-tight); overflow-wrap: anywhere; }
     .client-name { color: var(--text-muted); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
 
@@ -117,6 +123,7 @@ import { UiButtonComponent, UiCardComponent } from '../../shared/ui';
   `]
 })
 export class ModuleCardComponent {
+  readonly assets = APP_ASSETS;
   @Input() module!: ModuleDto;
   @Output() selectEnv = new EventEmitter<EnvironmentDto>();
 
@@ -146,7 +153,11 @@ export class ModuleCardComponent {
   }
 
   getLogoUrl(key: string): string {
-    return key === 'upc_ecommerce' ? 'assets/upc_logo.svg' : 'assets/whites_logo.svg';
+    return this.assets.modules.byKey[key] ?? '';
+  }
+
+  getLogoAlt(key: string): string {
+    return this.assets.modules.altByKey[key] ?? '';
   }
 
   getAccentColor(key: string): string {

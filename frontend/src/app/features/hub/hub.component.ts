@@ -1,14 +1,15 @@
 import { Component } from '@angular/core';
-import { EmptyStateComponent, ToolCardComponent } from '../../shared/ui';
+import { BrandMarkComponent, EmptyStateComponent, ToolCardComponent } from '../../shared/ui';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
 import { QaToolDefinition } from '../../core/models';
 import { HubSceneComponent } from './hub-scene/hub-scene.component';
 import { QA_TOOL_REGISTRY } from './tool-registry';
+import { APP_ASSETS } from '../../core/config/app-assets';
 
 @Component({
   selector: 'app-hub',
   standalone: true,
-  imports: [NavbarComponent, ToolCardComponent, EmptyStateComponent, HubSceneComponent],
+  imports: [NavbarComponent, BrandMarkComponent, ToolCardComponent, EmptyStateComponent, HubSceneComponent],
   template: `
     <app-navbar></app-navbar>
 
@@ -18,11 +19,17 @@ import { QA_TOOL_REGISTRY } from './tool-registry';
         <app-hub-scene></app-hub-scene>
 
         <div class="hub-hero__inner">
-          <p class="hub-eyebrow"><span aria-hidden="true"></span>QA Engineering Workspace</p>
-          <h1 id="hub-title">RMS+ Support Hub</h1>
-          <p class="hub-hero__description">
-            A focused workspace for QA engineering, prompt refinement, order operations, and support tooling.
-          </p>
+          <div class="hub-hero__identity">
+            <app-brand-mark [src]="assets.brand.rms" alt="RMS+" size="5rem"></app-brand-mark>
+            <div>
+              <p class="hub-eyebrow"><span aria-hidden="true"></span>QA Engineering Workspace</p>
+              <h1 id="hub-title">RMS+ Support Hub</h1>
+              <p class="hub-hero__description">
+                A focused workspace for QA engineering, prompt refinement, order operations, and support tooling.
+              </p>
+            </div>
+          </div>
+          <p class="hub-attribution">Built by <app-brand-mark [src]="assets.brand.dbs" alt="DBS" size="2rem" [framed]="true"></app-brand-mark></p>
           <ul class="hub-hero__signals">
             @for (tool of tools; track tool.id) {
               <li class="hub-signal" [class.hub-signal--pending]="tool.status === 'migration-pending'">
@@ -81,6 +88,9 @@ import { QA_TOOL_REGISTRY } from './tool-registry';
     .hub-hero { position: relative; overflow: hidden; margin-bottom: var(--space-7); padding: calc(var(--navbar-height) + var(--space-8)) var(--space-6) var(--space-8); border-bottom: 1px solid var(--divider); isolation: isolate; }
     .hub-hero__inner { position: relative; z-index: 1; width: min(100%, 1240px); margin: 0 auto; }
     .hub-page__inner { width: min(100%, 1240px); margin: 0 auto; padding: 0 var(--space-6); }
+    .hub-hero__identity { display: flex; align-items: center; gap: var(--space-5); }
+    .hub-hero__identity > div { min-width: 0; }
+    .hub-attribution { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-5) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
 
     .hub-eyebrow, .hub-tools__eyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; }
     .hub-eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -118,6 +128,7 @@ import { QA_TOOL_REGISTRY } from './tool-registry';
     @media (max-width: 680px) {
       .hub-hero { margin-bottom: var(--space-6); padding: calc(var(--navbar-height) + var(--space-6)) var(--space-4) var(--space-6); }
       .hub-page__inner { padding: 0 var(--space-4); }
+      .hub-hero__identity { align-items: flex-start; gap: var(--space-3); }
       .hub-hero__signals { gap: var(--space-2); }
       .hub-tools__heading { align-items: flex-start; flex-direction: column; gap: var(--space-2); }
       .hub-tools__grid { grid-template-columns: 1fr; grid-auto-rows: auto; gap: var(--space-4); }
@@ -130,5 +141,6 @@ import { QA_TOOL_REGISTRY } from './tool-registry';
   `]
 })
 export class HubComponent {
+  readonly assets = APP_ASSETS;
   tools: readonly QaToolDefinition[] = QA_TOOL_REGISTRY;
 }

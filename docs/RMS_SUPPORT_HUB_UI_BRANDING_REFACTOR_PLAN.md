@@ -15,8 +15,8 @@
 |---|---|
 | 00 — Baseline, Asset Inventory & Rename Map | Completed |
 | 01 — Product & Technical Rename | Completed |
-| 02 — Asset Pipeline & Brand Foundation | Active |
-| 03 — Global Density, Table & Surface System | Planned |
+| 02 — Asset Pipeline & Brand Foundation | Completed |
+| 03 — Global Density, Table & Surface System | Active |
 | 04 — Landing, Three.js, Shared Cards, Icons & Motion | Planned |
 | 05 — Prompt Studio UI Harmonization | Planned |
 | 06 — Online Orders Dense UI + Branding + Tables | Planned |

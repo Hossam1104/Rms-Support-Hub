@@ -1,18 +1,24 @@
-# RMS+ Support Hub — Active Task
+# RMS+ Support Hub - Active Task
 
 Program:
 RMS+ Support Hub UI / Branding Refactor
 
 Active Session:
-02 — Asset Pipeline & Brand Foundation
+03 - Global Density, Tables, Borders & Surface System
 
 Previous:
-01 — Completed
+02 - Completed
 
-Known gap:
-`frontend/public/assets/Saudi_Riyal.svg` is currently missing; Session 02 must resolve it deliberately.
+Role:
+Implement
 
-# Global Contract for Every Luna Session
+Expected branch:
+refactor/rms-hub-03-density-tables
+
+Expected commit:
+refactor(ui): compact layouts and standardize data tables
+
+## Global Contract
 
 Repository root:
 
@@ -24,27 +30,22 @@ Before each session:
 
 1. Read `AGENTS.md`.
 2. Read `.ai/STATE.md`.
-3. Read `.ai/HANDOFF.md`.
-4. Read `TASK.md` if present.
-5. Inspect Git state.
-6. Inspect only session-relevant source.
+3. Run `python .ai/scripts/context.py`.
+4. Read `.ai/HANDOFF.md` only when its status is `In Progress` or `Blocked`.
+5. Read only the source, tests, and documentation named in this task, plus
+   task-related changed files.
+6. Inspect Git state before changing files.
 7. Execute the task completely.
-8. Run targeted validation.
-9. Run the required full validation gates.
-10. Review the final task-scoped diff.
-11. Update durable state only when materially useful.
-12. Commit automatically.
-13. Fast-forward merge to `main`.
-14. Push `main`.
-15. Verify `origin/main...main == 0 0`.
-16. Delete the session branch.
+8. Run targeted validation first, then the required full validation gates.
+9. Review the final task-scoped diff and remove temporary changes.
+10. Update durable state only when materially useful.
 
 Safety:
 
 ```text
 Never git reset --hard.
 Never force push.
-Never discard unrelated work.
+Never discard unrelated changes.
 Never auto-resolve semantic conflicts.
 Never modify Production.
 Never run Production SQL.
@@ -52,13 +53,8 @@ Never invoke state-changing Online Order actions during UI validation.
 Never implement POS operations.
 ```
 
-Use session-local Git maintenance suppression when required:
-
-```text
-git -c gc.auto=0 -c maintenance.auto=false ...
-```
-
-The following business behavior is frozen unless a session explicitly says otherwise:
+The following business behavior is frozen unless this session explicitly says
+otherwise:
 
 - Prompt Studio canonical outputs
 - Prompt Quality semantics
@@ -74,126 +70,137 @@ The following business behavior is frozen unless a session explicitly says other
 - integration/module keys
 - POS remains Coming Soon
 
+Repository guardrails:
 
-# SESSION 02 â€” Asset Pipeline & Brand Foundation
+- Treat `docs/request_examples/**` and mirrored backend test fixtures as the
+  payload contract.
+- Treat current repository SQL plus `docs/database-schema.md` as the database
+  contract; never guess a column or JSON key.
+- Keep backend dependencies flowing Core -> Data -> API, with API as the
+  composition root.
+- Gate module behavior through `IOrderModule.Capabilities`; do not add module-key
+  string comparisons.
+- Keep connection strings and credentials outside tracked files.
+- Use the Testing environment for agent-run live verification. Never send,
+  cancel, or resend against Production.
+- Do not edit generated or runtime paths: `bin/`, `obj/`, `node_modules/`,
+  `dist/`, `.angular/`, or `var/`.
+- Component styles must consume design tokens; raw color literals belong only
+  in the designated token/gradient files.
 
-## Goal
+## Session 03 - Global Density, Tables, Borders & Surface System
 
-Make the supplied assets reusable, semantic, centralized and safe.
+### Goal
 
-## Branch
+Reduce project-wide wasted space and establish consistent tables, margins,
+cards, panels and form density.
 
-```text
-refactor/rms-hub-02-assets
-```
+### Critical Requirement
 
-## Required Work
+This is global. Do not make one-off Online Order-only CSS fixes.
 
-### 1. Reinspect actual assets
+### Required Work
 
-Use current:
+#### 1. Normalize density tokens
 
-```text
-./assets
-```
+Inspect existing tokens and create/reuse semantic values for:
 
-Never assume files are unchanged.
+- page padding
+- section gap
+- panel gap
+- panel padding
+- compact panel padding
+- control height
+- compact control height
+- table cell X/Y padding
+- table header height
+- card gap
 
-### 2. Normalize frontend asset placement
+Prefer tokens and `clamp()` to scattered magic numbers.
 
-Use the repositoryâ€™s existing public/static convention.
+#### 2. Reduce vertical waste
 
-Prefer semantic folders such as:
+Target approximately 15-30% reduction where safe in:
 
-```text
-frontend/public/assets/
-â”œâ”€â”€ brand/
-â”œâ”€â”€ modules/
-â”œâ”€â”€ payments/
-â”œâ”€â”€ commerce/
-â””â”€â”€ system/
-```
+- page headers
+- breadcrumb gaps
+- workflow bars
+- section headers
+- accordion headers
+- forms
+- panel padding
+- action bars
+- table spacing
 
-Do not duplicate an already-approved asset unless migration is required.
+Do not make the UI cramped or reduce focus/tap accessibility.
 
-Preserve the verified Riyal behavior.
+#### 3. Shared table contract
 
-### 3. Central asset catalog
+Every true data table should gain:
 
-Create one typed mapping, preferably:
+- 1px outer border
+- visible header border
+- row separators
+- safe card inset/margins
+- compact cell padding
+- numeric alignment
+- clear totals/footer
+- responsive horizontal scrolling only when necessary
 
-```text
-frontend/src/app/core/config/app-assets.ts
-```
+Optional vertical separators are allowed where they materially improve dense
+numeric scanning.
 
-Expose semantic references for:
-- RMS
-- DBS
-- UPC
-- GHC/Whites
-- Riyal
-- Visa
-- Mastercard
-- Mada
-- Tabby
-- Tamara
-- offer
-- loader
-- confirmed CustomMessage assets
+#### 4. Apply representative global surfaces
 
-Do not create a service unless runtime logic needs it.
+Apply to:
 
-### 4. Reusable logo/brand primitive
+- shared table/grid components
+- Online Order table
+- Order Requests
+- Products
+- Items
+- at least one non-Online-Order table/list if truly tabular
 
-Only if useful across multiple screens, add a lightweight logo/brand component or shared pattern supporting:
-- size
-- alt
-- decorative state
-- `object-fit: contain`
-- consistent aspect handling
+#### 5. Form density
 
-Do not over-engineer.
+Normalize:
 
-### 5. Integrate hierarchy
+- labels
+- helper text
+- control heights
+- field gaps
 
-RMS:
-- global navbar
-- Hub hero/product identity
+Do not change validation/data.
 
-DBS:
-- secondary attribution only
+#### 6. Panels/cards
 
-UPC:
-- UPC E-Commerce module card/shell/sidebar
+Normalize:
 
-GHC/Whites:
-- only where actual module/context supports it
+- border
+- radius
+- padding
+- internal gap
+- header height
 
-### 6. CustomMessage assets
+Do not perform the major landing redesign yet.
 
-Inspect contents. Map only confirmed semantics. Unknown assets stay unused and documented.
+### Validation
 
-No new message functionality.
-
-## Validation
-
-Targeted:
-- asset catalog
-- logo primitive
-- Hub/module card
-
-Then:
+Required:
 
 ```text
 npm --prefix frontend test -- --watch=false
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 npm --prefix frontend run build -- --configuration production
 git diff --check
 ```
 
-## Commit
+If browser exists, check representative pages at 1440/1024/900/768/390.
+
+If not, do not claim rendered visual validation; Session 07 will close it.
+
+### Commit
 
 ```text
-feat(brand): integrate RMS+ Support Hub asset system
+refactor(ui): compact layouts and standardize data tables
 ```
-
----
