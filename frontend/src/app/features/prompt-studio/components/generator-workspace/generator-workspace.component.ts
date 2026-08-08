@@ -17,26 +17,35 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
 
     <main class="generator-page">
       <header class="generator-header">
-        <a routerLink="/tools/prompt-studio" class="generator-back">
-          <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          Prompt Studio
-        </a>
-        <div class="generator-header__text">
-          <p class="generator-header__eyebrow">{{ eyebrow() }}</p>
-          <h1>{{ title() }}</h1>
-          <p>{{ description() }}</p>
+        <div class="generator-header__topline">
+          <a routerLink="/tools/prompt-studio" class="generator-back" aria-label="Back to Prompt Studio">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Prompt Studio
+          </a>
+          <span class="generator-header__state"><i class="bi bi-shield-check" aria-hidden="true"></i> Local-only workspace</span>
+        </div>
+        <div class="generator-header__heading">
+          <span class="generator-header__icon" aria-hidden="true"><i class="bi" [class]="icon()"></i></span>
+          <div class="generator-header__text">
+            <p class="generator-header__eyebrow">{{ eyebrow() }}</p>
+            <h1>{{ title() }}</h1>
+            <p>{{ description() }}</p>
+          </div>
         </div>
       </header>
 
       <section class="generator-workspace" [attr.aria-label]="title() + ' workspace'">
         <div class="generator-workspace__input">
           <header class="generator-workspace__panel-header">
-            <div>
-              <h2>{{ formTitle() }}</h2>
-              <p>{{ formSubtitle() }}</p>
+            <div class="generator-workspace__panel-title">
+              <span class="generator-workspace__panel-icon" aria-hidden="true"><i class="bi bi-pencil-square"></i></span>
+              <div>
+                <h2>{{ formTitle() }}</h2>
+                <p>{{ formSubtitle() }}</p>
+              </div>
             </div>
             <div class="generator-workspace__panel-actions">
-              <ui-button variant="ghost" size="sm" icon="bi-magic" ariaLabel="Load sample data" (pressed)="sample.emit()">Sample</ui-button>
+              <ui-button variant="ghost" size="sm" icon="bi-file-earmark-arrow-down" ariaLabel="Load sample data" (pressed)="sample.emit()">Load Sample</ui-button>
               <ui-button variant="ghost" size="sm" icon="bi-eraser" ariaLabel="Clear form" (pressed)="clear.emit()">Clear</ui-button>
             </div>
           </header>
@@ -59,7 +68,7 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
             <section class="generator-history" aria-labelledby="recent-prompts-title">
               <header class="generator-history__header">
                 <div>
-                  <h2 id="recent-prompts-title">Recent Prompts</h2>
+                  <h2 id="recent-prompts-title"><i class="bi bi-clock-history" aria-hidden="true"></i> Recent Prompts</h2>
                   <p>Stored locally on this device.</p>
                 </div>
                 <ui-button variant="ghost" size="sm" icon="bi-trash3" ariaLabel="Clear prompt history" (pressed)="history.clear()">Clear History</ui-button>
@@ -91,16 +100,24 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
     :host { display: block; min-width: 0; }
     .generator-page { padding: calc(var(--navbar-height) + var(--page-padding-block)) var(--page-padding-inline) var(--section-gap); }
     .generator-header { width: min(100%, 1440px); margin: 0 auto var(--section-gap); }
-    .generator-back { display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); color: var(--text-secondary); font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: none; border-radius: var(--radius-sm); }
+    .generator-header__topline { display: flex; align-items: center; justify-content: space-between; gap: var(--panel-gap); margin-bottom: var(--panel-padding-compact); }
+    .generator-back { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-secondary); font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: none; border-radius: var(--radius-sm); }
     .generator-back:hover { color: var(--text-accent); }
     .generator-back:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .generator-header__state { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-muted); font-size: var(--text-xs); font-weight: var(--weight-semibold); white-space: nowrap; }
+    .generator-header__state i { color: var(--state-success-fg); }
+    .generator-header__heading { display: flex; align-items: flex-start; gap: var(--panel-gap); }
+    .generator-header__icon { display: inline-grid; flex: 0 0 var(--control-height); width: var(--control-height); height: var(--control-height); place-items: center; border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--card-sheen), var(--surface-interactive); color: var(--text-accent); font-size: 1.1rem; }
+    .generator-header__text { min-width: 0; }
     .generator-header__eyebrow { margin: 0 0 var(--space-1); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); text-transform: uppercase; }
     .generator-header h1 { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-heavy); line-height: 1.1; }
     .generator-header__text > p:last-child { max-width: 760px; margin: var(--space-2) 0 0; color: var(--text-secondary); }
-    .generator-workspace { display: grid; width: min(100%, 1440px); margin: 0 auto; grid-template-columns: minmax(360px, 1.02fr) minmax(400px, .98fr); align-items: stretch; gap: var(--section-gap); }
+    .generator-workspace { display: grid; width: min(100%, 1440px); margin: 0 auto; grid-template-columns: minmax(360px, 1.02fr) minmax(400px, .98fr); align-items: stretch; gap: var(--panel-gap); }
     .generator-workspace__input { display: flex; min-width: 0; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: var(--panel-radius); background: var(--surface-panel); box-shadow: var(--shadow-sm); overflow: hidden; }
     .generator-workspace__panel-header { display: flex; align-items: center; justify-content: space-between; gap: var(--panel-gap); padding: var(--panel-padding-compact) var(--panel-padding); border-bottom: 1px solid var(--divider); }
-    .generator-workspace__panel-header h2 { margin: 0 0 4px; font-size: var(--text-lg); }
+    .generator-workspace__panel-title { display: flex; align-items: center; min-width: 0; gap: var(--space-3); }
+    .generator-workspace__panel-icon { display: inline-grid; flex: 0 0 var(--control-height-compact); width: var(--control-height-compact); height: var(--control-height-compact); place-items: center; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-interactive); color: var(--text-accent); }
+    .generator-workspace__panel-header h2 { margin: 0 0 var(--space-1); font-size: var(--text-lg); }
     .generator-workspace__panel-header p { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
     .generator-workspace__panel-actions { display: flex; flex-shrink: 0; gap: var(--space-2); }
     .generator-workspace__form { display: flex; min-width: 0; flex-direction: column; gap: var(--panel-gap); padding: var(--panel-padding); }
@@ -108,7 +125,8 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
     .generator-workspace__actions { display: flex; gap: var(--panel-gap); padding: var(--panel-padding-compact) var(--panel-padding); border-top: 1px solid var(--divider); }
     .generator-history { display: flex; flex-direction: column; gap: var(--panel-gap); padding: var(--panel-padding-compact) var(--panel-padding); border-top: 1px solid var(--divider); }
     .generator-history__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-    .generator-history__header h2 { margin: 0 0 3px; font-size: var(--text-sm); }
+    .generator-history__header h2 { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-1); font-size: var(--text-sm); }
+    .generator-history__header h2 i { color: var(--text-accent); font-size: .9rem; }
     .generator-history__header p { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
     .generator-history__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
     .generator-history__item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; padding: var(--space-2) 0; border-top: 1px solid var(--divider); }
@@ -120,7 +138,10 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
     @media (max-width: 680px) {
       .generator-page { padding: calc(var(--navbar-height) + var(--page-padding-block)) var(--page-padding-inline) var(--section-gap); }
       .generator-header h1 { font-size: var(--text-xl); }
+      .generator-header__topline { align-items: flex-start; flex-direction: column; }
+      .generator-header__state { white-space: normal; }
       .generator-workspace__panel-header { align-items: flex-start; flex-direction: column; }
+      .generator-workspace__panel-title { width: 100%; }
       .generator-workspace__panel-actions { width: 100%; }
       .generator-workspace__panel-actions ui-button { flex: 1; }
       .generator-workspace__form { padding: var(--panel-padding); }
@@ -134,6 +155,7 @@ import { PromptPreviewComponent } from '../prompt-preview/prompt-preview.compone
 })
 export class GeneratorWorkspaceComponent {
   readonly title = input.required<string>();
+  readonly icon = input('bi-braces-asterisk');
   readonly eyebrow = input('QA Prompt Studio');
   readonly description = input.required<string>();
   readonly formTitle = input.required<string>();

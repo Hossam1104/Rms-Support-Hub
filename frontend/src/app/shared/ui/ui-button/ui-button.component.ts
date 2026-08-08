@@ -29,7 +29,7 @@ export type UiButtonSize = 'sm' | 'md';
   styles: [`
     :host { display: inline-flex; max-width: 100%; }
     .ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--control-height); max-width: 100%; padding: 0 var(--panel-padding); border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: 750; line-height: 1; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast); }
-    .ui-button:hover:not(:disabled) { transform: translateY(-1px); }
+    .ui-button:hover:not(:disabled) { transform: translateY(var(--control-lift)); }
     .ui-button:active:not(:disabled) { transform: translateY(0); }
     .ui-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .ui-button:disabled { cursor: not-allowed; opacity: .55; transform: none; }

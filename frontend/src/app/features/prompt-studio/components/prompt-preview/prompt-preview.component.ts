@@ -12,11 +12,14 @@ let nextPreviewId = 0;
   template: `
     <section class="prompt-preview" [attr.aria-labelledby]="headingId">
       <header class="prompt-preview__header">
-        <div>
-          <h2 [id]="headingId">Generated Prompt</h2>
-          <p>{{ subtitle() }}</p>
+        <div class="prompt-preview__title">
+          <span class="prompt-preview__title-icon" aria-hidden="true"><i class="bi bi-terminal"></i></span>
+          <div>
+            <h2 [id]="headingId">Generated Prompt</h2>
+            <p>{{ subtitle() }}</p>
+          </div>
         </div>
-        <span class="prompt-preview__shortcut">Ctrl / Cmd + Enter</span>
+        <span class="prompt-preview__shortcut"><i class="bi bi-keyboard" aria-hidden="true"></i> Ctrl / Cmd + Enter</span>
       </header>
 
       @if (prompt()) {
@@ -37,15 +40,18 @@ let nextPreviewId = 0;
   `,
   styles: [`
     :host { display: block; min-width: 0; height: 100%; }
-    .prompt-preview { display: flex; min-width: 0; min-height: 100%; flex-direction: column; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-panel); box-shadow: var(--shadow-sm); }
+    .prompt-preview { display: flex; min-width: 0; min-height: 100%; flex-direction: column; gap: var(--panel-gap); padding: var(--panel-padding); border: 1px solid var(--border-subtle); border-radius: var(--panel-radius); background: var(--surface-panel); box-shadow: var(--shadow-sm); }
     .prompt-preview__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-4); border-bottom: 1px solid var(--divider); }
-    .prompt-preview__header h2 { margin: 0 0 4px; font-size: var(--text-lg); line-height: var(--leading-tight); }
+    .prompt-preview__title { display: flex; align-items: center; min-width: 0; gap: var(--space-3); }
+    .prompt-preview__title-icon { display: inline-grid; flex: 0 0 var(--control-height-compact); width: var(--control-height-compact); height: var(--control-height-compact); place-items: center; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-interactive); color: var(--text-accent); }
+    .prompt-preview__header h2 { margin: 0 0 var(--space-1); font-size: var(--text-lg); line-height: var(--leading-tight); }
     .prompt-preview__header p { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
-    .prompt-preview__shortcut { flex-shrink: 0; padding: 5px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-interactive); color: var(--text-secondary); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
-    .prompt-preview__output { flex: 1; min-height: 360px; margin: 0; padding: var(--space-4); overflow: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-muted); color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-xs); line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .prompt-preview__shortcut { display: inline-flex; align-items: center; flex-shrink: 0; gap: var(--space-2); padding: 5px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-interactive); color: var(--text-secondary); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+    .prompt-preview__shortcut i { color: var(--text-accent); }
+    .prompt-preview__output { flex: 1; min-height: 360px; margin: 0; padding: var(--panel-padding-compact); overflow: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-muted); color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-xs); line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
     .prompt-preview__output:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .prompt-preview__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-    @media (max-width: 680px) { .prompt-preview { padding: var(--space-4); } .prompt-preview__header { flex-direction: column; } .prompt-preview__output { min-height: 300px; } }
+    .prompt-preview__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+    @media (max-width: 680px) { .prompt-preview__header { flex-direction: column; } .prompt-preview__output { min-height: 300px; } }
   `]
 })
 export class PromptPreviewComponent {

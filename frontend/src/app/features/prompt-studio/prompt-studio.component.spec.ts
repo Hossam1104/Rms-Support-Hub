@@ -34,6 +34,12 @@ describe('PromptStudioComponent', () => {
       'Story Refinement',
       'Test Case Generation'
     ]);
+    expect(cards.map(card => card.querySelector('.tool-card__icon')?.className)).toEqual([
+      'bi tool-card__icon bi-bug',
+      'bi tool-card__icon bi-journal-text',
+      'bi tool-card__icon bi-check2-square'
+    ]);
+    expect(cards.every(card => card.querySelectorAll('.tool-card__capability').length === 3)).toBe(true);
     expect(cards.map(card => card.querySelector('a')?.getAttribute('href'))).toEqual([
       '/tools/prompt-studio/bugs',
       '/tools/prompt-studio/stories',

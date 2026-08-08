@@ -7,11 +7,17 @@ import { PromptQualityResult } from '../../services/prompt-quality.service';
   template: `
     <section class="quality-panel" aria-labelledby="prompt-quality-title">
       <header class="quality-panel__header">
-        <div>
-          <h2 id="prompt-quality-title">Prompt Quality</h2>
-          <p>{{ result().findings.length }} suggestion{{ result().findings.length === 1 ? '' : 's' }} · advisory only</p>
+        <div class="quality-panel__title">
+          <span class="quality-panel__icon" aria-hidden="true"><i class="bi bi-clipboard2-check"></i></span>
+          <div>
+            <h2 id="prompt-quality-title">Prompt Quality</h2>
+            <p>{{ result().findings.length }} suggestion{{ result().findings.length === 1 ? '' : 's' }} · advisory only</p>
+          </div>
         </div>
-        <strong [attr.aria-label]="'Prompt quality score: ' + result().score + ' percent'">{{ result().score }}%</strong>
+        <div class="quality-panel__score">
+          <span>Score</span>
+          <strong [attr.aria-label]="'Prompt quality score: ' + result().score + ' percent'">{{ result().score }}%</strong>
+        </div>
       </header>
       <progress class="quality-panel__progress" max="100" [value]="result().score" aria-label="Prompt quality score"></progress>
       <div class="quality-panel__facts">
@@ -44,13 +50,17 @@ import { PromptQualityResult } from '../../services/prompt-quality.service';
   `,
   styles: [`
     :host { display: block; }
-    .quality-panel { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-muted); }
+    .quality-panel { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--panel-padding-compact) var(--panel-padding); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-muted); }
     .quality-panel__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+    .quality-panel__title { display: flex; align-items: center; min-width: 0; gap: var(--space-2); }
+    .quality-panel__icon { display: inline-grid; flex: 0 0 var(--control-height-compact); width: var(--control-height-compact); height: var(--control-height-compact); place-items: center; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-interactive); color: var(--text-accent); }
     .quality-panel__header h2 { margin: 0; color: var(--text-primary); font-size: var(--text-sm); }
-    .quality-panel__header p, .quality-panel__more, .quality-panel__clear, .quality-panel__notice, .quality-panel__sensitive { margin: 2px 0 0; color: var(--text-muted); font-size: var(--text-xs); line-height: 1.35; }
-    .quality-panel__header strong { color: var(--text-accent); font-size: var(--text-md); }
+    .quality-panel__header p, .quality-panel__more, .quality-panel__clear, .quality-panel__notice, .quality-panel__sensitive { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: var(--text-xs); line-height: 1.35; }
+    .quality-panel__score { display: flex; align-items: flex-end; flex-direction: column; gap: 2px; }
+    .quality-panel__score span { color: var(--text-muted); font-size: .65rem; font-weight: var(--weight-semibold); text-transform: uppercase; }
+    .quality-panel__score strong { color: var(--text-accent); font-size: var(--text-md); line-height: 1; }
     .quality-panel__progress { display: block; width: 100%; height: 5px; accent-color: var(--accent); }
-    .quality-panel__facts { display: grid; gap: 2px; color: var(--text-muted); font-size: .7rem; line-height: 1.35; }
+    .quality-panel__facts { display: grid; gap: var(--space-1); color: var(--text-muted); font-size: var(--text-xs); line-height: 1.35; }
     .quality-panel__facts p { margin: 0; overflow-wrap: anywhere; }
     .quality-panel__facts span { color: var(--text-secondary); font-weight: var(--weight-bold); }
     .quality-panel__findings { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }

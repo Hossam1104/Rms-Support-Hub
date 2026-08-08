@@ -23,6 +23,7 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
     template: `
     <app-generator-workspace
       title="Story Refinement"
+      icon="bi-journal-text"
       description="Transform rough business requests into structured implementation-ready stories."
       formTitle="Story Details"
       formSubtitle="Capture the request, outcome, rules, and references"

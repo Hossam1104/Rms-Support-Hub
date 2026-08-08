@@ -23,6 +23,7 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
   template: `
     <app-generator-workspace
       title="Bug Refinement"
+      icon="bi-bug"
       description="Transform raw defect notes into structured developer-ready QA prompts."
       formTitle="Bug Details"
       formSubtitle="Enter defect notes below"

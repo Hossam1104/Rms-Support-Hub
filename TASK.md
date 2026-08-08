@@ -1,91 +1,156 @@
-# SESSION 05 — Prompt Studio UI Harmonization
+# SESSION 06 — Online Orders Dense UI, Branding, Tables & Commerce Assets
 
 ## Goal
 
-Apply the new compact branded system to Prompt Studio while preserving its simplified behavior.
+Implement the screenshot-driven Online Order UI improvements while preserving every business contract.
 
 ## Branch
 
 ```text
-refactor/rms-hub-05-prompt-studio-ui
+refactor/rms-hub-06-online-orders-ui
 ```
 
-## Hard Output Contracts
+## Hard Boundary
 
-Do not change canonical sections.
+Do NOT change:
+- APIs
+- DTOs
+- payload mapping
+- module keys
+- capability guard
+- filters/paging business rules
+- payment codes
+- status logic
+- Send/Resend/Cancel behavior
 
-Bug = exactly 11 sections.
-Story = exactly 7 sections.
-Test Case = exactly 9 sections.
+UI presentation only.
 
-Do not change:
-- quality semantics
-- history max 10
-- drafts
-- copy
-- Markdown
-- text export
-- Ctrl/Cmd+Enter
+### 1. Module identity
 
-### 1. Landing cards
+Use:
+- RMS+ global brand
+- UPC logo for UPC E-Commerce
+- GHC/Whites only where actual context supports it
 
-Equal-height:
-- Bug Refinement
-- Story Refinement
-- Test Case Generation
+Improve module card and sidebar/header identity.
 
-Each:
-- meaningful icon
-- title
-- concise explanation
-- capability summary
-- aligned footer action
+### 2. Compact Order Builder
 
-### 2. Generator workspaces
+Reduce:
+- page header height
+- workflow height
+- inter-section gap
+- accordion/header height
+- field row gap
+- panel padding
 
-Compact:
-- page header
-- form section spacing
-- label/helper gaps
-- preview header/action area
-- Prompt Quality
-- history
+Keep it readable.
 
-Use shared surface/card/density tokens.
+### 3. Order Header
 
-### 3. Icons
+Compact the existing grid without changing fields:
+- Branch
+- Order code
+- Parent order code
+- Delivery cost
+- Order status
+- Notes
+- coordinates
 
-Add useful icons for:
-- Load Sample
-- Generate
-- Clear
-- Copy
-- Download
-- Quality
-- History
+### 4. Products table
 
-Preserve accessible names.
+Add:
+- outer border
+- safe inset from parent
+- header separation
+- row separators
+- compact controls
+- aligned price/qty/discount/VAT/total
+- aligned delete action
+- no page-level horizontal overflow
 
-### 4. Motion
+### 5. Items summary
 
-Use restrained feedback/entrance only.
+Add:
+- outer border
+- row separators
+- clear totals/footer row
+- compact cell padding
+- numeric alignment
+- safe card margins
 
-Reduced motion must disable nonessential transforms.
+### 6. Order Requests
 
-## Validation
+Apply the same shared table contract while preserving all existing functionality.
 
-Run:
-- focused builder/generator/history/storage/export tests
-- full frontend suite
-- production build
-- `git diff --check`
+### 7. Riyal
 
-Explicitly confirm prompt-builder contracts unchanged.
+Use the canonical Saudi Riyal asset/presentation everywhere monetary values use the Riyal.
+
+Do not regress the existing verified Riyal check.
+
+### 8. Payment assets
+
+Map visual logos only to existing methods:
+- Visa
+- Mastercard
+- Mada
+- Tabby
+- Tamara
+
+Underlying values/codes/payloads remain unchanged.
+
+Unknown method = generic fallback; never guessed logo.
+
+### 9. Offer and loading
+
+Use `offer_logo.png` only for existing discount/offer concepts.
+
+Use loader only if it improves a real current loading state.
+
+### 10. Browser safety
+
+If browser available, use the configured local backend/proxy.
+
+Read-only validation only.
+
+Never click:
+- Send
+- Resend
+- Cancel
+- Submit
+- destructive order actions
+
+Widths:
+- 1440
+- 1024
+- 900
+- 768
+- 390
+
+Validate:
+- reduced scrolling
+- table borders
+- table/card margins
+- responsive behavior
+- summary readability
+- logos/payment assets
+- no distortion
+- console clean
+
+## Full Validation
+
+```text
+npm --prefix frontend test -- --watch=false
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
+npm --prefix frontend run build -- --configuration production
+git diff --check
+```
 
 ## Commit
 
 ```text
-refactor(prompt-studio): harmonize RMS+ compact visual system
+refactor(online-orders): compact workflows and brand commerce UI
 ```
 
 ---

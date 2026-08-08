@@ -92,6 +92,20 @@ entries; the Riyal root path is the only deliberate compatibility location.
   and 734.66 kB raw / 153.90 kB estimated transfer for the lazy Three.js
   chunk. Interactive browser evidence was unavailable in this environment.
 
+### Session 05 Prompt Studio harmonization
+
+- Prompt Studio landing cards retain equal-height peers, meaningful generator
+  icons, capability summaries, native routes, and pinned actions.
+- Generator workspaces now use compact branded identity headers and tokenized
+  panel geometry, with explicit Load Sample, Generate, Clear, Copy, Download,
+  Quality, and History icon treatment while accessible names remain intact.
+- Prompt Quality, preview, and local history surfaces were tightened without
+  changing builders, canonical sections, quality semantics, drafts, history
+  limits, exports, or Ctrl/Cmd+Enter.
+- Session 05 validation passed: focused Prompt Studio tests (11 files / 48
+  tests), full frontend suite (49 files / 259 tests), warning-free production
+  build, and `git diff --check`. No browser matrix was run.
+
 ## UI touch map
 
 | Surface | Current controlling source | Baseline responsibility / next-session dependency |
@@ -105,7 +119,7 @@ entries; the Riyal root path is the only deliberate compatibility location.
 | Tokens, typography, gradients, motion | `frontend/src/styles/_tokens.css`, `_typography.css`, `_gradients.css`, `_animations.css`, `order-requests-filter.css`, `styles.css` | Semantic colors, card tokens, spacing/radius/type scales, gradients, reduced-motion rules, and Bootstrap Icons are centralized here. Raw colors stay in token/gradient files. |
 | Theme and motion services | `core/services/theme.service.ts`, `core/services/motion.service.ts` | `data-theme` and `data-motion` are stamped on `<html>`; system, explicit, and reduced-motion behavior is already centralized. |
 | Hub landing and scene | `features/hub/hub.component.ts`, `hub/tool-registry.ts`, `features/hub/hub-scene/hub-scene.component.ts` | Three.js is dynamically imported only by the decorative Hub scene; CSS fallback, WebGL probe, DPR cap, visibility pause, and teardown are already present. Refine only in Session 04. |
-| Prompt Studio landing/workspaces | `features/prompt-studio/prompt-studio.component.ts`, `prompt-studio.routes.ts`, generator components, `components/generator-workspace`, `prompt-preview`, `prompt-quality-panel`, history/storage services | Client-side generator UI and canonical output behavior are frozen. Visual harmonization belongs to Session 05. |
+| Prompt Studio landing/workspaces | `features/prompt-studio/prompt-studio.component.ts`, `prompt-studio.routes.ts`, generator components, `components/generator-workspace`, `prompt-preview`, `prompt-quality-panel`, history/storage services | Session 05 presentation harmonization is complete; client-side generator UI and canonical output behavior remain frozen. |
 | Online Order landing/modules | `features/landing/landing.component.ts`, `module-card.component.ts`, `core/services/module.service.ts` | Module cards, environment selection, dynamic module data, and actual keys (`upc_ecommerce`, `ghc_ecommerce`, `ghc_unicommerce`) are feature behavior; branding/asset presentation is Session 02/06. |
 | Flat Order workspace | `features/flat-order/flat-order.component.ts`, `components/order-info`, `client-info`, `delivery-info`, `products-table`, `payments-table`, `api-config`, `order-section-navigation`, `order-summary-rail` | Order Header, Customer, Delivery, Products, Payments, Payload & Send sections and summary rail; UI-only compaction is Session 06. |
 | Uni-Commerce workspace | `features/unicommerce/unicommerce.component.ts`, `components/order-fields`, `consumer-section`, `delivery-section`, `row-items-table`, `invoice-summary` | Invoice fields, customer/delivery, row items, summary, API config; preserve payload and validation contracts. |
@@ -167,8 +181,8 @@ test assembly. The observed Git remote is
 | 02 — Asset Pipeline & Brand Foundation | Move/centralize the root assets through the existing public/static convention, resolve missing `upc_logo`/`whites_logo` and Riyal paths deliberately, and review GHC/Whites plus CustomMessageBox semantics. |
 | 03 — Global Density, Tables & Surface System | Apply tokenized spacing, panel, form, card, and true-table contracts globally using the touch points above. |
 | 04 — Landing, Three.js, Shared Cards, Icons & Motion | Completed: compact Hub hero/status rail, semantic card icons and pinned actions, tokenized reduced-motion distances, and a restrained themed scene anchor; preserve fallback, isolation, and shared card/motion behavior. |
-| 05 — Prompt Studio UI Harmonization | Active: apply branded compact presentation without changing builder sections, quality semantics, drafts, history, exports, or keyboard shortcuts. |
-| 06 — Online Orders Dense UI & Commerce Assets | Apply screenshot-driven compaction and table/payment/Riyal/offer presentation without changing APIs, DTOs, payloads, status/filter/paging, capability, or order actions. |
+| 05 — Prompt Studio UI Harmonization | Completed: branded compact landing/workspaces, action icons, quality/history treatment, and reduced-motion-safe control lift; builder sections, quality semantics, drafts, history, exports, and keyboard shortcuts remain unchanged. |
+| 06 — Online Orders Dense UI & Commerce Assets | Active: apply screenshot-driven compaction and table/payment/Riyal/offer presentation without changing APIs, DTOs, payloads, status/filter/paging, capability, or order actions. |
 | 07 — Cross-Project UI Closure | Perform the required responsive/theme/reduced-motion/browser matrix and final asset/table/card audit. |
 | 08 — GitHub Rename & Final Checkpoint | Rename the actual GitHub repository only after Sessions 00–07 are complete and synchronized; update the remote to `Hossam1104/Rms-Support-Hub`. |
 | R1 — Opus review | Independent final review after Session 08; no remediation is implied by this baseline map. |

@@ -39,6 +39,22 @@ describe('BugRefinerComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Complete the form and generate a prompt to preview it here.');
   });
 
+  it('uses the compact workspace action and status icon contract', () => {
+    const fixture = create();
+
+    expect(fixture.nativeElement.querySelector('.generator-header__icon i.bi-bug')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('ui-button[ariaLabel="Load sample data"] i.bi-file-earmark-arrow-down')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('ui-button[ariaLabel="Clear form"] i.bi-eraser')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('ui-button[ariaLabel="Generate prompt"] i.bi-stars')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.quality-panel__icon i.bi-clipboard2-check')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.prompt-preview__title-icon i.bi-terminal')).toBeTruthy();
+
+    fixture.componentInstance.generate();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.generator-history__header h2 i.bi-clock-history')).toBeTruthy();
+  });
+
   it('associates counters with their Prompt Studio controls without a live region', () => {
     const fixture = create();
 

@@ -23,6 +23,7 @@ import { PromptTextareaComponent } from '../components/prompt-textarea/prompt-te
     template: `
     <app-generator-workspace
       title="Test Case Generation"
+      icon="bi-check2-square"
       description="Create structured manual QA test-case prompts from requirements and evidence."
       formTitle="Test Case Details"
       formSubtitle="Capture only the information needed to execute the scenario"
