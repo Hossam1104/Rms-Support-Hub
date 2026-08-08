@@ -4,8 +4,9 @@
 export type ToolId = 'prompt-studio' | 'online-orders' | 'pos-maintenance';
 export type ToolStatus = 'available' | 'migration-pending';
 
-/** Accent keys map to gradient tokens in styles/_gradients.css. Components
- * consume the key, never a raw color (design-token guardrail). */
+/** Accent keys map to the `--tool-<accent>-from/to` identity tokens in
+ * styles/_tokens.css. Components consume the key, never a raw color
+ * (design-token guardrail). */
 export type ToolAccent = 'brand' | 'info' | 'amber';
 
 export interface ToolRouteData {

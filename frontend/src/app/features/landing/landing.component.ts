@@ -39,9 +39,11 @@ import { PageHeaderComponent } from '../../shared/ui';
       margin-left: auto;
       margin-right: auto;
     }
-    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-5); }
+    /* Peer module cards stretch to one shared height (see module-card). */
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--space-5); }
     @media (max-width: 768px) {
       .landing-container { padding: var(--space-5) var(--space-4) var(--space-7); }
+      .modules-grid { grid-auto-rows: auto; }
     }
   `]
 })

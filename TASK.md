@@ -1,54 +1,50 @@
-# Execution Contract
+# Active Task
 
-You are implementing one scoped session in the existing QA Support Hub repository.
+## Current mode
 
-Before changing code:
+**Post-release iterative maintenance and enhancement.**
 
-1. Read `AGENTS.md` completely.
-2. Read `QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md`.
-3. Read `QA_SUPPORT_HUB_SESSION_PROMPTS.md` only for the current session.
-4. Read `TASK.md`, `.ai/STATE.md`, and `.ai/HANDOFF.md` when they exist.
-5. Inspect the current Git branch, status, diff, and recent commits.
-6. Inspect the actual code related to this session.
-7. Preserve unrelated user work.
-8. Do not reset, discard, or overwrite changes you do not own.
-
-Execution rules:
-
-- Execute the session through completion; do not stop after planning.
-- Keep the change limited to the current session.
-- Follow the existing Angular and .NET architecture.
-- Preserve existing Online Order behavior unless this session explicitly changes it.
-- Do not deploy to IIS or any server.
-- Do not run Production SQL or state-changing Production operations.
-- Do not add credentials, connection strings, secrets, private addresses, or customer data.
-- Do not commit generated artifacts, `dist`, `node_modules`, backups, logs, or screenshots.
-- Do not introduce an iframe as the final integration mechanism.
-- Do not add arbitrary command, PowerShell, or SQL execution fields.
-- Use typed models and deterministic behavior.
-- Maintain accessibility and reduced-motion support.
-- Use targeted validation for the current change.
-- Run the full repository suite only when the session explicitly requests it or when a change affects application-wide routing/build behavior.
-- Review the final diff.
-- Update project state documentation only when materially required.
-- Commit with the requested commit message when all validation passes.
-- Push only when repository policy and the user’s current workflow allow it.
-- Return a concise execution report with: Result, Changes, Validation, Commit, Remaining.
-
-# Session 16 — Final Integration Regression and Release Preparation
-
-## Objective
-
-Complete non-functional hardening before final regression.
+The QA Support Hub implementation programme is complete. There is no numbered
+implementation session, no active plan under `.ai/plans/`, and no roadmap to
+resume. Work arrives as individually scoped maintenance, enhancement, or
+defect tasks against the current repository state.
 
 ## Status
 
-Release Candidate Ready / Awaiting Deployment Decision. No implementation
-session is currently active. POS integration remains separate and deferred
-while the independent POS Maintenance Tool project is under development.
+Release Candidate Ready / Awaiting Deployment Decision. Deployment and
+Production acceptance were not executed and remain outside implementation
+work. The validation evidence for the release is
+`docs/QA_SUPPORT_HUB_RELEASE_READINESS.md`.
 
-## Scope
+## Product boundaries
 
-Session 16 final integration regression and release preparation are complete.
-See `docs/QA_SUPPORT_HUB_RELEASE_READINESS.md` for the validation evidence and
-deployment boundary. Deployment and Production acceptance were not executed.
+| Tool | Route | State |
+| --- | --- | --- |
+| QA Prompt Studio | `/tools/prompt-studio` | Available |
+| Online Order Tool | `/tools/online-orders` | Available |
+| POS Maintenance Tool | `/tools/pos-maintenance` | Coming Soon, informational only |
+
+The POS Maintenance Tool is developed in a separate project. Do not implement
+POS operations, backends, or controls here; keep the route informational until
+a dedicated integration task is authorized. See
+`docs/POS_MAINTENANCE_MIGRATION_INTAKE.md` for the security boundary that any
+future integration must satisfy.
+
+## Standing constraints
+
+- Preserve the Prompt Studio canonical Bug, Story, and Test Case output
+  contracts, the ten-record local history cap, draft persistence, and the
+  local-only deterministic generation path.
+- Preserve Online Order business behavior: API calls, DTOs, payloads, filters,
+  paging, statuses, capability guarding, order actions, and route meaning.
+- Never send, cancel, or resend against Production. Testing is the default
+  environment for any agent-run live verification.
+- Keep connection strings and credentials out of tracked files.
+- Follow `AGENTS.md` for role, scope, validation, and memory rules.
+
+## Entry points
+
+- Repository layout and where new work belongs: `docs/REPOSITORY_STRUCTURE.md`
+- Documentation index: `docs/README.md`
+- Current durable state: `.ai/STATE.md`
+- Full validation gate: `.\scripts\build.ps1`

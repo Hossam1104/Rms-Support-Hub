@@ -10,9 +10,9 @@
 The repository hosts the Online Order Tool (.NET 10 API, Angular 22 SPA). A
 standalone single-file QA Prompt Studio (`prompt_generator/index.html`) was
 added to the repository, and a POS Maintenance Tool is planned but its source
-has not been supplied. `docs/QA_SUPPORT_HUB_IMPLEMENTATION_PLAN.md` defines the
-unified target architecture delivered through Sessions 00-16 in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`.
+has not been supplied. The unified target architecture was delivered through
+Sessions 00-16; the programme plan and session prompts that drove them were
+executed and removed after the release (see `.ai/HISTORY.md` and Git history).
 
 ## Decisions
 
@@ -45,5 +45,5 @@ unified target architecture delivered through Sessions 00-16 in
 - POS privileged operations must run through a secured backend module or
   Windows agent with allowlists and audit; no arbitrary command, PowerShell, or
   SQL execution fields.
-- The repository map (implementation plan section 23) records where each future
-  feature belongs so later sessions do not re-derive placement.
+- `docs/REPOSITORY_STRUCTURE.md` records where each kind of change belongs so
+  later tasks do not re-derive placement.

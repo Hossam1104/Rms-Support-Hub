@@ -74,25 +74,23 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Build and Validation Entry Points
 
-- Full gate: `.\scripts\build.ps1` - passed for the final Order Requests
-  hardening on 2026-08-04 (160 backend tests, Release build, and production
-  Angular build; initial bundle 438.35 kB with no style-budget warning).
-- Backend tests: `dotnet test backend/OnlineOrderTool.slnx -c Release
-  --nologo` - passed 160/160 on 2026-08-04.
+- Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
+  Angular production build in sequence.
+- Backend tests: `dotnet test backend/OnlineOrderTool.slnx -c Release --nologo`.
+- Frontend tests: `cd frontend; npm test -- --watch=false`.
 - Frontend production build/type check: `cd frontend; npm run build --
-  --configuration production` - covered by the full gate on 2026-08-04.
-- Frontend tests: `cd frontend; npm test -- --watch=false` - passed 114/114
-  across 23 spec files on 2026-08-04.
+  --configuration production`. A `production-offline` configuration disables
+  external font inlining for reproducible offline builds.
 - Riyal asset provenance check: `cd frontend; npm run test:riyal-asset` -
   verifies the approved SAMA vector's canonical SHA-1, SVG structure, and
   absence of textual or external references.
+- AI context budget check: `python .ai/scripts/check_memory.py`.
 - Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
-  4200; the Order Requests workbench and API filter matrix were verified
-  locally against the approved UPC Testing connection without a
-  state-changing workflow.
+  4200. Agent-run live verification uses Testing only, never Production.
 - Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
-  npm ci` - discovered but not executed.
+  npm ci`.
 - Lint/format/E2E: no configured command.
+- Current counts and bundle sizes live in `.ai/STATE.md`, not here.
 
 ## Integrations
 
@@ -124,6 +122,14 @@ Do not copy facts that can be cheaply discovered from the repository.
   production API URLs remain relative.
 - Component styles consume CSS variables. Raw colors are restricted to
   `frontend/src/styles/_tokens.css` and `_gradients.css`.
+- Every card surface consumes the shared `--card-*` contract, and peer cards in
+  one grid get equal height from `grid-auto-rows: 1fr` plus `margin-top: auto`
+  on the action block - never a fixed pixel height. Tool identity is the named
+  accent key, not a color. See ADR-0012 and `docs/design-system.md`.
+- The Hub hero scene is the only WebGL surface. Three.js is dynamically
+  imported so it stays in its own lazy chunk, the canvas is decorative and
+  aria-hidden, and reduced motion or absent WebGL falls back to the static
+  `--scene-backdrop` gradient. Nothing may depend on it functionally.
 - Order Requests uses one normalized filter contract for list/count/stats:
   exact order matching by default, escaped partial matching when requested,
   last-nine-digit phone matching, latest-header branch/status semantics,

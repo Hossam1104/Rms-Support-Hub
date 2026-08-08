@@ -1,111 +1,82 @@
-# Online Order Tool (.NET 10 + Angular 22)
+# QA Support Hub
 
-An internal tool for building and sending pharmacy/e-commerce order and
-invoice payloads to three client RMS APIs (**GHC E-Commerce**, **UPC
-E-Commerce**, **GHC Uni-Commerce**), and for inspecting, cancelling and
-resending what was actually sent, straight from the real `OrderRequests`
-table. **OMS** and **Call Center** are registered placeholder modules, not
-yet built.
+An internal QA engineering workspace: a .NET 10 Web API and an Angular 22 SPA
+hosting the QA tools used day to day.
 
-Originally a Flask app; rewritten as a .NET 10 Web API + Angular 22 SPA,
-then remediated across eleven sessions (see `.ai/HISTORY.md`; the detailed
-audit plan is archived under `.ai/archive/`) to fix an invented payload
-schema, invented SQL columns, a per-user draft that was actually shared
-process-wide, and a design system that didn't match the approved
-direction. This README describes the tool as it exists **after** that
-remediation — the legacy Flask implementation has been removed from the
-tree entirely (see git history before this commit if you need to compare
-against it).
+| Tool | Route | State |
+| --- | --- | --- |
+| **QA Prompt Studio** | `/tools/prompt-studio` | Available |
+| **Online Order Tool** | `/tools/online-orders` | Available |
+| **POS Maintenance Tool** | `/tools/pos-maintenance` | Coming Soon |
+
+**QA Prompt Studio** turns rough notes into structured, paste-ready QA prompts —
+Bug Refinement, Story Refinement, and Test Case Generation — with deterministic
+builders, advisory prompt-quality feedback, and a local ten-record history.
+Generation is entirely client-side: nothing is sent to an external provider and
+attachment contents are never stored.
+
+**Online Order Tool** builds and sends order and invoice payloads to three
+client RMS APIs (GHC E-Commerce, UPC E-Commerce, GHC Uni-Commerce), and
+inspects, cancels, and resends what was actually sent, straight from the real
+`OrderRequests` table. OMS and Call Center are registered placeholder modules.
+
+**POS Maintenance Tool** is developed in a separate project. Its page here is
+informational only — status and planned capability areas, no operations. The
+security boundary a future integration must satisfy is recorded in
+[docs/POS_MAINTENANCE_MIGRATION_INTAKE.md](docs/POS_MAINTENANCE_MIGRATION_INTAKE.md).
 
 ---
 
 ## Tech stack
 
-- **Backend**: .NET 10 Web API (C#, `[ApiController]`), Dapper +
+- **Backend** — .NET 10 Web API (`[ApiController]`), Dapper +
   `Microsoft.Data.SqlClient` against SQL Server, xUnit.
-- **Frontend**: Angular 22 (standalone components, signals, Angular CDK for
-  overlay/virtual-scroll/a11y), a hand-rolled **bold-gradient design
-  system** (`frontend/src/styles/_tokens.css` + `_gradients.css` — see
-  `docs/design-system.md`) with dark/light theme switching.
-- **Architecture**: `OnlineOrderTool.Core` (domain/services, no external
-  deps) → `OnlineOrderTool.Data` (Dapper repositories) → `OnlineOrderTool.Api`
-  (controllers, DI composition root, references both). Frontend talks to
-  the API exclusively through typed models in `frontend/src/app/core/models/`.
+- **Frontend** — Angular 22 standalone components with signals, Angular CDK for
+  overlay/virtual-scroll/a11y, a hand-rolled token-based design system with
+  dark/light themes, and Three.js for one decorative, lazy-loaded Hub scene.
+- **Architecture** — `OnlineOrderTool.Core` (domain, module capabilities,
+  payload builders, validators; no external dependencies) →
+  `OnlineOrderTool.Data` (Dapper repositories) → `OnlineOrderTool.Api`
+  (controllers, middleware, DI composition root). The frontend talks to the API
+  only through typed models in `frontend/src/app/core/models/`.
+- **Feature routing** — every tool is a lazy Angular route with typed
+  `ToolRouteData`. Pre-hub Online Order URLs (`/modules/:key/...`) still
+  resolve through a compatibility mount.
 
----
-
-## Project layout
-
-```
-online_order_tool/
-├── backend/
-│   ├── OnlineOrderTool.slnx
-│   ├── src/
-│   │   ├── OnlineOrderTool.Api/         # Controllers, DI composition, middleware, guards
-│   │   ├── OnlineOrderTool.Core/        # Domain models, modules/capabilities, payload builders, validators
-│   │   └── OnlineOrderTool.Data/        # Dapper SQL Server repositories
-│   └── tests/OnlineOrderTool.Tests/     # xUnit backend tests
-│
-├── frontend/                            # Angular 22 SPA
-│   └── src/app/
-│       ├── core/                        # ApiService, ModuleService, ThemeService, ToastService,
-│       │                                #   typed models, HTTP interceptor, route guards
-│       ├── shared/ui/                   # stat-tile, status-pill, json-tree, drawer, ui-table,
-│       │                                #   confirm-dialog, pagination, riyal, ...
-│       ├── layout/                      # Navbar, Sidebar, Breadcrumb
-│       └── features/
-│           ├── landing/                 # Module picker
-│           ├── flat-order/              # GHC/UPC E-Commerce order builder
-│           ├── unicommerce/             # GHC Uni-Commerce invoice builder
-│           ├── order-requests/          # Order Requests: canonical list/detail, cancel/resend
-│           └── kitchen-sink/            # Dev-only /_kitchen-sink showcase of every shared/ui component
-│
-├── docs/
-│   ├── request_examples/                # Reference JSON payloads -- the payload contract
-│   ├── api-spec.md                      # REST API specification (kept in sync with the controllers)
-│   ├── database-schema.md               # Verified SQL Server schema (the SQL contract)
-│   └── design-system.md                 # Token catalogue and the "no raw hex" rule
-│
-├── scripts/
-│   ├── dev.ps1                          # Runs the API and `ng serve` together
-│   └── build.ps1                        # dotnet test + dotnet build (Release) + ng build (production)
-│
-├── docs/UI_Rework_Plan.md                # Closed U0-U8 programme; D1-D13 rationale cited by source comments
-└── .ai/HISTORY.md                        # Concise completed-milestone index
-```
+The full layout, and where new work belongs, is in
+[docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md).
 
 ---
 
 ## Getting started
 
 ### 1. Prerequisites
-- **.NET 10 SDK**
-- **Node.js 18+** and npm
 
-### 2. Configuration & secrets
+- .NET 10 SDK
+- Node.js 18+ and npm
 
-**No connection string is ever committed to this repository.**
-`appsettings.json` tracks four empty `ConnectionStrings` placeholders
-(`GhcEcommerce`, `UpcEcommerceProd`, `UpcEcommerceTest`, `GhcUnicommerce`);
-the API throws a `ConfigurationException` naming the exact missing key at
-the point a database call needs one, instead of failing with an opaque
-error inside Dapper.
+### 2. Configuration and secrets
 
-**Development** — populate them with [.NET user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets)
-(already initialized for `OnlineOrderTool.Api`; the secrets live outside
-the repo under your user profile, not in any tracked file):
+**No connection string is ever committed.** `appsettings.json` tracks four
+empty `ConnectionStrings` placeholders (`GhcEcommerce`, `UpcEcommerceProd`,
+`UpcEcommerceTest`, `GhcUnicommerce`); the API throws a
+`ConfigurationException` naming the exact missing key when a database call
+needs one, instead of failing opaquely inside Dapper.
+
+**Development** — use [.NET user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets)
+(already initialized for `OnlineOrderTool.Api`; secrets live outside the repo):
 
 ```powershell
 cd backend/src/OnlineOrderTool.Api
 dotnet user-secrets set "ConnectionStrings:GhcEcommerce"     "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
-dotnet user-secrets set "ConnectionStrings:UpcEcommerceProd" "Server=<host>;Database=RmsMainProd;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
-dotnet user-secrets set "ConnectionStrings:UpcEcommerceTest" "Server=<host>;Database=RmsMainTest2;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
+dotnet user-secrets set "ConnectionStrings:UpcEcommerceProd" "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
+dotnet user-secrets set "ConnectionStrings:UpcEcommerceTest" "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
 dotnet user-secrets set "ConnectionStrings:GhcUnicommerce"   "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
 dotnet user-secrets list   # confirm all four are set
 ```
 
-**Production** — set the equivalent environment variables (double
-underscore is ASP.NET Core's configuration-key separator):
+**Deployed** — set the equivalent environment variables (double underscore is
+ASP.NET Core's configuration-key separator):
 
 ```
 CONNECTIONSTRINGS__GHCECOMMERCE=...
@@ -114,91 +85,88 @@ CONNECTIONSTRINGS__UPCECOMMERCETEST=...
 CONNECTIONSTRINGS__GHCUNICOMMERCE=...
 ```
 
-Real credentials that were previously hardcoded in source are already in
-git history from before the remediation; rotating them is a decision for
-whoever owns that SQL Server instance, not something this repository can
-undo by deleting a file.
-
 Outbound TLS certificate validation for calls to the client RMS APIs is
-disabled by default (`Outbound:VerifyTls=false` in `appsettings.json`,
-logged once at startup) — those hosts present self-signed certificates.
-Set `Outbound:VerifyTls=true` (or the `Outbound__VerifyTls` environment
-variable) once that's no longer the case.
+disabled by default (`Outbound:VerifyTls=false`, logged once at startup)
+because those hosts present self-signed certificates. Set
+`Outbound:VerifyTls=true` (or `Outbound__VerifyTls`) once that changes.
 
 ### 3. Per-module credential status
 
 | Module | `Capabilities.OrderRequests` | Notes |
 |---|---|---|
-| `upc_ecommerce` | `true` | Configured for Testing/Production; current live database/API availability must be verified in the target environment. |
-| `ghc_ecommerce` | `false` | Item/consumer lookup and send/cancel are configured; the Order Requests page remains 501 pending confirmed GHC database credentials. |
-| `ghc_unicommerce` | `false` | No confirmed API URL or database credentials yet; the module is registered but not live. |
+| `upc_ecommerce` | `true` | Configured for Testing/Production; live availability must be verified in the target environment. |
+| `ghc_ecommerce` | `false` | Lookup and send/cancel are configured; Order Requests returns 501 pending confirmed GHC database credentials. |
+| `ghc_unicommerce` | `false` | No confirmed API URL or database credentials yet; registered but not live. |
 | `oms`, `call_center` | — | Placeholder modules, not implemented. |
 
-**The one-line GHC flip**, once GHC's `OrderRequests`/`RequestOrderHeaders`/
-etc. tables are confirmed live the same way UPC's were (see
-`docs/database-schema.md`): in
-`backend/src/OnlineOrderTool.Core/Modules/GhcEcommerceModule.cs`, change
+**The one-line GHC flip**: once GHC's `OrderRequests`/`RequestOrderHeaders`
+tables are confirmed live the way UPC's were (see
+[docs/database-schema.md](docs/database-schema.md)), change
+`OrderRequests: false` to `true` in
+`backend/src/OnlineOrderTool.Core/Modules/GhcEcommerceModule.cs`. Nothing else
+keys off module identity — the controller, the route guard, and the UI all read
+that one capability flag.
 
-```diff
-  public ModuleCapabilities Capabilities { get; } = new(
-      ...
--     OrderRequests: false,
-+     OrderRequests: true,
-```
-
-Nothing else keys off module identity for this feature — `OrderRequestsController`,
-the frontend route guard, and the Order Requests UI all read this one
-capability flag.
-
-### 4. Run it
+### 4. Run
 
 ```powershell
 .\scripts\dev.ps1
 ```
-runs the API (`http://localhost:5200`) and `ng serve` (`http://localhost:4200`,
-proxying `/api` to the API — see `frontend/proxy.conf.json`) together. Or
-run them in separate terminals:
+
+starts the API on `http://localhost:5200` and `ng serve` on
+`http://localhost:4200` (proxying `/api`, see `frontend/proxy.conf.json`). Or
+run them separately:
 
 ```bash
 cd backend && dotnet run --project src/OnlineOrderTool.Api
 cd frontend && npm install && npx ng serve
 ```
 
-### 5. Test
+### 5. Test and build
 
 ```powershell
 .\scripts\build.ps1
 ```
-runs `dotnet test`, `dotnet build -c Release`, and `ng build --configuration production`
-in sequence, or individually:
+
+runs `dotnet test`, `dotnet build -c Release`, and
+`ng build --configuration production` in sequence. Individually:
 
 ```bash
-cd backend && dotnet test
-cd frontend && npm run build
+cd backend  && dotnet test
+cd frontend && npm test -- --watch=false
+cd frontend && npm run build -- --configuration production
+cd frontend && npm run test:riyal-asset    # approved currency asset provenance
 ```
+
+A `production-offline` build configuration exists for reproducible builds when
+Google Fonts is unreachable.
 
 ---
 
-## Key features
+## Key behavior
 
-1. **Module & environment selector** — loaded live from `GET /api/modules`
-   (never hardcoded client-side), each with real `Capabilities` the
-   frontend gates routes and UI on.
-2. **Flat order builder (GHC & UPC)** — client identity block, branch-aware
-   item lookup, consumer lookup prefilling name and address, live totals,
-   and a compiled-payload preview that is the actual server-built payload
-   (`GET .../export-json`), not an approximation.
-3. **Uni-Commerce invoice builder** — invoice headers, consumer details,
-   row items, `IsReturn`/parent-reference logic, live calculated totals.
-4. **Order Requests** — reads the real `OrderRequests` table (not a local
-   file): an explicitly applied, paginated filter workbench with exact or
-   escaped partial order search, last-nine-digit phone search, four live stat
-   tiles, and a route-level detail page (Items / Order Info / Transactions /
-   Request JSON / Response JSON) with server-enforced cancel and same-number
-   resend. The historical `/requests` and `/validation` paths redirect to
-   this canonical route. External database support indexes are documented in
-   `docs/sql/order-requests-performance-indexes.sql` and require per-database
-   owner approval.
-5. **Bold-gradient design system** — a shared UI kit
-   (`frontend/src/app/shared/ui/`) built on design tokens; see
-   `docs/design-system.md`.
+1. **Modules and environments** load live from `GET /api/modules`, never
+   hardcoded client-side, and carry real `Capabilities` that the frontend gates
+   routes and UI on.
+2. **Flat order builder (GHC & UPC)** — client identity, branch-aware item
+   lookup, consumer lookup, server-owned live totals, and a compiled-payload
+   preview that is the actual server-built payload, not an approximation. An
+   empty payment list is the verified Cash on Delivery state, not an error.
+3. **Uni-Commerce invoice builder** — invoice headers, consumer details, row
+   items, `IsReturn`/parent-reference logic, and calculated totals.
+4. **Order Requests** — an explicit-apply, paginated filter workbench over the
+   real `OrderRequests` table, with exact or escaped partial order search,
+   last-nine-digit phone search, live stat tiles, and a route-level detail page
+   with server-enforced cancel and same-number resend.
+5. **Prompt Studio** — deterministic builders with detail levels and
+   Generic/Jira/Azure DevOps output formats, draft persistence, copy and
+   Markdown/plain-text export, and `Ctrl`/`Cmd`+`Enter` generation.
+6. **Design system** — one token set, one card contract, one theme service and
+   one motion service; see [docs/design-system.md](docs/design-system.md).
+
+## Documentation
+
+Start at [docs/README.md](docs/README.md). The contracts that must never be
+guessed at are `docs/api-spec.md`, `docs/database-schema.md`, and
+`docs/request_examples/`. Release status and deferred items are in
+[docs/QA_SUPPORT_HUB_RELEASE_READINESS.md](docs/QA_SUPPORT_HUB_RELEASE_READINESS.md).

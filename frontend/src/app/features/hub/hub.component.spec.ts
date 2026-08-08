@@ -12,6 +12,15 @@ import { QA_TOOL_REGISTRY } from './tool-registry';
 })
 class StubNavbarComponent { }
 
+/** The real scene lazy-loads Three.js; the Hub contract is that it is purely
+ * decorative, so the tests below run without it entirely. */
+@Component({
+    standalone: true,
+    selector: 'app-hub-scene',
+    template: ''
+})
+class StubHubSceneComponent { }
+
 describe('HubComponent', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
@@ -19,7 +28,7 @@ describe('HubComponent', () => {
             providers: [provideRouter([])]
         }).overrideComponent(HubComponent, {
             set: {
-                imports: [StubNavbarComponent, ToolCardComponent, EmptyStateComponent]
+                imports: [StubNavbarComponent, ToolCardComponent, EmptyStateComponent, StubHubSceneComponent]
             }
         }).compileComponents();
     });
@@ -82,5 +91,26 @@ describe('HubComponent', () => {
 
         expect(fixture.nativeElement.querySelectorAll('app-tool-card')).toHaveLength(1);
         expect(fixture.nativeElement.querySelector('.tool-card__title')?.textContent).toContain('Online Order Tool');
+    });
+
+    it('keeps one H1 and reachable tool cards when the decorative scene is absent', () => {
+        const fixture = TestBed.createComponent(HubComponent);
+        fixture.detectChanges();
+
+        const page = fixture.nativeElement as HTMLElement;
+        expect(page.querySelectorAll('h1')).toHaveLength(1);
+        expect(page.querySelector('h1')?.textContent).toContain('QA Support Hub');
+        // The stub renders nothing, proving navigation never depends on WebGL.
+        expect(page.querySelector('canvas')).toBeNull();
+        expect(page.querySelectorAll('.tool-card__link')).toHaveLength(3);
+    });
+
+    it('summarizes registry availability in the hero without duplicating card status', () => {
+        const fixture = TestBed.createComponent(HubComponent);
+        fixture.detectChanges();
+
+        const signals = Array.from(fixture.nativeElement.querySelectorAll('.hub-signal')) as HTMLElement[];
+        expect(signals.map(signal => signal.querySelector('.hub-signal__state')?.textContent?.trim()))
+            .toEqual(['Available', 'Available', 'Coming Soon']);
     });
 });

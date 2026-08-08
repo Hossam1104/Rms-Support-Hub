@@ -88,6 +88,51 @@
   --code-null: var(--text-muted);
   --on-amber: #1f2937;
 
+  /*
+   * ---- Card system ----
+   * One geometry/elevation contract shared by every card in the app, so hub
+   * tiles, module cards, and informational panels stay visually related.
+   * Peer cards in one grid stretch to `1fr` rows and pin their action row with
+   * `margin-top: auto`; `--card-min-height` sets the floor, never a fixed
+   * height, so longer content grows instead of clipping.
+   */
+  --card-radius: var(--radius-lg);
+  --card-padding: var(--space-5);
+  --card-gap: var(--space-4);
+  --card-min-height: 292px;
+  --card-surface: linear-gradient(160deg, rgba(24, 44, 68, .92) 0%, rgba(13, 27, 43, .96) 100%);
+  --card-surface-quiet: linear-gradient(160deg, rgba(19, 35, 54, .82) 0%, rgba(11, 23, 38, .92) 100%);
+  --card-border: rgba(170, 211, 218, .16);
+  --card-border-hover: rgba(111, 226, 215, .42);
+  --card-sheen: linear-gradient(180deg, rgba(255, 255, 255, .055) 0%, rgba(255, 255, 255, 0) 46%);
+  --card-shadow: 0 18px 40px -26px rgba(0, 0, 0, .82);
+  --card-shadow-hover: 0 26px 54px -24px rgba(0, 0, 0, .9);
+  --card-lift: -4px;
+
+  /*
+   * ---- Tool identity accents ----
+   * Each tool keeps one restrained two-stop identity used for its card icon,
+   * top edge light, and hover glow. Features reference the semantic name
+   * (brand/info/amber/teal), never these literals.
+   */
+  --tool-brand-from: #8f7cf5;
+  --tool-brand-to: #4fb4ff;
+  --tool-info-from: #22d3ee;
+  --tool-info-to: #4fb4ff;
+  --tool-amber-from: #dcaa52;
+  --tool-amber-to: #b0834b;
+  --tool-teal-from: var(--teal-500);
+  --tool-teal-to: var(--teal-400);
+
+  /* ---- Hub atmosphere (Three.js constellation + static fallback) ---- */
+  --scene-node: #6fe2d7;
+  --scene-link: #4fb4ff;
+  --scene-halo: #8f7cf5;
+  --scene-backdrop:
+    radial-gradient(70% 55% at 18% 4%, rgba(79, 180, 255, .16), transparent 62%),
+    radial-gradient(55% 45% at 86% 12%, rgba(143, 124, 245, .14), transparent 62%),
+    radial-gradient(80% 60% at 50% 100%, rgba(24, 197, 180, .10), transparent 65%);
+
   /* ---- Layout ---- */
   --sidebar-expanded-width: 280px;
   --sidebar-width: var(--sidebar-expanded-width);
@@ -207,6 +252,31 @@
   --shadow-md: 0 14px 32px -16px rgba(15, 23, 42, .20);
   --shadow-lg: 0 26px 56px -22px rgba(15, 23, 42, .24);
   --shadow-glow: 0 16px 42px -18px rgba(14, 159, 145, .28);
+
+  --card-surface: linear-gradient(160deg, #ffffff 0%, #f4faf9 100%);
+  --card-surface-quiet: linear-gradient(160deg, #f8fcfc 0%, #eef6f5 100%);
+  --card-border: rgba(18, 40, 59, .13);
+  --card-border-hover: rgba(8, 127, 118, .40);
+  --card-sheen: linear-gradient(180deg, rgba(255, 255, 255, .85) 0%, rgba(255, 255, 255, 0) 46%);
+  --card-shadow: 0 16px 34px -26px rgba(15, 23, 42, .34);
+  --card-shadow-hover: 0 24px 46px -24px rgba(15, 23, 42, .40);
+
+  --tool-brand-from: #6d5bd0;
+  --tool-brand-to: #2f7fc4;
+  --tool-info-from: #0e9aad;
+  --tool-info-to: #2f7fc4;
+  --tool-amber-from: #b07d24;
+  --tool-amber-to: #8a6533;
+  --tool-teal-from: #0e9f91;
+  --tool-teal-to: #14b5a4;
+
+  --scene-node: #0e9f91;
+  --scene-link: #2f7fc4;
+  --scene-halo: #6d5bd0;
+  --scene-backdrop:
+    radial-gradient(70% 55% at 18% 4%, rgba(47, 127, 196, .12), transparent 62%),
+    radial-gradient(55% 45% at 86% 12%, rgba(109, 91, 208, .10), transparent 62%),
+    radial-gradient(80% 60% at 50% 100%, rgba(14, 159, 145, .10), transparent 65%);
 }
 
 /*

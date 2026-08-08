@@ -46,6 +46,9 @@ semantic states, borders, focus, layout, radius, shadow, and motion.
 | Z-index | `--z-sticky`, `--z-sidebar`, `--z-navbar`, `--z-dropdown`, `--z-overlay`, `--z-dialog`, `--z-toast` | One layering scale; toast stays above dialogs |
 | Shape/elevation | `--radius-sm/md/lg/xl/pill`, `--shadow-sm/md/lg`, `--shadow-glow` | Consistent shape and depth scale |
 | Motion | `--d-fast`, `--d`, `--d-slow`, `--ease-spring`, `--ease-out`, `--transition-*` | Shared timing and easing; reduced motion collapses durations |
+| Cards | `--card-radius`, `--card-padding`, `--card-gap`, `--card-min-height`, `--card-surface`, `--card-surface-quiet`, `--card-border`, `--card-border-hover`, `--card-sheen`, `--card-shadow`, `--card-shadow-hover`, `--card-lift` | The one card contract shared by every card surface |
+| Tool identity | `--tool-brand-from/to`, `--tool-info-from/to`, `--tool-amber-from/to`, `--tool-teal-from/to` | Per-tool icon, edge light, and hover accent |
+| Hub scene | `--scene-node`, `--scene-link`, `--scene-halo`, `--scene-backdrop` | Constellation colors and the static gradient fallback |
 
 Legacy compatibility aliases such as `--bg-*`, `--primary`, `--success`,
 `--danger`, and `--glass-*` were removed after the U7 migration proved that
@@ -109,6 +112,79 @@ The standalone signal-based components are exported through
 Compose `ui-field` with `ui-input`/`ui-select`. Compose it with the existing
 `app-searchable-select` for branch search; U5 does not duplicate the U3
 searchable behavior.
+
+## The card contract
+
+Every card surface in the application — hub tiles, Prompt Studio generator
+cards, Online Order module cards, POS capability cards — consumes the same
+`--card-*` tokens, so radius, border, padding rhythm, elevation, and hover
+language are defined once. See ADR-0012.
+
+Three card kinds share that language without being interchangeable:
+
+| Kind | Example | Behavior |
+|---|---|---|
+| Navigation card | `app-tool-card` on the Hub and Prompt Studio landing | One routed action; the whole card is the link |
+| Information card | POS planned capability areas | No action; quieter `--card-surface-quiet` surface |
+| Live/selection card | `app-module-card` | Contains its own interactive controls, so the card itself is not a single link |
+
+Data-heavy workspace panels and forms keep their own layout. They may use the
+card tokens for surface and border, but they are not reshaped into tool cards.
+
+### Equal height
+
+Peer cards in one grid must line up. The grid owns the height, not the card:
+
+```css
+.grid { display: grid; grid-auto-rows: 1fr; align-items: stretch; }
+.grid > app-tool-card { height: 100%; }
+```
+
+and the card itself is a flex column whose last block is pinned:
+
+```css
+.card__content { display: flex; flex-direction: column; min-height: var(--card-min-height); }
+.card__action { margin-top: auto; }
+```
+
+`--card-min-height` is a floor, never a fixed height, so longer descriptions or
+extra capability chips grow the row instead of clipping. At the mobile
+breakpoint the grids return to `grid-auto-rows: auto`, because stretching
+single-column cards to a shared height only adds dead space.
+
+### Structure and interaction
+
+Order is fixed: header (icon container + status pill), title, description,
+capability chips, then the footer action. Hover and keyboard focus receive the
+same treatment — `translateY(var(--card-lift))`, a `--card-border-hover` edge,
+`--card-shadow-hover`, a brighter top edge light, and a small icon nudge. There
+is no tilt and no scale. Under reduced motion every transform is dropped and
+the border/shadow feedback carries the interaction.
+
+Tool identity is a named accent, never a literal: `app-tool-card` takes
+`accent="brand" | "info" | "amber" | "teal"`, which maps to
+`--tool-<accent>-from/to`. Prompt Studio is violet-blue, Online Orders is
+cyan-blue, and POS is a muted amber because it is not operational.
+
+## Hub scene
+
+The Hub hero renders a decorative Three.js particle constellation from
+`features/hub/hub-scene`. It is atmosphere only:
+
+- Three.js is imported dynamically, so it forms its own lazy chunk that no other
+  feature loads and that never enters the initial bundle.
+- The canvas is `aria-hidden` and pointer-transparent. All content, navigation,
+  headings, and accessibility live in HTML.
+- Reduced motion (`MotionService`), missing WebGL, or a failed import all leave
+  the static `--scene-backdrop` gradient in place. The Hub is fully usable in
+  every one of those cases.
+- Rendering pauses on `visibilitychange`, device pixel ratio is capped at 1.5,
+  link geometry is computed once rather than per frame, the loop runs outside
+  the Angular zone, and destroy releases frames, listeners, geometries,
+  materials, and the renderer.
+
+This is the only WebGL scene in the application. Internal routes reuse the
+static `--scene-backdrop` gradient instead of running their own.
 
 The existing shared kit also includes stat tiles, status pills, data tables,
 drawers, dialogs, empty states, skeletons, pagination, JSON trees, copy
