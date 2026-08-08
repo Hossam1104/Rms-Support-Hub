@@ -179,6 +179,12 @@ export interface OrderBuilderSection {
           width: 100%;
         }
       }
+      @media (max-width: 1199px) {
+        .section-navigation__items {
+          flex-wrap: wrap;
+          overflow-x: visible;
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
         .section-navigation__item {
           transition: none;

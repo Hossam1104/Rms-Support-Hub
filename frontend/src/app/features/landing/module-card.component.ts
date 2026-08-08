@@ -69,6 +69,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     /* Equal-height peers: the article stretches and the body absorbs the slack,
      * so the Open Module action lines up across cards with different
      * environment counts. */
+    :host ::ng-deep ui-card.module-card { display: block; height: 100%; }
     :host ::ng-deep .module-card .ui-card {
       display: flex;
       height: 100%;

@@ -20,9 +20,10 @@
 | 04 — Landing, Three.js, Shared Cards, Icons & Motion | Completed |
 | 05 — Prompt Studio UI Harmonization | Completed |
 | 06 — Online Orders Dense UI + Branding + Tables | Completed |
-| 07 — Cross-Project UI Closure | Active |
-| 08 — GitHub Rename & Final Checkpoint | Planned |
+| 07 — Cross-Project UI Closure | Completed |
+| 08 — GitHub Rename & Final Checkpoint | Planned — awaiting Opus R2 approval |
 | R1 — Opus Final Review | Planned |
+| R2 — Opus Checkpoint before Session 08 | Required / Pending |
 
 ## 1. Objectives
 
@@ -594,6 +595,14 @@ carried into Session 07.
 
 ### Session 07 — Cross-Project UI Closure
 Finish consistency, responsive matrix, themes, reduced motion, asset audit and visual regression.
+
+Session 07 completion checkpoint: the rendered 9-route by 5-viewport matrix
+passed in light and dark themes, with reduced-motion and Hub-only Three.js
+checks. Responsive workflow navigation, the narrow JSON toolbar, shared motion
+gating, and equal-height Online Order module cards were closed. The local
+Testing environment lacks `ConnectionStrings:UpcEcommerceTest`, so UPC branch
+and order-request calls returned isolated HTTP 500 responses; no Production or
+state-changing order operation was used.
 
 ### Session 08 — GitHub Rename & Final Checkpoint
 Rename GitHub repository to `Rms-Support-Hub`, update remote, stale-name scan, final tests/build/browser smoke.

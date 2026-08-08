@@ -17,9 +17,10 @@ Session 03: Completed
 Session 04: Completed
 Session 05: Completed
 Session 06: Completed
-Session 07: Active
-Session 08: Planned
+Session 07: Completed
+Session 08: Planned — awaiting Opus R2 approval
 Opus R1: Planned
+Opus R2: Required / Pending
 
 ---
 
@@ -1169,6 +1170,17 @@ Required:
 ```text
 refactor(ui): close RMS+ cross-project visual consistency
 ```
+
+## Session 07 Completion Record
+
+Session 07 passed the rendered 9-route by 5-viewport matrix in light and dark
+themes, with reduced-motion, keyboard-focus, accessibility naming, responsive
+overflow, and Hub-only Three.js checks. Full frontend/backend validation,
+production and offline builds, the Riyal verifier, and `git diff --check` also
+passed. The local Testing API reported isolated HTTP 500 responses for UPC
+branch/order-request calls because `ConnectionStrings:UpcEcommerceTest` is not
+configured; this is recorded as an environment limitation, not a frontend
+regression. The next gate is Opus R2; Session 08 remains planned.
 
 ---
 

@@ -61,14 +61,19 @@ import { sanitizeDownloadFilename } from '../../../core/utils/download-filename.
     }
     .json-tree-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
     .json-tree-title { font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); }
-    .toolbar-actions { display: flex; align-items: center; gap: 8px; }
-    .search-input { background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); padding: 3px 8px; font-size: 0.78rem; color: var(--text-primary); }
+    .toolbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; max-width: 100%; flex-wrap: wrap; }
+    .search-input { width: min(100%, 240px); min-width: 0; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); padding: 3px 8px; font-size: 0.78rem; color: var(--text-primary); }
     .toolbar-btn { background: var(--surface-interactive); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 0.75rem; padding: 3px 8px; cursor: pointer; }
     .toolbar-btn:hover { color: var(--text-primary); background: var(--surface-hover); }
     .tree-view, .raw-view { max-height: 420px; overflow: auto; }
     .raw-view { margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-primary); }
     .danger-banner { background: var(--state-danger-bg); color: var(--state-danger-fg); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; }
     .raw-fallback { margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; opacity: 0.85; }
+    @media (max-width: 480px) {
+      .json-tree-toolbar { align-items: flex-start; flex-direction: column; }
+      .toolbar-actions { align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; width: 100%; }
+      .search-input { grid-column: 1 / -1; width: 100%; }
+    }
   `]
 })
 export class JsonTreeComponent {

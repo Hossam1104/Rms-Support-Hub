@@ -2,6 +2,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ToolCardComponent } from '../../shared/ui';
+import { MotionService } from '../../core/services/motion.service';
 import { PromptStudioComponent } from './prompt-studio.component';
 
 @Component({
@@ -54,5 +55,20 @@ describe('PromptStudioComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.prompt-preview')).toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.tool-card__link')).toHaveLength(3);
+  });
+
+  it('gates the stagger through the shared motion preference', () => {
+    const fixture = TestBed.createComponent(PromptStudioComponent);
+    const motion = TestBed.inject(MotionService);
+
+    motion.setPreference('reduce');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.prompt-studio__grid')?.classList.contains('prompt-studio__grid--motion')).toBe(false);
+
+    motion.setPreference('full');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.prompt-studio__grid')?.classList.contains('prompt-studio__grid--motion')).toBe(true);
+
+    motion.setPreference('system');
   });
 });

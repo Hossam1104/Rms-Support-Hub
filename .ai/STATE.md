@@ -1,9 +1,9 @@
 # Current Project State
 
-- **Updated:** 2026-08-08
-- **Branch:** `main` after Session 06 merge
+- **Updated:** 2026-08-09
+- **Branch:** `main` after Session 07 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 06 completed; Session 07 active
+- **Session status:** Session 07 completed; Opus R2 review required/pending; Session 08 planned
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
 - **Product target:** `RMS+ Support Hub`
@@ -173,6 +173,28 @@ Session 00 map.
   The Riyal verifier and `git diff --check` passed. Browser validation was not
   run because the prescribed browser control was unavailable.
 
+## Session 07 Cross-Project UI Closure and browser matrix
+
+- Resolved the Session 06 carry-forward findings: reduced-motion animation
+  delays are reset, Prompt Studio uses the shared motion gate, responsive
+  workflow navigation wraps below desktop width, the JSON tree toolbar stays
+  inside narrow panels, and Online Order module card surfaces stretch to the
+  shared grid row height.
+- Rendered validation passed for all 9 required routes at 1440/1024/900/768/390
+  in light and dark themes, plus reduced-motion coverage. Every case had one
+  H1, one main landmark, no page shell overflow, no unlabeled visible form
+  control, no unnamed visible link/button, and no broken image. Three.js was
+  present only on Hub in full motion, absent elsewhere and under reduced motion,
+  and was removed after client-side navigation away from Hub.
+- Testing-only UPC order and order-request calls returned HTTP 500 because
+  `ConnectionStrings:UpcEcommerceTest` is not configured in the local Testing
+  environment. This was recorded as an environment/backend limitation; no
+  Production action or state-changing order operation was performed.
+- Session 07 validation passed: 52 frontend test files / 266 tests, 161 backend
+  tests, Release build with 0 warnings and 0 errors, production initial bundle
+  441.43 kB raw, production-offline initial bundle 427.11 kB raw, and lazy
+  Three.js 734.66 kB raw. The Riyal verifier and `git diff --check` passed.
+
 ## Deferred scope
 
 - UPC Testing fixture acceptance remains deferred pending Testing approval; no
@@ -183,7 +205,8 @@ Session 00 map.
 
 ## Verification boundary
 
-- No interactive browser matrix was run in Sessions 00-04. The
-  1440/1024/900/768/390 light/dark/reduced-motion/WebGL-fallback matrix remains
-  Session 07 work.
+- The Session 07 1440/1024/900/768/390 light/dark/reduced-motion/WebGL matrix
+  was rendered with the existing local Chromium CDP mechanism because the
+  in-app browser connector exposed no browser. The structural and visual gate
+  passed; the Testing-only UPC 500s remain an environment limitation.
 - No Production state-changing action or Production SQL was performed.

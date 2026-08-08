@@ -1,6 +1,7 @@
-﻿import { Component } from '@angular/core';
+﻿import { Component, inject } from '@angular/core';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
 import { ToolCardComponent } from '../../shared/ui';
+import { MotionService } from '../../core/services/motion.service';
 
 interface PromptStudioGenerator {
   title: string;
@@ -67,7 +68,7 @@ const PROMPT_STUDIO_GENERATORS: readonly PromptStudioGenerator[] = [
           </div>
         </header>
 
-        <section class="prompt-studio__grid" aria-label="Prompt generators">
+        <section class="prompt-studio__grid" [class.prompt-studio__grid--motion]="!motion.reducedMotion()" aria-label="Prompt generators">
           @for (generator of generators; track generator.route) {
             <app-tool-card
               [title]="generator.title"
@@ -101,7 +102,8 @@ const PROMPT_STUDIO_GENERATORS: readonly PromptStudioGenerator[] = [
     .prompt-studio__signal i { color: var(--text-accent); font-size: .85rem; }
     /* Equal-height peers: the three generators share one card contract. */
     .prompt-studio__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--card-gap); }
-    .prompt-studio__grid > app-tool-card { height: 100%; opacity: 0; animation: prompt-card-in var(--d-slow) var(--ease-out) forwards; }
+    .prompt-studio__grid > app-tool-card { height: 100%; }
+    .prompt-studio__grid--motion > app-tool-card { opacity: 0; animation: prompt-card-in var(--d-slow) var(--ease-out) forwards; }
     .prompt-studio__grid > app-tool-card:nth-child(1) { animation-delay: 0ms; }
     .prompt-studio__grid > app-tool-card:nth-child(2) { animation-delay: 70ms; }
     .prompt-studio__grid > app-tool-card:nth-child(3) { animation-delay: 140ms; }
@@ -120,12 +122,9 @@ const PROMPT_STUDIO_GENERATORS: readonly PromptStudioGenerator[] = [
       .prompt-studio__signals { grid-template-columns: 1fr; width: 100%; }
       .prompt-studio__signal { width: fit-content; max-width: 100%; }
     }
-    @media (prefers-reduced-motion: reduce) {
-      :host-context(html:not([data-motion="full"])) .prompt-studio__grid > app-tool-card { animation: none; opacity: 1; transform: none; }
-    }
-    :host-context(html[data-motion="reduce"]) .prompt-studio__grid > app-tool-card { animation: none; opacity: 1; transform: none; }
   `]
 })
 export class PromptStudioComponent {
   readonly generators = PROMPT_STUDIO_GENERATORS;
+  readonly motion = inject(MotionService);
 }

@@ -26,12 +26,13 @@ per-session validation numbers are not repeated here.
 | RMS+ Support Hub Session 04 - Landing, Three.js, Shared Cards, Icons & Motion | Completed | Session 04 branch validation: 49 frontend test files / 258 tests, warning-free production build, and `git diff --check` | Reworked the Hub into a compact RMS-branded landing with status rail, semantic shared-card icons and pinned actions, tokenized reduced-motion distances, and a restrained themed scene core/halo; preserved Prompt Studio, Online Order, and POS behavior and activated Session 05. |
 | RMS+ Support Hub Session 05 - Prompt Studio UI Harmonization | Completed | Session 05 branch validation: focused Prompt Studio 11 files / 48 tests, full frontend 49 files / 259 tests, warning-free production build, and `git diff --check` | Harmonized the Prompt Studio landing and generator workspaces with compact RMS+ surfaces, explicit action/quality/history icons, and reduced-motion-safe control feedback; preserved builder sections, quality semantics, drafts, history, exports, and keyboard shortcuts and activated Session 06. |
 | RMS+ Support Hub Session 06 - Online Orders Dense UI, Branding, Tables & Commerce Assets | Completed | Session 06 branch validation: 52 frontend files / 265 tests, 161 backend tests, Release build, production build, Riyal verifier, and `git diff --check` | Compacted the Online Order Builder, standardized Products/Payments/Items/Requests presentation, added exact known-payment and offer visuals with canonical Riyal treatment, resolved the R1 medium findings, and activated Session 07. Browser control was unavailable. |
+| RMS+ Support Hub Session 07 - Cross-Project UI Closure & Browser Matrix | Completed | Session 07 branch validation: 52 frontend files / 266 tests, 161 backend tests, Release build, production and offline builds, rendered light/dark/reduced-motion matrix, Riyal verifier, and `git diff --check` | Closed the cross-project visual consistency findings, responsive workflow navigation, narrow JSON toolbar, equal-height module cards, and shared motion gating. The Testing-only UPC connection-string 500s were isolated as an environment limitation; Opus R2 is the next gate. |
 
 ## Programme status
 
-- RMS+ Support Hub UI / Branding Refactor is active. Sessions 01-06 are
-  complete and Session 07 is active; later sessions remain planned in the
-  execution prompts document.
+- RMS+ Support Hub UI / Branding Refactor has completed Session 07. Opus R2 is
+  required/pending; Session 08 remains planned and must not start before that
+  review gate.
 - Remaining external evidence, not implementation work: safe UPC **Testing**
   order population/send/cancel/resend acceptance, the Production database index
   decision, and deployment/Production acceptance.
