@@ -1,3 +1,15 @@
+# RMS+ Support Hub — Active Task
+
+Program:
+RMS+ Support Hub UI / Branding Refactor
+
+Active Session:
+01 — Product & Technical Rename
+
+Previous Session:
+00 — Completed
+
+# Global Contract for Every Luna Session
 
 Repository root:
 
@@ -61,185 +73,150 @@ The following business behavior is frozen unless a session explicitly says other
 
 ---
 
-# SESSION 00 — Baseline, Asset Inventory & Rename Map
+
+# SESSION 01 — Product & Technical Rename
 
 ## Goal
 
-Build a precise implementation map before changing branding, project identifiers, global UI primitives, or assets.
-
-This is primarily inspection/documentation.
+Rename the host application to **RMS+ Support Hub** and technical project root to **RmsSupportHub** while preserving all external/business contracts.
 
 ## Branch
 
 ```text
-refactor/rms-hub-00-baseline
+refactor/rms-hub-01-project-rename
 ```
+
+## Naming Contract
+
+```text
+Display: RMS+ Support Hub
+.NET root: RmsSupportHub
+npm package: rms-support-hub
+```
+
+Do NOT rename GitHub yet. GitHub rename is Session 08.
 
 ## Required Work
 
-### 1. Synchronize Git
-
-Require:
-
-```text
-branch = main
-worktree = clean
-main == origin/main
-ahead/behind = 0 0
-```
-
-If not, stop and report the exact blocker.
-
-### 2. Inspect current naming
-
-Search the tracked repository for:
-
-```text
-QA Support Hub
-Online Order Tool
-OnlineOrderTool
-online_order_tool
-Online_Order_Tool
-QA_SUPPORT_HUB
-```
-
-Classify every meaningful occurrence as:
-
-```text
-DISPLAY NAME
-TECHNICAL PROJECT NAME
-NAMESPACE
-DOCUMENTATION
-GIT/REMOTE REFERENCE
-BUSINESS FEATURE NAME
-EXTERNAL CONTRACT
-DO NOT RENAME
-```
-
-Do not assume every `Online Order` reference should disappear. **Online Order Tool remains a feature inside RMS+ Support Hub.**
-
-### 3. Inspect actual `./assets`
-
-Inventory the real filesystem:
-
-```text
-RMS_Logo.svg
-DBS_Logo.svg
-UPC_Logo.svg
-GHC_Logo.svg
-Saudi_Riyal.svg
-MADA.png
-MasterCard.png
-Visa.png
-tabby.png
-tamara.png
-offer_logo.png
-loader.svg
-CustomMessage Box/*
-```
-
-For each:
-- exact filename/case
-- format
-- dimensions/viewBox
-- transparency
-- likely semantic purpose
-- duplicate/obsolete status
-- current frontend copy/reference if any
-
-Do not modify the assets yet.
-
-### 4. Inspect UI architecture
-
-Map the source controlling:
-- navbar
-- global shell
-- page headers
-- breadcrumbs
-- sidebar
-- cards
-- tables
-- form controls
-- spacing/tokens
-- typography
-- icons
-- ThemeService
-- MotionService
-- Hub Three.js scene
-- Prompt Studio landing/workspaces
-- Online Order shell/order/order-requests
-- POS Coming Soon
-
-### 5. Establish measured baseline
-
-Record:
-- frontend test count
-- backend test count
-- production initial bundle
-- Three.js lazy chunk size
-- current routes
-- current project names
-- current Git remote
-
-Use repository-supported commands only.
-
-### 6. Create one concise map
-
-Create:
+### 1. Read Session 00 map
 
 ```text
 docs/RMS_SUPPORT_HUB_REFACTOR_MAP.md
 ```
 
-Include only:
-- rename map
-- asset map
-- UI touch map
-- risky identifiers to preserve
-- session dependencies
+### 2. Rename user-facing host identity
 
-Do not create multiple new planning documents.
+Replace host-level `QA Support Hub` with `RMS+ Support Hub` where it means the overall product.
+
+Preserve:
+- QA Prompt Studio
+- Online Order Tool
+- POS Maintenance Tool
+
+### 3. Rename Angular metadata
+
+Update as applicable:
+- browser title
+- application metadata
+- npm package name
+- host shell labels
+- README/current docs
+- tests expecting the old host name
+
+Use npm-safe:
+
+```text
+rms-support-hub
+```
+
+Do not rename feature routes.
+
+### 4. Rename .NET host project identifiers
+
+After mapping every reference, rename:
+
+```text
+OnlineOrderTool.Api
+→ RmsSupportHub.Api
+
+OnlineOrderTool.Tests
+→ RmsSupportHub.Tests
+```
+
+Rename equivalent project/solution folders/files and host namespaces:
+
+```text
+OnlineOrderTool.*
+→ RmsSupportHub.*
+```
+
+Update:
+- `.sln`
+- `.csproj`
+- project references
+- namespaces/usings
+- assembly/root namespace
+- test namespaces
+- launch profiles
+- build scripts
+- local-development docs
+- command paths
+
+### 5. Preserve contracts
+
+Do NOT rename:
+- API routes
+- JSON properties
+- database schemas/tables
+- module keys such as `upc_ecommerce`
+- payment values/codes
+- integration/customer identifiers
+- persisted values
+- capability names
+- Online Order feature wording
+
+unless proven to be purely the obsolete technical host name.
+
+### 6. Stale-name scan
+
+At end search tracked source for:
+
+```text
+OnlineOrderTool
+QA Support Hub
+online_order_tool
+```
+
+Classify remaining matches; do not blindly force zero.
 
 ## Validation
 
+Required:
+
 ```text
+npm --prefix frontend test -- --watch=false
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
+npm --prefix frontend run build -- --configuration production
 git diff --check
 ```
 
-If documentation-only, full application regression is not required.
+No merge on any failing gate.
 
 ## Commit
 
 ```text
-docs(refactor): map RMS+ Support Hub branding and UI refactor
+refactor(brand): rename host to RMS+ Support Hub
 ```
 
 ## Final Response
 
-```text
-## Result
-Completed / Blocked
+Report:
+- renamed projects/files
+- renamed namespaces
+- renamed frontend metadata
+- preserved external identifiers
+- justified old-name references
+- frontend/backend/build results
+- Git `0 0`
 
-## Naming Map
-Display-name references:
-Technical rename references:
-Preserved Online Order feature references:
-External/do-not-rename references:
-
-## Assets
-Confirmed:
-Unknown/requires review:
-
-## UI Touch Map
-<summary>
-
-## Baseline
-Frontend:
-Backend:
-Production bundle:
-Three.js lazy chunk:
-
-## Git
-Commit:
-Ahead/behind: 0 0
-```
+---

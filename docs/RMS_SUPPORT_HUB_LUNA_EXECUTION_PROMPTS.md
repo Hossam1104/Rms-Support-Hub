@@ -8,6 +8,15 @@ Execute these sessions **in order**. Do not execute multiple sessions in one cha
 
 ---
 
+## Execution Status
+
+Session 00: Completed
+Session 01: Active
+Sessions 02–08: Planned
+Opus R1: Planned
+
+---
+
 # Global Contract for Every Luna Session
 
 Repository root:
@@ -1185,7 +1194,7 @@ RMS+ Support Hub
 GitHub repository:
 
 ```text
-RMS-Support-Hub
+Rms-Support-Hub
 ```
 
 Do not attempt spaces or `+` in the GitHub repository name.
@@ -1231,7 +1240,7 @@ gh repo view
 Rename:
 
 ```bash
-gh repo rename RMS-Support-Hub
+gh repo rename Rms-Support-Hub
 ```
 
 Use an explicit repository flag if the CLI requires it.
@@ -1239,7 +1248,7 @@ Use an explicit repository flag if the CLI requires it.
 Then explicitly update local canonical URL:
 
 ```bash
-git remote set-url origin https://github.com/<OWNER>/RMS-Support-Hub.git
+git remote set-url origin https://github.com/<OWNER>/Rms-Support-Hub.git
 git remote -v
 git -c gc.auto=0 -c maintenance.auto=false fetch --prune origin
 ```
@@ -1288,7 +1297,7 @@ Completed / Partially Completed / Blocked
 
 ## Identity
 Product: RMS+ Support Hub
-GitHub: <owner>/RMS-Support-Hub
+GitHub: <owner>/Rms-Support-Hub
 .NET: RmsSupportHub.*
 npm: rms-support-hub
 

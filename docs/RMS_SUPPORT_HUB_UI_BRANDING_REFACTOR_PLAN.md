@@ -4,10 +4,25 @@
 **Executor:** Codex GPT-5.6 Luna Max  
 **Final reviewer:** Claude Opus 5  
 **Target product name:** **RMS+ Support Hub**  
-**GitHub-compatible repository slug:** **RMS-Support-Hub**  
+**GitHub-compatible repository slug:** **Rms-Support-Hub**
 **Execution model:** Small validated sessions; branch → implement → validate → commit → fast-forward merge → push → verify `0 0`.
 
 ---
+
+## Program Status
+
+| Session | Status |
+|---|---|
+| 00 — Baseline, Asset Inventory & Rename Map | Completed |
+| 01 — Product & Technical Rename | Active |
+| 02 — Asset Pipeline & Brand Foundation | Planned |
+| 03 — Global Density, Table & Surface System | Planned |
+| 04 — Landing, Three.js, Shared Cards, Icons & Motion | Planned |
+| 05 — Prompt Studio UI Harmonization | Planned |
+| 06 — Online Orders Dense UI + Branding + Tables | Planned |
+| 07 — Cross-Project UI Closure | Planned |
+| 08 — GitHub Rename & Final Checkpoint | Planned |
+| R1 — Opus Final Review | Planned |
 
 ## 1. Objectives
 
@@ -35,7 +50,7 @@ The program has four goals:
    - display name: `RMS+ Support Hub`
    - .NET technical root: `RmsSupportHub`
    - npm/package identifier: `rms-support-hub`
-   - GitHub repository: `RMS-Support-Hub`
+   - GitHub repository: `Rms-Support-Hub`
    - integrate RMS, DBS, UPC, GHC/Whites, Riyal, payment, offer, loader and custom-message assets
 
 4. **Refresh the visual language**
@@ -133,7 +148,7 @@ Do not use arbitrary fixed heights.
 | .NET API project | `RmsSupportHub.Api` |
 | .NET tests | `RmsSupportHub.Tests` |
 | npm package | `rms-support-hub` |
-| GitHub repository | `RMS-Support-Hub` |
+| GitHub repository | `Rms-Support-Hub` |
 
 Preserve feature names:
 - QA Prompt Studio
@@ -527,20 +542,20 @@ Do after code/UI work is stable and pushed.
 
 Target:
 - application: `RMS+ Support Hub`
-- repository slug: `RMS-Support-Hub`
+- repository slug: `Rms-Support-Hub`
 
 Verify clean `main` and `0 0` first.
 
 If GitHub CLI is authenticated/admin-authorized:
 
 ```bash
-gh repo rename RMS-Support-Hub
+gh repo rename Rms-Support-Hub
 ```
 
 Then update local remote explicitly:
 
 ```bash
-git remote set-url origin https://github.com/<OWNER>/RMS-Support-Hub.git
+git remote set-url origin https://github.com/<OWNER>/Rms-Support-Hub.git
 git remote -v
 git fetch origin
 ```
@@ -576,7 +591,7 @@ Apply screenshot-driven compaction, table structure and commerce assets while pr
 Finish consistency, responsive matrix, themes, reduced motion, asset audit and visual regression.
 
 ### Session 08 — GitHub Rename & Final Checkpoint
-Rename GitHub repository to `RMS-Support-Hub`, update remote, stale-name scan, final tests/build/browser smoke.
+Rename GitHub repository to `Rms-Support-Hub`, update remote, stale-name scan, final tests/build/browser smoke.
 
 ### Review R1 — Opus 5
 Independent final review after Sessions 00–08. Findings only first; remediation prompts only for confirmed issues.
@@ -699,7 +714,7 @@ If Windows Git auto-maintenance locks recur, use session-local:
 
 ### Branding
 - RMS+ Support Hub shown throughout host UI
-- GitHub repo = RMS-Support-Hub
+- GitHub repo = Rms-Support-Hub
 - local remote uses canonical renamed URL
 - RMS primary identity
 - DBS secondary attribution
