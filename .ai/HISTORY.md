@@ -29,12 +29,13 @@ per-session validation numbers are not repeated here.
 | RMS+ Support Hub Session 07 - Cross-Project UI Closure & Browser Matrix | Completed | Session 07 branch validation: 52 frontend files / 266 tests, 161 backend tests, Release build, production and offline builds, rendered light/dark/reduced-motion matrix, Riyal verifier, and `git diff --check` | Closed the cross-project visual consistency findings, responsive workflow navigation, narrow JSON toolbar, equal-height module cards, and shared motion gating. The Testing-only UPC connection-string 500s were isolated as an environment limitation; Opus R2 is the next gate. |
 | RMS+ Support Hub Session 07.1 - Persisted Storage Contract Guardrail | Completed | Documentation-only validation: exact source literals, `git diff --check`, and Session 08 contract scan | Resolved Opus R2 HIGH-1 by protecting all seven persisted storage keys from stale-name cleanup and pinning the canonical future remote URL; planner acceptance and the visibility decision followed. |
 | RMS+ Support Hub Opus R2 / Session 08 Gate | Approved / Active | Transition commit: `docs(programme): approve Opus R2 and activate Session 08` | Approved Opus R2 after remediation, recorded the owner decision that the repository is Private, and activated the authoritative Session 08 task. |
+| RMS+ Support Hub Session 08 - GitHub Rename & Final Branded Checkpoint | Completed | Session 08 branch validation, canonical remote verification, and final synchronized `main` | Renamed the private GitHub repository to `Hossam1104/Rms-Support-Hub`, updated durable current identity references, verified the RMS+ / npm / .NET identity, and preserved all runtime and persisted contracts. The next gate is the final independent Opus review. |
 
 ## Programme status
 
-- RMS+ Support Hub UI / Branding Refactor has completed Session 07.1. Opus R2
+- RMS+ Support Hub UI / Branding Refactor has completed Session 08. Opus R2
   remediation is approved after HIGH-1 resolution, the repository visibility
-  decision is Private, and Session 08 is active.
+  decision is Private, and the final independent Opus review is pending.
 - Remaining external evidence, not implementation work: safe UPC **Testing**
   order population/send/cancel/resend acceptance, the Production database index
   decision, and deployment/Production acceptance. The Testing environment

@@ -5,7 +5,7 @@ Where things live, where new work belongs, and what to read first.
 ## Layout
 
 ```
-online_order_tool/
+Rms-Support-Hub/
 ├── AGENTS.md                  # Canonical AI operating contract (CLAUDE.md just includes it)
 ├── TASK.md                    # Current mode and standing constraints
 ├── README.md                  # Product overview, setup, build, and run

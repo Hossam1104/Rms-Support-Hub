@@ -18,9 +18,10 @@ Session 04: Completed
 Session 05: Completed
 Session 06: Completed
 Session 07: Completed
-Session 08: Planned — awaiting Opus R2 approval
-Opus R1: Planned
-Opus R2: Required / Pending
+Session 08: Completed
+Opus R1: Approved
+Opus R2: Approved after remediation
+Final independent Opus review: Pending
 
 ---
 

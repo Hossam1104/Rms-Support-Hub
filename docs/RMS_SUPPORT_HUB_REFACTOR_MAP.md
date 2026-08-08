@@ -11,8 +11,8 @@ projects, assets, or external identifiers.
 | `QA Support Hub` | DISPLAY NAME / DOCUMENTATION | 39 matching lines in 21 tracked files, including the Hub heading, navbar, sidebar, POS copy, tests, README, release documents, state, and historical ADRs. | Session 01 changes host-level product copy to `RMS+ Support Hub`; historical/audit references are reviewed individually. |
 | `Online Order Tool` | BUSINESS FEATURE NAME / DOCUMENTATION / EXTERNAL CONTRACT | 23 matching lines in 14 tracked files, including tool metadata, Online Orders landing, Hub tests, README, API/schema documents, and release state. | Preserve as the feature name inside the RMS+ Support Hub. Do not rename the `/tools/online-orders` feature route or business wording. |
 | `OnlineOrderTool` | TECHNICAL PROJECT NAME / NAMESPACE | Session 00 baseline: 261 matching lines in 89 tracked files, including the solution, project folders/files, .NET namespaces/usings, scripts, tests, and technical documentation. | Completed in Session 01: physical solution/project identities and host namespaces now use `RmsSupportHub.*`; payload, API, database, and persisted contracts remain unchanged. |
-| `online_order_tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | 7 matching lines in 3 tracked files, primarily repository-structure and task/path documentation. | Keep the current repository identity through Session 07; GitHub rename is deferred to Session 08. |
-| `Online_Order_Tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | Present in the active execution prompt as a search target; the observed remote URL is `https://github.com/Hossam1104/Online_Order_Tool.git`. | Do not alter the current remote in Session 01; the GitHub rename remains Session 08. |
+| `online_order_tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | Historical local/repository spelling retained in the stale-name inventory and execution records; the GitHub repository was renamed in Session 08. | Current canonical GitHub identity is `Hossam1104/Rms-Support-Hub`; a local workspace path may retain the legacy directory name. |
+| `Online_Order_Tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | Historical remote spelling retained in the stale-name inventory and completed execution prompt. | Session 08 completed the GitHub rename and canonical origin update; do not use the historical URL. |
 | `QA_SUPPORT_HUB` | DOCUMENTATION / FILE NAME | Appears in active search instructions and the tracked release-readiness filename `docs/QA_SUPPORT_HUB_RELEASE_READINESS.md` plus its links. | Review current-document links during the technical/product rename; preserve historical evidence unless the next session proves a safe rename. |
 | `RMS-Support-Hub` | FUTURE GIT/REMOTE REFERENCE | The two programme documents used the older future-slug spelling. | Normalized in both programme documents to the authoritative future target `Rms-Support-Hub`; actual `origin` remains the current Online Order Tool repository until Session 08. |
 
@@ -22,7 +22,7 @@ Current product targets are deliberately distinct:
 Display: RMS+ Support Hub
 .NET technical root: RmsSupportHub
 npm package: rms-support-hub
-Future GitHub repository: Hossam1104/Rms-Support-Hub (Session 08)
+Current GitHub repository: Hossam1104/Rms-Support-Hub
 ```
 
 ## Asset map
@@ -150,7 +150,7 @@ Current technical project names are `frontend` / npm package `rms-support-hub`,
 `RmsSupportHub.Tests`. Session 01 verified the renamed solution, project
 references, namespaces, assembly/root namespaces, scripts, current docs, and
 test assembly. The observed Git remote is
-`https://github.com/Hossam1104/Online_Order_Tool.git`.
+`https://github.com/Hossam1104/Rms-Support-Hub.git`.
 
 ## Risky identifiers to preserve
 
@@ -182,10 +182,10 @@ test assembly. The observed Git remote is
 | 03 — Global Density, Tables & Surface System | Apply tokenized spacing, panel, form, card, and true-table contracts globally using the touch points above. |
 | 04 — Landing, Three.js, Shared Cards, Icons & Motion | Completed: compact Hub hero/status rail, semantic card icons and pinned actions, tokenized reduced-motion distances, and a restrained themed scene anchor; preserve fallback, isolation, and shared card/motion behavior. |
 | 05 — Prompt Studio UI Harmonization | Completed: branded compact landing/workspaces, action icons, quality/history treatment, and reduced-motion-safe control lift; builder sections, quality semantics, drafts, history, exports, and keyboard shortcuts remain unchanged. |
-| 06 — Online Orders Dense UI & Commerce Assets | Active: apply screenshot-driven compaction and table/payment/Riyal/offer presentation without changing APIs, DTOs, payloads, status/filter/paging, capability, or order actions. |
+| 06 — Online Orders Dense UI & Commerce Assets | Completed: applied screenshot-driven compaction and table/payment/Riyal/offer presentation without changing APIs, DTOs, payloads, status/filter/paging, capability, or order actions. |
 | 07 — Cross-Project UI Closure | Perform the required responsive/theme/reduced-motion/browser matrix and final asset/table/card audit. |
-| 08 — GitHub Rename & Final Checkpoint | Rename the actual GitHub repository only after Sessions 00–07 are complete and synchronized; update the remote to `Hossam1104/Rms-Support-Hub`. |
-| R1 — Opus review | Independent final review after Session 08; no remediation is implied by this baseline map. |
+| 08 — GitHub Rename & Final Checkpoint | Completed: renamed the actual private GitHub repository and updated the canonical origin to `Hossam1104/Rms-Support-Hub`. |
+| R1 — Opus review | Final independent review is pending after Session 08; no further implementation session is authorized by the current hold. |
 
 ### Baseline measurements
 

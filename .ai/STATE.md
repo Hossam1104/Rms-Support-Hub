@@ -1,17 +1,17 @@
 # Current Project State
 
 - **Updated:** 2026-08-09
-- **Branch:** `main` after Opus R2 approval and Session 08 gate activation
+- **Branch:** `main` after Session 08 completion and final-review hold
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 07 completed; Session 07.1 remediation completed; Opus R2 approved after remediation; Session 08 active
+- **Session status:** Session 08 completed; final independent Opus review pending
 - **Opus Checkpoint R2:** Approved after remediation
 - **R2 HIGH-1:** Persisted-storage stale-name guardrail resolved in Session 07.1
 - **R2 visibility concern:** Resolved by owner decision — repository is Private
-- **Planner decision:** Approved to proceed to Session 08
-- **Current GitHub repository:** `Hossam1104/online_order_tool`
-- **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
+- **Planner decision:** Session 08 approved and completed
+- **Current GitHub repository:** `Hossam1104/Rms-Support-Hub`
+- **Canonical origin:** `https://github.com/Hossam1104/Rms-Support-Hub.git`
 - **Repository visibility:** Private
-- **Session 08 gate:** Active; Session 08 execution is authorized
+- **Session 08 gate:** Completed; final independent Opus review is the next gate
 - **Product target:** `RMS+ Support Hub`
 - **Technical target:** `RmsSupportHub`
 - **npm target:** `rms-support-hub`
@@ -200,6 +200,23 @@ Session 00 map.
   tests, Release build with 0 warnings and 0 errors, production initial bundle
   441.43 kB raw, production-offline initial bundle 427.11 kB raw, and lazy
   Three.js 734.66 kB raw. The Riyal verifier and `git diff --check` passed.
+
+## Session 08 GitHub rename and final branded checkpoint
+
+- The private GitHub repository was renamed from `Hossam1104/online_order_tool`
+  to `Hossam1104/Rms-Support-Hub`; local `origin` uses the canonical new URL
+  and the authenticated owner has `ADMIN` permission.
+- Product identity is RMS+ Support Hub, the npm package is
+  `rms-support-hub`, and the .NET solution/projects use `RmsSupportHub.*`.
+  The Online Order Tool, QA Prompt Studio, and POS Maintenance Tool feature
+  names remain preserved.
+- The seven persisted storage literals remain byte-identical. Remaining
+  stale-name matches are classified as historical records/programme prompts,
+  protected persisted contracts, feature/technical inventory evidence, or the
+  local workspace path rather than renamed runtime identity.
+- Session 08 implementation is complete. The next gate is the final
+  independent Opus review; deferred Testing/Production evidence remains
+  outside this session's authorization.
 
 ## Deferred scope
 
