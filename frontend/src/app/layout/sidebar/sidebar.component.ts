@@ -47,9 +47,9 @@ import { UiButtonComponent } from '../../shared/ui';
           <i class="bi bi-arrow-left"></i>
           <span>All Modules</span>
         </a>
-        <a routerLink="/" class="back-link" aria-label="Back to QA Support Hub">
+        <a routerLink="/" class="back-link" aria-label="Back to RMS+ Support Hub">
           <i class="bi bi-grid-3x3-gap"></i>
-          <span>QA Support Hub</span>
+          <span>RMS+ Support Hub</span>
         </a>
       </div>
     </aside>

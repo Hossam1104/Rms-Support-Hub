@@ -99,7 +99,7 @@ describe('HubComponent', () => {
 
         const page = fixture.nativeElement as HTMLElement;
         expect(page.querySelectorAll('h1')).toHaveLength(1);
-        expect(page.querySelector('h1')?.textContent).toContain('QA Support Hub');
+        expect(page.querySelector('h1')?.textContent).toContain('RMS+ Support Hub');
         // The stub renders nothing, proving navigation never depends on WebGL.
         expect(page.querySelector('canvas')).toBeNull();
         expect(page.querySelectorAll('.tool-card__link')).toHaveLength(3);

@@ -1,4 +1,4 @@
-# QA Support Hub - Release Readiness
+# RMS+ Support Hub - Release Readiness
 
 Date: 2026-08-08
 

@@ -1,5 +1,5 @@
 /**
- * Mirrors OnlineOrderTool.Core.DTOs.EnvironmentDto (see docs/api-spec.md §1).
+ * Mirrors RmsSupportHub.Core.DTOs.EnvironmentDto (see docs/api-spec.md §1).
  * Never carries the real ApiUrl/CancelUrl -- only whether they are
  * configured -- so internal RMS endpoint topology is not published to the
  * browser (see remediation_plan.md B16, fixed server-side in R6).
@@ -21,7 +21,7 @@ export interface EnvironmentDto {
   isDefault: boolean;
 }
 
-/** Mirrors OnlineOrderTool.Core.Modules.ModuleCapabilities, exposed on
+/** Mirrors RmsSupportHub.Core.Modules.ModuleCapabilities, exposed on
  * ModuleDto so routes/UI can gate on real capability data instead of
  * hardcoded module-key comparisons (see remediation_plan.md B21). */
 export interface ModuleCapabilities {
@@ -34,7 +34,7 @@ export interface ModuleCapabilities {
   hasDeliveryFields: boolean;
 }
 
-/** Mirrors OnlineOrderTool.Core.DTOs.ModuleDto. */
+/** Mirrors RmsSupportHub.Core.DTOs.ModuleDto. */
 export interface ModuleDto {
   key: string;
   label: string;

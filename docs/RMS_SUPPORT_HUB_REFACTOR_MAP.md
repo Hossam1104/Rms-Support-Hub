@@ -10,9 +10,9 @@ projects, assets, or external identifiers.
 |---|---|---|---|
 | `QA Support Hub` | DISPLAY NAME / DOCUMENTATION | 39 matching lines in 21 tracked files, including the Hub heading, navbar, sidebar, POS copy, tests, README, release documents, state, and historical ADRs. | Session 01 changes host-level product copy to `RMS+ Support Hub`; historical/audit references are reviewed individually. |
 | `Online Order Tool` | BUSINESS FEATURE NAME / DOCUMENTATION / EXTERNAL CONTRACT | 23 matching lines in 14 tracked files, including tool metadata, Online Orders landing, Hub tests, README, API/schema documents, and release state. | Preserve as the feature name inside the RMS+ Support Hub. Do not rename the `/tools/online-orders` feature route or business wording. |
-| `OnlineOrderTool` | TECHNICAL PROJECT NAME / NAMESPACE | 261 matching lines in 89 tracked files, including `backend/OnlineOrderTool.slnx`, project folders/files, .NET namespaces/usings, scripts, tests, and technical documentation. | Session 01 maps the obsolete host root to `RmsSupportHub.*` after checking every project/reference; payload, API, database, and persisted contracts remain unchanged. |
+| `OnlineOrderTool` | TECHNICAL PROJECT NAME / NAMESPACE | Session 00 baseline: 261 matching lines in 89 tracked files, including the solution, project folders/files, .NET namespaces/usings, scripts, tests, and technical documentation. | Completed in Session 01: physical solution/project identities and host namespaces now use `RmsSupportHub.*`; payload, API, database, and persisted contracts remain unchanged. |
 | `online_order_tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | 7 matching lines in 3 tracked files, primarily repository-structure and task/path documentation. | Keep the current repository identity through Session 07; GitHub rename is deferred to Session 08. |
-| `Online_Order_Tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | Present in the active execution prompt as a search target; the observed remote URL is `https://github.com/Hossam1104/Online_Order_Tool.git`. | Do not alter the current remote in Session 00. |
+| `Online_Order_Tool` | GIT/REMOTE REFERENCE / DOCUMENTATION | Present in the active execution prompt as a search target; the observed remote URL is `https://github.com/Hossam1104/Online_Order_Tool.git`. | Do not alter the current remote in Session 01; the GitHub rename remains Session 08. |
 | `QA_SUPPORT_HUB` | DOCUMENTATION / FILE NAME | Appears in active search instructions and the tracked release-readiness filename `docs/QA_SUPPORT_HUB_RELEASE_READINESS.md` plus its links. | Review current-document links during the technical/product rename; preserve historical evidence unless the next session proves a safe rename. |
 | `RMS-Support-Hub` | FUTURE GIT/REMOTE REFERENCE | The two programme documents used the older future-slug spelling. | Normalized in both programme documents to the authoritative future target `Rms-Support-Hub`; actual `origin` remains the current Online Order Tool repository until Session 08. |
 
@@ -94,10 +94,12 @@ Current route topology is lazy and typed through `ToolRouteData`:
 /_kitchen-sink                         development-only route; absent in production
 ```
 
-Current technical project names are `frontend` / npm package `frontend`,
-`backend/OnlineOrderTool.slnx`, and .NET projects
-`OnlineOrderTool.Api`, `OnlineOrderTool.Core`, `OnlineOrderTool.Data`, and
-`OnlineOrderTool.Tests`. The observed Git remote is
+Current technical project names are `frontend` / npm package `rms-support-hub`,
+`backend/RmsSupportHub.slnx`, and .NET projects
+`RmsSupportHub.Api`, `RmsSupportHub.Core`, `RmsSupportHub.Data`, and
+`RmsSupportHub.Tests`. Session 01 verified the renamed solution, project
+references, namespaces, assembly/root namespaces, scripts, current docs, and
+test assembly. The observed Git remote is
 `https://github.com/Hossam1104/Online_Order_Tool.git`.
 
 ## Risky identifiers to preserve
@@ -141,7 +143,7 @@ Commands executed on the Session 00 branch:
 
 - `npm --prefix frontend test -- --watch=false --no-progress`: 46 test files,
   250 tests passed.
-- `dotnet test backend/OnlineOrderTool.slnx -c Release --nologo`: 161 passed,
+- Session 00 baseline command (before the technical rename): `dotnet test backend/OnlineOrderTool.slnx -c Release --nologo`: 161 passed,
   0 failed, 0 skipped.
 - `npm --prefix frontend run build -- --configuration production`: initial
   439.28 kB raw / 101.43 kB estimated transfer; no budget warning.

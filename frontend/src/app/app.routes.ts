@@ -1,4 +1,4 @@
-﻿import { Route, Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 import { capabilityGuard } from './core/guards/capability.guard';
 import { TOOL_ROUTE_DATA, ToolRouteData } from './core/models';
 import { environment } from '../environments/environment';
@@ -68,7 +68,7 @@ export const routes: Routes = [
     path: '',
     loadComponent: () => import('./features/hub/hub.component').then(m => m.HubComponent),
     data: {
-      title: 'QA Support Hub',
+      title: 'RMS+ Support Hub',
       breadcrumb: 'Dashboard',
       status: 'available',
       accent: 'brand'

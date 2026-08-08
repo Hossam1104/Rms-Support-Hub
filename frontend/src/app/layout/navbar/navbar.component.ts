@@ -13,8 +13,8 @@ import { EnvironmentDto } from '../../core/models';
   imports: [CommonModule, RouterLink, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent],
   template: `
     <header class="navbar">
-      <a routerLink="/" class="navbar-brand" aria-label="Return to QA Support Hub">
-        <span class="brand-title">QA Support Hub</span>
+      <a routerLink="/" class="navbar-brand" aria-label="Return to RMS+ Support Hub">
+        <span class="brand-title">RMS+ Support Hub</span>
         <span class="brand-subtitle">Unified QA & Support Workspace</span>
       </a>
       <div class="navbar-actions">

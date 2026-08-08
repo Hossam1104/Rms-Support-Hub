@@ -1,9 +1,9 @@
 # Online Order Tool — REST API Specification
 
-Base URL: `http://localhost:5200/api` (dev; see `backend/src/OnlineOrderTool.Api/Properties/launchSettings.json`). The Angular dev server proxies `/api` to this host via `frontend/proxy.conf.json`.
+Base URL: `http://localhost:5200/api` (dev; see `backend/src/RmsSupportHub.Api/Properties/launchSettings.json`). The Angular dev server proxies `/api` to this host via `frontend/proxy.conf.json`.
 
 This document describes the actual routes implemented in
-`backend/src/OnlineOrderTool.Api/Controllers/*.cs` as of Session R7. It is the
+`backend/src/RmsSupportHub.Api/Controllers/*.cs` as of Session R7. It is the
 contract the Angular app's `core/models/*.ts` are typed against — keep it in
 sync with the controllers, not the other way around.
 

@@ -11,8 +11,9 @@ Execute these sessions **in order**. Do not execute multiple sessions in one cha
 ## Execution Status
 
 Session 00: Completed
-Session 01: Active
-Sessions 02–08: Planned
+Session 01: Completed
+Session 02: Active
+Sessions 03–08: Planned
 Opus R1: Planned
 
 ---

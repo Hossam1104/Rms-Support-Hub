@@ -1,4 +1,4 @@
-/** Typed route metadata for the QA Support Hub shell (Session 01). Attached
+/** Typed route metadata for the RMS+ Support Hub shell (Session 01). Attached
  * to each tool route through Route.data so the shell and breadcrumbs share one
  * consistent contract. */
 export type ToolId = 'prompt-studio' | 'online-orders' | 'pos-maintenance';

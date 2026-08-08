@@ -7,11 +7,11 @@ $root = Split-Path -Parent $PSScriptRoot
 try {
     Write-Host "==> dotnet test" -ForegroundColor Cyan
     Push-Location (Join-Path $root "backend")
-    dotnet test OnlineOrderTool.slnx --nologo
+    dotnet test RmsSupportHub.slnx --nologo
     if ($LASTEXITCODE -ne 0) { throw "dotnet test failed with exit code $LASTEXITCODE" }
 
     Write-Host "==> dotnet build -c Release" -ForegroundColor Cyan
-    dotnet build OnlineOrderTool.slnx -c Release --nologo
+    dotnet build RmsSupportHub.slnx -c Release --nologo
     if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit code $LASTEXITCODE" }
     Pop-Location
 

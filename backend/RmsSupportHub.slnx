@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RmsSupportHub.Api/RmsSupportHub.Api.csproj" />
+    <Project Path="src/RmsSupportHub.Core/RmsSupportHub.Core.csproj" />
+    <Project Path="src/RmsSupportHub.Data/RmsSupportHub.Data.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RmsSupportHub.Tests/RmsSupportHub.Tests.csproj" />
+  </Folder>
+</Solution>

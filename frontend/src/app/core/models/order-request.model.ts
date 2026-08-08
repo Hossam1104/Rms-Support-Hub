@@ -1,5 +1,5 @@
 /**
- * Typed against OnlineOrderTool.Core.DTOs.OrderRequestDtos and the
+ * Typed against RmsSupportHub.Core.DTOs.OrderRequestDtos and the
  * OrderRequestsController responses documented in docs/api-spec.md §5.
  */
 

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ORDER_REQUEST_STATUS_LABELS } from '../../../core/models';
 
 /** RequestOrderHeaders.OrderStatus (1..9) -- see
- * backend/src/OnlineOrderTool.Core/OrderRequestStatus.cs. */
+ * backend/src/RmsSupportHub.Core/OrderRequestStatus.cs. */
 /** Renders one of the nine order-status gradient pills defined in
  * _gradients.css. Pops on status change (spring scale via a CSS class
  * toggled for one animation cycle -- no @angular/animations dependency

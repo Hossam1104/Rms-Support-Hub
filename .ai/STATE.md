@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-08
-- **Branch:** `main` after Session 00 merge
+- **Branch:** `main` after Session 01 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 00 completed; Session 01 active and ready
+- **Session status:** Session 01 completed; Session 02 active and ready
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
 - **Product target:** `RMS+ Support Hub`
@@ -53,6 +53,29 @@ Session 00 map.
   hashes were found, but `frontend/public/` has no asset copy and the Riyal
   verifier currently fails on its missing public path. Asset integration is
   Session 02 scope.
+
+## Session 01 rename and validation
+
+- Host-level product identity is now **RMS+ Support Hub**; the preserved tools
+  remain **QA Prompt Studio**, **Online Order Tool**, and **POS Maintenance
+  Tool**.
+- The physical backend solution/projects, namespaces, project references,
+  assembly/root namespaces, scripts, current technical docs, and test assembly
+  now use `RmsSupportHub.*`; the Angular npm package is `rms-support-hub`.
+- External behavior was preserved: routes, API/DTO/payload contracts, SQL and
+  database identifiers, module keys, payment values, persisted values,
+  capability names, and POS Coming Soon boundaries were not changed. The
+  current GitHub remote remains unchanged; the GitHub rename is Session 08.
+- Required validation passed: 46 frontend test files / 250 tests, 161 backend
+  tests, Release build with 0 warnings and 0 errors, production bundle
+  439.28 kB raw / 101.42 kB estimated transfer, and lazy Three.js
+  734.66 kB raw / 153.95 kB estimated transfer.
+- The stale-name audit found no old technical/host names in current source,
+  scripts, README, or current technical docs. Remaining matches are justified
+  historical ADRs, baseline/map records, and the active execution prompt.
+- The canonical `assets/Saudi_Riyal.svg` remains one of the 17 root assets, but
+  `frontend/public/assets/Saudi_Riyal.svg` is still missing; asset integration
+  is active Session 02 scope.
 
 ## Deferred scope
 

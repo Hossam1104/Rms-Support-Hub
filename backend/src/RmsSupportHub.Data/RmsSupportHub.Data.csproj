@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\RmsSupportHub.Core\RmsSupportHub.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets OrderRequestRepositoryTests assert on the internal SQL-building
+         helpers directly (e.g. that the list query never selects the
+         RequestJson/ResponseJson blobs) without a live database. -->
+    <InternalsVisibleTo Include="RmsSupportHub.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>RmsSupportHub.Data</AssemblyName>
+    <RootNamespace>RmsSupportHub.Data</RootNamespace>
+  </PropertyGroup>
+
+</Project>

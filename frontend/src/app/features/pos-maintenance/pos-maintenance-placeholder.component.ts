@@ -15,7 +15,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
     <main class="pos-page" aria-label="POS Maintenance Tool">
       <app-page-header
         title="POS Maintenance Tool"
-        subtitle="This tool is currently under development and will be integrated into QA Support Hub when ready.">
+        subtitle="This tool is currently under development and will be integrated into RMS+ Support Hub when ready.">
       </app-page-header>
 
       <section class="status-grid" aria-label="POS availability">
@@ -28,7 +28,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
               <app-status-badge label="Coming Soon" variant="info" role="status"></app-status-badge>
             </div>
           </div>
-          <p>This tool is currently under development and will be integrated into QA Support Hub when ready.</p>
+          <p>This tool is currently under development and will be integrated into RMS+ Support Hub when ready.</p>
         </article>
 
         <article class="availability-panel" aria-labelledby="available-now-title">
@@ -69,7 +69,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 
       <a routerLink="/" class="back-link">
         <i class="bi bi-arrow-left" aria-hidden="true"></i>
-        <span>Back to QA Support Hub</span>
+        <span>Back to RMS+ Support Hub</span>
       </a>
     </main>
   `,

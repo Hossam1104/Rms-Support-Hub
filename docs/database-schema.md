@@ -10,7 +10,7 @@
 > None of them exist on the real schema; every query built against them
 > throws `Invalid column name` at runtime. The remediation milestone is indexed
 > in [`.ai/HISTORY.md`](../.ai/HISTORY.md); see
-> [`ContractTests.cs`](../backend/tests/OnlineOrderTool.Tests/ContractTests.cs)
+> [`ContractTests.cs`](../backend/tests/RmsSupportHub.Tests/ContractTests.cs)
 > for the automated guard against regressing this again.
 >
 > The queries below were originally ported line-for-line from the
@@ -18,7 +18,7 @@
 > of R10's decommission — see git history before this commit if you need
 > the original source) and have since been superseded in places by the
 > actual C# implementation; where they differ, **the C# source under
-> `backend/src/OnlineOrderTool.Data/Repositories/` is authoritative**, not
+> `backend/src/RmsSupportHub.Data/Repositories/` is authoritative**, not
 > this document. GHC's `lookup_item` query (§3.1) is still carried over
 > **unverified** — GHC database credentials have never been confirmed live.
 
@@ -206,7 +206,7 @@ filters use a `LatestHeaders` CTE with `ROW_NUMBER() OVER (PARTITION BY
 OrderNumber ORDER BY Id DESC)` so the latest header is joined before filtering.
 
 ```sql
--- List (OnlineOrderTool.Data/Repositories/OrderRequestRepository.cs::BuildListSql)
+-- List (RmsSupportHub.Data/Repositories/OrderRequestRepository.cs::BuildListSql)
 -- RequestJson/ResponseJson are never selected here -- only DATALENGTH/existence,
 -- so the list stays fast regardless of blob size. Paginated with OFFSET/FETCH.
 -- Canonical predicates are shared by list, count, and stats.

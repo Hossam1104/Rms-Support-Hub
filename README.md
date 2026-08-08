@@ -1,4 +1,4 @@
-# QA Support Hub
+# RMS+ Support Hub
 
 An internal QA engineering workspace: a .NET 10 Web API and an Angular 22 SPA
 hosting the QA tools used day to day.
@@ -34,9 +34,9 @@ security boundary a future integration must satisfy is recorded in
 - **Frontend** — Angular 22 standalone components with signals, Angular CDK for
   overlay/virtual-scroll/a11y, a hand-rolled token-based design system with
   dark/light themes, and Three.js for one decorative, lazy-loaded Hub scene.
-- **Architecture** — `OnlineOrderTool.Core` (domain, module capabilities,
+- **Architecture** — `RmsSupportHub.Core` (domain, module capabilities,
   payload builders, validators; no external dependencies) →
-  `OnlineOrderTool.Data` (Dapper repositories) → `OnlineOrderTool.Api`
+  `RmsSupportHub.Data` (Dapper repositories) → `RmsSupportHub.Api`
   (controllers, middleware, DI composition root). The frontend talks to the API
   only through typed models in `frontend/src/app/core/models/`.
 - **Feature routing** — every tool is a lazy Angular route with typed
@@ -64,10 +64,10 @@ empty `ConnectionStrings` placeholders (`GhcEcommerce`, `UpcEcommerceProd`,
 needs one, instead of failing opaquely inside Dapper.
 
 **Development** — use [.NET user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets)
-(already initialized for `OnlineOrderTool.Api`; secrets live outside the repo):
+(already initialized for `RmsSupportHub.Api`; secrets live outside the repo):
 
 ```powershell
-cd backend/src/OnlineOrderTool.Api
+cd backend/src/RmsSupportHub.Api
 dotnet user-secrets set "ConnectionStrings:GhcEcommerce"     "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
 dotnet user-secrets set "ConnectionStrings:UpcEcommerceProd" "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
 dotnet user-secrets set "ConnectionStrings:UpcEcommerceTest" "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
@@ -103,7 +103,7 @@ because those hosts present self-signed certificates. Set
 tables are confirmed live the way UPC's were (see
 [docs/database-schema.md](docs/database-schema.md)), change
 `OrderRequests: false` to `true` in
-`backend/src/OnlineOrderTool.Core/Modules/GhcEcommerceModule.cs`. Nothing else
+`backend/src/RmsSupportHub.Core/Modules/GhcEcommerceModule.cs`. Nothing else
 keys off module identity — the controller, the route guard, and the UI all read
 that one capability flag.
 
@@ -118,7 +118,7 @@ starts the API on `http://localhost:5200` and `ng serve` on
 run them separately:
 
 ```bash
-cd backend && dotnet run --project src/OnlineOrderTool.Api
+cd backend && dotnet run --project src/RmsSupportHub.Api
 cd frontend && npm install && npx ng serve
 ```
 

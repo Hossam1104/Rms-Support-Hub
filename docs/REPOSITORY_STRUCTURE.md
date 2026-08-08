@@ -11,12 +11,12 @@ online_order_tool/
 ├── README.md                  # Product overview, setup, build, and run
 │
 ├── backend/
-│   ├── OnlineOrderTool.slnx
+│   ├── RmsSupportHub.slnx
 │   ├── src/
-│   │   ├── OnlineOrderTool.Core/   # Domain models, module capabilities, payload builders, validators
-│   │   ├── OnlineOrderTool.Data/   # Dapper SQL Server repositories
-│   │   └── OnlineOrderTool.Api/    # Controllers, middleware, guards, DI composition root
-│   └── tests/OnlineOrderTool.Tests/
+│   │   ├── RmsSupportHub.Core/   # Domain models, module capabilities, payload builders, validators
+│   │   ├── RmsSupportHub.Data/   # Dapper SQL Server repositories
+│   │   └── RmsSupportHub.Api/    # Controllers, middleware, guards, DI composition root
+│   └── tests/RmsSupportHub.Tests/
 │
 ├── frontend/src/
 │   ├── app/
@@ -27,7 +27,7 @@ online_order_tool/
 │   │   │   └── directives/
 │   │   ├── layout/            # Navbar, sidebar, breadcrumb
 │   │   └── features/
-│   │       ├── hub/           # QA Support Hub landing + hub-scene (Three.js)
+│   │       ├── hub/           # RMS+ Support Hub landing + hub-scene (Three.js)
 │   │       ├── prompt-studio/ # Landing, three generators, builders, models, services
 │   │       ├── landing/       # Online Order module picker
 │   │       ├── module-shell/  # Online Order workspace shell
@@ -48,7 +48,7 @@ online_order_tool/
 
 | Change | Location |
 | --- | --- |
-| New API endpoint | Controller in `OnlineOrderTool.Api`, logic in `Core`, SQL in `Data`. Dependencies flow Core → Data → API only. |
+| New API endpoint | Controller in `RmsSupportHub.Api`, logic in `Core`, SQL in `Data`. Dependencies flow Core → Data → API only. |
 | Module behavior difference | A flag on `IOrderModule.Capabilities`. Never a module-key string comparison. |
 | New shared UI primitive | `frontend/src/app/shared/ui/<name>/`, exported from `shared/ui/index.ts`, demonstrated in the kitchen sink. |
 | New feature screen | `frontend/src/app/features/<feature>/`, lazy-loaded from `app.routes.ts` with typed route data. |

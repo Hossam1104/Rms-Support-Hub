@@ -76,7 +76,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.
-- Backend tests: `dotnet test backend/OnlineOrderTool.slnx -c Release --nologo`.
+- Backend tests: `dotnet test backend/RmsSupportHub.slnx -c Release --nologo`.
 - Frontend tests: `cd frontend; npm test -- --watch=false`.
 - Frontend production build/type check: `cd frontend; npm run build --
   --configuration production`. A `production-offline` configuration disables
@@ -87,7 +87,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 - AI context budget check: `python .ai/scripts/check_memory.py`.
 - Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
   4200. Agent-run live verification uses Testing only, never Production.
-- Restore/install: `dotnet restore backend/OnlineOrderTool.slnx`; `cd frontend;
+- Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
   npm ci`.
 - Lint/format/E2E: no configured command.
 - Current counts and bundle sizes live in `.ai/STATE.md`, not here.
@@ -95,8 +95,8 @@ Do not copy facts that can be cheaply discovered from the repository.
 ## Integrations
 
 - SQL Server supports lookups and request history. Ownership:
-  `OnlineOrderTool.Data`; schema contract: `docs/database-schema.md`; named
-  configuration: `backend/src/OnlineOrderTool.Api/appsettings.json`. Tracked
+  `RmsSupportHub.Data`; schema contract: `docs/database-schema.md`; named
+  configuration: `backend/src/RmsSupportHub.Api/appsettings.json`. Tracked
   connection-string values stay empty.
 - Branch options use the capability-gated `/api/modules/{key}/branches`
   endpoint, the verified `dbo.Branches` contract, and a short in-memory cache;

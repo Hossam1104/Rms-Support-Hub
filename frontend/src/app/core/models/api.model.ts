@@ -10,7 +10,7 @@ export interface ApiError {
   details?: unknown;
 }
 
-/** Mirrors OnlineOrderTool.Core.Services.ApiResponseResult -- the shape of
+/** Mirrors RmsSupportHub.Core.Services.ApiResponseResult -- the shape of
  * send-request / cancel-order / resend responses. */
 export interface SendOrderResult {
   success: boolean;
@@ -19,14 +19,14 @@ export interface SendOrderResult {
   urlSent: string;
 }
 
-/** Mirrors OnlineOrderTool.Core.DTOs.LookupResultDto. */
+/** Mirrors RmsSupportHub.Core.DTOs.LookupResultDto. */
 export interface LookupResult<T> {
   success: boolean;
   message?: string | null;
   data?: T | null;
 }
 
-/** Mirrors OnlineOrderTool.Core.DTOs.ModuleEndpointDto -- the active
+/** Mirrors RmsSupportHub.Core.DTOs.ModuleEndpointDto -- the active
  * environment's resolved send endpoint (U4, UI_Rework_Plan.md D13). Scoped
  * to the single resolved environment; the module catalog still never
  * carries URLs (B16). */

@@ -19,11 +19,12 @@ per-session validation numbers are not repeated here.
 | QA Support Hub Sessions 14-16 | Completed | `0452c88`, `3a2837a`, `4a59893` | Hardened cross-tool responsive consistency, then accessibility, security, and performance (non-fatal storage handling, safe download names, keyboard and landmark fixes, route teardown, offline font build profile), then ran the final integration regression and produced `docs/QA_SUPPORT_HUB_RELEASE_READINESS.md`. |
 | Post-release cleanup and visual refresh | Completed | `refactor(app): clean repository and refresh visual system` | Removed superseded programme plans, session prompts, the duplicated command cheat sheet, the `.ai` plan archive, three dead source files, and four unused CSS animations. Added one shared card contract (`--card-*` tokens, equal-height peer grids, pinned actions) applied across the Hub, Prompt Studio, Online Order module, and POS capability cards; redesigned the Hub landing with a decorative lazy-loaded Three.js constellation that degrades to a static gradient (ADR-0012). Prompt Studio and Online Order behavior were unchanged. |
 | RMS+ Support Hub Session 00 — Baseline, Asset Inventory & Rename Map | Completed | Session 00 branch validation: 46 frontend test files / 250 tests, 161 backend tests, production bundle and lazy Three.js measurements | Created the rename and UI touch map, inventoried all 17 supplied assets and integration gaps, normalized the future GitHub target to `Rms-Support-Hub`, and activated Session 01. |
+| RMS+ Support Hub Session 01 — Product & Technical Rename | Completed | Session 01 branch validation: 46 frontend test files / 250 tests, 161 backend tests, Release build, production build, and `git diff --check` | Renamed host display identity to RMS+ Support Hub, technical .NET root to `RmsSupportHub`, and npm package to `rms-support-hub`; preserved external identifiers and activated Session 02. |
 
 ## Programme status
 
-- RMS+ Support Hub UI / Branding Refactor is active. Session 00 is complete and
-  Session 01 is active/ready; later sessions remain planned in the execution
+- RMS+ Support Hub UI / Branding Refactor is active. Session 01 is complete and
+  Session 02 is active/ready; later sessions remain planned in the execution
   prompts document.
 - Remaining external evidence, not implementation work: safe UPC **Testing**
   order population/send/cancel/resend acceptance, the Production database index

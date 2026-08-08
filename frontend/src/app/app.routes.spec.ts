@@ -35,7 +35,7 @@ describe('application order-request routing contract', () => {
   });
 });
 
-describe('QA Support Hub route skeleton', () => {
+describe('RMS+ Support Hub route skeleton', () => {
   function routeAt(path: string): Route | undefined {
     return routes.find(route => route.path === path);
   }
@@ -49,7 +49,7 @@ describe('QA Support Hub route skeleton', () => {
     expect(hub?.loadComponent).toBeTruthy();
     expect(hub?.redirectTo).toBeUndefined();
     const data = hub?.data as ToolRouteData;
-    expect(data.title).toBe('QA Support Hub');
+    expect(data.title).toBe('RMS+ Support Hub');
     expect(data.breadcrumb).toBe('Dashboard');
     expect(data.status).toBe('available');
     expect(data.accent).toBeTruthy();

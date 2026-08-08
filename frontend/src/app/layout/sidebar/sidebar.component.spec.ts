@@ -29,8 +29,8 @@ describe('SidebarComponent', () => {
         ]);
 
         const footerLinks = Array.from(element.querySelectorAll('.sidebar-footer a')) as HTMLAnchorElement[];
-        expect(footerLinks.map(link => link.textContent?.trim())).toEqual(['All Modules', 'QA Support Hub']);
+        expect(footerLinks.map(link => link.textContent?.trim())).toEqual(['All Modules', 'RMS+ Support Hub']);
         expect(footerLinks.map(link => link.getAttribute('href'))).toEqual(['/tools/online-orders', '/']);
-        expect(footerLinks[1].getAttribute('aria-label')).toBe('Back to QA Support Hub');
+        expect(footerLinks[1].getAttribute('aria-label')).toBe('Back to RMS+ Support Hub');
     });
 });

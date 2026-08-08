@@ -4,7 +4,7 @@
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$apiProject = Join-Path $root "backend\src\OnlineOrderTool.Api"
+$apiProject = Join-Path $root "backend\src\RmsSupportHub.Api"
 $frontend = Join-Path $root "frontend"
 
 Write-Host "Starting API (http://localhost:5200) in a new window..." -ForegroundColor Cyan

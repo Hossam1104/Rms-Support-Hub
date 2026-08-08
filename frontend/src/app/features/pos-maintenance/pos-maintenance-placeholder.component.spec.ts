@@ -79,7 +79,7 @@ describe('PosMaintenancePlaceholderComponent', () => {
         const text = page.textContent || '';
 
         expect(backLink?.getAttribute('href')).toBe('/');
-        expect(backLink?.textContent).toContain('Back to QA Support Hub');
+        expect(backLink?.textContent).toContain('Back to RMS+ Support Hub');
         expect(page.querySelectorAll('button')).toHaveLength(0);
         for (const forbiddenText of [
             'Run PowerShell',

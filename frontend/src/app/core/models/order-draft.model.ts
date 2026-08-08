@@ -1,4 +1,4 @@
-/** Mirrors OnlineOrderTool.Core.Models.Product. */
+/** Mirrors RmsSupportHub.Core.Models.Product. */
 export interface Product {
   itemCode: string;
   itemName: string;
@@ -20,7 +20,7 @@ export interface Product {
   netUnitPrice?: number;
 }
 
-/** Mirrors OnlineOrderTool.Core.Models.Payment. */
+/** Mirrors RmsSupportHub.Core.Models.Payment. */
 export interface Payment {
   paymentMethod: string;
   paymentStatus: string;
@@ -36,7 +36,7 @@ export interface Payment {
   bankCode?: string | null;
 }
 
-/** Mirrors OnlineOrderTool.Core.Models.Consumer. */
+/** Mirrors RmsSupportHub.Core.Models.Consumer. */
 export interface Consumer {
   firstName?: string | null;
   middleName?: string | null;
@@ -53,7 +53,7 @@ export interface Consumer {
   addressCode?: string | null;
 }
 
-/** Mirrors OnlineOrderTool.Core.Models.DeliveryDetails (Uni-Commerce only). */
+/** Mirrors RmsSupportHub.Core.Models.DeliveryDetails (Uni-Commerce only). */
 export interface DeliveryDetails {
   deliveryPhoneNumber?: string | null;
   deliveryAddress?: string | null;
@@ -62,7 +62,7 @@ export interface DeliveryDetails {
   deliveryFees: number;
 }
 
-/** Mirrors OnlineOrderTool.Core.Models.RowItem (Uni-Commerce invoice line). */
+/** Mirrors RmsSupportHub.Core.Models.RowItem (Uni-Commerce invoice line). */
 export interface RowItem {
   quantity: number;
   materialNumber: string;
@@ -78,7 +78,7 @@ export interface RowItem {
 }
 
 /**
- * Mirrors OnlineOrderTool.Core.Models.OrderDraft. orderData is a genuine
+ * Mirrors RmsSupportHub.Core.Models.OrderDraft. orderData is a genuine
  * loosely-typed bag (Dictionary<string, object?> server-side, holding a
  * different field set per module/variant) -- `unknown` is the honest type,
  * not `any`: every read site must narrow/cast before use.
@@ -92,7 +92,7 @@ export interface OrderDraft {
   rowItems: RowItem[];
 }
 
-/** Mirrors OnlineOrderTool.Core.Services.TotalsSummary. */
+/** Mirrors RmsSupportHub.Core.Services.TotalsSummary. */
 export interface TotalsSummary {
   totalProductAmount: number;
   totalProductVat: number;

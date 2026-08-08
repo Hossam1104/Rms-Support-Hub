@@ -4,10 +4,13 @@ Program:
 RMS+ Support Hub UI / Branding Refactor
 
 Active Session:
-01 — Product & Technical Rename
+02 — Asset Pipeline & Brand Foundation
 
-Previous Session:
-00 — Completed
+Previous:
+01 — Completed
+
+Known gap:
+`frontend/public/assets/Saudi_Riyal.svg` is currently missing; Session 02 must resolve it deliberately.
 
 # Global Contract for Every Luna Session
 
@@ -71,152 +74,126 @@ The following business behavior is frozen unless a session explicitly says other
 - integration/module keys
 - POS remains Coming Soon
 
----
 
-
-# SESSION 01 — Product & Technical Rename
+# SESSION 02 â€” Asset Pipeline & Brand Foundation
 
 ## Goal
 
-Rename the host application to **RMS+ Support Hub** and technical project root to **RmsSupportHub** while preserving all external/business contracts.
+Make the supplied assets reusable, semantic, centralized and safe.
 
 ## Branch
 
 ```text
-refactor/rms-hub-01-project-rename
+refactor/rms-hub-02-assets
 ```
-
-## Naming Contract
-
-```text
-Display: RMS+ Support Hub
-.NET root: RmsSupportHub
-npm package: rms-support-hub
-```
-
-Do NOT rename GitHub yet. GitHub rename is Session 08.
 
 ## Required Work
 
-### 1. Read Session 00 map
+### 1. Reinspect actual assets
+
+Use current:
 
 ```text
-docs/RMS_SUPPORT_HUB_REFACTOR_MAP.md
+./assets
 ```
 
-### 2. Rename user-facing host identity
+Never assume files are unchanged.
 
-Replace host-level `QA Support Hub` with `RMS+ Support Hub` where it means the overall product.
+### 2. Normalize frontend asset placement
 
-Preserve:
-- QA Prompt Studio
-- Online Order Tool
-- POS Maintenance Tool
+Use the repositoryâ€™s existing public/static convention.
 
-### 3. Rename Angular metadata
-
-Update as applicable:
-- browser title
-- application metadata
-- npm package name
-- host shell labels
-- README/current docs
-- tests expecting the old host name
-
-Use npm-safe:
+Prefer semantic folders such as:
 
 ```text
-rms-support-hub
+frontend/public/assets/
+â”œâ”€â”€ brand/
+â”œâ”€â”€ modules/
+â”œâ”€â”€ payments/
+â”œâ”€â”€ commerce/
+â””â”€â”€ system/
 ```
 
-Do not rename feature routes.
+Do not duplicate an already-approved asset unless migration is required.
 
-### 4. Rename .NET host project identifiers
+Preserve the verified Riyal behavior.
 
-After mapping every reference, rename:
+### 3. Central asset catalog
+
+Create one typed mapping, preferably:
 
 ```text
-OnlineOrderTool.Api
-→ RmsSupportHub.Api
-
-OnlineOrderTool.Tests
-→ RmsSupportHub.Tests
+frontend/src/app/core/config/app-assets.ts
 ```
 
-Rename equivalent project/solution folders/files and host namespaces:
+Expose semantic references for:
+- RMS
+- DBS
+- UPC
+- GHC/Whites
+- Riyal
+- Visa
+- Mastercard
+- Mada
+- Tabby
+- Tamara
+- offer
+- loader
+- confirmed CustomMessage assets
 
-```text
-OnlineOrderTool.*
-→ RmsSupportHub.*
-```
+Do not create a service unless runtime logic needs it.
 
-Update:
-- `.sln`
-- `.csproj`
-- project references
-- namespaces/usings
-- assembly/root namespace
-- test namespaces
-- launch profiles
-- build scripts
-- local-development docs
-- command paths
+### 4. Reusable logo/brand primitive
 
-### 5. Preserve contracts
+Only if useful across multiple screens, add a lightweight logo/brand component or shared pattern supporting:
+- size
+- alt
+- decorative state
+- `object-fit: contain`
+- consistent aspect handling
 
-Do NOT rename:
-- API routes
-- JSON properties
-- database schemas/tables
-- module keys such as `upc_ecommerce`
-- payment values/codes
-- integration/customer identifiers
-- persisted values
-- capability names
-- Online Order feature wording
+Do not over-engineer.
 
-unless proven to be purely the obsolete technical host name.
+### 5. Integrate hierarchy
 
-### 6. Stale-name scan
+RMS:
+- global navbar
+- Hub hero/product identity
 
-At end search tracked source for:
+DBS:
+- secondary attribution only
 
-```text
-OnlineOrderTool
-QA Support Hub
-online_order_tool
-```
+UPC:
+- UPC E-Commerce module card/shell/sidebar
 
-Classify remaining matches; do not blindly force zero.
+GHC/Whites:
+- only where actual module/context supports it
+
+### 6. CustomMessage assets
+
+Inspect contents. Map only confirmed semantics. Unknown assets stay unused and documented.
+
+No new message functionality.
 
 ## Validation
 
-Required:
+Targeted:
+- asset catalog
+- logo primitive
+- Hub/module card
+
+Then:
 
 ```text
 npm --prefix frontend test -- --watch=false
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 npm --prefix frontend run build -- --configuration production
 git diff --check
 ```
 
-No merge on any failing gate.
-
 ## Commit
 
 ```text
-refactor(brand): rename host to RMS+ Support Hub
+feat(brand): integrate RMS+ Support Hub asset system
 ```
-
-## Final Response
-
-Report:
-- renamed projects/files
-- renamed namespaces
-- renamed frontend metadata
-- preserved external identifiers
-- justified old-name references
-- frontend/backend/build results
-- Git `0 0`
 
 ---

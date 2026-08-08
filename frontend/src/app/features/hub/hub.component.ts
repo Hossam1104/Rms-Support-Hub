@@ -19,7 +19,7 @@ import { QA_TOOL_REGISTRY } from './tool-registry';
 
         <div class="hub-hero__inner">
           <p class="hub-eyebrow"><span aria-hidden="true"></span>QA Engineering Workspace</p>
-          <h1 id="hub-title">QA Support Hub</h1>
+          <h1 id="hub-title">RMS+ Support Hub</h1>
           <p class="hub-hero__description">
             A focused workspace for QA engineering, prompt refinement, order operations, and support tooling.
           </p>

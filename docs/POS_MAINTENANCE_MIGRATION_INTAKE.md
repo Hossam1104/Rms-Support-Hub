@@ -5,12 +5,12 @@
 This document preserves the security and architecture questions for a future
 dedicated POS integration session. The POS Maintenance Tool is being developed
 independently outside this repository, so source assessment and integration are
-intentionally deferred. QA Support Hub does not implement, connect to, or infer
+intentionally deferred. RMS+ Support Hub does not implement, connect to, or infer
 POS operations today.
 
 ## Source Availability
 
-**External development in progress.** The repository contains the QA Support Hub
+**External development in progress.** The repository contains the RMS+ Support Hub
 informational placeholder at `frontend/src/app/features/pos-maintenance/`. The
 independent POS project will be considered for integration after development is
 complete and a future migration session is authorized.
@@ -110,7 +110,7 @@ values are **[REQUIRES SOURCE REVIEW]**.
 The preferred direction for machine-local operations is:
 
 ```text
-Angular QA Support Hub
+Angular RMS+ Support Hub
         ->
 .NET API
         ->
