@@ -556,7 +556,7 @@ gh repo rename Rms-Support-Hub
 Then update local remote explicitly:
 
 ```bash
-git remote set-url origin https://github.com/<OWNER>/Rms-Support-Hub.git
+git remote set-url origin https://github.com/Hossam1104/Rms-Support-Hub.git
 git remote -v
 git fetch origin
 ```

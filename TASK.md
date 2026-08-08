@@ -6,17 +6,22 @@ RMS+ Support Hub UI / Branding Refactor
 Session 07:
 Completed
 
+Session 07.1:
+Completed - persisted-storage guardrail remediation
+
 Next Gate:
-Opus Checkpoint R2
+Opus Checkpoint R2 / remediation acceptance
 
 Session 08:
 GitHub Rename & Final Branded Checkpoint
 
 Status:
-Blocked pending Opus R2 approval.
+Blocked pending planner acceptance of Session 07.1, Opus R2 remediation
+acceptance, and the repository visibility decision.
 
 Instructions:
-Do not execute Session 08 until the planner records Opus R2 approval.
+Do not execute Session 08 until the planner records Opus R2 approval and the
+repository visibility decision.
 
 The authoritative Session 08 prompt remains stored in:
 

@@ -1244,6 +1244,36 @@ Preserve the feature name:
 Online Order Tool
 ```
 
+### PERSISTED STORAGE CONTRACTS — DO NOT RENAME
+
+The following runtime values are external/persisted compatibility contracts.
+During Session 08 stale-name cleanup, every value below MUST remain
+byte-identical and MUST be classified as:
+
+```text
+EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE
+```
+
+| Contract | Source | Literal | Classification |
+|---|---|---|---|
+| Environment selection prefix | `frontend/src/app/core/services/module.service.ts` — `ENV_STORAGE_PREFIX` | `onlineOrderTool.activeEnvironment.` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+| Motion preference | `frontend/src/app/core/services/motion.service.ts` — `MOTION_STORAGE_KEY` | `qa-support-hub:motion` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+| Theme preference | `frontend/src/app/core/services/theme.service.ts` — `THEME_STORAGE_KEY` | `qa-support-hub:theme` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+| Prompt Studio history | `frontend/src/app/features/prompt-studio/services/prompt-history.service.ts` — `PROMPT_STUDIO_HISTORY_KEY` | `qa-support-hub.prompt-studio.history` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+| Prompt Studio bug draft | `frontend/src/app/features/prompt-studio/services/prompt-storage.service.ts` — `PROMPT_STUDIO_DRAFT_KEYS.bug` | `qa-support-hub.prompt-studio.bug-draft` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+| Prompt Studio story draft | `frontend/src/app/features/prompt-studio/services/prompt-storage.service.ts` — `PROMPT_STUDIO_DRAFT_KEYS.story` | `qa-support-hub.prompt-studio.story-draft` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+| Prompt Studio test-case draft | `frontend/src/app/features/prompt-studio/services/prompt-storage.service.ts` — `PROMPT_STUDIO_DRAFT_KEYS.testCase` | `qa-support-hub.prompt-studio.test-case-draft` | `EXTERNAL / PERSISTED CONTRACT — DO NOT CHANGE` |
+
+Renaming these values during repository, project, or product stale-name
+cleanup would silently discard or orphan existing users' theme preference,
+motion preference, Prompt Studio bug drafts, Prompt Studio story drafts,
+Prompt Studio test-case drafts, Prompt Studio history, and per-module selected
+environment. The application test suite may still pass because these exact
+storage-key literals are not necessarily pinned by regression tests.
+
+Therefore, repository/project/product rename does **not** authorize storage-key
+rename.
+
 ### 2. Verify technical identity
 
 Confirm:
@@ -1274,7 +1304,7 @@ Use an explicit repository flag if the CLI requires it.
 Then explicitly update local canonical URL:
 
 ```bash
-git remote set-url origin https://github.com/<OWNER>/Rms-Support-Hub.git
+git remote set-url origin https://github.com/Hossam1104/Rms-Support-Hub.git
 git remote -v
 git -c gc.auto=0 -c maintenance.auto=false fetch --prune origin
 ```

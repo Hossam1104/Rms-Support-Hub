@@ -1,11 +1,14 @@
 # Current Project State
 
 - **Updated:** 2026-08-09
-- **Branch:** `main` after Session 07 merge
+- **Branch:** `main` after Session 07.1 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 07 completed; Opus R2 review required/pending; Session 08 planned
+- **Session status:** Session 07 completed; Session 07.1 remediation completed; Opus R2 remediation acceptance required; Session 08 blocked
+- **Opus R2:** Remediation Required; HIGH-1 Session 08 persisted-storage-key guardrail resolved by Session 07.1
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
+- **Repository visibility:** Current Public; owner decision pending; planner recommends Private due to committed internal network topology
+- **Session 08 gate:** Blocked pending planner acceptance of Session 07.1 and the repository visibility decision
 - **Product target:** `RMS+ Support Hub`
 - **Technical target:** `RmsSupportHub`
 - **npm target:** `rms-support-hub`
