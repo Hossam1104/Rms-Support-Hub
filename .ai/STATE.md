@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-08
 - **Branch:** `main`
-- **Release or milestone:** QA Support Hub — Session 15 Accessibility, Security, and Performance Hardening
+- **Release or milestone:** QA Support Hub — Release Candidate Ready / Awaiting Deployment Decision
 
 ## Working State
 
@@ -105,6 +105,12 @@
   restrained announcements, route teardown, and the final landmark/control
   fixes are in place. Prompt Studio and Online Orders remain available; POS
   remains Coming Soon and non-operational.
+- QA Support Hub **Session 16 — Final Integration Regression and Release
+  Preparation** is complete. The release-readiness record is
+  `docs/QA_SUPPORT_HUB_RELEASE_READINESS.md`. Prompt Studio and Online Orders
+  are available; POS remains Coming Soon and non-operational. No application
+  implementation, API contract, Online Order business behavior, state-changing
+  Online Order action, Production operation, or deployment was performed.
 
 ## Deferred Acceptance and Database Scope
 
@@ -239,13 +245,34 @@
   configuration.
 - The exact target environment, server identity, deployment mechanism, secure
   access method, rollback location, and health checks are therefore unknown.
-- Application deployment stays deferred until the final QA Support Hub release
-  session; the plan scopes deployment outside feature sessions.
+- Application deployment and Production acceptance remain pending after the
+  completed release-candidate validation; the plan keeps deployment outside
+  implementation sessions.
+
+## Session 16 Final Verification
+
+- Frontend: 244 tests passed across 45 files, with no skipped tests.
+- Backend: 161 tests passed, with 0 failures and 0 skipped tests; Release build
+  passed.
+- Standard Angular production build passed at 436.68 kB initial with no
+  warnings. The established offline diagnostic build passed at 422.36 kB
+  initial.
+- Browser matrix: 27 of 27 canonical route/viewport checks passed at
+  1440x900, 900x900, and 390x844; representative `upc_ecommerce` legacy
+  routes passed 3 of 3. The completed matrix had no frontend console errors,
+  page errors, failed requests, shell overflow, or unlabeled controls.
+- Prompt contracts, local quality/history/draft/export behavior, capability
+  guarding, POS non-operational safety, accessibility smoke, security
+  boundaries, and lazy-loading/performance constraints passed review.
+- Riyal asset verification passed. No dependency changes or committed
+  credentials were found. Session 15 timer/lifecycle observations remain
+  accepted low-risk risks because no reproducible defect was found.
 
 ## Programme Status
 
 - U0-U8, final project polish, Order Requests unification, and acceptance
   hardening are closed.
-- QA Support Hub: Sessions 00 through 10, 14, and 15 completed; Sessions
-  11-13 deferred while the independent POS project is developed; Session 16 is
-  active.
+- QA Support Hub: Sessions 00 through 10, 14, 15, and 16 completed; Sessions
+  11-13 deferred while the independent POS project is developed. No active
+  implementation session remains. The current state is Release Candidate Ready
+  / Awaiting Deployment Decision.

@@ -43,11 +43,12 @@ Complete non-functional hardening before final regression.
 
 ## Status
 
-Active. Session 15 accessibility, security, and performance hardening is
-complete. POS implementation remains deferred while the independent POS
-Maintenance Tool project is under development.
+Release Candidate Ready / Awaiting Deployment Decision. No implementation
+session is currently active. POS integration remains separate and deferred
+while the independent POS Maintenance Tool project is under development.
 
 ## Scope
 
-Use the Session 16 prompt and validation contract maintained in
-`docs/QA_SUPPORT_HUB_SESSION_PROMPTS.md`. Do not deploy in this session.
+Session 16 final integration regression and release preparation are complete.
+See `docs/QA_SUPPORT_HUB_RELEASE_READINESS.md` for the validation evidence and
+deployment boundary. Deployment and Production acceptance were not executed.

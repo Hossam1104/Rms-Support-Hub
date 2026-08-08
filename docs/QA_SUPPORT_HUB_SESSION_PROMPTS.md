@@ -1382,8 +1382,11 @@ Session 12 — Deferred — External POS Development
 Session 13 — Deferred — External POS Development
 Session 14 — Completed
 Session 15 — Completed
-Session 16 — Active
+Session 16 — Completed
 ```
+
+Current QA Support Hub roadmap: Completed through Session 16 with Sessions
+11-13 deferred.
 
 Allowed statuses:
 
