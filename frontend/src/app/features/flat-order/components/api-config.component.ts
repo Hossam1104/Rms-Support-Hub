@@ -87,9 +87,9 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
     </section>
   `,
   styles: [`
-    .card-section { padding: 24px; margin-bottom: 24px; background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+    .card-section { padding: var(--panel-padding); margin-bottom: var(--section-gap); background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--panel-radius); box-shadow: var(--shadow-sm); }
     .card-section.embedded { padding: 0; margin: 0; background: transparent; border: 0; box-shadow: none; }
-    .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
+    .card-title { display: flex; align-items: center; gap: var(--panel-gap); font-size: 1.1rem; font-weight: 600; margin-bottom: var(--panel-gap); color: var(--text-primary); }
     .card-title i { color: var(--accent); }
     .env-tag {
       margin-left: auto; display: flex; align-items: center; gap: 6px;
@@ -99,12 +99,12 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
     }
     .env-tag--prod { background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .input-group { display: flex; gap: 10px; margin-top: 10px; }
-    .token-input { width: 100%; box-sizing: border-box; min-height: 42px; padding: 0 12px; border: 1px solid var(--input-border); border-radius: var(--radius-md); background: var(--input-bg); color: var(--text-primary); font: inherit; }
+    .token-input { width: 100%; box-sizing: border-box; min-height: var(--control-height); padding: 0 var(--panel-padding-compact); border: 1px solid var(--input-border); border-radius: var(--radius-md); background: var(--input-bg); color: var(--text-primary); font: inherit; }
     .token-input:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     .input-group input { flex: 1; }
     .custom-toggle { margin-top: 10px; }
     .toggle-label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; }
-    .send-button { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; margin-bottom: 16px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--accent); color: var(--text-inverse); cursor: pointer; font: inherit; font-weight: 750; }
+    .send-button { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-height); margin-bottom: var(--panel-gap); padding: 0 var(--panel-padding); border: 1px solid transparent; border-radius: var(--radius-md); background: var(--accent); color: var(--text-inverse); cursor: pointer; font: inherit; font-weight: 750; }
     .send-button:hover:not(:disabled) { background: var(--accent-hover); }
     .send-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .send-button:disabled { opacity: .55; cursor: not-allowed; }

@@ -60,8 +60,8 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     :host { display: contents; }
     .sidebar { position: fixed; top: var(--navbar-height); left: 0; bottom: 0; z-index: 900; display: flex; width: var(--sidebar-expanded-width); flex-direction: column; background: var(--surface-panel); border-right: 1px solid var(--border-subtle); color: var(--text-primary); transition: width var(--transition-normal), transform var(--transition-normal); }
     .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-    .sidebar-header { display: flex; align-items: center; justify-content: space-between; min-height: 72px; padding: 16px; border-bottom: 1px solid var(--divider); }
-    .brand-logo { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .sidebar-header { display: flex; align-items: center; justify-content: space-between; min-height: var(--section-header-height); padding: var(--panel-padding-compact); border-bottom: 1px solid var(--divider); }
+    .brand-logo { display: flex; align-items: center; gap: var(--panel-gap); min-width: 0; }
     .brand-icon { color: var(--accent); font-size: 1.5rem; }
     .brand-text { display: flex; flex-direction: column; min-width: 0; }
     .module-title { overflow: hidden; font-size: .95rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
@@ -69,8 +69,8 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     :host ::ng-deep ui-button.btn-toggle { display: grid; width: 32px; height: 32px; flex: 0 0 32px; }
     :host ::ng-deep ui-button.btn-toggle .ui-button { width: 32px; min-height: 32px; padding: 0; border-color: var(--border-subtle); background: var(--surface-interactive); color: var(--text-secondary); }
     :host ::ng-deep ui-button.btn-toggle .ui-button:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
-    .sidebar-nav { display: flex; flex: 1; flex-direction: column; gap: 4px; padding: 16px 8px; }
-    .nav-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; transition: background var(--transition-fast), color var(--transition-fast), transform var(--d) var(--ease-spring); }
+    .sidebar-nav { display: flex; flex: 1; flex-direction: column; gap: var(--space-1); padding: var(--panel-padding-compact) var(--space-2); }
+    .nav-item { position: relative; display: flex; align-items: center; gap: var(--panel-gap); padding: 9px var(--panel-padding-compact); border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; transition: background var(--transition-fast), color var(--transition-fast), transform var(--d) var(--ease-spring); }
     .nav-item::before { content: ''; position: absolute; inset: 8px auto 8px 0; width: 2px; border-radius: var(--radius-pill); background: transparent; }
     .nav-item i { font-size: 1.1rem; }
     .nav-item:hover { background: var(--surface-hover); color: var(--text-primary); transform: translateX(3px); }

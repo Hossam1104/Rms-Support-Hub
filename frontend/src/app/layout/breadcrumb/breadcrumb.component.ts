@@ -40,7 +40,7 @@ import { RouterLink } from '@angular/router';
     </nav>
   `,
   styles: [`
-    .breadcrumb-nav { min-width: 0; margin-bottom: var(--space-5); color: var(--text-muted); font-size: var(--text-sm); }
+    .breadcrumb-nav { min-width: 0; margin-bottom: var(--panel-gap); color: var(--text-muted); font-size: var(--text-sm); }
     .breadcrumb-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; margin: 0; padding: 0; list-style: none; }
     .breadcrumb-segment { display: inline-flex; min-width: 0; max-width: 100%; }
     .crumb-item { min-width: 0; max-width: 100%; color: var(--text-secondary); overflow-wrap: anywhere; text-decoration: none; }

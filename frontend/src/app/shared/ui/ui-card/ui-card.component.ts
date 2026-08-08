@@ -31,7 +31,7 @@ export type UiCardVariant = 'default' | 'raised' | 'interactive';
       overflow: hidden;
       background: var(--surface-panel);
       border: 1px solid var(--card-border);
-      border-radius: var(--card-radius);
+      border-radius: var(--panel-radius);
       box-shadow: var(--shadow-sm);
       color: var(--text-primary);
       transition: border-color var(--transition-fast), transform var(--transition-normal);
@@ -51,10 +51,10 @@ export type UiCardVariant = 'default' | 'raised' | 'interactive';
     .ui-card--interactive:focus-visible { outline: none; box-shadow: var(--focus-ring), var(--shadow-md); }
     .ui-card--disabled { cursor: not-allowed; opacity: .58; transform: none; }
     .ui-card__header:empty, .ui-card__footer:empty { display: none; }
-    .ui-card__header { padding: 16px 20px 0; font-weight: 700; }
-    .ui-card__body { padding: 20px; }
-    .ui-card__header + .ui-card__body { padding-top: 12px; }
-    .ui-card__footer { padding: 0 20px 16px; color: var(--text-secondary); }
+    .ui-card__header { min-height: var(--section-header-height); padding: var(--panel-padding-compact) var(--panel-padding) 0; font-weight: 700; }
+    .ui-card__body { padding: var(--panel-padding); }
+    .ui-card__header + .ui-card__body { padding-top: var(--panel-padding-compact); }
+    .ui-card__footer { padding: 0 var(--panel-padding) var(--panel-padding-compact); color: var(--text-secondary); }
   `]
 })
 export class UiCardComponent {

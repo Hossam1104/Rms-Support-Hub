@@ -55,7 +55,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 var(--space-5);
+      padding: 0 var(--page-padding-inline);
       background: var(--surface-panel);
       border-bottom: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-sm);
@@ -63,7 +63,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     .navbar-brand {
       display: flex;
       align-items: center;
-      gap: var(--space-3);
+      gap: var(--panel-gap);
       border-radius: var(--radius-sm);
       text-decoration: none;
     }
@@ -86,7 +86,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     }
     .navbar-actions {
       display: flex;
-      gap: var(--space-3);
+      gap: var(--panel-gap);
     }
     .theme-toggle { color: var(--text-secondary); }
     @media (max-width: 560px) {

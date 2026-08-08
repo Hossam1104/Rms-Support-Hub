@@ -13,8 +13,9 @@ Execute these sessions **in order**. Do not execute multiple sessions in one cha
 Session 00: Completed
 Session 01: Completed
 Session 02: Completed
-Session 03: Active
-Sessions 04–08: Planned
+Session 03: Completed
+Session 04: Active
+Sessions 05–08: Planned
 Opus R1: Planned
 
 ---

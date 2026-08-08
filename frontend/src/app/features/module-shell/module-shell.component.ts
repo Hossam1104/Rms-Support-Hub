@@ -41,7 +41,7 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
       flex: 0 0 calc(100vw - var(--sidebar-width));
       width: calc(100vw - var(--sidebar-width));
       max-width: calc(100vw - var(--sidebar-width));
-      padding: var(--space-6);
+      padding: var(--page-padding-block) var(--page-padding-inline);
       transition: margin-left var(--transition-normal);
       min-height: calc(100vh - var(--navbar-height));
       min-width: 0;
@@ -53,7 +53,7 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
         flex-basis: calc(100vw - var(--sidebar-collapsed-width));
         width: calc(100vw - var(--sidebar-collapsed-width));
         max-width: calc(100vw - var(--sidebar-collapsed-width));
-        padding: var(--space-5) var(--space-3) var(--space-6);
+        padding: var(--page-padding-block) var(--page-padding-inline) var(--section-gap);
       }
     }
   `]

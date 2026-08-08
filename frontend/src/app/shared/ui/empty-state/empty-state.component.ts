@@ -16,12 +16,12 @@ import { CommonModule } from '@angular/common';
   styles: [`
     .empty-state {
       text-align: center;
-      padding: 64px 24px;
+      padding: var(--section-gap) var(--panel-padding);
       color: var(--text-muted);
     }
     .empty-state i {
       font-size: 3rem;
-      margin-bottom: 16px;
+      margin-bottom: var(--panel-gap);
       display: block;
       background: var(--grad-muted);
       -webkit-background-clip: text;
@@ -29,7 +29,7 @@ import { CommonModule } from '@angular/common';
     }
     .empty-state h3 { font-size: 1.15rem; color: var(--text-primary); margin: 0 0 6px; }
     .empty-state p { margin: 0; font-size: 0.9rem; }
-    .empty-state-action { margin-top: 20px; }
+    .empty-state-action { margin-top: var(--panel-gap); }
     .empty-state-action:empty { display: none; }
   `]
 })

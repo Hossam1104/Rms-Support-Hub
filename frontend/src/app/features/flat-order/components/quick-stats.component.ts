@@ -46,8 +46,8 @@ import { TotalsSummary } from '../../../core/models';
     </ng-template>
   `,
   styles: [`
-    .quick-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 16px; }
-    .totals-breakdown { padding: 12px 20px; margin-bottom: 24px; }
+    .quick-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--card-gap); margin-bottom: var(--panel-gap); }
+    .totals-breakdown { padding: var(--panel-padding-compact) var(--panel-padding); margin-bottom: var(--section-gap); }
     .breakdown-row { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; font-size: 0.85rem; color: var(--text-secondary); }
     .breakdown-item strong { color: var(--text-primary); margin-left: 4px; }
     .breakdown-placeholder { color: var(--text-muted); }

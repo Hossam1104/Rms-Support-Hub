@@ -39,10 +39,10 @@ let nextSectionId = 0;
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .ui-section { background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); overflow: hidden; }
-    .ui-section__header { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px 10px 18px; border-bottom: 1px solid var(--divider); }
+    .ui-section { background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--panel-radius); color: var(--text-primary); overflow: hidden; }
+    .ui-section__header { display: flex; align-items: center; gap: var(--panel-gap); min-height: var(--section-header-height); padding: 8px var(--panel-padding-compact); border-bottom: 1px solid var(--divider); }
     .ui-section.is-collapsed .ui-section__header { border-bottom-color: transparent; }
-    .ui-section__toggle { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+    .ui-section__toggle { display: flex; align-items: center; gap: var(--panel-gap); min-width: 0; flex: 1; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
     .ui-section__toggle:disabled { cursor: default; }
     .ui-section__toggle:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }
     .ui-section__marker { display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 26px; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--text-muted); font-size: .78rem; }
@@ -54,7 +54,7 @@ let nextSectionId = 0;
     .ui-section__chevron { margin-left: auto; color: var(--text-muted); font-size: .8rem; }
     .ui-section__actions { display: flex; align-items: center; gap: 8px; }
     .ui-section__issue { display: inline-flex; align-items: center; gap: 5px; color: var(--state-danger-fg); font-size: .75rem; font-weight: 750; white-space: nowrap; }
-    .ui-section__body { padding: 20px; }
+    .ui-section__body { padding: var(--panel-padding); }
     .ui-section.is-disabled { opacity: .58; }
     @media (max-width: 560px) { .ui-section__header { align-items: flex-start; } .ui-section__actions { align-self: center; } .ui-section__description { white-space: normal; } }
   `]

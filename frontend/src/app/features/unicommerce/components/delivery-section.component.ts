@@ -33,11 +33,11 @@ import { RiyalComponent, UiCardComponent, UiFieldComponent, UiInputComponent } f
     </ui-card>
   `,
   styles: [`
-    .card-section { margin-bottom: 24px; }
+    .card-section { margin-bottom: var(--section-gap); }
     .section-heading { display: flex; align-items: center; gap: 10px; }
     .section-title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); }
     .section-title i { color: var(--accent); }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--form-gap); }
     .full-width { grid-column: 1 / -1; }
   `]
 })

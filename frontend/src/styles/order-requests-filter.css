@@ -5,20 +5,20 @@
   z-index: 50;
   width: 100%;
   max-width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: var(--section-gap);
 }
 
 .order-request-filter .filter-workbench {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--section-gap);
 }
 
 .order-request-filter .workbench-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--section-gap);
 }
 
 .order-request-filter .workbench-heading {
@@ -27,7 +27,7 @@
 }
 .order-request-filter .eyebrow {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: var(--space-2);
   color: var(--text-accent);
   font-size: .68rem;
   font-weight: 850;
@@ -38,7 +38,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--panel-gap);
 }
 .order-request-filter h2 {
   min-width: 0;
@@ -155,7 +155,7 @@
 .order-request-filter .primary-filter-grid {
   display: grid;
   grid-template-columns: minmax(190px, 1.25fr) minmax(165px, 1fr) minmax(180px, 1fr) minmax(210px, 1.15fr) minmax(250px, 1.35fr);
-  gap: 16px;
+  gap: var(--form-gap);
   align-items: start;
 }
 .order-request-filter .primary-filter-grid > ui-field,
@@ -164,7 +164,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin-top: 9px;
+  margin-top: var(--space-2);
   color: var(--text-muted);
   font-size: .72rem;
   font-weight: 700;
@@ -187,7 +187,7 @@
 .order-request-filter .field-block {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: var(--field-gap);
 }
 .order-request-filter .field-label {
   display: block;
@@ -206,7 +206,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 3px;
-  min-height: 44px;
+  min-height: var(--control-height);
   padding: 3px;
   border: 1px solid var(--input-border);
   border-radius: var(--radius-md);
@@ -245,7 +245,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
 }
 .order-request-filter .date-inputs label {
   color: var(--text-muted);
@@ -284,19 +284,19 @@
 }
 .order-request-filter .status-section,
 .order-request-filter .filter-footer {
-  padding-top: 17px;
+  padding-top: var(--panel-gap);
   border-top: 1px solid var(--divider);
 }
 .order-request-filter .status-section {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: var(--panel-gap);
 }
 .order-request-filter .status-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--panel-gap);
 }
 .order-request-filter .status-heading > div {
   display: flex;
@@ -347,7 +347,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--section-gap);
 }
 .order-request-filter .active-filter-area {
   display: flex;
@@ -436,7 +436,7 @@
 @media (max-width: 600px) {
   .order-request-filter { top: calc(var(--navbar-height) + 8px); }
   .order-request-filter .workbench-header,
-  .order-request-filter .filter-workbench { gap: 15px; }
+  .order-request-filter .filter-workbench { gap: var(--panel-gap); }
   .order-request-filter .heading-line { display: block; }
   .order-request-filter .heading-line h2 { display: block; }
   .order-request-filter .filter-count { display: inline-flex; margin-top: 8px; }
@@ -447,7 +447,7 @@
   .order-request-filter .workbench-actions ui-button { flex: 1 1 auto; min-width: 0; }
   .order-request-filter .workbench-actions .environment-badge,
   .order-request-filter .auto-refresh-control { flex: 1 1 auto; }
-  .order-request-filter .primary-filter-grid { grid-template-columns: 1fr; gap: 14px; }
+  .order-request-filter .primary-filter-grid { grid-template-columns: 1fr; gap: var(--form-gap); }
   .order-request-filter .date-inputs { grid-template-columns: auto minmax(0, 1fr); }
   .order-request-filter .date-separator { grid-column: 1 / -1; }
   .order-request-filter .status-heading > div {

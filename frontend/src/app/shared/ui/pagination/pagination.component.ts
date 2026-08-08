@@ -28,17 +28,17 @@ import { FormsModule } from '@angular/forms';
     </div>
   `,
   styles: [`
-    .pagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px 4px; }
+    .pagination { display: flex; justify-content: space-between; align-items: center; gap: var(--panel-gap); flex-wrap: wrap; padding: var(--panel-padding-compact) var(--space-1); }
     .pagination-summary { font-size: 0.85rem; color: var(--text-muted); }
-    .pagination-controls { display: flex; align-items: center; gap: 10px; }
+    .pagination-controls { display: flex; align-items: center; gap: var(--panel-gap); }
     .page-size-select {
-      min-height: 36px;
+      min-height: var(--control-height-compact);
       background: var(--surface-interactive);
       color: var(--text-primary);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       box-shadow: inset 0 1px 0 var(--input-highlight);
-      padding: 0 10px;
+      padding: 0 var(--panel-padding-compact);
       font-size: 0.8rem;
     }
     .page-size-select:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }

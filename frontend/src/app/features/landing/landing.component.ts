@@ -35,14 +35,14 @@ import { PageHeaderComponent } from '../../shared/ui';
       margin-top: var(--navbar-height);
       width: min(100%, 1300px);
       box-sizing: border-box;
-      padding: var(--space-6) var(--space-6) var(--space-8);
+      padding: var(--page-padding-block) var(--page-padding-inline) var(--section-gap);
       margin-left: auto;
       margin-right: auto;
     }
     /* Peer module cards stretch to one shared height (see module-card). */
-    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--space-5); }
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--card-gap); }
     @media (max-width: 768px) {
-      .landing-container { padding: var(--space-5) var(--space-4) var(--space-7); }
+      .landing-container { padding: var(--page-padding-block) var(--page-padding-inline) var(--section-gap); }
       .modules-grid { grid-auto-rows: auto; }
     }
   `]

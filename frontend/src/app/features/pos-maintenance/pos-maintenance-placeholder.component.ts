@@ -75,9 +75,9 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
   `,
   styles: [`
     :host { display: block; min-height: 100vh; background: var(--scene-backdrop), var(--surface-page); }
-    .pos-page { width: min(100%, 1280px); box-sizing: border-box; margin: 0 auto; padding: calc(var(--navbar-height) + var(--space-6)) var(--space-6) var(--space-8); }
+    .pos-page { width: min(100%, 1280px); box-sizing: border-box; margin: 0 auto; padding: calc(var(--navbar-height) + var(--page-padding-block)) var(--page-padding-inline) var(--section-gap); }
     /* Informational panels are peers, so they share one height. */
-    .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: var(--space-5); margin-bottom: var(--space-7); }
+    .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: var(--card-gap); margin-bottom: var(--section-gap); }
     .status-panel, .availability-panel { display: flex; min-width: 0; flex-direction: column; padding: var(--card-padding); border: 1px solid var(--card-border); border-radius: var(--card-radius); background: var(--card-surface); box-shadow: var(--card-shadow); }
     .status-panel { box-shadow: inset 3px 0 0 var(--state-info-fg), var(--card-shadow); }
     .section-kicker { margin: 0 0 var(--space-2); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; }
@@ -88,12 +88,12 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
     .status-panel p:not(.section-kicker), .availability-panel p:not(.section-kicker), .section-heading > p { margin: var(--space-3) 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-normal); }
     .availability-panel { background: var(--surface-raised); }
     .availability-note { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); color: var(--text-muted); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
-    .capabilities-section { margin-bottom: var(--space-7); }
-    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-4); }
+    .capabilities-section { margin-bottom: var(--section-gap); }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--panel-gap); margin-bottom: var(--panel-gap); }
     .section-heading > p { max-width: 520px; margin: 0; }
     /* Planned capability areas are peer information cards: same card language
      * as the hub tiles, dimmer surface because nothing here is operational. */
-    .capability-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--space-4); }
+    .capability-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--card-gap); }
     .capability-card { display: flex; min-width: 0; min-height: var(--card-min-height); height: 100%; flex-direction: column; padding: var(--card-padding); border: 1px solid var(--card-border); border-radius: var(--card-radius); background: var(--card-surface-quiet); box-shadow: var(--card-shadow); }
     .capability-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--card-gap); }
     .capability-icon { display: grid; place-items: center; width: 46px; height: 46px; border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--surface-interactive); color: var(--text-muted); font-size: 1.2rem; }
@@ -104,7 +104,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
     .back-link:hover { color: var(--accent-hover); }
     .back-link:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }
     @media (max-width: 1000px) { .capability-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 700px) { .pos-page { padding: calc(var(--navbar-height) + var(--space-5)) var(--space-4) var(--space-7); } .status-grid, .capability-grid { grid-template-columns: 1fr; grid-auto-rows: auto; } .capability-card { min-height: 0; } .section-heading { align-items: start; flex-direction: column; gap: var(--space-3); } }
+    @media (max-width: 700px) { .pos-page { padding: calc(var(--navbar-height) + var(--page-padding-block)) var(--page-padding-inline) var(--section-gap); } .status-grid, .capability-grid { grid-template-columns: 1fr; grid-auto-rows: auto; } .capability-card { min-height: 0; } .section-heading { align-items: start; flex-direction: column; gap: var(--panel-gap); } }
   `]
 })
 export class PosMaintenancePlaceholderComponent {

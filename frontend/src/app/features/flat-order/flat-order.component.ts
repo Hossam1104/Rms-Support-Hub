@@ -318,30 +318,30 @@ const TOTALS_DEBOUNCE_MS = 300;
   styles: [`
     :host { display: block; min-width: 0; }
     .flat-order-container { min-width: 0; max-width: 1680px; margin: 0 auto; }
-    .builder-header-status { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+    .builder-header-status { display: flex; align-items: center; justify-content: flex-end; gap: var(--panel-gap); }
     .workflow-status { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-panel); color: var(--text-secondary); font-size: .74rem; font-weight: 750; white-space: nowrap; }
     .workflow-status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--state-success-fg); box-shadow: 0 0 0 4px var(--state-success-bg); }
     .workflow-status.is-busy .workflow-status__dot { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); animation: builderPulse 1.4s ease-in-out infinite; }
-    .builder-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); align-items: start; gap: 24px; }
+    .builder-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); align-items: start; gap: var(--section-gap); }
     .workflow-column, .summary-column { min-width: 0; }
     app-order-section-navigation { position: sticky; top: 16px; z-index: 8; margin-bottom: 16px; }
-    .workflow-sections { display: flex; flex-direction: column; gap: 16px; }
+    .workflow-sections { display: flex; flex-direction: column; gap: var(--section-gap); }
     ui-section { scroll-margin-top: 88px; }
     .summary-column { position: sticky; top: 16px; }
     .mobile-summary { display: none; }
-    .builder-skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); gap: 24px; }
-    .builder-skeleton__main, .builder-skeleton__rail { display: flex; flex-direction: column; gap: 16px; }
+    .builder-skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); gap: var(--section-gap); }
+    .builder-skeleton__main, .builder-skeleton__rail { display: flex; flex-direction: column; gap: var(--section-gap); }
     .builder-skeleton app-skeleton { display: block; min-height: 48px; }
-    .builder-load-error { display: flex; align-items: center; gap: 16px; padding: 28px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-xl); background: var(--state-danger-bg); color: var(--text-primary); }
+    .builder-load-error { display: flex; align-items: center; gap: var(--panel-gap); padding: var(--panel-padding); border: 1px solid var(--state-danger-border); border-radius: var(--radius-xl); background: var(--state-danger-bg); color: var(--text-primary); }
     .builder-load-error > i { color: var(--state-danger-fg); font-size: 1.6rem; }
     .builder-load-error h2 { margin: 0 0 4px; font-size: 1.05rem; }
     .builder-load-error p { margin: 0; color: var(--text-secondary); font-size: .84rem; }
     .builder-load-error ui-button { margin-left: auto; }
-    .global-validation { padding: 15px 18px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-lg); background: var(--state-danger-bg); color: var(--state-danger-fg); }
+    .global-validation { padding: var(--panel-padding-compact) var(--panel-padding); border: 1px solid var(--state-danger-border); border-radius: var(--panel-radius); background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .global-validation__heading { display: flex; align-items: center; gap: 8px; font-size: .86rem; }
     .global-validation p { margin: 8px 0 0 24px; color: var(--text-primary); font-size: .8rem; }
     .landed-card {
-      display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+      display: flex; align-items: center; gap: var(--panel-gap); padding: var(--panel-padding-compact) var(--panel-padding);
       border: 1px solid var(--state-success-border); border-radius: var(--radius-lg);
       background: var(--state-success-bg); color: var(--state-success-fg); font-weight: 600;
       animation: fadeInUp var(--d-slow) var(--ease-spring);

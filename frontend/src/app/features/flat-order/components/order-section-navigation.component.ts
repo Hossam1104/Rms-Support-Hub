@@ -72,11 +72,11 @@ export interface OrderBuilderSection {
       .section-navigation {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: var(--panel-gap);
         min-width: 0;
         padding: 8px;
         border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-lg);
+        border-radius: var(--panel-radius);
         background: var(--surface-raised);
         box-shadow: var(--shadow-sm);
       }
@@ -100,8 +100,8 @@ export interface OrderBuilderSection {
       .section-navigation__item {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
-        min-height: 36px;
+        gap: var(--space-2);
+        min-height: var(--control-height-compact);
         flex: 0 0 auto;
         padding: 0 10px;
         border: 1px solid transparent;

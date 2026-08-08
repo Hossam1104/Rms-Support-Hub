@@ -28,7 +28,7 @@ export type UiButtonSize = 'sm' | 'md';
   `,
   styles: [`
     :host { display: inline-flex; max-width: 100%; }
-    .ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; max-width: 100%; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: .88rem; font-weight: 750; line-height: 1; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast); }
+    .ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--control-height); max-width: 100%; padding: 0 var(--panel-padding); border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: 750; line-height: 1; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast); }
     .ui-button:hover:not(:disabled) { transform: translateY(-1px); }
     .ui-button:active:not(:disabled) { transform: translateY(0); }
     .ui-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -41,7 +41,7 @@ export type UiButtonSize = 'sm' | 'md';
     .ui-button--ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
     .ui-button--danger { background: var(--state-danger-bg); border-color: var(--state-danger-border); color: var(--state-danger-fg); }
     .ui-button--danger:hover:not(:disabled) { background: var(--state-danger-bg-strong); }
-    .ui-button--sm { min-height: 34px; padding-inline: 12px; border-radius: var(--radius-sm); font-size: .8rem; }
+    .ui-button--sm { min-height: var(--control-height-compact); padding-inline: var(--panel-padding-compact); border-radius: var(--radius-sm); font-size: var(--text-xs); }
     .ui-button__projected { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ui-button--loading .ui-button__projected { display: none; }
     .ui-button__loading { display: inline-flex; align-items: center; gap: 8px; }

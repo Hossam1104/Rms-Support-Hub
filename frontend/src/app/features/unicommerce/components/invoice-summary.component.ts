@@ -16,7 +16,7 @@ import { RiyalComponent, UiCardComponent } from '../../../shared/ui';
     </div>
   `,
   styles: [`
-    .quick-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .quick-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--card-gap); margin-bottom: var(--section-gap); }
     .stat-card { min-height: 92px; }
     .stat-card.highlight { border-color: var(--state-success-border); }
     .stat-meta { display: flex; flex-direction: column; }

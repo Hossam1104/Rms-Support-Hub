@@ -50,13 +50,13 @@ import { UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent 
     </ui-card>
   `,
   styles: [`
-    .card-section { margin-bottom: 24px; }
+    .card-section { margin-bottom: var(--section-gap); }
     .section-heading { display: flex; align-items: center; gap: 10px; }
     .section-title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); }
     .section-title i { color: var(--accent); }
-    .lookup-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 20px; }
+    .lookup-row { display: flex; align-items: flex-end; gap: var(--panel-gap); margin-bottom: var(--panel-gap); }
     .lookup-field { flex: 1; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--form-gap); }
     @media (max-width: 560px) { .lookup-row { align-items: stretch; flex-direction: column; } .lookup-row ui-button { align-self: flex-start; } }
   `]
 })

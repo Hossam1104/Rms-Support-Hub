@@ -32,10 +32,10 @@ export interface PaymentUpdate {
       <ui-table *ngIf="payments.length > 0; else paymentsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Order payments">
         <thead>
           <tr>
-            <th scope="col">#</th>
+            <th scope="col" class="numeric-cell">#</th>
             <th scope="col">Method</th>
             <th scope="col">Status</th>
-            <th scope="col">Amount</th>
+            <th scope="col" class="numeric-cell">Amount</th>
             <th scope="col">Transaction / reference</th>
             <th scope="col">Method metadata</th>
             <th scope="col"><span class="sr-only">Actions</span></th>
@@ -43,7 +43,7 @@ export interface PaymentUpdate {
         </thead>
         <tbody>
           <tr *ngFor="let payment of payments; let index = index; trackBy: trackByIndex">
-            <td class="muted-cell">{{ index + 1 }}</td>
+            <td class="muted-cell numeric-cell">{{ index + 1 }}</td>
             <td><strong>{{ payment.paymentMethod }}</strong><span class="secondary-label" *ngIf="payment.paymentOption">{{ payment.paymentOption }}</span></td>
             <td>
               <label class="sr-only" [for]="'payment-status-' + index">Status for {{ payment.paymentMethod }}</label>
@@ -51,7 +51,7 @@ export interface PaymentUpdate {
                 <option *ngFor="let status of paymentStatuses" [value]="status">{{ status }}</option>
               </select>
             </td>
-            <td>
+            <td class="numeric-cell">
               <label class="sr-only" [for]="'payment-amount-' + index">Amount for {{ payment.paymentMethod }}</label>
               <span class="amount-editor"><app-riyal [size]=".82"></app-riyal><input [id]="'payment-amount-' + index" class="table-editor" type="number" min="0" step="0.01" [value]="payment.paymentAmount" (change)="onEdit(index, 'paymentAmount', $event)"></span>
             </td>
@@ -87,7 +87,7 @@ export interface PaymentUpdate {
     .muted-cell { color: var(--text-muted); }
     .action-cell { width: 50px; text-align: right; }
     .amount-editor { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-    .table-editor { width: 94px; min-height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: .82rem; }
+    .table-editor { width: 94px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-xs); }
     .table-select { width: 126px; }
     .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
   `]

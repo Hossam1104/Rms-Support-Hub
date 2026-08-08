@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-08
-- **Branch:** `main` after Session 02 merge
+- **Branch:** `main` after Session 03 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 02 completed; Session 03 active
+- **Session status:** Session 03 completed; Session 04 active
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
 - **Product target:** `RMS+ Support Hub`
@@ -95,6 +95,26 @@ Session 00 map.
   439.28 kB raw / 101.39 kB estimated transfer, lazy Three.js 734.66 kB raw /
   153.89 kB estimated transfer, Riyal verifier, and `git diff --check`.
 
+## Session 03 density, tables and surface system
+
+- Session 03 completed the global density contract in `_tokens.css` for page,
+  section, panel, form, control, card, and table geometry, then applied it to
+  shared shells, cards, headers, fields, inputs, selects, buttons, toolbars,
+  pagination, and representative feature surfaces.
+- `ui-table` now provides a shared 1px outer border, visible header boundary,
+  row separators, compact tokenized insets, numeric alignment, totals/footer
+  treatment, and responsive overflow. Products, Payments, Unicommerce Items,
+  and the Order Requests virtualized list use the standardized treatment.
+- Session 03 was presentation-only: Prompt Studio behavior, Online Order API /
+  DTO / payload contracts, totals, filters, paging, statuses, payment values,
+  capabilities, and POS Coming Soon behavior remain unchanged.
+- Session 03 validation: 48 frontend test files / 255 tests passed; 161 backend
+  tests passed; Release build completed with 0 warnings and 0 errors; standalone
+  production build completed without warnings at 440.43 kB initial raw /
+  101.69 kB estimated transfer, with lazy Three.js at 734.66 kB raw /
+  153.85 kB estimated transfer; the offline build and Riyal verifier passed;
+  the repository wrapper passed all checks; and `git diff --check` passed.
+
 ## Deferred scope
 
 - UPC Testing fixture acceptance remains deferred pending Testing approval; no
@@ -105,6 +125,7 @@ Session 00 map.
 
 ## Verification boundary
 
-- No interactive browser matrix was run in Session 00. The 1440/1024/900/768/
-  390 light/dark/reduced-motion/WebGL-fallback matrix remains Session 07 work.
+- No interactive browser matrix was run in Sessions 00-03. The
+  1440/1024/900/768/390 light/dark/reduced-motion/WebGL-fallback matrix remains
+  Session 07 work.
 - No Production state-changing action or Production SQL was performed.

@@ -71,7 +71,7 @@ import { RequestsTableComponent } from './components/requests-table.component';
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--card-gap); margin-bottom: var(--section-gap); }
   `]
 })
 export class OrderRequestsComponent implements OnInit, OnDestroy {

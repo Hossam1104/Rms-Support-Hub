@@ -22,12 +22,12 @@ export type StatTileVariant = 'brand' | 'success' | 'danger' | 'muted';
     .stat-tile {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 20px 22px;
+      gap: var(--panel-gap);
+      padding: var(--panel-padding);
       width: 100%;
       min-width: 0;
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
+      border-radius: var(--panel-radius);
       background: var(--surface-panel);
       cursor: pointer;
       text-align: left;

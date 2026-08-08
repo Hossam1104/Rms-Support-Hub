@@ -71,7 +71,7 @@ import { normalizeLocalPhone } from '../../../core/utils/phone.util';
     .lookup-copy { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .78rem; font-weight: 750; }
     .lookup-copy i { color: var(--accent); }
     .lookup-input { flex: 1 1 230px; min-width: 180px; }
-    .form-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+    .form-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--form-gap); margin-top: var(--panel-gap); }
     ui-field { grid-column: span 3; }
     ui-field:nth-child(2), ui-field:nth-child(3) { grid-column: span 4; }
     .field-span-8 { grid-column: span 8; }

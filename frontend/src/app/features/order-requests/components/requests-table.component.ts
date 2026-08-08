@@ -55,7 +55,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
             <button type="button" class="retry-btn" (click)="store.refresh()">Retry</button>
           </div>
         }
-        <cdk-virtual-scroll-viewport itemSize="56" class="table-body" [style.height.px]="tableHeight()" [class.dimmed]="store.status() === 'loading'">
+        <cdk-virtual-scroll-viewport [itemSize]="rowHeight" class="table-body" [style.height.px]="tableHeight()" [class.dimmed]="store.status() === 'loading'">
           <button
             type="button"
             *cdkVirtualFor="let row of store.items(); let i = index"
@@ -94,26 +94,26 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     </ui-card>
   `,
   styles: [`
-    .table-shell { overflow-x: auto; overflow-y: hidden; border-radius: var(--radius-md); background: var(--surface-panel); scrollbar-color: var(--border-strong) transparent; }
+    .table-shell { overflow-x: auto; overflow-y: hidden; margin-top: var(--table-inset-block); border: 1px solid var(--table-border); border-radius: var(--radius-md); background: var(--surface-panel); scrollbar-color: var(--border-strong) transparent; }
     .table-shell.is-refreshing { cursor: progress; }
     .table-head, .table-row {
       display: grid;
       grid-template-columns: 18px minmax(150px, 1.25fr) minmax(135px, 1.05fr) minmax(120px, 1fr) minmax(132px, 1.1fr) 58px minmax(125px, 1fr) minmax(120px, 1fr) 82px 28px;
       align-items: center;
-      gap: 10px;
-      padding: 0 16px;
+      gap: var(--panel-gap);
+      padding: 0 var(--table-cell-padding-x);
       min-width: 1090px;
     }
-    .table-head { height: 44px; background: var(--surface-raised); font-size: 0.7rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; }
+    .table-head { height: var(--table-header-height); border-bottom: 1px solid var(--table-border); background: var(--table-header-surface); font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; }
     .table-body { min-width: 1090px; transition: opacity var(--transition-normal); }
     .table-body.dimmed { opacity: 0.55; }
     .stale-error { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding: 10px 14px; border-bottom: 1px solid var(--state-danger-border); background: var(--state-danger-bg); color: var(--state-danger-fg); font-size: .76rem; }
     .stale-error span { flex: 1 1 260px; }
     .table-row {
-      height: 56px;
+      height: var(--table-row-height);
       width: 100%;
       box-sizing: border-box;
-      border-bottom: 1px solid var(--divider);
+      border-bottom: 1px solid var(--table-row-border);
       border-top: 0;
       border-left: 0;
       border-right: 0;
@@ -145,7 +145,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     .cell-branch { display: flex; flex-direction: column; }
     .branch-name { font-size: 0.72rem; color: var(--text-muted); }
     .no-header { font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
-    .align-right { text-align: right; }
+    .align-right, .col-items { text-align: right; font-variant-numeric: tabular-nums; }
     .net-total { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-weight: 600; }
     .cell-invoice { font-size: 0.78rem; color: var(--text-secondary); }
     .payload-badges { display: flex; gap: 4px; }
@@ -161,12 +161,13 @@ export class RequestsTableComponent {
   private route = inject(ActivatedRoute);
 
   readonly Math = Math;
+  readonly rowHeight = 44;
 
   tableHeight(): number {
     // Keep short result sets compact while retaining a stable viewport for
     // the normal 25-row page. The virtual scroller still caps the table at
     // the existing 560px rail height for larger pages.
-    return Math.min(560, Math.max(168, Math.max(this.store.items().length, 3) * 56));
+    return Math.min(560, Math.max(176, Math.max(this.store.items().length, 4) * this.rowHeight));
   }
 
   isCancelled(row: OrderRequestListItem): boolean {

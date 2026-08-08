@@ -82,12 +82,12 @@ import { APP_ASSETS } from '../../core/config/app-assets';
   `,
   styles: [`
     :host { display: block; min-height: 100%; }
-    .hub-page { min-height: 100vh; padding-bottom: var(--space-8); background: var(--surface-page); }
+    .hub-page { min-height: 100vh; padding-bottom: var(--section-gap); background: var(--surface-page); }
 
     /* Hero: the Three.js canvas fills this box absolutely, content sits above. */
     .hub-hero { position: relative; overflow: hidden; margin-bottom: var(--space-7); padding: calc(var(--navbar-height) + var(--space-8)) var(--space-6) var(--space-8); border-bottom: 1px solid var(--divider); isolation: isolate; }
     .hub-hero__inner { position: relative; z-index: 1; width: min(100%, 1240px); margin: 0 auto; }
-    .hub-page__inner { width: min(100%, 1240px); margin: 0 auto; padding: 0 var(--space-6); }
+    .hub-page__inner { width: min(100%, 1240px); margin: 0 auto; padding: 0 var(--page-padding-inline); }
     .hub-hero__identity { display: flex; align-items: center; gap: var(--space-5); }
     .hub-hero__identity > div { min-width: 0; }
     .hub-attribution { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-5) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
@@ -111,7 +111,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     .hub-tools__hint { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
 
     /* Equal-height peers: 1fr rows stretch every card to the tallest one. */
-    .hub-tools__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--space-5); }
+    .hub-tools__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: var(--card-gap); }
     .hub-tools__grid > app-tool-card { height: 100%; opacity: 0; animation: hub-card-in var(--d-slow) var(--ease-out) forwards; }
     .hub-tools__grid > app-tool-card:nth-child(1) { animation-delay: 0ms; }
     .hub-tools__grid > app-tool-card:nth-child(2) { animation-delay: 70ms; }
@@ -127,11 +127,11 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     }
     @media (max-width: 680px) {
       .hub-hero { margin-bottom: var(--space-6); padding: calc(var(--navbar-height) + var(--space-6)) var(--space-4) var(--space-6); }
-      .hub-page__inner { padding: 0 var(--space-4); }
+      .hub-page__inner { padding: 0 var(--page-padding-inline); }
       .hub-hero__identity { align-items: flex-start; gap: var(--space-3); }
       .hub-hero__signals { gap: var(--space-2); }
       .hub-tools__heading { align-items: flex-start; flex-direction: column; gap: var(--space-2); }
-      .hub-tools__grid { grid-template-columns: 1fr; grid-auto-rows: auto; gap: var(--space-4); }
+      .hub-tools__grid { grid-template-columns: 1fr; grid-auto-rows: auto; gap: var(--panel-gap); }
     }
 
     @media (prefers-reduced-motion: reduce) {

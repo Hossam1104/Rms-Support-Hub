@@ -96,9 +96,9 @@
    * `margin-top: auto`; `--card-min-height` sets the floor, never a fixed
    * height, so longer content grows instead of clipping.
    */
-  --card-radius: var(--radius-lg);
-  --card-padding: var(--space-5);
-  --card-gap: var(--space-4);
+  --card-radius: var(--panel-radius);
+  --card-padding: var(--panel-padding);
+  --card-gap: var(--panel-gap);
   --card-min-height: 292px;
   --card-surface: linear-gradient(160deg, rgba(24, 44, 68, .92) 0%, rgba(13, 27, 43, .96) 100%);
   --card-surface-quiet: linear-gradient(160deg, rgba(19, 35, 54, .82) 0%, rgba(11, 23, 38, .92) 100%);
@@ -138,6 +138,32 @@
   --sidebar-width: var(--sidebar-expanded-width);
   --sidebar-collapsed-width: 72px;
   --navbar-height: 64px;
+
+  /* ---- Density and surface geometry ----
+   * These semantic values are the shared geometry contract. Feature styles
+   * may compose them, but should not recreate page, panel, form, or table
+   * spacing with local magic numbers.
+   */
+  --page-padding-inline: clamp(12px, 2vw, 24px);
+  --page-padding-block: clamp(16px, 2.5vw, 24px);
+  --section-gap: clamp(14px, 1.6vw, 20px);
+  --panel-gap: clamp(10px, 1.2vw, 16px);
+  --panel-padding: clamp(14px, 1.4vw, 20px);
+  --panel-padding-compact: clamp(10px, 1vw, 14px);
+  --control-height: 42px;
+  --control-height-compact: 36px;
+  --table-cell-padding-x: clamp(8px, .9vw, 12px);
+  --table-cell-padding-y: clamp(7px, .7vw, 10px);
+  --table-cell-padding-x-compact: clamp(7px, .7vw, 10px);
+  --table-cell-padding-y-compact: clamp(6px, .6vw, 8px);
+  --table-header-height: 40px;
+  --table-row-height: 44px;
+  --table-inset-block: var(--panel-gap);
+  --table-inset-inline: 0px;
+  --table-min-width: 100%;
+  --table-min-width-wide: 860px;
+  --field-gap: 6px;
+  --form-gap: var(--panel-gap);
 
   /* ---- Typography ---- */
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -180,6 +206,13 @@
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-pill: 999px;
+  --panel-radius: var(--radius-lg);
+
+  /* ---- Table surfaces ---- */
+  --table-border: var(--border-strong);
+  --table-row-border: var(--divider);
+  --table-header-surface: var(--surface-raised);
+  --table-footer-surface: var(--surface-selected);
 
   /* ---- Shadow scale ---- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .22);

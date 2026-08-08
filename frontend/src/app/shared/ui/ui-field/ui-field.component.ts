@@ -24,12 +24,12 @@ let nextFieldId = 0;
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .ui-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+    .ui-field { display: flex; flex-direction: column; gap: var(--field-gap); min-width: 0; }
     .ui-field__label { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-secondary); font-size: .8rem; font-weight: 700; line-height: 1.25; }
     .ui-field__status { color: var(--text-accent); border: 1px solid var(--border-focus); border-radius: var(--radius-pill); padding: 0 5px; font-size: .62rem; font-weight: 800; letter-spacing: .04em; }
     .ui-field__required { color: var(--state-danger-fg); }
     .ui-field__control { min-width: 0; }
-    .ui-field__hint, .ui-field__error { margin: 0; font-size: .76rem; line-height: 1.35; }
+    .ui-field__hint, .ui-field__error { margin: 0; font-size: var(--text-xs); line-height: 1.35; }
     .ui-field__hint { color: var(--text-muted); }
     .ui-field__error { display: flex; align-items: flex-start; gap: 5px; color: var(--state-danger-fg); }
     .ui-field.is-disabled { opacity: .62; }

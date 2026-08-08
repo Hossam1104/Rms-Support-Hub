@@ -15,9 +15,9 @@ import { Component, input } from '@angular/core';
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .ui-toolbar { display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-panel); color: var(--text-primary); }
+    .ui-toolbar { display: flex; align-items: center; gap: var(--panel-gap); min-width: 0; flex-wrap: wrap; padding: var(--panel-padding-compact); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-panel); color: var(--text-primary); }
     .ui-toolbar--nowrap { flex-wrap: nowrap; }
-    .ui-toolbar--compact { gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); }
+    .ui-toolbar--compact { gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-sm); }
     .ui-toolbar__start, .ui-toolbar__center, .ui-toolbar__end { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .ui-toolbar__start { flex: 1 1 auto; }
     .ui-toolbar__center { flex: 0 1 auto; justify-content: center; }

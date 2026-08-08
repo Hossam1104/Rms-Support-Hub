@@ -32,30 +32,30 @@ export interface ProductUpdate {
       <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Order products">
         <thead>
           <tr>
-            <th scope="col">#</th>
+            <th scope="col" class="numeric-cell">#</th>
             <th scope="col">Item</th>
             <th scope="col">Code</th>
-            <th scope="col">Unit price</th>
-            <th scope="col">Qty</th>
-            <th scope="col">Discount</th>
-            <th scope="col">VAT</th>
-            <th scope="col">Row total</th>
+            <th scope="col" class="numeric-cell">Unit price</th>
+            <th scope="col" class="numeric-cell">Qty</th>
+            <th scope="col" class="numeric-cell">Discount</th>
+            <th scope="col" class="numeric-cell">VAT</th>
+            <th scope="col" class="numeric-cell">Row total</th>
             <th scope="col"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let product of products; let index = index; trackBy: trackByIndex">
-            <td class="muted-cell">{{ index + 1 }}</td>
+            <td class="muted-cell numeric-cell">{{ index + 1 }}</td>
             <td>
               <strong>{{ product.itemName }}</strong>
               <span class="secondary-label" *ngIf="product.itemNameAr">{{ product.itemNameAr }}</span>
             </td>
             <td><span class="code-label">{{ product.itemCode }}</span></td>
             <td class="numeric-cell"><app-riyal [size]=".82"></app-riyal>{{ product.unitPrice | number:'1.2-2' }}</td>
-            <td>
+            <td class="numeric-cell">
               <input class="table-editor table-editor--quantity" type="number" min="0" step="1" [value]="product.quantity" [attr.aria-label]="'Quantity for ' + product.itemName" (change)="onEdit(index, 'quantity', $event)">
             </td>
-            <td>
+            <td class="numeric-cell">
               <label class="sr-only" [for]="'product-discount-' + index">Discount for {{ product.itemName }}</label>
               <input [id]="'product-discount-' + index" class="table-editor" type="number" min="0" step="0.01" [value]="product.discount" [attr.aria-label]="'Discount for ' + product.itemName" (change)="onEdit(index, 'discount', $event)">
             </td>
@@ -90,7 +90,7 @@ export interface ProductUpdate {
     .total-cell { color: var(--text-primary); font-weight: 800; }
     .muted-cell { color: var(--text-muted); }
     .action-cell { width: 50px; text-align: right; }
-    .table-editor { width: 82px; min-height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: .82rem; }
+    .table-editor { width: 82px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-xs); }
     .table-editor--quantity { width: 68px; }
     .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     @media (max-width: 767px) { .table-panel__heading { flex: 1 1 auto; } }

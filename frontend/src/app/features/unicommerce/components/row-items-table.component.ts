@@ -17,21 +17,21 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiTableComponent } 
       <ui-table *ngIf="rowItems.length > 0; else emptyState" [dense]="true" [stickyHeader]="true" caption="Invoice row items">
         <thead>
           <tr>
-            <th>#</th><th>Material #</th><th>Barcode</th><th>Qty</th><th>Price</th><th>Discount</th><th>Gross</th><th>VAT</th><th>Net Amount</th><th>Actions</th>
+            <th class="numeric-cell">#</th><th>Material #</th><th>Barcode</th><th class="numeric-cell">Qty</th><th class="numeric-cell">Price</th><th class="numeric-cell">Discount</th><th class="numeric-cell">Gross</th><th class="numeric-cell">VAT</th><th class="numeric-cell">Net Amount</th><th>Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (item of rowItems; track $index) {
             <tr>
-              <td>{{ $index + 1 }}</td>
+              <td class="numeric-cell">{{ $index + 1 }}</td>
               <td><strong>{{ item.materialNumber }}</strong></td>
               <td>{{ item.barcode }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ item.itemPrice | number:'1.2-2' }}</td>
-              <td>{{ item.itemDiscount | number:'1.2-2' }}</td>
-              <td>{{ getGrossAmount(item) | number:'1.2-2' }}</td>
-              <td>{{ getRowVat(item) | number:'1.2-2' }}</td>
-              <td class="money"><app-riyal [size]=".85"></app-riyal><strong>{{ getRowNet(item) | number:'1.2-2' }}</strong></td>
+              <td class="numeric-cell">{{ item.quantity }}</td>
+              <td class="numeric-cell">{{ item.itemPrice | number:'1.2-2' }}</td>
+              <td class="numeric-cell">{{ item.itemDiscount | number:'1.2-2' }}</td>
+              <td class="numeric-cell">{{ getGrossAmount(item) | number:'1.2-2' }}</td>
+              <td class="numeric-cell">{{ getRowVat(item) | number:'1.2-2' }}</td>
+              <td class="money numeric-cell"><app-riyal [size]=".85"></app-riyal><strong>{{ getRowNet(item) | number:'1.2-2' }}</strong></td>
               <td>
                 <button type="button" class="delete-button" (click)="deleteRowItem.emit($index)" title="Remove Item" aria-label="Remove item">
                   <i class="bi bi-trash" aria-hidden="true"></i>
@@ -51,16 +51,16 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiTableComponent } 
     </ui-card>
   `,
   styles: [`
-    .card-section { margin-bottom: 24px; }
+    .card-section { margin-bottom: var(--section-gap); }
     .money { white-space: nowrap; }
     .money app-riyal { margin-inline-end: 3px; }
-    .section-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; gap: var(--panel-gap); }
     .section-title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); }
     .section-title i { color: var(--accent); }
     .delete-button { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--state-danger-fg); cursor: pointer; }
     .delete-button:hover { background: var(--state-danger-bg); border-color: var(--state-danger-border); }
     .delete-button:focus-visible { outline: none; box-shadow: var(--focus-ring-danger); }
-    .empty-placeholder { display: grid; place-items: center; padding: 40px 20px; color: var(--text-muted); text-align: center; }
+    .empty-placeholder { display: grid; place-items: center; padding: var(--section-gap) var(--panel-padding); color: var(--text-muted); text-align: center; }
     .empty-placeholder i { display: block; margin-bottom: 8px; font-size: 2.5rem; }
     .empty-placeholder p { margin: 0; }
     @media (max-width: 720px) { .section-header { align-items: flex-start; flex-direction: column; } }

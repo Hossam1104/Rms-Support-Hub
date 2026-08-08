@@ -59,7 +59,7 @@ import { RiyalComponent, SearchableSelectComponent, UiFieldComponent, UiInputCom
   styles: [`
     :host { display: block; min-width: 0; }
     .form-panel { min-width: 0; }
-    .form-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+    .form-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--form-gap); }
     ui-field { grid-column: span 4; }
     ui-field:first-child, ui-field:nth-child(2) { grid-column: span 6; }
     .field-span-12 { grid-column: 1 / -1; }

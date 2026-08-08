@@ -22,15 +22,15 @@ import { CommonModule } from '@angular/common';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: var(--space-5);
-      padding: var(--space-6) var(--space-5);
+      gap: var(--panel-gap);
+      padding: var(--panel-padding) var(--panel-padding);
       border-radius: var(--radius-xl);
       overflow: hidden;
       background-image: var(--grad-mesh);
       background-size: 180% 180%;
       background-color: var(--surface-panel);
       animation: meshDrift 18s ease-in-out infinite;
-      margin-bottom: var(--space-6);
+      margin-bottom: var(--section-gap);
     }
     .header-content { flex: 1 1 auto; min-width: 0; }
     .header-content h1 {
@@ -49,7 +49,7 @@ import { CommonModule } from '@angular/common';
       .header-actions { width: 100%; justify-content: flex-start; }
     }
     @media (max-width: 620px) {
-      .page-header { gap: var(--space-4); padding: var(--space-5) var(--space-4); }
+      .page-header { gap: var(--panel-gap); padding: var(--panel-padding) var(--panel-padding); }
       .header-content { width: 100%; }
       .header-content h1 { font-size: var(--text-xl); }
       .header-content p { max-width: 100%; }

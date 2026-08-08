@@ -1,22 +1,22 @@
-# RMS+ Support Hub - Active Task
+# RMS+ Support Hub — Active Task
 
 Program:
 RMS+ Support Hub UI / Branding Refactor
 
 Active Session:
-03 - Global Density, Tables, Borders & Surface System
+04 — Landing, Three.js, Shared Cards, Icons & Motion
 
 Previous:
-02 - Completed
+03 — Completed
 
 Role:
 Implement
 
 Expected branch:
-refactor/rms-hub-03-density-tables
+refactor/rms-hub-04-landing-motion
 
 Expected commit:
-refactor(ui): compact layouts and standardize data tables
+feat(ui): refresh RMS+ Hub landing and motion system
 
 ## Global Contract
 
@@ -39,6 +39,17 @@ Before each session:
 8. Run targeted validation first, then the required full validation gates.
 9. Review the final task-scoped diff and remove temporary changes.
 10. Update durable state only when materially useful.
+11. Commit automatically using the expected commit message.
+12. Fast-forward merge the session branch to `main`.
+13. Push `main` to `origin`.
+14. Verify `origin/main...main == 0 0`.
+15. Delete the session branch after synchronization.
+
+Use session-local Git maintenance suppression when required:
+
+```text
+git -c gc.auto=0 -c maintenance.auto=false ...
+```
 
 Safety:
 
@@ -78,8 +89,8 @@ Repository guardrails:
   contract; never guess a column or JSON key.
 - Keep backend dependencies flowing Core -> Data -> API, with API as the
   composition root.
-- Gate module behavior through `IOrderModule.Capabilities`; do not add module-key
-  string comparisons.
+- Gate module behavior through `IOrderModule.Capabilities`; do not add
+  module-key string comparisons.
 - Keep connection strings and credentials outside tracked files.
 - Use the Testing environment for agent-run live verification. Never send,
   cancel, or resend against Production.
@@ -88,119 +99,131 @@ Repository guardrails:
 - Component styles must consume design tokens; raw color literals belong only
   in the designated token/gradient files.
 
-## Session 03 - Global Density, Tables, Borders & Surface System
+## Session 04 — Landing, Three.js, Shared Cards, Icons & Motion
 
-### Goal
+## Goal
 
-Reduce project-wide wasted space and establish consistent tables, margins,
-cards, panels and form density.
+Make the **RMS+ Support Hub** landing visually compelling and finalize the shared card/icon/motion language.
 
-### Critical Requirement
+## Branch
 
-This is global. Do not make one-off Online Order-only CSS fixes.
+```text
+refactor/rms-hub-04-landing-motion
+```
 
-### Required Work
+## Three.js Boundary
 
-#### 1. Normalize density tokens
+Three.js already exists.
 
-Inspect existing tokens and create/reuse semantic values for:
+Do NOT:
 
-- page padding
-- section gap
-- panel gap
-- panel padding
-- compact panel padding
-- control height
-- compact control height
-- table cell X/Y padding
-- table header height
-- card gap
+- install another 3D framework
+- create additional WebGL scenes in modules
+- move Three.js into the root initial bundle
 
-Prefer tokens and `clamp()` to scattered magic numbers.
+### 1. Landing hero
 
-#### 2. Reduce vertical waste
+Use:
 
-Target approximately 15-30% reduction where safe in:
+- RMS logo
+- RMS+ Support Hub title
+- concise subtitle
+- environment/status
+- subtle DBS attribution
 
-- page headers
-- breadcrumb gaps
-- workflow bars
-- section headers
-- accordion headers
-- forms
-- panel padding
-- action bars
-- table spacing
+Reduce dead vertical hero space.
 
-Do not make the UI cramped or reduce focus/tap accessibility.
+### 2. Refine current Hub Three.js scene
 
-#### 3. Shared table contract
+Preserve:
 
-Every true data table should gain:
+- dynamic/lazy import
+- Hub-only
+- aria-hidden/decorative
+- pointer-events none
+- DPR cap
+- visibility pause
+- teardown
+- reduced-motion fallback
+- functional independence from WebGL
 
-- 1px outer border
-- visible header border
-- row separators
-- safe card inset/margins
-- compact cell padding
-- numeric alignment
-- clear totals/footer
-- responsive horizontal scrolling only when necessary
+Enhance only with restrained technical/RMS visual identity.
 
-Optional vertical separators are allowed where they materially improve dense
-numeric scanning.
+No giant models/textures/post-processing stack.
 
-#### 4. Apply representative global surfaces
+### 3. Main tool cards
 
-Apply to:
+Cards:
 
-- shared table/grid components
-- Online Order table
-- Order Requests
-- Products
-- Items
-- at least one non-Online-Order table/list if truly tabular
+1. QA Prompt Studio
+2. Online Order Tool
+3. POS Maintenance Tool
 
-#### 5. Form density
+Requirements:
 
-Normalize:
+- equal-height peers
+- aligned logo/icon/title/status
+- aligned footer action
+- capability list
+- same card contract
+- strong focus
+- restrained hover
+- POS = Coming Soon
 
-- labels
-- helper text
-- control heights
-- field gaps
+### 4. Icon language
 
-Do not change validation/data.
+Reuse existing icon system.
 
-#### 6. Panels/cards
+Add meaningful icons to:
 
-Normalize:
+- capability summaries
+- card actions
+- status/meta
+- common section headings
 
-- border
-- radius
-- padding
-- internal gap
-- header height
+Do not add an icon dependency if current project already has adequate icons.
 
-Do not perform the major landing redesign yet.
+### 5. Motion language
 
-### Validation
+Use MotionService.
 
-Required:
+Add subtle:
+
+- card entrances
+- hover/focus
+- icon movement
+- status reveal
+- section expansion
+
+Reduced motion removes transforms/entrances.
+
+No heavy table animation.
+
+## Validation
 
 ```text
 npm --prefix frontend test -- --watch=false
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 npm --prefix frontend run build -- --configuration production
-git diff --check
 ```
 
-If browser exists, check representative pages at 1440/1024/900/768/390.
+Record:
 
-If not, do not claim rendered visual validation; Session 07 will close it.
+- initial bundle
+- Three.js lazy chunk
+- warnings
 
-### Commit
+Browser if available:
+
+- WebGL scene
+- fallback
+- reduced motion
+- light/dark
+- card keyboard navigation
+- no layout shift
+- console clean
+
+## Commit
 
 ```text
-refactor(ui): compact layouts and standardize data tables
+feat(ui): refresh RMS+ Hub landing and motion system
 ```

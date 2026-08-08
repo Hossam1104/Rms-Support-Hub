@@ -52,7 +52,7 @@ let nextSelectId = 0;
     :host { display: block; min-width: 0; }
     .searchable-select { min-width: 0; }
     .select-control { position: relative; display: flex; align-items: center; }
-    input { width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-md); box-shadow: inset 0 1px 0 var(--input-highlight); color: var(--text-primary); padding: 0 56px 0 13px; font: inherit; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+    input { width: 100%; min-width: 0; box-sizing: border-box; min-height: var(--control-height); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-md); box-shadow: inset 0 1px 0 var(--input-highlight); color: var(--text-primary); padding: 0 56px 0 var(--panel-padding-compact); font: inherit; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
     input:focus { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     input:disabled { cursor: not-allowed; opacity: .6; }
     .is-open input { border-color: var(--border-focus); }
