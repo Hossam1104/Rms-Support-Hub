@@ -19,8 +19,16 @@ This file records durable current facts only. Milestone history lives in
 | npm package | `rms-support-hub` |
 | GitHub repository | `Hossam1104/Rms-Support-Hub` |
 | Canonical origin | `https://github.com/Hossam1104/Rms-Support-Hub.git` |
-| Local folder | `D:\AI Tools\DBS\Rms-Support-Hub` |
+| Local folder | `D:\AI Tools\DBS\online_order_tool` — rename to `Rms-Support-Hub` still pending, see below |
 | Visibility | Public by explicit owner decision; the owner intends to return it to Private after the POS integration work |
+
+The local folder rename was attempted and refused by Windows: live processes
+hold the directory (the open VS Code workspace, the C# Dev Kit and Roslyn
+language servers, and the agent shells). Nothing in the repository depends on
+the folder name. Close everything rooted there, then from a shell **outside**
+it run `Rename-Item -LiteralPath "D:\AI Tools\DBS\online_order_tool" -NewName
+"Rms-Support-Hub"`, re-check `git status` and `git remote -v` from the new
+path, and update the row above.
 
 ## Application
 
