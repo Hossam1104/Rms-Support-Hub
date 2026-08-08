@@ -115,6 +115,25 @@ export class HubSceneComponent implements OnDestroy {
       });
       const nodes = new THREE.Points(nodeGeometry, nodeMaterial);
 
+      // A small central ring gives the constellation a restrained RMS+ anchor
+      // without adding textures, post-processing, or a second scene system.
+      const coreGeometry = new THREE.SphereGeometry(0.13, 12, 8);
+      const coreMaterial = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0.46,
+        depthWrite: false
+      });
+      const core = new THREE.Mesh(coreGeometry, coreMaterial);
+      const haloGeometry = new THREE.RingGeometry(0.34, 0.38, 32);
+      const haloMaterial = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0.20,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+      const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+      halo.position.z = 0.05;
+
       // Links are computed once: the field only rotates, so pair distances
       // never change and there is nothing to recompute per frame.
       const linkPositions: number[] = [];
@@ -136,13 +155,15 @@ export class HubSceneComponent implements OnDestroy {
       const links = new THREE.LineSegments(linkGeometry, linkMaterial);
 
       const field = new THREE.Group();
-      field.add(nodes, links);
+      field.add(nodes, links, core, halo);
       scene.add(field);
 
       this.applyTheme = () => {
         const styles = getComputedStyle(this.host.nativeElement);
         nodeMaterial.color.set(readColor(styles, '--scene-node', '#6fe2d7'));
         linkMaterial.color.set(readColor(styles, '--scene-link', '#4fb4ff'));
+        coreMaterial.color.set(readColor(styles, '--scene-node', '#6fe2d7'));
+        haloMaterial.color.set(readColor(styles, '--scene-halo', '#8f7cf5'));
       };
       this.applyTheme();
 
@@ -168,6 +189,7 @@ export class HubSceneComponent implements OnDestroy {
         // per-frame allocation, no post-processing.
         field.rotation.y += 0.0011;
         field.rotation.x += 0.0004;
+        halo.rotation.z += 0.0014;
         camera.position.x += (pointerX * 2.4 - camera.position.x) * 0.035;
         camera.position.y += (-pointerY * 2.4 - camera.position.y) * 0.035;
         camera.lookAt(0, 0, 0);
@@ -201,8 +223,12 @@ export class HubSceneComponent implements OnDestroy {
         document.removeEventListener('visibilitychange', onVisibility);
         nodeGeometry.dispose();
         linkGeometry.dispose();
+        coreGeometry.dispose();
+        haloGeometry.dispose();
         nodeMaterial.dispose();
         linkMaterial.dispose();
+        coreMaterial.dispose();
+        haloMaterial.dispose();
         renderer.dispose();
         this.applyTheme = null;
       };

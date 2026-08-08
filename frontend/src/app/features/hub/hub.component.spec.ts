@@ -123,4 +123,19 @@ describe('HubComponent', () => {
         expect(signals.map(signal => signal.querySelector('.hub-signal__state')?.textContent?.trim()))
             .toEqual(['Available', 'Available', 'Coming Soon']);
     });
+
+    it('renders the compact hero status rail and shared icon language', () => {
+        const fixture = TestBed.createComponent(HubComponent);
+        fixture.detectChanges();
+
+        const page = fixture.nativeElement as HTMLElement;
+        expect(page.querySelector('.hub-hero__meta')?.textContent).toContain('Workspace status');
+        expect(page.querySelector('.hub-hero__meta')?.textContent).toContain('Testing');
+        expect(page.querySelector('.hub-rail__count')?.textContent?.trim()).toBe('3 surfaces');
+        expect(page.querySelectorAll('.hub-signal__icon i')).toHaveLength(3);
+        expect(page.querySelector('.hub-tools__eyebrow i')?.classList.contains('bi-command')).toBe(true);
+        expect(page.querySelectorAll('.tool-card__capability-icon')).toHaveLength(9);
+        expect(page.querySelectorAll('.tool-card__status-icon')).toHaveLength(3);
+        expect(page.querySelectorAll('.tool-card__action i')).toHaveLength(3);
+    });
 });

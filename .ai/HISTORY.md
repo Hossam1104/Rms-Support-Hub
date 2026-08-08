@@ -23,11 +23,12 @@ per-session validation numbers are not repeated here.
 
 | RMS+ Support Hub Session 02 - Asset Pipeline & Brand Foundation | Completed | Session 02 branch validation: 48 frontend test files / 255 tests, 161 backend tests, production build, repository wrapper, Riyal verifier, and `git diff --check` | Created the central asset catalog and reusable brand mark, integrated RMS/DBS/UPC/GHC context, resolved the Riyal public-path gap, prepared payment/offer/loader/message assets, and activated Session 03. |
 | RMS+ Support Hub Session 03 - Global Density, Tables & Surface System | Completed | Session 03 branch validation, repository wrapper, standalone production build, offline build, Riyal verifier, and `git diff --check` | Added semantic density and surface geometry tokens, standardized shared tables and numeric/footer treatments, compacted representative shells/forms/panels, and activated Session 04. |
+| RMS+ Support Hub Session 04 - Landing, Three.js, Shared Cards, Icons & Motion | Completed | Session 04 branch validation: 49 frontend test files / 258 tests, warning-free production build, and `git diff --check` | Reworked the Hub into a compact RMS-branded landing with status rail, semantic shared-card icons and pinned actions, tokenized reduced-motion distances, and a restrained themed scene core/halo; preserved Prompt Studio, Online Order, and POS behavior and activated Session 05. |
 
 ## Programme status
 
-- RMS+ Support Hub UI / Branding Refactor is active. Sessions 01, 02, and 03
-  are complete and Session 04 is active; later sessions remain planned in the
+- RMS+ Support Hub UI / Branding Refactor is active. Sessions 01-04 are
+  complete and Session 05 is active; later sessions remain planned in the
   execution prompts document.
 - Remaining external evidence, not implementation work: safe UPC **Testing**
   order population/send/cancel/resend acceptance, the Production database index

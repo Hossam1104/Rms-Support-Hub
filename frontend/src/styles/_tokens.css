@@ -108,6 +108,9 @@
   --card-shadow: 0 18px 40px -26px rgba(0, 0, 0, .82);
   --card-shadow-hover: 0 26px 54px -24px rgba(0, 0, 0, .9);
   --card-lift: -4px;
+  --card-icon-lift: -2px;
+  --card-action-shift: 3px;
+  --card-status-shift: 5px;
 
   /*
    * ---- Tool identity accents ----
@@ -323,6 +326,10 @@
     --d-fast: 0.01ms;
     --d: 0.01ms;
     --d-slow: 0.01ms;
+    --card-lift: 0px;
+    --card-icon-lift: 0px;
+    --card-action-shift: 0px;
+    --card-status-shift: 0px;
   }
 }
 
@@ -330,4 +337,8 @@
   --d-fast: 0.01ms;
   --d: 0.01ms;
   --d-slow: 0.01ms;
+  --card-lift: 0px;
+  --card-icon-lift: 0px;
+  --card-action-shift: 0px;
+  --card-status-shift: 0px;
 }

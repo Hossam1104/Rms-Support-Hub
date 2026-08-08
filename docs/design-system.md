@@ -46,7 +46,7 @@ semantic states, borders, focus, layout, radius, shadow, and motion.
 | Z-index | `--z-sticky`, `--z-sidebar`, `--z-navbar`, `--z-dropdown`, `--z-overlay`, `--z-dialog`, `--z-toast` | One layering scale; toast stays above dialogs |
 | Shape/elevation | `--radius-sm/md/lg/xl/pill`, `--shadow-sm/md/lg`, `--shadow-glow` | Consistent shape and depth scale |
 | Motion | `--d-fast`, `--d`, `--d-slow`, `--ease-spring`, `--ease-out`, `--transition-*` | Shared timing and easing; reduced motion collapses durations |
-| Cards | `--card-radius`, `--card-padding`, `--card-gap`, `--card-min-height`, `--card-surface`, `--card-surface-quiet`, `--card-border`, `--card-border-hover`, `--card-sheen`, `--card-shadow`, `--card-shadow-hover`, `--card-lift` | The one card contract shared by every card surface |
+| Cards | `--card-radius`, `--card-padding`, `--card-gap`, `--card-min-height`, `--card-surface`, `--card-surface-quiet`, `--card-border`, `--card-border-hover`, `--card-sheen`, `--card-shadow`, `--card-shadow-hover`, `--card-lift`, `--card-icon-lift`, `--card-action-shift`, `--card-status-shift` | The one card contract shared by every card surface; motion distances collapse with reduced motion |
 | Tool identity | `--tool-brand-from/to`, `--tool-info-from/to`, `--tool-amber-from/to`, `--tool-teal-from/to` | Per-tool icon, edge light, and hover accent |
 | Hub scene | `--scene-node`, `--scene-link`, `--scene-halo`, `--scene-backdrop` | Constellation colors and the static gradient fallback |
 
@@ -168,8 +168,8 @@ cyan-blue, and POS is a muted amber because it is not operational.
 
 ## Hub scene
 
-The Hub hero renders a decorative Three.js particle constellation from
-`features/hub/hub-scene`. It is atmosphere only:
+The Hub hero renders a decorative Three.js particle constellation with a small
+themed core/halo from `features/hub/hub-scene`. It is atmosphere only:
 
 - Three.js is imported dynamically, so it forms its own lazy chunk that no other
   feature loads and that never enters the initial bundle.

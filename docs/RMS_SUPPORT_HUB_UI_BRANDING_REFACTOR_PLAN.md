@@ -17,8 +17,8 @@
 | 01 — Product & Technical Rename | Completed |
 | 02 — Asset Pipeline & Brand Foundation | Completed |
 | 03 — Global Density, Table & Surface System | Completed |
-| 04 — Landing, Three.js, Shared Cards, Icons & Motion | Active |
-| 05 — Prompt Studio UI Harmonization | Planned |
+| 04 — Landing, Three.js, Shared Cards, Icons & Motion | Completed |
+| 05 — Prompt Studio UI Harmonization | Active |
 | 06 — Online Orders Dense UI + Branding + Tables | Planned |
 | 07 — Cross-Project UI Closure | Planned |
 | 08 — GitHub Rename & Final Checkpoint | Planned |

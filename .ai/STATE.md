@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-08
-- **Branch:** `main` after Session 03 merge
+- **Branch:** `main` after Session 04 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 03 completed; Session 04 active
+- **Session status:** Session 04 completed; Session 05 active
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
 - **Product target:** `RMS+ Support Hub`
@@ -37,7 +37,8 @@ Session 00 map.
   raw component colors stay restricted to token/gradient files.
 - The Hub-only Three.js scene is dynamically imported, decorative, lazy,
   pointer-transparent, aria-hidden, DPR-capped, visibility-pausing, and
-  disposable; reduced motion/WebGL/import failure falls back to CSS.
+  disposable; the restrained themed core/halo is optional, and reduced
+  motion/WebGL/import failure falls back to CSS.
 
 ## Session 00 baseline
 
@@ -115,6 +116,22 @@ Session 00 map.
   153.85 kB estimated transfer; the offline build and Riyal verifier passed;
   the repository wrapper passed all checks; and `git diff --check` passed.
 
+## Session 04 landing, cards and motion
+
+- The Hub landing now uses a compact two-column hero with RMS identity, DBS
+  attribution, workspace/default-lane status, and a tool-availability rail;
+  tool routing and POS Coming Soon remain unchanged.
+- `app-tool-card` retains equal-height peers and a pinned footer group while
+  adding semantic capability/status/action icons. Shared motion distances are
+  tokenized so hover/focus movement collapses under reduced motion.
+- The existing lazy Hub-only scene gained a small themed RMS+ core/halo with
+  explicit geometry/material disposal; dynamic import, fallback, isolation,
+  visibility pause, and teardown boundaries remain intact.
+- Validation: 49 frontend test files / 258 tests; production build passed with
+  no warnings at 440.68 kB initial raw / 101.68 kB estimated transfer, with a
+  734.66 kB raw / 153.90 kB estimated-transfer Three.js lazy chunk. The
+  interactive browser connector was unavailable; no browser claim is made.
+
 ## Deferred scope
 
 - UPC Testing fixture acceptance remains deferred pending Testing approval; no
@@ -125,7 +142,7 @@ Session 00 map.
 
 ## Verification boundary
 
-- No interactive browser matrix was run in Sessions 00-03. The
+- No interactive browser matrix was run in Sessions 00-04. The
   1440/1024/900/768/390 light/dark/reduced-motion/WebGL-fallback matrix remains
   Session 07 work.
 - No Production state-changing action or Production SQL was performed.

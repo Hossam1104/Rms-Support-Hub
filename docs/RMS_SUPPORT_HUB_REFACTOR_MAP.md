@@ -74,6 +74,24 @@ entries; the Riyal root path is the only deliberate compatibility location.
 - `Saudi_Riyal.svg` remains at `frontend/public/assets/Saudi_Riyal.svg`; the
   existing verifier passes and `app-riyal` consumes the catalog reference.
 
+### Session 04 landing, scene, card and motion integration
+
+- The Hub landing now uses a compact two-column hero with RMS identity, DBS
+  attribution, workspace/default-lane status, and a tool-availability rail;
+  the three registered tools and POS Coming Soon state remain authoritative.
+- `app-tool-card` keeps the shared equal-height/pinned-footer contract while
+  adding semantic capability, status, and action icons. Motion distances are
+  tokenized so hover/focus transforms collapse with the existing
+  `MotionService` reduced-motion contract.
+- The existing lazy Hub-only Three.js scene remains decorative, pointer-
+  transparent, DPR-capped, visibility-paused, and disposable. A small themed
+  RMS+ core/halo was added without textures or post-processing; WebGL and
+  reduced-motion fallbacks remain CSS-only.
+- Session 04 validation passed: 49 frontend test files / 258 tests, production
+  build with no warnings, 440.68 kB initial raw / 101.68 kB estimated transfer,
+  and 734.66 kB raw / 153.90 kB estimated transfer for the lazy Three.js
+  chunk. Interactive browser evidence was unavailable in this environment.
+
 ## UI touch map
 
 | Surface | Current controlling source | Baseline responsibility / next-session dependency |
@@ -148,8 +166,8 @@ test assembly. The observed Git remote is
 | 01 — Product & Technical Rename | Use this map to rename host display/technical identifiers while preserving feature names, routes, payloads, module keys, and persisted values. Future GitHub rename remains deferred. |
 | 02 — Asset Pipeline & Brand Foundation | Move/centralize the root assets through the existing public/static convention, resolve missing `upc_logo`/`whites_logo` and Riyal paths deliberately, and review GHC/Whites plus CustomMessageBox semantics. |
 | 03 — Global Density, Tables & Surface System | Apply tokenized spacing, panel, form, card, and true-table contracts globally using the touch points above. |
-| 04 — Landing, Three.js, Shared Cards, Icons & Motion | Refine Hub identity and the existing lazy scene; preserve fallback, isolation, and shared card/motion behavior. |
-| 05 — Prompt Studio UI Harmonization | Apply branded compact presentation without changing builder sections, quality semantics, drafts, history, exports, or keyboard shortcuts. |
+| 04 — Landing, Three.js, Shared Cards, Icons & Motion | Completed: compact Hub hero/status rail, semantic card icons and pinned actions, tokenized reduced-motion distances, and a restrained themed scene anchor; preserve fallback, isolation, and shared card/motion behavior. |
+| 05 — Prompt Studio UI Harmonization | Active: apply branded compact presentation without changing builder sections, quality semantics, drafts, history, exports, or keyboard shortcuts. |
 | 06 — Online Orders Dense UI & Commerce Assets | Apply screenshot-driven compaction and table/payment/Riyal/offer presentation without changing APIs, DTOs, payloads, status/filter/paging, capability, or order actions. |
 | 07 — Cross-Project UI Closure | Perform the required responsive/theme/reduced-motion/browser matrix and final asset/table/card audit. |
 | 08 — GitHub Rename & Final Checkpoint | Rename the actual GitHub repository only after Sessions 00–07 are complete and synchronized; update the remote to `Hossam1104/Rms-Support-Hub`. |

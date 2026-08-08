@@ -33,7 +33,8 @@ export type ToolCardStatus = 'available' | 'migration-pending';
             class="tool-card__status"
             [class.tool-card__status--pending]="status() === 'migration-pending'"
             role="status">
-            <span class="tool-card__status-dot" aria-hidden="true"></span>{{ statusLabel() }}
+            <i class="bi tool-card__status-icon" [class]="statusIcon()" aria-hidden="true"></i>
+            <span>{{ statusLabel() }}</span>
           </span>
         </div>
 
@@ -41,14 +42,18 @@ export type ToolCardStatus = 'available' | 'migration-pending';
         <p class="tool-card__description" *ngIf="description()">{{ description() }}</p>
 
         <div class="tool-card__capabilities" *ngIf="capabilities().length" aria-label="Capabilities">
-          <span class="tool-card__capability" *ngFor="let capability of capabilities()">{{ capability }}</span>
+          <span class="tool-card__capability" *ngFor="let capability of capabilities()">
+            <i class="bi tool-card__capability-icon" [class]="capabilityIcon(capability)" aria-hidden="true"></i>
+            <span>{{ capability }}</span>
+          </span>
         </div>
 
-        <p class="tool-card__availability" *ngIf="availabilityMessage()">{{ availabilityMessage() }}</p>
-
-        <div class="tool-card__action">
-          <span>{{ actionLabel() }}</span>
-          <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        <div class="tool-card__footer">
+          <p class="tool-card__availability" *ngIf="availabilityMessage()">{{ availabilityMessage() }}</p>
+          <div class="tool-card__action">
+            <span>{{ actionLabel() }}</span>
+            <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+          </div>
         </div>
       </div>
     </ng-template>
@@ -142,30 +147,38 @@ export type ToolCardStatus = 'available' | 'migration-pending';
       font-size: var(--text-xs);
       font-weight: var(--weight-bold);
       white-space: nowrap;
+      animation: tool-card-status-reveal var(--d) var(--ease-out) 120ms both;
     }
-    .tool-card__status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .tool-card__status-icon { font-size: .8rem; line-height: 1; }
     .tool-card__status--pending { border-color: var(--state-neutral-border); background: var(--state-neutral-bg); color: var(--text-muted); }
+    @keyframes tool-card-status-reveal {
+      from { opacity: 0; transform: translateX(var(--card-status-shift)); }
+      to { opacity: 1; transform: translateX(0); }
+    }
 
     .tool-card__title { margin: 0 0 var(--space-2); color: var(--text-primary); font-size: var(--text-lg); font-weight: var(--weight-bold); line-height: var(--leading-tight); }
     .tool-card__description { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-normal); }
 
     .tool-card__capabilities { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--card-gap); }
-    .tool-card__capability { padding: 5px 10px; border: 1px solid var(--card-border); border-radius: var(--radius-pill); background: var(--surface-interactive); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.25; }
+    .tool-card__capability { display: inline-flex; align-items: center; gap: var(--space-2); padding: 5px 10px; border: 1px solid var(--card-border); border-radius: var(--radius-pill); background: var(--surface-interactive); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.25; }
+    .tool-card__capability-icon { color: var(--text-accent); font-size: .75rem; }
 
-    /* margin-top:auto on the first pinned block pushes the footer group down. */
-    .tool-card__availability { margin: auto 0 0; padding-top: var(--card-gap); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
+    /* The footer is one pinned group, so both availability and the action align
+       across peer cards without imposing a fixed height on the card. */
+    .tool-card__footer { margin-top: auto; }
+    .tool-card__availability { margin: 0; padding-top: var(--card-gap); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
     .tool-card__action {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: var(--space-3);
-      margin-top: auto;
+      margin-top: var(--card-gap);
       padding-top: var(--card-gap);
+      border-top: 1px solid var(--divider);
       color: var(--text-accent);
       font-size: var(--text-sm);
       font-weight: var(--weight-bold);
     }
-    .tool-card__availability + .tool-card__action { margin-top: var(--space-3); }
     .tool-card__action i { transition: transform var(--transition-fast); }
 
     /* Hover and keyboard focus get the same visual prominence. */
@@ -181,25 +194,16 @@ export type ToolCardStatus = 'available' | 'migration-pending';
     :host ::ng-deep .tool-card__link:focus-visible .ui-card::before,
     :host ::ng-deep .tool-card .ui-card--interactive:hover::before,
     :host ::ng-deep .tool-card .ui-card--interactive:focus-visible::before { opacity: 1; }
-    .tool-card__link:hover .tool-card__icon-shell { transform: translateY(-2px); border-color: var(--card-border-hover); }
-    .tool-card__link:hover .tool-card__action i { transform: translateX(3px); }
+    .tool-card__link:hover .tool-card__icon-shell,
+    .tool-card__link:focus-visible .tool-card__icon-shell,
+    :host ::ng-deep .tool-card .ui-card--interactive:hover .tool-card__icon-shell,
+    :host ::ng-deep .tool-card .ui-card--interactive:focus-visible .tool-card__icon-shell { transform: translateY(var(--card-icon-lift)); border-color: var(--card-border-hover); }
+    .tool-card__link:hover .tool-card__action i,
+    .tool-card__link:focus-visible .tool-card__action i,
+    :host ::ng-deep .tool-card .ui-card--interactive:hover .tool-card__action i,
+    :host ::ng-deep .tool-card .ui-card--interactive:focus-visible .tool-card__action i { transform: translate(var(--card-action-shift), var(--card-icon-lift)); }
     :host ::ng-deep .tool-card .ui-card--disabled,
     :host ::ng-deep .tool-card .ui-card--disabled:hover { transform: none; box-shadow: var(--card-shadow); }
-
-    @media (prefers-reduced-motion: reduce) {
-      :host-context(html:not([data-motion="full"])) ::ng-deep .tool-card__link:hover .ui-card,
-      :host-context(html:not([data-motion="full"])) ::ng-deep .tool-card__link:focus-visible .ui-card,
-      :host-context(html:not([data-motion="full"])) ::ng-deep .tool-card .ui-card--interactive:hover,
-      :host-context(html:not([data-motion="full"])) ::ng-deep .tool-card .ui-card--interactive:focus-visible,
-      :host-context(html:not([data-motion="full"])) .tool-card__link:hover .tool-card__icon-shell,
-      :host-context(html:not([data-motion="full"])) .tool-card__link:hover .tool-card__action i { transform: none; }
-    }
-    :host-context(html[data-motion="reduce"]) ::ng-deep .tool-card__link:hover .ui-card,
-    :host-context(html[data-motion="reduce"]) ::ng-deep .tool-card__link:focus-visible .ui-card,
-    :host-context(html[data-motion="reduce"]) ::ng-deep .tool-card .ui-card--interactive:hover,
-    :host-context(html[data-motion="reduce"]) ::ng-deep .tool-card .ui-card--interactive:focus-visible,
-    :host-context(html[data-motion="reduce"]) .tool-card__link:hover .tool-card__icon-shell,
-    :host-context(html[data-motion="reduce"]) .tool-card__link:hover .tool-card__action i { transform: none; }
   `]
 })
 export class ToolCardComponent {
@@ -219,10 +223,32 @@ export class ToolCardComponent {
   readonly accentClass = computed(() => `tool-card--${this.accent()}`);
   readonly statusLabel = computed(() =>
     this.status() === 'migration-pending' ? 'Coming Soon' : 'Available');
+  readonly statusIcon = computed(() =>
+    this.status() === 'migration-pending' ? 'bi-hourglass-split' : 'bi-check2-circle');
   readonly accessibleLabel = computed(() => this.ariaLabel() || [
     `${this.actionLabel()}: ${this.title()}`,
     this.statusLabel(),
     this.capabilities().length ? `Capabilities: ${this.capabilities().join(', ')}` : '',
     this.availabilityMessage()
   ].filter(Boolean).join('. '));
+
+  capabilityIcon(capability: string): string {
+    const normalized = capability.trim().toLowerCase();
+    if (normalized.includes('bug') || normalized.includes('defect')) return 'bi-bug';
+    if (normalized.includes('story') || normalized.includes('goal')) return 'bi-journal-text';
+    if (normalized.includes('test')) return 'bi-check2-square';
+    if (normalized.includes('search')) return 'bi-search';
+    if (normalized.includes('monitor')) return 'bi-activity';
+    if (normalized.includes('order')) return 'bi-inboxes';
+    if (normalized.includes('diagnostic')) return 'bi-wrench-adjustable-circle';
+    if (normalized.includes('backup')) return 'bi-cloud-arrow-up';
+    if (normalized.includes('service')) return 'bi-diagram-3';
+    if (normalized.includes('evidence')) return 'bi-paperclip';
+    if (normalized.includes('reproduction') || normalized.includes('execution')) return 'bi-list-check';
+    if (normalized.includes('actor') || normalized.includes('consumer')) return 'bi-person-badge';
+    if (normalized.includes('business')) return 'bi-briefcase';
+    if (normalized.includes('behavior') || normalized.includes('result')) return 'bi-bullseye';
+    if (normalized.includes('scenario')) return 'bi-signpost-split';
+    return 'bi-check2';
+  }
 }

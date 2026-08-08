@@ -1,229 +1,91 @@
-# RMS+ Support Hub — Active Task
-
-Program:
-RMS+ Support Hub UI / Branding Refactor
-
-Active Session:
-04 — Landing, Three.js, Shared Cards, Icons & Motion
-
-Previous:
-03 — Completed
-
-Role:
-Implement
-
-Expected branch:
-refactor/rms-hub-04-landing-motion
-
-Expected commit:
-feat(ui): refresh RMS+ Hub landing and motion system
-
-## Global Contract
-
-Repository root:
-
-```text
-D:\AI Tools\DBS\online_order_tool
-```
-
-Before each session:
-
-1. Read `AGENTS.md`.
-2. Read `.ai/STATE.md`.
-3. Run `python .ai/scripts/context.py`.
-4. Read `.ai/HANDOFF.md` only when its status is `In Progress` or `Blocked`.
-5. Read only the source, tests, and documentation named in this task, plus
-   task-related changed files.
-6. Inspect Git state before changing files.
-7. Execute the task completely.
-8. Run targeted validation first, then the required full validation gates.
-9. Review the final task-scoped diff and remove temporary changes.
-10. Update durable state only when materially useful.
-11. Commit automatically using the expected commit message.
-12. Fast-forward merge the session branch to `main`.
-13. Push `main` to `origin`.
-14. Verify `origin/main...main == 0 0`.
-15. Delete the session branch after synchronization.
-
-Use session-local Git maintenance suppression when required:
-
-```text
-git -c gc.auto=0 -c maintenance.auto=false ...
-```
-
-Safety:
-
-```text
-Never git reset --hard.
-Never force push.
-Never discard unrelated changes.
-Never auto-resolve semantic conflicts.
-Never modify Production.
-Never run Production SQL.
-Never invoke state-changing Online Order actions during UI validation.
-Never implement POS operations.
-```
-
-The following business behavior is frozen unless this session explicitly says
-otherwise:
-
-- Prompt Studio canonical outputs
-- Prompt Quality semantics
-- Prompt history max = 10
-- draft persistence
-- Copy/Markdown/Text export
-- Ctrl/Cmd+Enter
-- Online Order API contracts
-- Online Order DTOs/payloads
-- filters/paging/status behavior
-- capability guard
-- payment codes
-- integration/module keys
-- POS remains Coming Soon
-
-Repository guardrails:
-
-- Treat `docs/request_examples/**` and mirrored backend test fixtures as the
-  payload contract.
-- Treat current repository SQL plus `docs/database-schema.md` as the database
-  contract; never guess a column or JSON key.
-- Keep backend dependencies flowing Core -> Data -> API, with API as the
-  composition root.
-- Gate module behavior through `IOrderModule.Capabilities`; do not add
-  module-key string comparisons.
-- Keep connection strings and credentials outside tracked files.
-- Use the Testing environment for agent-run live verification. Never send,
-  cancel, or resend against Production.
-- Do not edit generated or runtime paths: `bin/`, `obj/`, `node_modules/`,
-  `dist/`, `.angular/`, or `var/`.
-- Component styles must consume design tokens; raw color literals belong only
-  in the designated token/gradient files.
-
-## Session 04 — Landing, Three.js, Shared Cards, Icons & Motion
+# SESSION 05 — Prompt Studio UI Harmonization
 
 ## Goal
 
-Make the **RMS+ Support Hub** landing visually compelling and finalize the shared card/icon/motion language.
+Apply the new compact branded system to Prompt Studio while preserving its simplified behavior.
 
 ## Branch
 
 ```text
-refactor/rms-hub-04-landing-motion
+refactor/rms-hub-05-prompt-studio-ui
 ```
 
-## Three.js Boundary
+## Hard Output Contracts
 
-Three.js already exists.
+Do not change canonical sections.
 
-Do NOT:
+Bug = exactly 11 sections.
+Story = exactly 7 sections.
+Test Case = exactly 9 sections.
 
-- install another 3D framework
-- create additional WebGL scenes in modules
-- move Three.js into the root initial bundle
+Do not change:
+- quality semantics
+- history max 10
+- drafts
+- copy
+- Markdown
+- text export
+- Ctrl/Cmd+Enter
 
-### 1. Landing hero
+### 1. Landing cards
 
-Use:
+Equal-height:
+- Bug Refinement
+- Story Refinement
+- Test Case Generation
 
-- RMS logo
-- RMS+ Support Hub title
-- concise subtitle
-- environment/status
-- subtle DBS attribution
-
-Reduce dead vertical hero space.
-
-### 2. Refine current Hub Three.js scene
-
-Preserve:
-
-- dynamic/lazy import
-- Hub-only
-- aria-hidden/decorative
-- pointer-events none
-- DPR cap
-- visibility pause
-- teardown
-- reduced-motion fallback
-- functional independence from WebGL
-
-Enhance only with restrained technical/RMS visual identity.
-
-No giant models/textures/post-processing stack.
-
-### 3. Main tool cards
-
-Cards:
-
-1. QA Prompt Studio
-2. Online Order Tool
-3. POS Maintenance Tool
-
-Requirements:
-
-- equal-height peers
-- aligned logo/icon/title/status
+Each:
+- meaningful icon
+- title
+- concise explanation
+- capability summary
 - aligned footer action
-- capability list
-- same card contract
-- strong focus
-- restrained hover
-- POS = Coming Soon
 
-### 4. Icon language
+### 2. Generator workspaces
 
-Reuse existing icon system.
+Compact:
+- page header
+- form section spacing
+- label/helper gaps
+- preview header/action area
+- Prompt Quality
+- history
 
-Add meaningful icons to:
+Use shared surface/card/density tokens.
 
-- capability summaries
-- card actions
-- status/meta
-- common section headings
+### 3. Icons
 
-Do not add an icon dependency if current project already has adequate icons.
+Add useful icons for:
+- Load Sample
+- Generate
+- Clear
+- Copy
+- Download
+- Quality
+- History
 
-### 5. Motion language
+Preserve accessible names.
 
-Use MotionService.
+### 4. Motion
 
-Add subtle:
+Use restrained feedback/entrance only.
 
-- card entrances
-- hover/focus
-- icon movement
-- status reveal
-- section expansion
-
-Reduced motion removes transforms/entrances.
-
-No heavy table animation.
+Reduced motion must disable nonessential transforms.
 
 ## Validation
 
-```text
-npm --prefix frontend test -- --watch=false
-npm --prefix frontend run build -- --configuration production
-```
+Run:
+- focused builder/generator/history/storage/export tests
+- full frontend suite
+- production build
+- `git diff --check`
 
-Record:
-
-- initial bundle
-- Three.js lazy chunk
-- warnings
-
-Browser if available:
-
-- WebGL scene
-- fallback
-- reduced motion
-- light/dark
-- card keyboard navigation
-- no layout shift
-- console clean
+Explicitly confirm prompt-builder contracts unchanged.
 
 ## Commit
 
 ```text
-feat(ui): refresh RMS+ Hub landing and motion system
+refactor(prompt-studio): harmonize RMS+ compact visual system
 ```
+
+---
