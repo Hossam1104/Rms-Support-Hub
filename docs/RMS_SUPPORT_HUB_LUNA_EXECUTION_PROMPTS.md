@@ -14,8 +14,11 @@ Session 00: Completed
 Session 01: Completed
 Session 02: Completed
 Session 03: Completed
-Session 04: Active
-Sessions 05–08: Planned
+Session 04: Completed
+Session 05: Completed
+Session 06: Completed
+Session 07: Active
+Session 08: Planned
 Opus R1: Planned
 
 ---
@@ -1038,6 +1041,14 @@ Finish global UI consistency and prove the result visually.
 ```text
 refactor/rms-hub-07-ui-closure
 ```
+
+## Session 06 Review Carry-Forward
+
+- Reset `animation-delay` to `0ms !important` under reduced motion for
+  nonessential animations.
+- Standardize the stagger-handling approach across Hub and Prompt Studio.
+- Keep any `capabilityIcon()` redesign optional; do not make it mandatory for
+  Session 07 acceptance.
 
 ## Required Work
 

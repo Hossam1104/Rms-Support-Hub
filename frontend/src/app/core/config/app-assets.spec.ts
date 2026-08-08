@@ -1,4 +1,4 @@
-import { APP_ASSETS } from './app-assets';
+import { APP_ASSETS, paymentAssetForMethod } from './app-assets';
 
 describe('APP_ASSETS', () => {
   it('exposes semantic paths for the supplied brand and module assets', () => {
@@ -25,5 +25,16 @@ describe('APP_ASSETS', () => {
     expect(APP_ASSETS.commerce.offer).toBe('/assets/commerce/offer_logo.png');
     expect(APP_ASSETS.system.loader).toBe('/assets/system/loader.svg');
     expect(APP_ASSETS.system.customMessage.warning).toBe('/assets/system/custom-message/warrning.svg');
+  });
+
+  it('maps only exact known payment methods and keeps ambiguous methods neutral', () => {
+    expect(paymentAssetForMethod('Visa')).toBe(APP_ASSETS.payments.visa);
+    expect(paymentAssetForMethod('MasterCard')).toBe(APP_ASSETS.payments.mastercard);
+    expect(paymentAssetForMethod('MADA')).toBe(APP_ASSETS.payments.mada);
+    expect(paymentAssetForMethod(' tabby ')).toBe(APP_ASSETS.payments.tabby);
+    expect(paymentAssetForMethod('Tamara')).toBe(APP_ASSETS.payments.tamara);
+    expect(paymentAssetForMethod('Card')).toBeNull();
+    expect(paymentAssetForMethod('ApplePay')).toBeNull();
+    expect(paymentAssetForMethod(undefined)).toBeNull();
   });
 });

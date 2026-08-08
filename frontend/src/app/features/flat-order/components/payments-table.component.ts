@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Payment } from '../../../core/models';
+import { AssetPath, paymentAssetForMethod } from '../../../core/config/app-assets';
 import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent, UiToolbarComponent } from '../../../shared/ui';
 
 export interface PaymentUpdate {
@@ -29,7 +30,7 @@ export interface PaymentUpdate {
         <p *ngFor="let message of errors"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
       </div>
 
-      <ui-table *ngIf="payments.length > 0; else paymentsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Order payments">
+      <ui-table *ngIf="payments.length > 0; else paymentsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order payments">
         <thead>
           <tr>
             <th scope="col" class="numeric-cell">#</th>
@@ -44,7 +45,21 @@ export interface PaymentUpdate {
         <tbody>
           <tr *ngFor="let payment of payments; let index = index; trackBy: trackByIndex">
             <td class="muted-cell numeric-cell">{{ index + 1 }}</td>
-            <td><strong>{{ payment.paymentMethod }}</strong><span class="secondary-label" *ngIf="payment.paymentOption">{{ payment.paymentOption }}</span></td>
+            <td>
+              <span class="payment-method">
+                <span class="payment-logo" aria-hidden="true">
+                  @if (paymentAsset(payment.paymentMethod); as logo) {
+                    <img [src]="logo" alt="">
+                  } @else {
+                    <i class="bi bi-credit-card-2-front"></i>
+                  }
+                </span>
+                <span class="payment-method__copy">
+                  <strong>{{ payment.paymentMethod }}</strong>
+                  <span class="secondary-label" *ngIf="payment.paymentOption">{{ payment.paymentOption }}</span>
+                </span>
+              </span>
+            </td>
             <td>
               <label class="sr-only" [for]="'payment-status-' + index">Status for {{ payment.paymentMethod }}</label>
               <select [id]="'payment-status-' + index" class="table-editor table-select" [value]="payment.paymentStatus" (change)="onEdit(index, 'paymentStatus', $event)">
@@ -64,6 +79,13 @@ export interface PaymentUpdate {
             </td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" colspan="3">Payment total</th>
+            <td class="numeric-cell total-cell"><app-riyal [decorative]="true" [size]=".82"></app-riyal>{{ totalAmount() | number:'1.2-2' }}</td>
+            <td colspan="3"><span class="sr-only">Sum of payment amounts</span></td>
+          </tr>
+        </tfoot>
       </ui-table>
 
       <ng-template #paymentsEmpty>
@@ -83,6 +105,10 @@ export interface PaymentUpdate {
     .table-errors p { display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: .78rem; line-height: 1.35; }
     td strong { display: block; font-weight: 750; }
     .secondary-label, .metadata-label { display: block; margin-top: 2px; color: var(--text-muted); font-size: .72rem; }
+    .payment-method { display: inline-flex; align-items: center; min-width: 150px; gap: 8px; }
+    .payment-logo { display: inline-grid; width: 32px; height: 25px; flex: 0 0 32px; place-items: center; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-muted); font-size: .9rem; }
+    .payment-logo img { width: 27px; height: 20px; object-fit: contain; }
+    .payment-method__copy { min-width: 0; }
     .reference-label { color: var(--text-secondary); font-family: var(--font-mono, ui-monospace, monospace); font-size: .78rem; }
     .muted-cell { color: var(--text-muted); }
     .action-cell { width: 50px; text-align: right; }
@@ -103,6 +129,14 @@ export class PaymentsTableComponent {
   readonly paymentStatuses = ['not_payment', 'done_payment', 'failed_payment'];
 
   trackByIndex(index: number): number { return index; }
+
+  paymentAsset(method: string): AssetPath | null {
+    return paymentAssetForMethod(method);
+  }
+
+  totalAmount(): number {
+    return this.payments.reduce((total, payment) => total + (Number(payment.paymentAmount) || 0), 0);
+  }
 
   onEdit(index: number, field: 'paymentAmount' | 'paymentStatus', event: Event) {
     const raw = (event.target as HTMLInputElement | HTMLSelectElement).value;

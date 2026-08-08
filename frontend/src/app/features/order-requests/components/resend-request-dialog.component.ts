@@ -16,7 +16,7 @@ import { canResend as canResendStatus } from '../resend-eligibility';
       <div class="dialog-header">
         <i class="bi bi-arrow-repeat"></i>
         <h3>Resend order {{ orderNumber }}</h3>
-        <button type="button" class="close-btn" (click)="close.emit()"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="close-btn" aria-label="Close" (click)="close.emit()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </div>
 
       <div class="blocked-banner" *ngIf="!isEligible()">

@@ -92,3 +92,27 @@ export const APP_ASSETS: AppAssetCatalog = {
     }
   }
 };
+
+/**
+ * Resolve only payment methods with an unambiguous supplied brand asset.
+ *
+ * The comparison is deliberately exact after trimming/case-normalization:
+ * values such as `Card`, `ApplePay`, or `STCPay` must keep the neutral icon
+ * fallback rather than being guessed from incidental payment metadata.
+ */
+export function paymentAssetForMethod(method: string | null | undefined): AssetPath | null {
+  switch ((method ?? '').trim().toLowerCase()) {
+    case 'visa':
+      return APP_ASSETS.payments.visa;
+    case 'mastercard':
+      return APP_ASSETS.payments.mastercard;
+    case 'mada':
+      return APP_ASSETS.payments.mada;
+    case 'tabby':
+      return APP_ASSETS.payments.tabby;
+    case 'tamara':
+      return APP_ASSETS.payments.tamara;
+    default:
+      return null;
+  }
+}

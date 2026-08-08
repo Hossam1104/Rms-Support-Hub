@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <header class="page-header">
+    <header class="page-header" [class.page-header--compact]="compact">
       <div class="header-content">
         <h1>{{ title }}</h1>
         <p *ngIf="subtitle">{{ subtitle }}</p>
@@ -44,6 +44,8 @@ import { CommonModule } from '@angular/common';
     }
     .header-content p { margin: 0; color: var(--text-secondary); max-width: 560px; }
     .header-actions { display: flex; flex: 0 1 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); min-width: 0; }
+    .page-header--compact { padding-block: var(--panel-padding-compact); border-radius: var(--radius-lg); margin-bottom: var(--panel-gap); }
+    .page-header--compact .header-content h1 { margin-bottom: 3px; font-size: var(--text-xl); }
     @media (max-width: 900px) {
       .page-header { align-items: flex-start; flex-direction: column; }
       .header-actions { width: 100%; justify-content: flex-start; }
@@ -59,4 +61,5 @@ import { CommonModule } from '@angular/common';
 export class PageHeaderComponent {
   @Input() title: string = '';
   @Input() subtitle?: string;
+  @Input() compact = false;
 }

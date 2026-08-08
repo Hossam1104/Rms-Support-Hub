@@ -35,7 +35,7 @@ const QUICK_REASONS = ['Customer request', 'Out of stock', 'Duplicate order', 'W
       <div class="dialog-header">
         <i class="bi bi-x-circle-fill"></i>
         <h3>Cancel order {{ orderNumber }}</h3>
-        <button type="button" class="close-btn" (click)="close.emit()"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="close-btn" aria-label="Close" (click)="close.emit()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </div>
 
       <div class="blocked-banner" *ngIf="!canCancel">

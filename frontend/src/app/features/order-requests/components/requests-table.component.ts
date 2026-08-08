@@ -14,7 +14,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
   imports: [CommonModule, ScrollingModule, StatusPillComponent, RiyalComponent, SkeletonComponent, EmptyStateComponent, UiCardComponent],
   template: `
     <ui-card variant="raised" class="table-card">
-      <div class="table-shell" [class.is-refreshing]="store.status() === 'loading'">
+      <div class="table-shell" [class.is-refreshing]="store.status() === 'loading'" [style.--table-row-height.px]="rowHeight">
       <div class="table-head">
         <span class="col-outcome"></span>
         <span class="col-order">Order #</span>
@@ -80,7 +80,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
               <span *ngIf="!row.orderStatus" class="no-header">No header</span>
             </span>
             <span class="col-items">{{ row.itemCount }}</span>
-            <span class="align-right net-total col-total">{{ row.netTotal | number:'1.2-2' }} <app-riyal [size]="0.85"></app-riyal></span>
+            <span class="align-right net-total col-total"><app-riyal [size]="0.85"></app-riyal>{{ row.netTotal | number:'1.2-2' }}</span>
             <span class="cell-invoice col-invoice">{{ row.invoiceBarcode || '—' }}</span>
             <span class="payload-badges col-payload">
               <span class="badge">REQ</span>

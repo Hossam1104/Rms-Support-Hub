@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../../core/models';
+import { APP_ASSETS } from '../../../core/config/app-assets';
 import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent, UiToolbarComponent } from '../../../shared/ui';
 
 export interface ProductUpdate {
@@ -29,7 +30,7 @@ export interface ProductUpdate {
         <p *ngFor="let message of errors"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
       </div>
 
-      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Order products">
+      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order products">
         <thead>
           <tr>
             <th scope="col" class="numeric-cell">#</th>
@@ -49,6 +50,10 @@ export interface ProductUpdate {
             <td>
               <strong>{{ product.itemName }}</strong>
               <span class="secondary-label" *ngIf="product.itemNameAr">{{ product.itemNameAr }}</span>
+              <span class="offer-mark" *ngIf="product.offerCode || product.offerMessage">
+                <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
+                <span>{{ product.offerCode || 'Offer' }}</span>
+              </span>
             </td>
             <td><span class="code-label">{{ product.itemCode }}</span></td>
             <td class="numeric-cell"><app-riyal [size]=".82"></app-riyal>{{ product.unitPrice | number:'1.2-2' }}</td>
@@ -57,7 +62,10 @@ export interface ProductUpdate {
             </td>
             <td class="numeric-cell">
               <label class="sr-only" [for]="'product-discount-' + index">Discount for {{ product.itemName }}</label>
-              <input [id]="'product-discount-' + index" class="table-editor" type="number" min="0" step="0.01" [value]="product.discount" [attr.aria-label]="'Discount for ' + product.itemName" (change)="onEdit(index, 'discount', $event)">
+              <span class="currency-editor">
+                <app-riyal [decorative]="true" [size]=".72"></app-riyal>
+                <input [id]="'product-discount-' + index" class="table-editor" type="number" min="0" step="0.01" [value]="product.discount" [attr.aria-label]="'Discount for ' + product.itemName" (change)="onEdit(index, 'discount', $event)">
+              </span>
             </td>
             <td class="numeric-cell">{{ product.vatPercentage | number:'1.0-2' }}%</td>
             <td class="numeric-cell total-cell"><app-riyal [size]=".82"></app-riyal>{{ getProductTotal(product) | number:'1.2-2' }}</td>
@@ -85,11 +93,15 @@ export interface ProductUpdate {
     .table-errors p { display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: .78rem; line-height: 1.35; }
     td strong { display: block; font-weight: 750; }
     .secondary-label { display: block; margin-top: 2px; color: var(--text-muted); font-size: .72rem; }
+    .offer-mark { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--state-warning-fg); font-size: .7rem; font-weight: 750; }
+    .offer-mark img { width: 16px; height: 16px; object-fit: contain; }
     .code-label { color: var(--text-secondary); font-family: var(--font-mono, ui-monospace, monospace); font-size: .78rem; }
     .numeric-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .total-cell { color: var(--text-primary); font-weight: 800; }
     .muted-cell { color: var(--text-muted); }
     .action-cell { width: 50px; text-align: right; }
+    .currency-editor { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; }
+    .currency-editor app-riyal { color: var(--text-muted); }
     .table-editor { width: 82px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-xs); }
     .table-editor--quantity { width: 68px; }
     .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
@@ -97,6 +109,7 @@ export interface ProductUpdate {
   `]
 })
 export class ProductsTableComponent {
+  readonly assets = APP_ASSETS;
   @Input() products: Product[] = [];
   /** U4: server send-validation errors routed to the products section. */
   @Input() errors: string[] = [];

@@ -25,11 +25,12 @@ per-session validation numbers are not repeated here.
 | RMS+ Support Hub Session 03 - Global Density, Tables & Surface System | Completed | Session 03 branch validation, repository wrapper, standalone production build, offline build, Riyal verifier, and `git diff --check` | Added semantic density and surface geometry tokens, standardized shared tables and numeric/footer treatments, compacted representative shells/forms/panels, and activated Session 04. |
 | RMS+ Support Hub Session 04 - Landing, Three.js, Shared Cards, Icons & Motion | Completed | Session 04 branch validation: 49 frontend test files / 258 tests, warning-free production build, and `git diff --check` | Reworked the Hub into a compact RMS-branded landing with status rail, semantic shared-card icons and pinned actions, tokenized reduced-motion distances, and a restrained themed scene core/halo; preserved Prompt Studio, Online Order, and POS behavior and activated Session 05. |
 | RMS+ Support Hub Session 05 - Prompt Studio UI Harmonization | Completed | Session 05 branch validation: focused Prompt Studio 11 files / 48 tests, full frontend 49 files / 259 tests, warning-free production build, and `git diff --check` | Harmonized the Prompt Studio landing and generator workspaces with compact RMS+ surfaces, explicit action/quality/history icons, and reduced-motion-safe control feedback; preserved builder sections, quality semantics, drafts, history, exports, and keyboard shortcuts and activated Session 06. |
+| RMS+ Support Hub Session 06 - Online Orders Dense UI, Branding, Tables & Commerce Assets | Completed | Session 06 branch validation: 52 frontend files / 265 tests, 161 backend tests, Release build, production build, Riyal verifier, and `git diff --check` | Compacted the Online Order Builder, standardized Products/Payments/Items/Requests presentation, added exact known-payment and offer visuals with canonical Riyal treatment, resolved the R1 medium findings, and activated Session 07. Browser control was unavailable. |
 
 ## Programme status
 
-- RMS+ Support Hub UI / Branding Refactor is active. Sessions 01-05 are
-  complete and Session 06 is active; later sessions remain planned in the
+- RMS+ Support Hub UI / Branding Refactor is active. Sessions 01-06 are
+  complete and Session 07 is active; later sessions remain planned in the
   execution prompts document.
 - Remaining external evidence, not implementation work: safe UPC **Testing**
   order population/send/cancel/resend acceptance, the Production database index

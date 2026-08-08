@@ -1,19 +1,20 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CountUpDirective } from '../../directives/count-up.directive';
+import { RiyalComponent } from '../riyal/riyal.component';
 
 export type StatTileVariant = 'brand' | 'success' | 'danger' | 'muted';
 
 @Component({
   selector: 'app-stat-tile',
   standalone: true,
-  imports: [CommonModule, CountUpDirective],
+  imports: [CommonModule, CountUpDirective, RiyalComponent],
   template: `
     <button type="button" class="stat-tile" [class]="'variant-' + variant" [class.active]="active" (click)="clicked.emit()">
       <span class="stat-icon"><i class="bi" [class]="icon"></i></span>
       <span class="stat-meta">
         <span class="stat-label">{{ label }}</span>
-        <span class="stat-value" [appCountUp]="value" [countUpDecimals]="decimals"></span>
+        <span class="stat-value"><app-riyal *ngIf="currency" [decorative]="true" [size]=".78"></app-riyal><span [appCountUp]="value" [countUpDecimals]="decimals"></span></span>
       </span>
     </button>
   `,
@@ -49,7 +50,7 @@ export type StatTileVariant = 'brand' | 'success' | 'danger' | 'muted';
     .variant-muted .stat-icon { background: var(--grad-muted); }
     .stat-meta { display: flex; flex-direction: column; gap: 2px; }
     .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-    .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); }
+    .stat-value { display: inline-flex; align-items: baseline; gap: 4px; font-size: 1.6rem; font-weight: 800; color: var(--text-primary); }
   `]
 })
 export class StatTileComponent {
@@ -59,6 +60,7 @@ export class StatTileComponent {
   @Input() icon: string = 'bi-graph-up';
   @Input() variant: StatTileVariant = 'brand';
   @Input() active: boolean = false;
+  @Input() currency = false;
 
   @Output() clicked = new EventEmitter<void>();
 }

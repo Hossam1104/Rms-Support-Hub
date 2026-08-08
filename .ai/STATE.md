@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-08
-- **Branch:** `main` after Session 05 merge
+- **Branch:** `main` after Session 06 merge
 - **Current program:** RMS+ Support Hub UI / Branding Refactor
-- **Session status:** Session 05 completed; Session 06 active
+- **Session status:** Session 06 completed; Session 07 active
 - **Current GitHub repository:** `Hossam1104/online_order_tool`
 - **Future GitHub repository:** `Hossam1104/Rms-Support-Hub` (Session 08)
 - **Product target:** `RMS+ Support Hub`
@@ -148,6 +148,30 @@ Session 00 map.
   49 files / 259 tests, production build with no warnings at 440.74 kB initial
   raw / 101.73 kB estimated transfer, and `git diff --check`. Browser was not
   run; no interactive browser connector was available.
+
+## Session 06 Online Orders dense UI and commerce visuals
+
+- The Online Order Builder now uses compact shared page-header and section
+  geometry, tighter local workflow spacing, and tokenized form/panel gaps.
+  Products, Payments, and Uni-Commerce Items use the shared wide table shell
+  with readable borders, separators, Riyal presentation, and display-only
+  totals where applicable. Order Request details reuse the same commerce
+  visuals without changing the virtualized list or request behavior.
+- The asset catalog now exposes an exact known-payment resolver for Visa,
+  Mastercard, Mada, Tabby, and Tamara; unknown methods keep the neutral icon.
+  Existing offer contexts use the supplied offer asset, and all changed
+  monetary displays use the canonical Riyal component/asset.
+- Reviewer R1 medium findings are resolved: the virtual row height now has one
+  TypeScript source stamped into CSS and both dialog icon-only close controls
+  have accessible names. Low findings are carried into Session 07: reset
+  reduced-motion animation delays to zero, standardize Hub/Prompt Studio
+  stagger handling, and keep any `capabilityIcon()` redesign optional.
+- Session 06 validation passed: 52 frontend test files / 265 tests, 161
+  backend tests, Release build with 0 warnings and 0 errors, production
+  initial bundle 441.37 kB raw / 101.90 kB estimated transfer, and the
+  `three-module` lazy chunk 734.66 kB raw / 154.04 kB estimated transfer.
+  The Riyal verifier and `git diff --check` passed. Browser validation was not
+  run because the prescribed browser control was unavailable.
 
 ## Deferred scope
 

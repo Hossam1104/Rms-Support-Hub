@@ -19,8 +19,8 @@
 | 03 — Global Density, Table & Surface System | Completed |
 | 04 — Landing, Three.js, Shared Cards, Icons & Motion | Completed |
 | 05 — Prompt Studio UI Harmonization | Completed |
-| 06 — Online Orders Dense UI + Branding + Tables | Active |
-| 07 — Cross-Project UI Closure | Planned |
+| 06 — Online Orders Dense UI + Branding + Tables | Completed |
+| 07 — Cross-Project UI Closure | Active |
 | 08 — GitHub Rename & Final Checkpoint | Planned |
 | R1 — Opus Final Review | Planned |
 
@@ -586,6 +586,11 @@ Apply compact branded system without changing generator behavior.
 
 ### Session 06 — Online Orders Dense UI + Branding + Tables
 Apply screenshot-driven compaction, table structure and commerce assets while preserving business logic.
+
+Session 06 completion checkpoint: compact builder geometry, shared wide-table
+presentation, canonical Riyal/offer/payment visuals, and the two R1 medium
+findings are complete. Browser control was unavailable; low R1 findings are
+carried into Session 07.
 
 ### Session 07 — Cross-Project UI Closure
 Finish consistency, responsive matrix, themes, reduced motion, asset audit and visual regression.

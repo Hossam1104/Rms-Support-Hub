@@ -71,6 +71,7 @@ const TOTALS_DEBOUNCE_MS = 300;
     <div class="flat-order-container">
       <app-page-header
         [title]="moduleLabel()"
+        [compact]="true"
         subtitle="Prepare the draft, review server totals, and send through the active environment.">
         <div class="builder-header-status">
           <span class="workflow-status" [class.is-busy]="sending() || totalsLoading() || draftStore.saving()">
@@ -124,6 +125,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               <ui-section
                 id="order-header-section"
                 title="Order header"
+                [compact]="true"
                 description="Branch, order identity, status, notes, and coordinates."
                 [completed]="section('order-header').completed"
                 [hasIssues]="section('order-header').hasIssues"
@@ -143,6 +145,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               <ui-section
                 id="customer-section"
                 title="Customer"
+                [compact]="true"
                 description="Consumer lookup and the payload’s customer/address fields."
                 [completed]="section('customer').completed"
                 [hasIssues]="section('customer').hasIssues"
@@ -159,6 +162,7 @@ const TOTALS_DEBOUNCE_MS = 300;
                 *ngIf="hasDeliveryFields()"
                 id="delivery-section"
                 title="Delivery"
+                [compact]="true"
                 description="Schedule and fulfillment details exposed by the active module."
                 [completed]="section('delivery').completed"
                 [hasIssues]="section('delivery').hasIssues"
@@ -173,6 +177,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               <ui-section
                 id="products-section"
                 title="Products"
+                [compact]="true"
                 description="Dense item rows with server-backed lookup, draft edits, and row actions."
                 [completed]="section('products').completed"
                 [hasIssues]="section('products').hasIssues"
@@ -189,6 +194,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               <ui-section
                 id="payments-section"
                 title="Payments"
+                [compact]="true"
                 description="Payment methods, statuses, references, and editable amounts."
                 [completed]="section('payments').completed"
                 [hasIssues]="section('payments').hasIssues"
@@ -205,6 +211,7 @@ const TOTALS_DEBOUNCE_MS = 300;
               <ui-section
                 id="payload-section"
                 title="Payload preview & send"
+                [compact]="true"
                 description="Server-compiled JSON, resolved endpoint, and response diagnostics."
                 [completed]="section('payload').completed"
                 [hasIssues]="section('payload').hasIssues"
@@ -317,14 +324,23 @@ const TOTALS_DEBOUNCE_MS = 300;
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .flat-order-container { min-width: 0; max-width: 1680px; margin: 0 auto; }
+    .flat-order-container {
+      min-width: 0;
+      max-width: 1680px;
+      margin: 0 auto;
+      --section-gap: clamp(12px, 1.25vw, 16px);
+      --panel-gap: clamp(8px, .95vw, 12px);
+      --panel-padding: clamp(12px, 1.15vw, 16px);
+      --panel-padding-compact: clamp(8px, .8vw, 11px);
+      --form-gap: clamp(8px, .85vw, 12px);
+    }
     .builder-header-status { display: flex; align-items: center; justify-content: flex-end; gap: var(--panel-gap); }
     .workflow-status { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-panel); color: var(--text-secondary); font-size: .74rem; font-weight: 750; white-space: nowrap; }
     .workflow-status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--state-success-fg); box-shadow: 0 0 0 4px var(--state-success-bg); }
     .workflow-status.is-busy .workflow-status__dot { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); animation: builderPulse 1.4s ease-in-out infinite; }
     .builder-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); align-items: start; gap: var(--section-gap); }
     .workflow-column, .summary-column { min-width: 0; }
-    app-order-section-navigation { position: sticky; top: 16px; z-index: 8; margin-bottom: 16px; }
+    app-order-section-navigation { position: sticky; top: 16px; z-index: 8; margin-bottom: var(--panel-gap); }
     .workflow-sections { display: flex; flex-direction: column; gap: var(--section-gap); }
     ui-section { scroll-margin-top: 88px; }
     .summary-column { position: sticky; top: 16px; }
@@ -352,7 +368,7 @@ const TOTALS_DEBOUNCE_MS = 300;
     @media (max-width: 1199px) {
       .builder-grid, .builder-skeleton { display: block; }
       .summary-column, .builder-skeleton__rail { display: none; }
-      .mobile-summary { position: sticky; bottom: 14px; z-index: 20; display: block; margin-top: 20px; padding-bottom: env(safe-area-inset-bottom, 0px); }
+      .mobile-summary { position: sticky; bottom: 14px; z-index: 20; display: block; margin-top: var(--section-gap); padding-bottom: env(safe-area-inset-bottom, 0px); }
       app-order-section-navigation { top: 12px; }
     }
     @media (max-width: 767px) {

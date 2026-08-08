@@ -138,4 +138,14 @@ describe('U5 shared UI primitives', () => {
     toolbar.detectChanges();
     expect(toolbar.nativeElement.querySelector('.ui-toolbar--compact')).toBeTruthy();
   });
+
+  it('supports compact section geometry without changing its collapse contract', () => {
+    const fixture = TestBed.createComponent(UiSectionComponent);
+    fixture.componentRef.setInput('title', 'Products');
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ui-section--compact')).toBeTruthy();
+    expect((fixture.nativeElement.querySelector('.ui-section__toggle') as HTMLButtonElement).getAttribute('aria-expanded')).toBe('true');
+  });
 });

@@ -25,7 +25,7 @@ import { RequestsTableComponent } from './components/requests-table.component';
     <router-outlet></router-outlet>
 
     @if (!detailRouteActive()) {
-    <app-page-header [title]="'Order Requests'" [subtitle]="moduleService.activeModule()?.label">
+    <app-page-header [title]="'Order Requests'" [subtitle]="moduleService.activeModule()?.label" [compact]="true">
     </app-page-header>
 
     <div class="stat-tiles">

@@ -7,6 +7,7 @@ import { OrderRequestDetail, OrderRequestCancelResponse, SendOrderResult, ApiErr
 import { ToastService } from '../../../core/services/toast.service';
 import { ApiService } from '../../../core/services/api.service';
 import { ModuleService } from '../../../core/services/module.service';
+import { APP_ASSETS, AssetPath, paymentAssetForMethod } from '../../../core/config/app-assets';
 import {
   StatusPillComponent, JsonTreeComponent, RiyalComponent, UiSectionComponent,
   CopyButtonComponent, EmptyStateComponent, SkeletonComponent, ConfirmDialogComponent, UiTableComponent
@@ -127,14 +128,17 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                       <tr>
                         <td>
                           {{ line.itemName || '—' }}
-                          <span class="muted small" *ngIf="line.offerMessage">{{ line.offerCode }}: {{ line.offerMessage }}</span>
+                          <span class="commerce-offer-mark" *ngIf="line.offerMessage">
+                            <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
+                            <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
+                          </span>
                         </td>
                         <td class="mono" [title]="'18-digit: ' + materialViews(line.materialNumber).full">{{ materialViews(line.materialNumber).short || '—' }}</td>
                         <td class="align-right">{{ line.quantity }}</td>
-                        <td class="align-right amount">{{ line.unitPrice | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
-                        <td class="align-right amount">{{ line.totalDiscount | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
-                        <td class="align-right amount">{{ line.itemVat | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal> <span class="muted">({{ line.itemVatPercentage }}%)</span></td>
-                        <td class="align-right amount">{{ line.totalPrice | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
+                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</td>
+                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</td>
+                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.itemVat | number:'1.2-2' }} <span class="muted">({{ line.itemVatPercentage }}%)</span></td>
+                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</td>
                       </tr>
                     }
                   </tbody>
@@ -244,7 +248,14 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                 @for (transaction of detail.request.transactions; track $index) {
                   <article class="transaction-card">
                     <div class="transaction-main">
-                      <strong>{{ transaction.eCommercePaymentMethod || 'Unknown method' }}</strong>
+                      <span class="commerce-payment-method">
+                        @if (paymentAsset(transaction.eCommercePaymentMethod); as logo) {
+                          <img [src]="logo" [alt]="(transaction.eCommercePaymentMethod || 'Payment') + ' payment logo'">
+                        } @else {
+                          <i class="bi bi-credit-card-2-front" aria-hidden="true"></i>
+                        }
+                        <strong>{{ transaction.eCommercePaymentMethod || 'Unknown method' }}</strong>
+                      </span>
                       <span>{{ transaction.eCommercePaymentOption || '—' }}</span>
                     </div>
                     <div class="transaction-meta">
@@ -254,7 +265,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                       <span *ngIf="transaction.cardName">Card: {{ transaction.cardName }}</span>
                       <span *ngIf="transaction.optionCommission">Commission: {{ transaction.optionCommission | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal></span>
                     </div>
-                    <strong class="transaction-amount">{{ transaction.paymentAmount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong>
+                    <strong class="transaction-amount"><app-riyal [size]="0.8"></app-riyal>{{ transaction.paymentAmount | number:'1.2-2' }}</strong>
                   </article>
                 }
               </div>
@@ -423,6 +434,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
   `]
 })
 export class OrderRequestDetailsComponent implements OnDestroy {
+  readonly assets = APP_ASSETS;
   store = inject(OrderRequestsStore);
   moduleService = inject(ModuleService);
   private route = inject(ActivatedRoute);
@@ -481,6 +493,10 @@ export class OrderRequestDetailsComponent implements OnDestroy {
   }
 
   materialViews(materialNumber: string | null) { return materialNumberViews(materialNumber); }
+
+  paymentAsset(method: string | null | undefined): AssetPath | null {
+    return paymentAssetForMethod(method);
+  }
 
   canResend(detail: OrderRequestDetail | null | undefined): boolean {
     const header = detail?.header;

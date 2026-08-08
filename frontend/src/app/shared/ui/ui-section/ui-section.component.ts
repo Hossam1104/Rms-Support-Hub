@@ -8,7 +8,7 @@ let nextSectionId = 0;
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="ui-section" [class.is-collapsed]="!expandedState()" [class.is-disabled]="disabled()" [class.has-issues]="hasIssues()">
+    <section class="ui-section" [class.ui-section--compact]="compact()" [class.is-collapsed]="!expandedState()" [class.is-disabled]="disabled()" [class.has-issues]="hasIssues()">
       <header class="ui-section__header">
         <button
           type="button"
@@ -55,6 +55,8 @@ let nextSectionId = 0;
     .ui-section__actions { display: flex; align-items: center; gap: 8px; }
     .ui-section__issue { display: inline-flex; align-items: center; gap: 5px; color: var(--state-danger-fg); font-size: .75rem; font-weight: 750; white-space: nowrap; }
     .ui-section__body { padding: var(--panel-padding); }
+    .ui-section--compact .ui-section__header { min-height: 46px; padding-block: 6px; }
+    .ui-section--compact .ui-section__body { padding-block: var(--panel-padding-compact); }
     .ui-section.is-disabled { opacity: .58; }
     @media (max-width: 560px) { .ui-section__header { align-items: flex-start; } .ui-section__actions { align-self: center; } .ui-section__description { white-space: normal; } }
   `]
@@ -67,6 +69,7 @@ export class UiSectionComponent {
   readonly issueCount = input(0);
   readonly collapsible = input(true);
   readonly expanded = input(true);
+  readonly compact = input(false);
   readonly disabled = input(false);
   readonly expandedChange = output<boolean>();
 

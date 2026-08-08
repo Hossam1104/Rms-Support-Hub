@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { StatTileComponent, UiCardComponent } from '../../../shared/ui';
+import { RiyalComponent, StatTileComponent, UiCardComponent } from '../../../shared/ui';
 import { TotalsSummary } from '../../../core/models';
 
 /**
@@ -14,22 +14,22 @@ import { TotalsSummary } from '../../../core/models';
 @Component({
   selector: 'app-quick-stats',
   standalone: true,
-  imports: [CommonModule, StatTileComponent, UiCardComponent],
+  imports: [CommonModule, RiyalComponent, StatTileComponent, UiCardComponent],
   template: `
     <div class="quick-stats-grid" *ngIf="totals">
-      <app-stat-tile label="Total Amount" [value]="totals?.totalOrderAmount ?? 0" [decimals]="2" icon="bi-cart-check" variant="brand"></app-stat-tile>
-      <app-stat-tile label="Paid Amount" [value]="totals?.totalPaidAmount ?? 0" [decimals]="2" icon="bi-wallet2" variant="success"></app-stat-tile>
-      <app-stat-tile label="Remaining Balance" [value]="totals?.remainingBalance ?? 0" [decimals]="2" [variant]="(totals?.remainingBalance ?? 0) > 0 ? 'muted' : 'success'" icon="bi-calculator"></app-stat-tile>
+      <app-stat-tile label="Total Amount" [value]="totals?.totalOrderAmount ?? 0" [decimals]="2" [currency]="true" icon="bi-cart-check" variant="brand"></app-stat-tile>
+      <app-stat-tile label="Paid Amount" [value]="totals?.totalPaidAmount ?? 0" [decimals]="2" [currency]="true" icon="bi-wallet2" variant="success"></app-stat-tile>
+      <app-stat-tile label="Remaining Balance" [value]="totals?.remainingBalance ?? 0" [decimals]="2" [currency]="true" [variant]="(totals?.remainingBalance ?? 0) > 0 ? 'muted' : 'success'" icon="bi-calculator"></app-stat-tile>
     </div>
 
     <ui-card variant="raised" class="totals-breakdown" *ngIf="totals; else totalsUnavailable">
       <div class="breakdown-row">
         <span class="breakdown-item"><i class="bi bi-box-seam"></i> Products <strong>{{ productCount }}</strong></span>
         <span class="breakdown-item"><i class="bi bi-stack"></i> Quantity <strong>{{ totalQuantity }}</strong></span>
-        <span class="breakdown-item">Subtotal <strong>{{ totals.totalProductAmount | number:'1.2-2' }}</strong></span>
-        <span class="breakdown-item">Discount <strong>{{ totals.orderDiscount | number:'1.2-2' }}</strong></span>
-        <span class="breakdown-item">VAT <strong>{{ totals.totalProductVat | number:'1.2-2' }}</strong></span>
-        <span class="breakdown-item">Delivery <strong>{{ totals.deliveryCost | number:'1.2-2' }}</strong></span>
+        <span class="breakdown-item">Subtotal <strong><app-riyal [decorative]="true" [size]=".72"></app-riyal>{{ totals.totalProductAmount | number:'1.2-2' }}</strong></span>
+        <span class="breakdown-item">Discount <strong><app-riyal [decorative]="true" [size]=".72"></app-riyal>{{ totals.orderDiscount | number:'1.2-2' }}</strong></span>
+        <span class="breakdown-item">VAT <strong><app-riyal [decorative]="true" [size]=".72"></app-riyal>{{ totals.totalProductVat | number:'1.2-2' }}</strong></span>
+        <span class="breakdown-item">Delivery <strong><app-riyal [decorative]="true" [size]=".72"></app-riyal>{{ totals.deliveryCost | number:'1.2-2' }}</strong></span>
         <span class="breakdown-refresh" *ngIf="loading" title="Refreshing totals from the server"><i class="bi bi-arrow-repeat spin"></i></span>
       </div>
       <p class="breakdown-error" *ngIf="error">{{ error }} Showing the last known values.</p>
