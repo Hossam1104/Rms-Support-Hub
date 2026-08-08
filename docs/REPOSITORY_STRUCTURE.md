@@ -44,6 +44,27 @@ Rms-Support-Hub/
 └── .ai/                       # Agent working set: PROJECT, STATE, DECISIONS, decisions/, HANDOFF, HISTORY, scripts
 ```
 
+## Route topology
+
+Every tool is a lazy route with typed `ToolRouteData`, declared in
+`frontend/src/app/app.routes.ts`:
+
+```text
+/                                                       Hub
+/tools/prompt-studio                                    Prompt Studio landing
+/tools/prompt-studio/bugs                               Bug Refinement
+/tools/prompt-studio/stories                            Story Refinement
+/tools/prompt-studio/test-cases                         Test Case Generation
+/tools/online-orders                                    Online Order module picker
+/tools/online-orders/modules/:key/order                 Flat order builder
+/tools/online-orders/modules/:key/unicommerce           Uni-Commerce invoice builder
+/tools/online-orders/modules/:key/order-requests        Request history
+/tools/online-orders/modules/:key/order-requests/:orderId   Request detail
+/modules/:key/...                                       Pre-hub Online Order compatibility mount
+/tools/pos-maintenance                                  POS Coming Soon (informational)
+/_kitchen-sink                                          Dev-only; tree-shaken from production
+```
+
 ## Where new work belongs
 
 | Change | Location |

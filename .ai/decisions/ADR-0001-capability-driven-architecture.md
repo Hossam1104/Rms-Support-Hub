@@ -25,8 +25,8 @@ Keep domain behavior and module capability declarations in Core, SQL implementat
 
 ## Evidence
 
-- `backend/src/OnlineOrderTool.Core/Modules/IOrderModule.cs`
-- `backend/src/OnlineOrderTool.Core/Modules/ModuleRegistry.cs`
-- `backend/src/OnlineOrderTool.Api/Program.cs`
+- `backend/src/RmsSupportHub.Core/Modules/IOrderModule.cs`
+- `backend/src/RmsSupportHub.Core/Modules/ModuleRegistry.cs`
+- `backend/src/RmsSupportHub.Api/Program.cs`
 - `frontend/src/app/core/services/module.service.ts`
 - `frontend/src/app/core/guards/capability.guard.ts`

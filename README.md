@@ -169,4 +169,4 @@ Google Fonts is unreachable.
 Start at [docs/README.md](docs/README.md). The contracts that must never be
 guessed at are `docs/api-spec.md`, `docs/database-schema.md`, and
 `docs/request_examples/`. Release status and deferred items are in
-[docs/QA_SUPPORT_HUB_RELEASE_READINESS.md](docs/QA_SUPPORT_HUB_RELEASE_READINESS.md).
+[docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md](docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md).

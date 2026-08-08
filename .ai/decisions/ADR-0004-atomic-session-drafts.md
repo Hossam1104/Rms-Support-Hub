@@ -25,7 +25,7 @@ Issue an HttpOnly GUID session cookie, key draft JSON by session and module, ser
 
 ## Evidence
 
-- `backend/src/OnlineOrderTool.Api/Middleware/SessionIdMiddleware.cs`
-- `backend/src/OnlineOrderTool.Core/Services/DraftManager.cs`
-- `backend/tests/OnlineOrderTool.Tests/DraftManagerTests.cs`
+- `backend/src/RmsSupportHub.Api/Middleware/SessionIdMiddleware.cs`
+- `backend/src/RmsSupportHub.Core/Services/DraftManager.cs`
+- `backend/tests/RmsSupportHub.Tests/DraftManagerTests.cs`
 - `frontend/src/app/features/flat-order/draft.store.ts`

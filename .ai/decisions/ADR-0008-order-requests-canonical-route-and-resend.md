@@ -42,6 +42,6 @@ action.
 
 - `frontend/src/app/app.routes.ts`
 - `frontend/src/app/features/order-requests/components/order-request-details.component.ts`
-- `backend/src/OnlineOrderTool.Api/Controllers/OrderRequestsController.cs`
-- `backend/src/OnlineOrderTool.Core/OrderRequestStatus.cs`
-- `backend/tests/OnlineOrderTool.Tests/OrderRequestsControllerTests.cs`
+- `backend/src/RmsSupportHub.Api/Controllers/OrderRequestsController.cs`
+- `backend/src/RmsSupportHub.Core/OrderRequestStatus.cs`
+- `backend/tests/RmsSupportHub.Tests/OrderRequestsControllerTests.cs`

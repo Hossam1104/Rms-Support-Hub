@@ -26,7 +26,7 @@ Treat reference payload JSON and its mirrored test fixtures as the payload contr
 ## Evidence
 
 - `docs/request_examples/`
-- `backend/tests/OnlineOrderTool.Tests/fixtures/`
-- `backend/tests/OnlineOrderTool.Tests/ContractTests.cs`
-- `backend/src/OnlineOrderTool.Data/Repositories/`
+- `backend/tests/RmsSupportHub.Tests/fixtures/`
+- `backend/tests/RmsSupportHub.Tests/ContractTests.cs`
+- `backend/src/RmsSupportHub.Data/Repositories/`
 - `docs/database-schema.md`

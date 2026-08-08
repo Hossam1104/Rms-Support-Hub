@@ -16,10 +16,10 @@ public class GhcConsumerRepository : IGhcConsumerRepository
     // TODO(db-creds): confirm the real table/column names once real GHC
     // database credentials/schema are supplied. This guesses a dbo.Customers
     // shape consistent with the customer_number EXISTS-filter already used in
-    // FlatOrderItemRepository (ported from lookup_consumer_by_phone in
-    // _legacy_flask/modules/flat_order.py, which carries the same TODO).
+    // FlatOrderItemRepository (ported from the retired Flask
+    // lookup_consumer_by_phone, which carried the same TODO; see Git history).
     // Unlike UPC's Consumers/LoyaltyConsumerAddresses lookup, this has never
-    // been verified live -- left unchanged this session pending GHC creds.
+    // been verified live.
     public async Task<Consumer?> LookupConsumerByPhoneAsync(string connectionString, string phone)
     {
         var rawPhone = (phone ?? "").Trim();
@@ -68,13 +68,11 @@ public class GhcConsumerRepository : IGhcConsumerRepository
             Gender = row.Gender ?? "",
             BirthDate = row.BirthDate?.ToString("yyyy-MM-dd"),
             PrimaryPhoneNumber = row.PrimaryPhoneNumber ?? rawPhone,
-            Email = rawRowEmail(row),
+            Email = row.Email ?? "",
             NationalId = row.NationalId ?? "",
             Nationality = row.Nationality ?? ""
         };
     }
-
-    private static string rawRowEmail(ConsumerQueryResult row) => row.Email ?? "";
 
     private class ConsumerQueryResult
     {

@@ -49,7 +49,7 @@ Capture from the supplied source and its approved environment:
 
 ## Dependency Review Checklist
 
-Session 11 must identify, for every dependency:
+The source assessment must identify, for every dependency:
 
 - Package, runtime, framework, or native component name and version.
 - License and support constraints where relevant.
@@ -89,7 +89,7 @@ source review.
 
 ## Privilege and Security Checklist
 
-Session 11 must identify whether each operation requires:
+The source assessment must identify whether each operation requires:
 
 - Local administrator permission.
 - Windows service control.
@@ -119,9 +119,11 @@ secured machine-local Windows agent
 approved POS maintenance operations
 ```
 
-This is a target direction, not an implemented system. Session 12 owns the
+This is a target direction, not an implemented system. No agent, machine
+identity, or authorization boundary exists in this repository today. The
 backend/agent contracts, authentication, machine identity, and authorization
-boundaries. Session 10 does not add an agent or backend contract.
+boundaries are owned by the integration architecture step described in
+[POS_MAINTENANCE_INTEGRATION_READINESS.md](POS_MAINTENANCE_INTEGRATION_READINESS.md).
 
 ## Explicit Prohibited Generic Execution Surfaces
 
@@ -137,7 +139,7 @@ Future operations must be explicit, typed, and allow-listed. For example, a
 future contract may expose `BackupDatabase(request)` or
 `RestartApprovedService(serviceId)`, but must not expose a generic
 `ExecuteCommand(...)` or `RunPowerShell(...)` surface. The concrete contracts
-must wait for source assessment and Session 12 architecture work.
+must wait for source assessment and the integration architecture step.
 
 ## Future Integration Entry Criteria
 

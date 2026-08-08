@@ -21,12 +21,18 @@ them, and `.ai/HISTORY.md` indexes the milestones.
 | [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md) | Where code, styles, and documentation belong, and what to read first. |
 | [UI_Rework_Plan.md](UI_Rework_Plan.md) | The closed U0-U8 programme. Retained because its D1-D13 decisions are cited by name from backend and frontend source comments. |
 
+Source comments also cite `remediation_plan.md` by filename for its `B1`-`B26`
+rationale IDs. That plan was executed and removed; it exists only in Git
+history, and `.ai/HISTORY.md` indexes the milestone. The citations are kept
+because they identify the reasoning behind specific lines.
+
 ## Release and future work
 
 | Document | What it governs |
 | --- | --- |
-| [QA_SUPPORT_HUB_RELEASE_READINESS.md](QA_SUPPORT_HUB_RELEASE_READINESS.md) | The release-candidate validation record, deferred items, and deployment preconditions. |
-| [POS_MAINTENANCE_MIGRATION_INTAKE.md](POS_MAINTENANCE_MIGRATION_INTAKE.md) | The security boundary any future POS integration must satisfy. POS stays Coming Soon until then. |
+| [RMS_SUPPORT_HUB_RELEASE_READINESS.md](RMS_SUPPORT_HUB_RELEASE_READINESS.md) | The release-candidate validation record, deferred items, and deployment preconditions. |
+| [POS_MAINTENANCE_INTEGRATION_READINESS.md](POS_MAINTENANCE_INTEGRATION_READINESS.md) | RMS+'s side of the POS integration seam: entry points, primitives to reuse, collision areas, and required post-merge validation. |
+| [POS_MAINTENANCE_MIGRATION_INTAKE.md](POS_MAINTENANCE_MIGRATION_INTAKE.md) | The security boundary and source inputs any future POS integration must satisfy. POS stays Coming Soon until then. |
 
 ## Agent context
 

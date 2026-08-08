@@ -41,6 +41,7 @@ semantic states, borders, focus, layout, radius, shadow, and motion.
 | Controls | `--input-bg`, `--input-border`, `--border-focus`, `--focus-ring`, `--focus-ring-danger`, `--divider` | Form fields, keyboard focus, table rules, and section rhythm |
 | Tables | `--table-row-hover`, `--table-row-zebra` | Data density without raw colors in feature styles |
 | Layout | `--sidebar-expanded-width`, `--sidebar-collapsed-width`, `--sidebar-width`, `--navbar-height` | Shell geometry and sidebar reflow |
+| Density | `--page-padding-inline/-block`, `--section-gap`, `--panel-gap`, `--panel-padding`, `--panel-padding-compact`, `--control-height`, `--control-height-compact`, `--field-gap`, `--form-gap`, `--table-cell-padding-*`, `--table-header-height`, `--table-row-height`, `--table-inset-block` | The one density contract for page, section, panel, form, control, and table geometry |
 | Typography | `--font-main`, `--font-mono`, `--text-xs`–`--text-2xl`, `--weight-regular/semibold/bold/heavy`, `--leading-tight/normal` | Shared type scale for new primitives |
 | Spacing | `--space-1`–`--space-8` (4px base) | Shared rhythm for new primitives |
 | Z-index | `--z-sticky`, `--z-sidebar`, `--z-navbar`, `--z-dropdown`, `--z-overlay`, `--z-dialog`, `--z-toast` | One layering scale; toast stays above dialogs |
@@ -108,10 +109,41 @@ The standalone signal-based components are exported through
   projection.
 - `ui-toolbar`: start/center/end projection, compact mode, wrapping, and
   narrow-screen fallback.
+- `app-brand-mark`: the one logo primitive — sized through a local
+  `--brand-mark-size` custom property, with an optional framed treatment, so no
+  feature spells out its own `<img>` geometry for a brand or module logo.
 
 Compose `ui-field` with `ui-input`/`ui-select`. Compose it with the existing
 `app-searchable-select` for branch search; U5 does not duplicate the U3
 searchable behavior.
+
+## Brand hierarchy and the asset catalog
+
+Visual identity has three fixed levels, and a surface never mixes two of them
+as if they were peers:
+
+| Level | Identity | Where it appears |
+|---|---|---|
+| 1 — Product | RMS+ Support Hub (`RMS_Logo.svg`) | Navbar and Hub hero identity |
+| 2 — Company attribution | DBS (`DBS_Logo.svg`) | A small Hub attribution only |
+| 3 — Module/client | UPC, GHC / Whites | Online Order module cards and the module sidebar |
+
+`frontend/src/app/core/config/app-assets.ts` is the single typed catalog for
+every supplied asset. Feature templates reference `APP_ASSETS`, never a raw
+string path, so an asset move is one edit. Files live in semantic public
+folders — `brand/`, `modules/`, `payments/`, `commerce/`, `system/` — with two
+deliberate exceptions to that rule, both documented at their definition site:
+
+- `/assets/Saudi_Riyal.svg` stays at the public root because `app-riyal` and
+  `scripts/verify-riyal-asset.ps1` both depend on that exact path.
+- the supplied `warrning.svg` filename is preserved as shipped and mapped to
+  the semantic `warning` key rather than renamed on disk.
+
+`paymentAssetForMethod()` resolves only the five payment methods with an
+unambiguous supplied brand asset (Visa, Mastercard, Mada, Tabby, Tamara). The
+match is exact after trim and case-normalization: anything else — `Card`,
+`ApplePay`, `STCPay` — keeps the neutral icon instead of being guessed from
+incidental payment metadata.
 
 ## The card contract
 

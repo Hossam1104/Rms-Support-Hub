@@ -25,7 +25,7 @@ Use SQL `OrderRequests` as the base and sole request-history source. Read large 
 
 ## Evidence
 
-- `backend/src/OnlineOrderTool.Data/Repositories/OrderRequestRepository.cs`
-- `backend/src/OnlineOrderTool.Api/Controllers/OrderRequestsController.cs`
-- `backend/tests/OnlineOrderTool.Tests/OrderRequestRepositoryTests.cs`
+- `backend/src/RmsSupportHub.Data/Repositories/OrderRequestRepository.cs`
+- `backend/src/RmsSupportHub.Api/Controllers/OrderRequestsController.cs`
+- `backend/tests/RmsSupportHub.Tests/OrderRequestRepositoryTests.cs`
 - `docs/database-schema.md`

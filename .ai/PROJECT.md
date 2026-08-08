@@ -5,9 +5,11 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Product and Business Boundaries
 
-- Online Order Tool is an internal browser application for composing,
-  validating, sending, inspecting, cancelling, and resending pharmacy/e-commerce
-  orders and invoices to client RMS systems.
+- RMS+ Support Hub is an internal browser application hosting the QA support
+  tools. Its Online Order Tool composes, validates, sends, inspects, cancels,
+  and resends pharmacy/e-commerce orders and invoices to client RMS systems;
+  QA Prompt Studio generates refinement prompts locally; POS Maintenance is an
+  informational placeholder with no operations.
 - Implemented user-facing domains are UPC E-Commerce, GHC E-Commerce,
   GHC Uni-Commerce, and SQL-backed Order Requests. OMS and Call Center are
   registered unavailable stubs.
@@ -144,21 +146,14 @@ Do not copy facts that can be cheaply discovered from the repository.
   `docs/sql/order-requests-performance-indexes.sql` is an externally applied,
   guarded support script, not an application migration.
 - U5 primitives are standalone, token-based, and exported through the shared UI
-  barrel. The development-only kitchen sink is their compatibility showcase;
-  all active feature surfaces now consume this shared system.
-- U6 consumes the U5 primitives and server-owned totals without creating
-  client-side financial calculations.
-- U7 completed the app-wide primitive migration and removed all `.glass-*`
-  definitions, consumers, and unused compatibility aliases.
-- Final acceptance hardening keeps the token palette and 6 kB/8 kB style
-  budgets unchanged, uses shared wide/caption-hidden tables and global
-  accessibility utilities, and keeps narrow order-builder screens inside the
-  viewport with a compact labelled sidebar rail.
-- The final Order Requests unification owns the canonical route-level detail
-  page, compatibility redirects, same-number resend contract, and removal of
-  the superseded validation component tree. Final local Edge checks cover the
-  Order Requests route at 1920, 1440, 1280, 900, 768, 600, and 390px widths
-  in dark and light themes, including Clear All, outside-click dismissal, and
-  reload/history behavior. The connected in-app browser was unavailable;
-  state-changing Testing order population/send/cancel/resend evidence remains
-  deferred; there is no active UI rework plan.
+  barrel; the development-only kitchen sink is their showcase. Every active
+  feature surface consumes them, U6 adds no client-side financial calculation,
+  and U7 removed all `.glass-*` definitions, consumers, and aliases.
+- The token palette and the 6 kB/8 kB component style budgets are fixed. Wide
+  and caption-hidden tables plus the global accessibility utilities are shared,
+  and narrow order-builder screens stay inside the viewport via a compact
+  labelled sidebar rail.
+- Order Requests has one canonical route-level detail page, compatibility
+  redirects, and a same-number resend contract; the superseded validation
+  component tree is gone. State-changing Testing send/cancel/resend evidence
+  remains deferred.

@@ -24,8 +24,8 @@ Mark an explicit default environment, prefer non-Production fallback, persist th
 
 ## Evidence
 
-- `backend/src/OnlineOrderTool.Core/Modules/ModuleEnvironmentResolver.cs`
-- `backend/src/OnlineOrderTool.Core/Models/ModuleEnvironment.cs`
-- `backend/tests/OnlineOrderTool.Tests/OrderControllerEnvironmentTests.cs`
+- `backend/src/RmsSupportHub.Core/Modules/ModuleEnvironmentResolver.cs`
+- `backend/src/RmsSupportHub.Core/Models/ModuleEnvironment.cs`
+- `backend/tests/RmsSupportHub.Tests/OrderControllerEnvironmentTests.cs`
 - `frontend/src/app/core/services/module.service.ts`
 - `frontend/src/app/shared/ui/env-badge/env-badge.component.ts`
