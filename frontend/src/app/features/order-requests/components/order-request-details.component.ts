@@ -111,10 +111,10 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
         <div class="detail-sections">
           <ui-section title="Items" [collapsible]="false">
             @if (detail.request.details.length > 0) {
-              <ui-table class="detail-table" [dense]="true" [wide]="true" caption="Order items and Riyal amounts" [captionHidden]="true">
+              <ui-table class="detail-table items-table" [dense]="true" caption="Order items and Riyal amounts" [captionHidden]="true">
                   <thead>
                     <tr>
-                      <th scope="col">Item</th>
+                      <th scope="col" class="item-col">Item</th>
                       <th scope="col">Material #</th>
                       <th scope="col" class="align-right">Qty</th>
                       <th scope="col" class="align-right">Unit price <span class="sr-only">Saudi Riyal</span></th>
@@ -126,8 +126,8 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                   <tbody>
                     @for (line of detail.request.details; track $index) {
                       <tr>
-                        <td>
-                          {{ line.itemName || '—' }}
+                        <td class="item-col">
+                          <span class="item-identity">{{ line.itemName || '—' }}</span>
                           <span class="commerce-offer-mark" *ngIf="line.offerMessage">
                             <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
                             <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
@@ -138,25 +138,38 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                         <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</td>
                         <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</td>
                         <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.itemVat | number:'1.2-2' }} <span class="muted">({{ line.itemVatPercentage }}%)</span></td>
-                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</td>
+                        <td class="align-right amount total-amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</td>
                       </tr>
                     }
                   </tbody>
                   <tfoot class="detail-table-footer">
                     <tr>
-                      <th scope="row" colspan="4">Column sums</th>
-                      <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</td>
-                      <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</td>
-                      <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</td>
+                      <th scope="row" colspan="4">Items summary</th>
+                      <td class="align-right amount footer-amount">
+                        <span class="footer-amount__label">Discount total</span>
+                        <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</span>
+                      </td>
+                      <td class="align-right amount footer-amount">
+                        <span class="footer-amount__label">VAT total</span>
+                        <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</span>
+                      </td>
+                      <td class="align-right amount footer-amount footer-amount--strong">
+                        <span class="footer-amount__label">Items total</span>
+                        <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.9"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</span>
+                      </td>
                     </tr>
                   </tfoot>
               </ui-table>
-              <div class="consistency-check" [class.mismatch]="!lineItemsConsistent(detail)">
+              <div class="mismatch-callout" [class.is-ok]="lineItemsConsistent(detail)" role="status">
                 <i class="bi" [class.bi-check-circle-fill]="lineItemsConsistent(detail)" [class.bi-exclamation-triangle-fill]="!lineItemsConsistent(detail)" aria-hidden="true"></i>
-                <span>
-                  Items total {{ sumTotal(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
-                  vs header net {{ detail.request.header?.netTotal ?? 0 | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
-                </span>
+                @if (lineItemsConsistent(detail)) {
+                  <span>Items total matches header total</span>
+                } @else {
+                  <span>
+                    Items total {{ sumTotal(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
+                    does not match header net {{ detail.request.header?.netTotal ?? 0 | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
+                  </span>
+                }
               </div>
             } @else {
               <app-empty-state icon="bi-box" title="No line items recorded"></app-empty-state>
@@ -164,23 +177,36 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
           </ui-section>
 
           <ui-section title="Order Info" [collapsible]="false">
-            <dl class="field-grid">
-              <div class="field"><dt>Request id</dt><dd class="mono">{{ detail.request.id }}</dd></div>
-              <div class="field"><dt>Order/request number</dt><dd class="mono">{{ detail.request.orderNumber }}</dd></div>
-              <div class="field"><dt>Module</dt><dd>{{ moduleService.activeModule()?.label || store.moduleKey() }}</dd></div>
-              <div class="field"><dt>Environment</dt><dd>{{ store.envKey() || 'Default environment' }}</dd></div>
-              <div class="field"><dt>Created</dt><dd>{{ detail.request.orderDate | date:'medium' }}</dd></div>
+            <div class="info-groups">
+              <div class="info-group">
+                <h3 class="info-group__title">Order identity</h3>
+                <dl class="info-group__grid">
+                  <div class="field"><dt>Request ID</dt><dd class="mono">{{ detail.request.id }}</dd></div>
+                  <div class="field"><dt>Order/request number</dt><dd class="mono">{{ detail.request.orderNumber }}</dd></div>
+                  <div class="field"><dt>Module</dt><dd>{{ moduleService.activeModule()?.label || store.moduleKey() }}</dd></div>
+                  <div class="field"><dt>Environment</dt><dd>{{ store.envKey() || 'Default environment' }}</dd></div>
+                  @if (detail.request.header; as h) {
+                    <div class="field"><dt>Status</dt><dd>{{ h.orderStatusLabel }}</dd></div>
+                    <div class="field"><dt>Order date</dt><dd>{{ h.orderDate | date:'medium' }}</dd></div>
+                  }
+                  <div class="field"><dt>Created</dt><dd>{{ detail.request.orderDate | date:'medium' }}</dd></div>
+                </dl>
+              </div>
+
               @if (detail.request.header; as h) {
-                <div class="field"><dt>Status</dt><dd>{{ h.orderStatusLabel }}</dd></div>
-                <div class="field"><dt>Branch</dt><dd>{{ h.branchCode || '—' }} <span class="muted" *ngIf="h.branchName">({{ h.branchName }})</span></dd></div>
-                <div class="field"><dt>Customer mobile</dt><dd>{{ h.consumerMobile || '—' }}</dd></div>
-                <div class="field"><dt>Delivery address</dt><dd>{{ h.address || '—' }}</dd></div>
-                <div class="field"><dt>Payment method</dt><dd>{{ h.orderPaymentMethod || '—' }}</dd></div>
-                <div class="field"><dt>Order date</dt><dd>{{ h.orderDate | date:'medium' }}</dd></div>
-                <div class="field"><dt>Order note</dt><dd>{{ h.orderNote || '—' }}</dd></div>
-                <div class="field"><dt>Parent order</dt><dd>{{ h.parentOrderNumber || '—' }}</dd></div>
+                <div class="info-group">
+                  <h3 class="info-group__title">Customer &amp; fulfillment</h3>
+                  <dl class="info-group__grid">
+                    <div class="field"><dt>Branch</dt><dd>{{ h.branchCode || '—' }} <span class="muted" *ngIf="h.branchName">({{ h.branchName }})</span></dd></div>
+                    <div class="field"><dt>Customer mobile</dt><dd>{{ h.consumerMobile || '—' }}</dd></div>
+                    <div class="field"><dt>Delivery address</dt><dd>{{ h.address || '—' }}</dd></div>
+                    <div class="field"><dt>Payment method</dt><dd>{{ h.orderPaymentMethod || '—' }}</dd></div>
+                    <div class="field"><dt>Order note</dt><dd>{{ h.orderNote || '—' }}</dd></div>
+                    <div class="field"><dt>Parent order</dt><dd>{{ h.parentOrderNumber || '—' }}</dd></div>
+                  </dl>
+                </div>
               }
-            </dl>
+            </div>
 
             @if (detail.request.header; as h) {
               <div class="amber-callout" *ngIf="h.rejectionMessage" role="note">
@@ -188,7 +214,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                 <div><strong>Rejection message:</strong> {{ h.rejectionMessage }}</div>
               </div>
 
-              <h2 class="subsection-title">Totals</h2>
+              <h2 class="subsection-title">Financial</h2>
               <div class="totals-grid" aria-label="Order totals">
                 <div><span>Gross</span><strong>{{ h.grossTotal | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
                 <div><span>Discount</span><strong>{{ h.totalDiscount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
@@ -210,9 +236,9 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
 
             <h2 class="subsection-title">Invoice</h2>
             <div class="invoice-card" *ngIf="detail.request.invoice as invoice; else noInvoice">
-              <div class="field"><span class="field-label">Invoice barcode</span><span class="mono">{{ invoice.barcode || '—' }} <app-copy-button *ngIf="invoice.barcode" [value]="invoice.barcode" label="Copy invoice barcode"></app-copy-button></span></div>
+              <div class="field"><span class="field-label">Barcode</span><span class="mono">{{ invoice.barcode || '—' }} <app-copy-button *ngIf="invoice.barcode" [value]="invoice.barcode" label="Copy invoice barcode"></app-copy-button></span></div>
               <div class="field"><span class="field-label">Close date</span><span>{{ invoice.closeDateLocalTime ? (invoice.closeDateLocalTime | date:'medium') : '—' }}</span></div>
-              <div class="field"><span class="field-label">Invoice net</span><span *ngIf="invoice.netAmount != null; else noInvoiceNet">{{ invoice.netAmount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></span></div>
+              <div class="field"><span class="field-label">Net</span><span *ngIf="invoice.netAmount != null; else noInvoiceNet">{{ invoice.netAmount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></span></div>
               <div class="field"><span class="field-label">Paid amount</span><span *ngIf="invoice.paidAmount != null; else noPaidAmount">{{ invoice.paidAmount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></span></div>
             </div>
             <ng-template #noInvoice><app-empty-state icon="bi-receipt" title="Not invoiced yet"></app-empty-state></ng-template>
@@ -399,10 +425,13 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
     .amount, .transaction-amount { white-space: nowrap; }
     .muted { color: var(--text-muted); }
     .small { display: block; font-size: .72rem; }
-    .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-3) var(--space-4); margin: 0; }
     .field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .eyebrow, .detail-context strong, .field dt, .field-label, .totals-grid span { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
     .field dd { margin: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: .86rem; }
+    .info-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
+    .info-group { min-width: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
+    .info-group__title { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .info-group__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin: 0; }
     .amber-callout { display: flex; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .84rem; }
     .subsection-title { margin: var(--space-5) 0 var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
     .subsection-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
@@ -412,6 +441,17 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
     .totals-grid .net strong { color: var(--accent); font-size: 1.05rem; }
     .consistency-check { display: flex; align-items: center; gap: 7px; margin-top: 14px; color: var(--state-success-fg); font-size: .78rem; }
     .consistency-check.mismatch { color: var(--state-warning-fg); }
+    .items-table { --table-min-width: 100%; }
+    .items-table .item-col { width: 32%; min-width: 0; }
+    .item-identity { display: block; overflow-wrap: anywhere; color: var(--text-primary); font-weight: 700; }
+    .items-table .total-amount { color: var(--text-primary); font-weight: 750; }
+    .detail-table-footer th { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; vertical-align: bottom; }
+    .footer-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .footer-amount__label { color: var(--text-muted); font-size: .64rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+    .footer-amount__value { color: var(--text-primary); font-size: .88rem; font-weight: 750; }
+    .footer-amount--strong .footer-amount__value { color: var(--accent); font-size: 1.05rem; font-weight: 850; }
+    .mismatch-callout { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 14px; border: 1px solid var(--state-warning-border); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .78rem; font-weight: 650; }
+    .mismatch-callout.is-ok { border-color: var(--state-success-border); background: var(--state-success-bg); color: var(--state-success-fg); }
     .detail-context, .invoice-card, .totals-grid > div, .transaction-card, .outcome-banner { border-radius: var(--radius-md); background: var(--surface-raised); }
     .invoice-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); }
     .attempt-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); font-size: .8rem; text-align: left; }

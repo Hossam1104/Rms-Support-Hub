@@ -155,48 +155,13 @@
 }
 .order-request-filter .primary-filter-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--form-gap);
+  align-items: start;
+  padding-bottom: var(--panel-gap);
+  border-bottom: 1px solid var(--divider);
 }
-.order-request-filter .filter-cluster {
-  min-width: 0;
-  padding: 14px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: linear-gradient(105deg, var(--surface-raised), var(--surface-panel));
-}
-.order-request-filter .filter-cluster--locate { border-left: 3px solid var(--accent); }
-.order-request-filter .filter-cluster--refine { border-left: 3px solid var(--accent-500); }
-.order-request-filter .cluster-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--panel-gap);
-  margin-bottom: 12px;
-}
-.order-request-filter .cluster-heading > div {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  min-width: 0;
-}
-.order-request-filter .cluster-kicker {
-  color: var(--text-accent);
-  font-size: .65rem;
-  font-weight: 850;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-.order-request-filter .cluster-title {
-  color: var(--text-primary);
-  font-size: .82rem;
-  font-weight: 800;
-}
-.order-request-filter .cluster-hint { color: var(--text-muted); font-size: .7rem; }
-.order-request-filter .cluster-fields { display: grid; gap: var(--form-gap); align-items: start; }
-.order-request-filter .cluster-fields--locate { grid-template-columns: minmax(220px, 1.35fr) minmax(180px, 1fr) minmax(210px, 1.1fr); }
-.order-request-filter .cluster-fields--refine { grid-template-columns: minmax(210px, .8fr) minmax(360px, 1.2fr); }
-.order-request-filter .cluster-fields > ui-field,
+.order-request-filter .primary-filter-grid > ui-field,
 .order-request-filter .field-block { min-width: 0; }
 .order-request-filter .exact-match-control {
   display: inline-flex;
@@ -433,57 +398,13 @@
   50% { opacity: 1; transform: scale(1); }
 }
 
-@media (max-width: 1220px) {
-  .order-request-filter .cluster-fields--locate { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .order-request-filter .cluster-fields--refine { grid-template-columns: minmax(190px, .8fr) minmax(300px, 1.2fr); }
-}
-@media (max-width: 900px) {
-  .order-request-filter .workbench-header,
-  .order-request-filter .filter-footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .order-request-filter .workbench-actions,
-  .order-request-filter .filter-actions { justify-content: flex-start; }
-  .order-request-filter .cluster-fields--locate { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .order-request-filter .cluster-fields--locate > ui-field:first-child { grid-column: 1 / -1; }
-  .order-request-filter .cluster-fields--refine { grid-template-columns: 1fr; }
-  .order-request-filter .filter-actions { width: 100%; }
-}
-@media (max-width: 600px) {
-  .order-request-filter { top: calc(var(--navbar-height) + 8px); }
-  .order-request-filter .workbench-header,
-  .order-request-filter .filter-workbench { gap: var(--panel-gap); }
-  .order-request-filter .heading-line { display: block; }
-  .order-request-filter .heading-line h2 { display: block; }
-  .order-request-filter .filter-count { display: inline-flex; margin-top: 8px; }
-  .order-request-filter .workbench-actions {
-    width: 100%;
-    align-items: stretch;
-  }
-  .order-request-filter .workbench-actions ui-button { flex: 1 1 auto; min-width: 0; }
-  .order-request-filter .workbench-actions .environment-badge,
-  .order-request-filter .auto-refresh-control { flex: 1 1 auto; }
-  .order-request-filter .filter-cluster { padding: 12px; }
-  .order-request-filter .cluster-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .order-request-filter .cluster-fields--locate,
-  .order-request-filter .cluster-fields--refine { grid-template-columns: 1fr; gap: var(--form-gap); }
-  .order-request-filter .cluster-fields--locate > ui-field:first-child { grid-column: auto; }
-  .order-request-filter .status-heading > div {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .order-request-filter .status-chip-row { gap: 7px; }
-  .order-request-filter .status-chip {
-    flex: 1 1 calc(50% - 7px);
-    justify-content: center;
-  }
-  .order-request-filter .filter-actions > ui-button { flex: 1 1 130px; }
-  .order-request-filter .result-context { width: 100%; }
-}
 @media (prefers-reduced-motion: reduce) {
   .order-request-filter .loading-dot { animation: none; }
+}
+@media (max-width: 600px) {
+  /* Sticky offset tracks the fixed navbar's viewport height, not the card's
+     own width, so it stays a viewport media query rather than a container one. */
+  .order-request-filter { top: calc(var(--navbar-height) + 8px); }
 }
 
 /* The filter card can become narrower than the browser viewport when DevTools
@@ -497,9 +418,6 @@
   }
   .order-request-filter .workbench-actions,
   .order-request-filter .filter-actions { justify-content: flex-start; }
-  .order-request-filter .cluster-fields--locate { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .order-request-filter .cluster-fields--locate > ui-field:first-child { grid-column: 1 / -1; }
-  .order-request-filter .cluster-fields--refine { grid-template-columns: 1fr; }
   .order-request-filter .filter-actions { width: 100%; }
 }
 
@@ -514,11 +432,7 @@
   .order-request-filter .workbench-actions ui-button { flex: 1 1 auto; min-width: 0; }
   .order-request-filter .workbench-actions .environment-badge,
   .order-request-filter .auto-refresh-control { flex: 1 1 auto; }
-  .order-request-filter .filter-cluster { padding: 12px; }
-  .order-request-filter .cluster-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .order-request-filter .cluster-fields--locate,
-  .order-request-filter .cluster-fields--refine { grid-template-columns: 1fr; gap: var(--form-gap); }
-  .order-request-filter .cluster-fields--locate > ui-field:first-child { grid-column: auto; }
+  .order-request-filter .primary-filter-grid { grid-template-columns: 1fr; }
   .order-request-filter .status-heading > div {
     align-items: flex-start;
     flex-direction: column;

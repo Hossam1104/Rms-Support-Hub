@@ -1,7 +1,7 @@
 import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { JsonTreeNodeComponent, JsonValue } from './json-tree-node.component';
+import { JsonTreeExpandCommand, JsonTreeNodeComponent, JsonValue } from './json-tree-node.component';
 import { CopyButtonComponent } from '../copy-button/copy-button.component';
 import { sanitizeDownloadFilename } from '../../../core/utils/download-filename.util';
 
@@ -28,6 +28,12 @@ import { sanitizeDownloadFilename } from '../../../core/utils/download-filename.
             placeholder="Search keys/values..."
             aria-label="Search JSON keys and values"
             [(ngModel)]="searchTerm">
+          <button type="button" class="toolbar-btn" (click)="expandAll()" *ngIf="parsed() !== undefined && !rawMode()">
+            Expand all
+          </button>
+          <button type="button" class="toolbar-btn" (click)="collapseAll()" *ngIf="parsed() !== undefined && !rawMode()">
+            Collapse all
+          </button>
           <button type="button" class="toolbar-btn" [attr.aria-pressed]="rawMode()" (click)="rawMode.set(!rawMode())" *ngIf="parsed() !== undefined">
             {{ rawMode() ? 'Tree view' : 'Raw view' }}
           </button>
@@ -46,7 +52,7 @@ import { sanitizeDownloadFilename } from '../../../core/utils/download-filename.
       <ng-container *ngIf="parsed() !== undefined && !parseError()">
         <pre class="raw-view" *ngIf="rawMode()">{{ formattedJson() }}</pre>
         <div class="tree-view" *ngIf="!rawMode()">
-          <app-json-tree-node [value]="parsed()!" [searchTerm]="searchTerm" [depth]="0"></app-json-tree-node>
+          <app-json-tree-node [value]="parsed()!" [searchTerm]="searchTerm" [depth]="0" [expandCommand]="expandCommand()"></app-json-tree-node>
         </div>
       </ng-container>
     </div>
@@ -83,6 +89,16 @@ export class JsonTreeComponent {
   private _data = signal<unknown>(null);
   searchTerm = '';
   rawMode = signal(false);
+  expandCommand = signal<JsonTreeExpandCommand | null>(null);
+  private commandToken = 0;
+
+  expandAll() {
+    this.expandCommand.set({ token: ++this.commandToken, expand: true });
+  }
+
+  collapseAll() {
+    this.expandCommand.set({ token: ++this.commandToken, expand: false });
+  }
 
   /** undefined = no data at all; null/JsonValue = successfully resolved. */
   parsed = computed<JsonValue | undefined>(() => {

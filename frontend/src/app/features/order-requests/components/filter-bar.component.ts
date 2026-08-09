@@ -79,110 +79,88 @@ import {
         </header>
 
         @if (!collapsed()) {
-          <div class="primary-filter-grid filter-layout">
-            <section class="filter-cluster filter-cluster--locate" aria-labelledby="order-request-locate-label">
-              <div class="cluster-heading">
-                <div>
-                  <span class="cluster-kicker">Locate</span>
-                  <span class="cluster-title" id="order-request-locate-label">Find a request</span>
-                </div>
-                <span class="cluster-hint">Start with the identifier you have.</span>
-              </div>
-              <div class="cluster-fields cluster-fields--locate">
-                <ui-field
-                  label="Order number"
-                  forId="order-request-search"
-                  hint="Exact match by default">
-                  <ui-input
-                    inputId="order-request-search"
-                    type="search"
-                    autocomplete="off"
-                    placeholder="Search by order number"
-                    [value]="draft().search"
-                    (valueChange)="patchDraft({ search: stringValue($event) })"
-                    (keydown.enter)="apply($event)">
-                    <i uiInputPrefix class="bi bi-search" aria-hidden="true"></i>
-                  </ui-input>
-                  <label class="exact-match-control">
-                    <input
-                      type="checkbox"
-                      [checked]="draft().exactMatch"
-                      (change)="patchDraft({ exactMatch: checkboxValue($event) })" />
-                    <span>Exact match</span>
-                  </label>
-                </ui-field>
+          <div class="primary-filter-grid" role="group" aria-label="Order request filters">
+            <ui-field
+              label="Order number"
+              forId="order-request-search"
+              hint="Exact match by default">
+              <ui-input
+                inputId="order-request-search"
+                type="search"
+                autocomplete="off"
+                placeholder="Search by order number"
+                [value]="draft().search"
+                (valueChange)="patchDraft({ search: stringValue($event) })"
+                (keydown.enter)="apply($event)">
+                <i uiInputPrefix class="bi bi-search" aria-hidden="true"></i>
+              </ui-input>
+              <label class="exact-match-control">
+                <input
+                  type="checkbox"
+                  [checked]="draft().exactMatch"
+                  (change)="patchDraft({ exactMatch: checkboxValue($event) })" />
+                <span>Exact match</span>
+              </label>
+            </ui-field>
 
-                <ui-field label="Phone" forId="order-request-phone" hint="Searches the last 9 digits">
-                  <ui-input
-                    inputId="order-request-phone"
-                    type="tel"
-                    autocomplete="tel"
-                    placeholder="05xxxxxxxx"
-                    [value]="draft().phone"
-                    (valueChange)="patchDraft({ phone: stringValue($event) })">
-                    <i uiInputPrefix class="bi bi-telephone" aria-hidden="true"></i>
-                  </ui-input>
-                </ui-field>
+            <ui-field label="Phone" forId="order-request-phone" hint="Searches the last 9 digits">
+              <ui-input
+                inputId="order-request-phone"
+                type="tel"
+                autocomplete="tel"
+                placeholder="05xxxxxxxx"
+                [value]="draft().phone"
+                (valueChange)="patchDraft({ phone: stringValue($event) })">
+                <i uiInputPrefix class="bi bi-telephone" aria-hidden="true"></i>
+              </ui-input>
+            </ui-field>
 
-                <ui-field label="Branch" forId="order-request-branch">
-                  <app-searchable-select
-                    label="Branch"
-                    inputId="order-request-branch"
-                    placeholder="All branches"
-                    [options]="store.branches()"
-                    [value]="draft().branchCode"
-                    [loading]="store.branchStatus() === 'loading'"
-                    [error]="store.branchError()"
-                    (valueChange)="patchDraft({ branchCode: $event })"
-                    (refresh)="store.loadBranches(true)">
-                  </app-searchable-select>
-                </ui-field>
-              </div>
-            </section>
+            <ui-field label="Branch" forId="order-request-branch">
+              <app-searchable-select
+                label="Branch"
+                inputId="order-request-branch"
+                placeholder="All branches"
+                [options]="store.branches()"
+                [value]="draft().branchCode"
+                [loading]="store.branchStatus() === 'loading'"
+                [error]="store.branchError()"
+                (valueChange)="patchDraft({ branchCode: $event })"
+                (refresh)="store.loadBranches(true)">
+              </app-searchable-select>
+            </ui-field>
 
-            <section class="filter-cluster filter-cluster--refine" aria-labelledby="order-request-refine-label">
-              <div class="cluster-heading">
-                <div>
-                  <span class="cluster-kicker">Refine</span>
-                  <span class="cluster-title" id="order-request-refine-label">Narrow the queue</span>
-                </div>
-                <span class="cluster-hint">Use outcome and time together.</span>
+            <div class="field-block outcome-field">
+              <span class="field-label" id="order-request-outcome-label">Outcome</span>
+              <div class="segmented-control" role="group" aria-labelledby="order-request-outcome-label">
+                <button
+                  type="button"
+                  [class.active]="draft().outcome === 'all'"
+                  [attr.aria-pressed]="draft().outcome === 'all'"
+                  (click)="patchDraft({ outcome: 'all' })">All</button>
+                <button
+                  type="button"
+                  [class.active]="draft().outcome === 'succeeded'"
+                  [attr.aria-pressed]="draft().outcome === 'succeeded'"
+                  (click)="patchDraft({ outcome: 'succeeded' })">Succeeded</button>
+                <button
+                  type="button"
+                  [class.active]="draft().outcome === 'failed'"
+                  [attr.aria-pressed]="draft().outcome === 'failed'"
+                  (click)="patchDraft({ outcome: 'failed' })">Failed</button>
               </div>
-              <div class="cluster-fields cluster-fields--refine">
-                <div class="field-block outcome-field">
-                  <span class="field-label" id="order-request-outcome-label">Outcome</span>
-                  <div class="segmented-control" role="group" aria-labelledby="order-request-outcome-label">
-                    <button
-                      type="button"
-                      [class.active]="draft().outcome === 'all'"
-                      [attr.aria-pressed]="draft().outcome === 'all'"
-                      (click)="patchDraft({ outcome: 'all' })">All</button>
-                    <button
-                      type="button"
-                      [class.active]="draft().outcome === 'succeeded'"
-                      [attr.aria-pressed]="draft().outcome === 'succeeded'"
-                      (click)="patchDraft({ outcome: 'succeeded' })">Succeeded</button>
-                    <button
-                      type="button"
-                      [class.active]="draft().outcome === 'failed'"
-                      [attr.aria-pressed]="draft().outcome === 'failed'"
-                      (click)="patchDraft({ outcome: 'failed' })">Failed</button>
-                  </div>
-                  <span class="field-hint">Derived from the request outcome</span>
-                </div>
+              <span class="field-hint">Derived from the request outcome</span>
+            </div>
 
-                <div class="field-block date-range-field">
-                  <app-date-range-picker
-                    [dateFrom]="draft().dateFrom"
-                    [dateTo]="draft().dateTo"
-                    (rangeChange)="onDateRangeChanged($event)">
-                  </app-date-range-picker>
-                  @if (dateRangeError(); as error) {
-                    <span class="date-range-error">{{ error }}</span>
-                  }
-                </div>
-              </div>
-            </section>
+            <div class="field-block date-range-field">
+              <app-date-range-picker
+                [dateFrom]="draft().dateFrom"
+                [dateTo]="draft().dateTo"
+                (rangeChange)="onDateRangeChanged($event)">
+              </app-date-range-picker>
+              @if (dateRangeError(); as error) {
+                <span class="date-range-error">{{ error }}</span>
+              }
+            </div>
           </div>
 
           <section class="status-section" aria-labelledby="order-request-status-label">

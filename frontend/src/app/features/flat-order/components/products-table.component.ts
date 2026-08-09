@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../../core/models';
 import { APP_ASSETS } from '../../../core/config/app-assets';
-import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent, UiToolbarComponent } from '../../../shared/ui';
+import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent } from '../../../shared/ui';
 
 export interface ProductUpdate {
   index: number;
@@ -12,29 +12,18 @@ export interface ProductUpdate {
 @Component({
   selector: 'app-products-table',
   standalone: true,
-  imports: [CommonModule, EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent, UiToolbarComponent],
+  imports: [CommonModule, EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent],
   template: `
     <div id="products-card" class="table-panel">
-      <ui-toolbar [compact]="true" [wrap]="true" role="toolbar" ariaLabel="Product actions">
-        <div uiToolbarStart class="table-panel__heading">
-          <i class="bi bi-box-seam" aria-hidden="true"></i>
-          <span>Products</span>
-          <span class="table-panel__count">{{ products.length }}</span>
-        </div>
-        <div uiToolbarEnd>
-          <ui-button variant="secondary" size="sm" icon="bi bi-plus-lg" (pressed)="openAddDialog.emit()">Add product</ui-button>
-        </div>
-      </ui-toolbar>
-
       <div class="table-errors" role="alert" *ngIf="errors.length > 0">
         <p *ngFor="let message of errors"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
       </div>
 
-      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="false" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order products">
+      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Order products">
         <thead>
           <tr>
             <th scope="col" class="numeric-cell">#</th>
-            <th scope="col">Item</th>
+            <th scope="col" class="item-col">Item</th>
             <th scope="col">Code</th>
             <th scope="col" class="numeric-cell">Unit price</th>
             <th scope="col" class="numeric-cell">Qty</th>
@@ -47,7 +36,7 @@ export interface ProductUpdate {
         <tbody>
           <tr *ngFor="let product of products; let index = index; trackBy: trackByIndex">
             <td class="muted-cell numeric-cell">{{ index + 1 }}</td>
-            <td>
+            <td class="item-col">
               <strong>{{ product.itemName }}</strong>
               <span class="secondary-label" *ngIf="product.itemNameAr">{{ product.itemNameAr }}</span>
               <span class="offer-mark" *ngIf="product.offerCode || product.offerMessage">
@@ -68,7 +57,7 @@ export interface ProductUpdate {
               </span>
             </td>
             <td class="numeric-cell">{{ product.vatPercentage | number:'1.0-2' }}%</td>
-            <td class="numeric-cell total-cell"><app-riyal [size]=".82"></app-riyal>{{ getProductTotal(product) | number:'1.2-2' }}</td>
+            <td class="numeric-cell total-cell"><app-riyal [size]=".85"></app-riyal>{{ getProductTotal(product) | number:'1.2-2' }}</td>
             <td class="action-cell">
               <ui-button variant="danger" size="sm" icon="bi bi-trash3" ariaLabel="Remove product" (pressed)="deleteProduct.emit(index)"></ui-button>
             </td>
@@ -84,20 +73,18 @@ export interface ProductUpdate {
     </div>
   `,
   styles: [`
-    :host { display: block; min-width: 0; }
+    :host { display: block; min-width: 0; container-type: inline-size; container-name: products-table; }
     .table-panel { min-width: 0; }
-    .table-panel__heading { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: var(--text-md); font-weight: var(--weight-heavy); }
-    .table-panel__heading > i { color: var(--accent); }
-    .table-panel__count { display: inline-grid; min-width: 22px; height: 22px; place-items: center; padding-inline: 5px; border-radius: var(--radius-pill); background: var(--surface-interactive); color: var(--text-secondary); font-size: .7rem; }
-    .table-errors { display: flex; flex-direction: column; gap: 5px; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
+    .table-errors { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .table-errors p { display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: .78rem; line-height: 1.35; }
+    .item-col { width: 32%; }
     td strong { display: block; font-weight: 750; }
     .secondary-label { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--leading-normal); }
     .offer-mark { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--state-warning-fg); font-size: var(--text-xs); font-weight: var(--weight-bold); }
     .offer-mark img { width: 16px; height: 16px; object-fit: contain; }
     .code-label { color: var(--text-secondary); font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-sm); }
     .numeric-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .total-cell { color: var(--text-primary); font-weight: 800; }
+    .total-cell { color: var(--text-primary); font-weight: 800; font-size: 1.02em; }
     .muted-cell { color: var(--text-muted); }
     .action-cell { width: 50px; text-align: right; }
     .currency-editor { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; }
@@ -105,7 +92,10 @@ export interface ProductUpdate {
     .table-editor { width: 82px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-sm); }
     .table-editor--quantity { width: 68px; }
     .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
-    @media (max-width: 767px) { .table-panel__heading { flex: 1 1 auto; } }
+    @container products-table (max-width: 640px) {
+      .table-editor { width: 68px; }
+      .table-editor--quantity { width: 56px; }
+    }
   `]
 })
 export class ProductsTableComponent {

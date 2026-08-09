@@ -92,18 +92,20 @@ failure. Details are in `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded by the final cleanup session; see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the full gate table.
+Recorded 2026-08-09 (Order Requests detail/builder/filter UI rework); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 52 files / 272 tests passed, 0 skipped |
+| Frontend tests | 53 files / 288 tests passed, 0 skipped |
 | Backend tests | 174 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors |
-| Production initial bundle | 445.25 kB raw / 102.22 kB estimated transfer |
-| Lazy `three-module` chunk | 734.66 kB raw / 153.78 kB estimated transfer |
-| Production-offline initial bundle | 427.11 kB raw / 101.30 kB estimated transfer |
+| Production initial bundle | 441.57 kB raw / 101.85 kB estimated transfer |
+| Lazy `three-module` chunk | 734.66 kB raw / 153.93 kB estimated transfer |
+| Production-offline initial bundle | 427.26 kB raw / 101.44 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
-| Rendered browser pass | Not run for this UI change; browser verification remains pending |
+| Rendered browser pass | Not run; no browser automation tool is available in this environment |
+
+`order-request-details.component.ts` styles exceed the 6 kB Angular budget (7.86 kB, warning only, build still succeeds).
 
 ## Boundaries and deferred scope
 
@@ -111,10 +113,6 @@ Recorded by the final cleanup session; see `docs/RMS_SUPPORT_HUB_RELEASE_READINE
 - `ConnectionStrings:UpcEcommerceTest` is not configured in the local Testing
   environment, so Testing-only UPC order and order-request calls return HTTP
   500. This is deferred environment setup, not an application defect.
-- UPC Production resolver tests use an in-memory connection configuration and
-  fakes only; no Production database or order API call was made.
-- UPC Testing fixture acceptance remains deferred; no live COD acceptance,
-  send, resend, or cancellation claim is made.
-- Production database index work and deployment/Production acceptance remain
-  deferred and unauthorized.
+- UPC Production resolver tests use an in-memory connection configuration and fakes only; no Production database or order API call was made.
+- UPC Testing fixture acceptance, live COD acceptance/send/resend/cancellation, and Production database index/deployment work all remain deferred and unauthorized.
 - POS integration is the next programme and has not started.

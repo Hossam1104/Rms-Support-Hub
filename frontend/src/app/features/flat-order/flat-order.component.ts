@@ -182,6 +182,10 @@ const TOTALS_DEBOUNCE_MS = 300;
                 [completed]="section('products').completed"
                 [hasIssues]="section('products').hasIssues"
                 [issueCount]="section('products').issueCount">
+                <div uiSectionActions class="section-actions">
+                  <span class="section-actions__count">{{ draftStore.draft().products.length }}</span>
+                  <ui-button variant="secondary" size="sm" icon="bi bi-plus-lg" (pressed)="openAddProductDialog()">Add product</ui-button>
+                </div>
                 <app-products-table
                   [products]="draftStore.draft().products"
                   [errors]="fieldErrors()['products'] ?? []"
@@ -199,6 +203,10 @@ const TOTALS_DEBOUNCE_MS = 300;
                 [completed]="section('payments').completed"
                 [hasIssues]="section('payments').hasIssues"
                 [issueCount]="section('payments').issueCount">
+                <div uiSectionActions class="section-actions">
+                  <span class="section-actions__count">{{ draftStore.draft().payments.length }}</span>
+                  <ui-button variant="secondary" size="sm" icon="bi bi-plus-lg" (pressed)="showAddPaymentDialog.set(true)">Add payment</ui-button>
+                </div>
                 <app-payments-table
                   [payments]="draftStore.draft().payments"
                   [errors]="fieldErrors()['payments'] ?? []"
@@ -344,6 +352,8 @@ const TOTALS_DEBOUNCE_MS = 300;
     app-order-section-navigation { position: sticky; top: 16px; z-index: 8; margin-bottom: var(--panel-gap); }
     .workflow-sections { display: flex; flex-direction: column; gap: var(--section-gap); }
     ui-section { scroll-margin-top: 88px; }
+    .section-actions { display: inline-flex; align-items: center; gap: 8px; }
+    .section-actions__count { display: inline-grid; min-width: 22px; height: 22px; place-items: center; padding-inline: 5px; border-radius: var(--radius-pill); background: var(--surface-interactive); color: var(--text-secondary); font-size: .7rem; font-weight: var(--weight-bold); }
     .summary-column { position: sticky; top: 16px; }
     .mobile-summary { display: none; }
     .builder-skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); gap: var(--section-gap); }

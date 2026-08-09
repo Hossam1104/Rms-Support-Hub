@@ -1,7 +1,17 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+/** Depth up to which containers auto-expand when a JSON tree first renders:
+ * root (0), first-level (1), and one further useful level (2). Deeper
+ * containers stay collapsed until toggled or reached via Expand all/search. */
+export const DEFAULT_AUTO_EXPAND_DEPTH = 2;
+
+export interface JsonTreeExpandCommand {
+  token: number;
+  expand: boolean;
+}
 
 function isContainer(v: JsonValue): v is JsonValue[] | { [key: string]: JsonValue } {
   return v !== null && typeof v === 'object';
@@ -48,8 +58,8 @@ interface HighlightPart {
         </button>
         <span class="node-key-suffix" *ngIf="keyLabel !== null">:</span>
 
-        <span *ngIf="isContainer" class="node-summary">
-          {{ isArray ? '[' : '{' }}{{ childCount }}{{ isArray ? ']' : '}' }}
+        <span *ngIf="isContainer" class="node-summary" [class.is-array]="isArray">
+          {{ isArray ? 'Array' : 'Object' }} &middot; {{ childCount }}
         </span>
 
         <span *ngIf="!isContainer" class="node-value" [class]="'type-' + valueType">
@@ -67,12 +77,13 @@ interface HighlightPart {
 
       <div class="node-children" *ngIf="isContainer && expanded()">
         <app-json-tree-node
-          *ngFor="let entry of entries"
+          *ngFor="let entry of entries; trackBy: trackByPath"
           [value]="entry.value"
           [keyLabel]="entry.key"
           [path]="entry.path"
           [searchTerm]="searchTerm"
-          [depth]="depth + 1">
+          [depth]="depth + 1"
+          [expandCommand]="expandCommand">
         </app-json-tree-node>
       </div>
     </div>
@@ -81,41 +92,53 @@ interface HighlightPart {
     .node-row {
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 0;
+      gap: 5px;
+      padding: 3px 4px;
+      border-radius: var(--radius-sm);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.82rem;
       cursor: default;
+      transition: background var(--transition-fast, .12s ease);
     }
-    .node-row.is-container { cursor: default; }
-    .toggle-button { display: grid; flex: 0 0 18px; place-items: center; width: 18px; height: 22px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
-    .toggle-button:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .node-row.is-container:hover { background: var(--surface-hover); }
+    .toggle-button { display: grid; flex: 0 0 22px; place-items: center; width: 22px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
+    .toggle-button:hover { background: var(--surface-selected); color: var(--text-primary); }
     .toggle-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .toggle-icon { width: 14px; font-size: 0.7rem; flex-shrink: 0; }
-    .toggle-spacer { width: 14px; flex-shrink: 0; }
-    .node-key { padding: 0; border: 0; background: transparent; color: var(--accent-violet); cursor: pointer; font: inherit; text-align: left; }
+    .toggle-icon { width: 14px; font-size: 0.75rem; flex-shrink: 0; }
+    .toggle-spacer { width: 18px; flex-shrink: 0; }
+    .node-key { padding: 0; border: 0; background: transparent; color: var(--accent-violet); cursor: pointer; font: inherit; font-weight: 650; text-align: left; }
     .node-key:hover { text-decoration: underline; }
     .node-key:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring); }
     .node-key-suffix { color: var(--text-primary); }
-    .node-summary { color: var(--text-muted); }
+    .node-summary { color: var(--text-muted); font-size: 0.74rem; font-weight: 650; letter-spacing: .01em; }
+    .node-summary.is-array { color: var(--code-number); }
     .type-string { color: var(--code-string); }
     .type-number { color: var(--code-number); }
     .type-boolean { color: var(--code-boolean); }
     .type-null { color: var(--code-null); font-style: italic; }
-    .node-children { margin-left: 18px; border-left: 1px dashed var(--border-subtle); padding-left: 10px; }
+    .node-children { margin-left: 20px; border-left: 1px dashed var(--border-subtle); padding-left: 11px; }
     .copied-flash { color: var(--code-string); font-size: 0.75rem; }
     :host ::ng-deep mark { background: var(--accent-amber); color: var(--on-amber); border-radius: 2px; padding: 0 1px; }
   `]
 })
-export class JsonTreeNodeComponent {
+export class JsonTreeNodeComponent implements OnChanges {
   @Input({ required: true }) value!: JsonValue;
   @Input() keyLabel: string | null = null;
   @Input() path: string = 'root';
   @Input() searchTerm: string = '';
   @Input() depth: number = 0;
+  @Input() expandCommand: JsonTreeExpandCommand | null = null;
 
   expandedState = signal<boolean | null>(null);
   justCopied = signal(false);
+  private appliedCommandToken = -1;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (!changes['expandCommand'] || !this.expandCommand || !this.isContainer) return;
+    if (this.expandCommand.token === this.appliedCommandToken) return;
+    this.appliedCommandToken = this.expandCommand.token;
+    this.expandedState.set(this.expandCommand.expand);
+  }
 
   get isContainer(): boolean { return isContainer(this.value); }
   get isArray(): boolean { return Array.isArray(this.value); }
@@ -142,13 +165,19 @@ export class JsonTreeNodeComponent {
   }
 
   expanded(): boolean {
-    if (this.expandedState() !== null) return this.expandedState()!;
+    // An active search match always wins so a manually collapsed ancestor
+    // can never permanently hide a matching descendant.
     if (this.searchTerm && containsMatch(this.value, this.searchTerm.toLowerCase())) return true;
-    return this.depth < 1;
+    if (this.expandedState() !== null) return this.expandedState()!;
+    return this.depth <= DEFAULT_AUTO_EXPAND_DEPTH;
   }
 
   toggle() {
     this.expandedState.set(!this.expanded());
+  }
+
+  trackByPath(_index: number, entry: { path: string }): string {
+    return entry.path;
   }
 
   copyPath(event: Event) {
