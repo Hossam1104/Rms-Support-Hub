@@ -298,7 +298,34 @@ public class OrderRequestRepository : IOrderRequestRepository
     }
 
     internal static string BuildStatsSql(string whereSql)
-        => $@"
+        => BuildStatsSql(whereSql, useFilteredBaseRows: false);
+
+    /// <summary>Builds the aggregate query. A filtered search that only touches
+    /// OrderRequests must narrow that base table before looking up the latest
+    /// header; otherwise the windowed latest-header CTE ranks the entire
+    /// RequestOrderHeaders table before applying an order-number predicate.
+    /// Header-derived filters and the unfiltered dashboard retain the ranked
+    /// shape so their filtering and aggregate semantics do not change.</summary>
+    internal static string BuildStatsSql(string whereSql, bool useFilteredBaseRows)
+    {
+        if (useFilteredBaseRows)
+        {
+            return $@"
+                WITH FilteredRequests AS (
+                    SELECT R.Id, R.OrderNumber, R.IsSucceeded, R.ExceptionMessage
+                    FROM dbo.OrderRequests AS R
+                    {whereSql}
+                )
+                SELECT
+                    COUNT(DISTINCT R.Id) AS Total,
+                    SUM(CASE WHEN R.IsSucceeded = 1 THEN 1 ELSE 0 END) AS Succeeded,
+                    SUM(CASE WHEN R.IsSucceeded = 0 OR R.ExceptionMessage IS NOT NULL THEN 1 ELSE 0 END) AS Failed,
+                    SUM(CASE WHEN H.OrderStatus IN (6, 7) THEN 1 ELSE 0 END) AS Cancelled
+                FROM FilteredRequests AS R
+                {HeaderApplyClause}";
+        }
+
+        return $@"
             {LatestHeadersCte}
             SELECT
                 COUNT(DISTINCT R.Id) AS Total,
@@ -308,12 +335,15 @@ public class OrderRequestRepository : IOrderRequestRepository
             FROM dbo.OrderRequests AS R
             {LatestHeaderJoinClause}
             {whereSql}";
+    }
 
     public async Task<OrderRequestStatsDto> StatsAsync(
         string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
     {
         var (whereSql, p) = BuildFilters(filters);
-        var sql = BuildStatsSql(whereSql);
+        var sql = BuildStatsSql(
+            whereSql,
+            useFilteredBaseRows: !RequiresHeaderJoin(filters) && !string.IsNullOrWhiteSpace(whereSql));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(

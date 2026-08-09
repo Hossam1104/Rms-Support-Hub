@@ -5,7 +5,7 @@ using Xunit;
 namespace RmsSupportHub.Tests;
 
 /// <summary>Asserts on the SQL shape OrderRequestRepository builds, without a
-/// live database -- BuildListSql/BuildFilters are internal, exposed to this
+/// live database -- BuildListSql/BuildStatsSql/BuildFilters are internal, exposed to this
 /// assembly via InternalsVisibleTo in RmsSupportHub.Data.csproj.</summary>
 public class OrderRequestRepositoryTests
 {
@@ -231,5 +231,20 @@ public class OrderRequestRepositoryTests
         Assert.Contains("FROM dbo.OrderRequests AS R", sql);
         Assert.DoesNotContain("LatestHeaders", sql);
         Assert.Contains("COUNT(DISTINCT R.Id)", sql);
+    }
+
+    [Fact]
+    public void StatsWithBaseFilter_NarrowsRequestsBeforeLatestHeaderLookup()
+    {
+        var sql = OrderRequestRepository.BuildStatsSql(
+            "WHERE R.OrderNumber = @OrderNumber",
+            useFilteredBaseRows: true);
+
+        Assert.Contains("WITH FilteredRequests AS", sql);
+        Assert.Contains("FROM dbo.OrderRequests AS R", sql);
+        Assert.Contains("FROM FilteredRequests AS R", sql);
+        Assert.DoesNotContain("WITH LatestHeaders AS", sql);
+        Assert.True(sql.IndexOf("WHERE R.OrderNumber", StringComparison.Ordinal)
+            < sql.IndexOf("OUTER APPLY", StringComparison.Ordinal));
     }
 }
