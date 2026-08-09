@@ -9,6 +9,15 @@ public class BranchRepository : IBranchRepository
 {
     private readonly ISqlServerConnectionFactory _connectionFactory;
 
+    internal const string ListBranchesSql = @"
+            SELECT B.BranchCode, B.Name
+            FROM dbo.Branches AS B
+            WHERE B.IsActive = 1
+              AND B.IsDeleted = 0
+              AND B.BranchCode IS NOT NULL
+              AND B.BranchCode <> ''
+            ORDER BY B.Id";
+
     public BranchRepository(ISqlServerConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
@@ -21,6 +30,8 @@ public class BranchRepository : IBranchRepository
     /// IsTestingBranch is deliberately NOT filtered out -- the Testing lane
     /// legitimately works against testing branches, and hiding them would
     /// silently break exactly the verification this tool exists for.
+    /// Results follow the database branch identity (B.Id) so every picker
+    /// receives the same stable branch order.
     /// Replaces the RequestOrderHeaders GROUP BY in OrderRequestRepository,
     /// which could only see branches that already had orders and whose name
     /// was a MAX() over denormalised history (UI_Rework_Plan.md D7).
@@ -28,17 +39,8 @@ public class BranchRepository : IBranchRepository
     /// SQL at all.</summary>
     public async Task<List<BranchOptionDto>> ListBranchesAsync(string connectionString)
     {
-        const string sql = @"
-            SELECT B.BranchCode, B.Name
-            FROM dbo.Branches AS B
-            WHERE B.IsActive = 1
-              AND B.IsDeleted = 0
-              AND B.BranchCode IS NOT NULL
-              AND B.BranchCode <> ''
-            ORDER BY B.Name";
-
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var rows = await connection.QueryAsync<BranchRow>(sql);
+        var rows = await connection.QueryAsync<BranchRow>(ListBranchesSql);
 
         return rows.Select(r => new BranchOptionDto(r.BranchCode ?? "", r.Name ?? "")).ToList();
     }
