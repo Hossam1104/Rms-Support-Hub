@@ -103,6 +103,16 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
         replaceUrl: true
       });
     });
+
+    // Keep the store's envKey in sync with the navbar environment switcher.
+    // Without this, switching Testing/Production after the page has already
+    // loaded leaves the grid and stats on the environment that was active at
+    // mount time (store.envKey is a separate signal, seeded once in ngOnInit).
+    effect(() => {
+      const key = this.moduleService.activeEnvironment()?.key || null;
+      if (key === this.store.envKey()) return;
+      this.store.setEnvKey(key);
+    });
   }
 
   ngOnInit() {
