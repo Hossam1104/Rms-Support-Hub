@@ -145,12 +145,19 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                   <tfoot class="detail-table-footer">
                     <tr>
                       <th scope="row" colspan="4">Column sums</th>
-                      <td class="align-right amount">{{ sumDiscount(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
-                      <td class="align-right amount">{{ sumVat(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
-                      <td class="align-right amount">{{ sumTotal(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.8"></app-riyal></td>
+                      <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</td>
+                      <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</td>
+                      <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</td>
                     </tr>
                   </tfoot>
               </ui-table>
+              <div class="consistency-check" [class.mismatch]="!lineItemsConsistent(detail)">
+                <i class="bi" [class.bi-check-circle-fill]="lineItemsConsistent(detail)" [class.bi-exclamation-triangle-fill]="!lineItemsConsistent(detail)" aria-hidden="true"></i>
+                <span>
+                  Items total {{ sumTotal(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
+                  vs header net {{ detail.request.header?.netTotal ?? 0 | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
+                </span>
+              </div>
             } @else {
               <app-empty-state icon="bi-box" title="No line items recorded"></app-empty-state>
             }
@@ -181,6 +188,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                 <div><strong>Rejection message:</strong> {{ h.rejectionMessage }}</div>
               </div>
 
+              <h2 class="subsection-title">Totals</h2>
               <div class="totals-grid" aria-label="Order totals">
                 <div><span>Gross</span><strong>{{ h.grossTotal | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
                 <div><span>Discount</span><strong>{{ h.totalDiscount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
@@ -200,6 +208,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
               <app-empty-state icon="bi-file-earmark-x" title="No order header recorded" description="This request has no RequestOrderHeaders row. The stored request and response remain available below."></app-empty-state>
             }
 
+            <h2 class="subsection-title">Invoice</h2>
             <div class="invoice-card" *ngIf="detail.request.invoice as invoice; else noInvoice">
               <div class="field"><span class="field-label">Invoice barcode</span><span class="mono">{{ invoice.barcode || '—' }} <app-copy-button *ngIf="invoice.barcode" [value]="invoice.barcode" label="Copy invoice barcode"></app-copy-button></span></div>
               <div class="field"><span class="field-label">Close date</span><span>{{ invoice.closeDateLocalTime ? (invoice.closeDateLocalTime | date:'medium') : '—' }}</span></div>
@@ -395,6 +404,8 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
     .eyebrow, .detail-context strong, .field dt, .field-label, .totals-grid span { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
     .field dd { margin: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: .86rem; }
     .amber-callout { display: flex; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .84rem; }
+    .subsection-title { margin: var(--space-5) 0 var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+    .subsection-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
     .totals-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
     .totals-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; }
     .totals-grid strong { color: var(--text-primary); font-size: .92rem; }
