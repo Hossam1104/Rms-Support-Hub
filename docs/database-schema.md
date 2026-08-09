@@ -22,6 +22,15 @@
 > this document. GHC's `lookup_item` query (§3.1) is still carried over
 > **unverified** — GHC database credentials have never been confirmed live.
 
+## Environment routing
+
+UPC Testing keeps its existing `ConnectionStrings:UpcEcommerceTest` resolution.
+UPC Production uses the same server-owned server and authentication details,
+with the application applying the approved catalog override `RmsMainProd`.
+The catalog is not accepted from the browser. Production database validation,
+when authorized and available, is read-only; no Production order-create,
+cancel, resend, or other mutation is part of repository validation.
+
 ---
 
 ## 1. Verified schema (live-introspected)
@@ -41,8 +50,9 @@ keep 17 first, or keep both in a fallback list with 18 first and a short
 > `10.10.8.181:1433` accepts the `UpcEcommerceTest` credentials and returned
 > the live `dbo.Branches` data below. Per `UI_Rework_Plan.md` §5 risk 5, this
 > document is not rewritten onto an unverified host — `10.10.8.181` remains
-> correct for `ConnectionStrings:UpcEcommerceTest`/`UpcEcommerceProd` until
-> someone confirms otherwise against a real login on `10.10.10.181`.
+> correct for `ConnectionStrings:UpcEcommerceTest` until someone confirms
+> otherwise against a real login on `10.10.10.181`. UPC Production derives its
+> connection from that server-owned Testing value and changes only the catalog.
 
 | Table | Columns | Notes |
 |---|---|---|

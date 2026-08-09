@@ -38,6 +38,17 @@ public record ModuleEnvironment
     /// per environment without comparing module-key strings.</summary>
     public string? ConnectionStringName { get; init; }
 
+    /// <summary>Optional server-owned catalog override applied after the named
+    /// connection string is resolved. This is intentionally not part of any
+    /// browser DTO: an environment may reuse one credential set while routing
+    /// reads to an approved catalog such as UPC Production's RmsMainProd.</summary>
+    public string? DatabaseOverride { get; init; }
+
+    /// <summary>Whether the pre-existing optional custom endpoint may
+    /// override this environment. Production environments that must remain
+    /// server-routed can explicitly disable the browser override.</summary>
+    public bool AllowCustomApiUrl { get; init; } = true;
+
     public string StatusLabel => (Available, Environment) switch
     {
         (true, "Production") => "Live",

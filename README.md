@@ -57,11 +57,17 @@ The full layout, and where new work belongs, is in
 
 ### 2. Configuration and secrets
 
-**No connection string is ever committed.** `appsettings.json` tracks four
-empty `ConnectionStrings` placeholders (`GhcEcommerce`, `UpcEcommerceProd`,
-`UpcEcommerceTest`, `GhcUnicommerce`); the API throws a
+**No connection string is ever committed.** `appsettings.json` tracks three
+empty `ConnectionStrings` placeholders (`GhcEcommerce`, `UpcEcommerceTest`,
+`GhcUnicommerce`); the API throws a
 `ConfigurationException` naming the exact missing key when a database call
 needs one, instead of failing opaquely inside Dapper.
+
+UPC Testing and UPC Production are both supported. Production reuses the
+server-owned `UpcEcommerceTest` connection details and changes only the
+approved database catalog to `RmsMainProd`; the browser cannot supply a server,
+catalog, credentials, or connection string. Production database checks are
+read-only, and no Production order mutation is part of local validation.
 
 **Development** — use [.NET user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets)
 (already initialized for `RmsSupportHub.Api`; secrets live outside the repo):
@@ -69,10 +75,9 @@ needs one, instead of failing opaquely inside Dapper.
 ```powershell
 cd backend/src/RmsSupportHub.Api
 dotnet user-secrets set "ConnectionStrings:GhcEcommerce"     "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
-dotnet user-secrets set "ConnectionStrings:UpcEcommerceProd" "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
 dotnet user-secrets set "ConnectionStrings:UpcEcommerceTest" "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
 dotnet user-secrets set "ConnectionStrings:GhcUnicommerce"   "Server=<host>;Database=<db>;User Id=<user>;Password=<pwd>;TrustServerCertificate=True;"
-dotnet user-secrets list   # confirm all four are set
+dotnet user-secrets list   # confirm all three are set
 ```
 
 **Deployed** — set the equivalent environment variables (double underscore is
@@ -80,7 +85,6 @@ ASP.NET Core's configuration-key separator):
 
 ```
 CONNECTIONSTRINGS__GHCECOMMERCE=...
-CONNECTIONSTRINGS__UPCECOMMERCEPROD=...
 CONNECTIONSTRINGS__UPCECOMMERCETEST=...
 CONNECTIONSTRINGS__GHCUNICOMMERCE=...
 ```

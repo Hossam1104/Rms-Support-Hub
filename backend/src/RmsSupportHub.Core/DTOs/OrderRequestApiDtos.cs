@@ -25,9 +25,8 @@ public record OrderRequestListQuery(
 
 /// <summary>EndpointKey is accepted for forward compatibility with the
 /// customUrl -> endpointKey -> environment.CancelUrl precedence order the
-/// plan specifies, but ModuleEnvironment has only a single CancelUrl today
-/// (no multiple named endpoints to select between), so it currently has no
-/// effect beyond falling through to CancelUrl.</summary>
+/// plan specifies when the selected environment permits a custom URL. A
+/// server-routed Production environment ignores browser overrides.</summary>
 public record OrderRequestCancelRequest(string Reason, string? EndpointKey, string? CustomUrl);
 
 public record OrderRequestResendRequest(string? BranchCode, string? EndpointKey);

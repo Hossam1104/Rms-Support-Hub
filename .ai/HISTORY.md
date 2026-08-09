@@ -14,6 +14,7 @@ per-session validation numbers are not repeated here.
 | Final project polish | `30bb28e`, `3c65eaa`, `0953f63`, `4aee8cd` | Made an empty payment list a valid Cash-on-Delivery order end to end (ADR-0006), split the Saudi country code out of the phone fields (ADR-0007), pinned UPC first in the module display, and routed every visible amount through `app-riyal`. |
 | Order Requests unification | `44006a4`..`51ad1e4` | Replaced the overlapping validation/drawer experience with one canonical list/detail route, added same-number resend from the selected stored `RequestJson` with server-side guards, corrected normalized filtering/paging/stat semantics, and made Clear All a single fresh-default reset transaction (ADR-0008, ADR-0009, ADR-0010). |
 | Final acceptance hardening | `0b5cd5e`, `046104c` | Replaced the Riyal placeholder with the provenance-verified SAMA vector plus a CRLF-safe verifier, cleared component style-budget warnings, and hardened wide tables and narrow-screen shell layout. |
+| UPC Production environment routing | `feat(upc): add production environment routing` | Corrected the owner-confirmed UPC Production endpoint, reused UPC Testing connection semantics with the server-owned `RmsMainProd` catalog override, synchronized landing/navbar environment persistence, and validated read-side routing with fakes. |
 
 ## QA Support Hub
 

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using RmsSupportHub.Api;
@@ -72,6 +73,7 @@ public class OrderRequestsControllerTests
     private class FakeOrderRequestRepository : IOrderRequestRepository
     {
         public OrderRequestDetailDto Detail = MakeDetail(orderStatus: 1); // 1 = New, cancel-allowed
+        public ConcurrentBag<string> ConnectionStrings { get; } = new();
         public OrderRequestFilters? LastFilters;
         public CancellationToken LastCancellationToken;
         public int LastPage;
@@ -83,6 +85,7 @@ public class OrderRequestsControllerTests
             string connectionString, OrderRequestFilters filters, int page, int pageSize, string? sort,
             CancellationToken cancellationToken = default)
         {
+            ConnectionStrings.Add(connectionString);
             LastFilters = filters;
             LastCancellationToken = cancellationToken;
             LastPage = page;
@@ -93,19 +96,34 @@ public class OrderRequestsControllerTests
         }
 
         public Task<int> CountAsync(string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
-            => Task.FromResult(Total);
+        {
+            ConnectionStrings.Add(connectionString);
+            return Task.FromResult(Total);
+        }
 
         public Task<OrderRequestStatsDto> StatsAsync(string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
-            => Task.FromResult(new OrderRequestStatsDto(Total, 0, 0, 0));
+        {
+            ConnectionStrings.Add(connectionString);
+            return Task.FromResult(new OrderRequestStatsDto(Total, 0, 0, 0));
+        }
 
         public Task<OrderRequestDetailDto?> GetDetailAsync(string connectionString, long requestId)
-            => Task.FromResult<OrderRequestDetailDto?>(Detail);
+        {
+            ConnectionStrings.Add(connectionString);
+            return Task.FromResult<OrderRequestDetailDto?>(Detail);
+        }
 
         public Task<List<OrderRequestAttemptDto>> ListAttemptsAsync(string connectionString, string orderNumber)
-            => Task.FromResult(new List<OrderRequestAttemptDto>());
+        {
+            ConnectionStrings.Add(connectionString);
+            return Task.FromResult(new List<OrderRequestAttemptDto>());
+        }
 
         public Task<OrderRequestLineageDto> GetLineageAsync(string connectionString, string orderNumber, string? parentOrderNumber)
-            => Task.FromResult(new OrderRequestLineageDto(null, new List<OrderRequestLineageNodeDto>()));
+        {
+            ConnectionStrings.Add(connectionString);
+            return Task.FromResult(new OrderRequestLineageDto(null, new List<OrderRequestLineageNodeDto>()));
+        }
     }
 
     private class FakeApiClient : IApiClient
@@ -140,6 +158,21 @@ public class OrderRequestsControllerTests
         Assert.NotNull(apiClient.LastUrl);
         Assert.Contains("CancelOrder", apiClient.LastUrl);
         Assert.DoesNotContain("CreateAndAssignOrder", apiClient.LastUrl);
+    }
+
+    [Fact]
+    public async Task ProductionCancel_IgnoresBrowserCustomUrl()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var apiClient = new FakeApiClient();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+
+        await controller.Cancel(
+            "upc_ecommerce", 42,
+            new OrderRequestCancelRequest("Customer request", null, "https://attacker.example/cancel"),
+            envKey: "UPC Production");
+
+        Assert.Equal("http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder", apiClient.LastUrl);
     }
 
     [Fact]
@@ -280,6 +313,26 @@ public class OrderRequestsControllerTests
         Assert.Equal(new[] { 6, 7 }, repo.LastFilters.Statuses);
         Assert.Equal(2, repo.LastPage);
         Assert.Equal(cancellation.Token, repo.LastCancellationToken);
+    }
+
+    [Fact]
+    public async Task ProductionListAndDetailReadsUseTheProductionCatalog()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+
+        var list = await controller.List("upc_ecommerce", ListQuery(), "UPC Production");
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(list);
+
+        var detail = await controller.GetDetail("upc_ecommerce", 42, "UPC Production");
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(detail);
+
+        Assert.NotEmpty(repo.ConnectionStrings);
+        foreach (var connectionString in repo.ConnectionStrings)
+        {
+            var connection = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+            Assert.Equal("RmsMainProd", connection.InitialCatalog);
+        }
     }
 
     [Fact]

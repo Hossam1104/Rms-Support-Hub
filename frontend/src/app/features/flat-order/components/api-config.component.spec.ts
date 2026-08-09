@@ -46,6 +46,21 @@ describe('ApiConfigComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('PROD');
   });
 
+  it('does not expose or emit a custom endpoint for Production', () => {
+    const fixture = createFixture();
+    const sent: { url: string }[] = [];
+    fixture.componentInstance.sendRequest.subscribe(e => sent.push(e));
+
+    fixture.componentRef.setInput('environment', { key: 'UPC Production', environment: 'Production' } as EnvironmentDto);
+    fixture.detectChanges();
+    fixture.componentInstance.useCustomEndpoint = true;
+    fixture.componentInstance.customUrl = 'https://attacker.example/api';
+    fixture.componentInstance.onSend();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Use custom endpoint');
+    expect(sent).toEqual([{ url: '' }]);
+  });
+
   it('keeps the custom URL input hidden and omits customApiUrl by default', () => {
     const fixture = createFixture();
     const sent: { url: string }[] = [];

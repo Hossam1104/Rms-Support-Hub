@@ -191,7 +191,9 @@ public class OrderRequestsController : ControllerBase
             return BadRequest(new { error = "A cancellation reason is required." });
 
         var env = module!.GetEnvironment(envKey);
-        var cancelUrl = !string.IsNullOrWhiteSpace(request.CustomUrl) ? request.CustomUrl : env.CancelUrl;
+        var cancelUrl = env.AllowCustomApiUrl && !string.IsNullOrWhiteSpace(request.CustomUrl)
+            ? request.CustomUrl
+            : env.CancelUrl;
         if (string.IsNullOrWhiteSpace(cancelUrl))
             return BadRequest(new { error = $"No cancel URL configured for environment '{env.Key}'." });
 
@@ -327,13 +329,7 @@ public class OrderRequestsController : ControllerBase
         }
 
         var env = module.GetEnvironment(envKey);
-        var name = env.ConnectionStringName
-            ?? throw new InvalidOperationException($"Environment '{env.Key}' has no ConnectionStringName configured.");
-        var connStr = ConnectionStringResolver.Require(_configuration, name);
-        if (!connStr.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))
-        {
-            connStr += ";Connect Timeout=5;";
-        }
+        var connStr = ConnectionStringResolver.RequireForEnvironment(_configuration, env);
 
         return (module, connStr, null);
     }

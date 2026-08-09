@@ -1,5 +1,8 @@
-import { ModuleDto } from '../models';
-import { orderModulesForDisplay } from './module.service';
+import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
+import { ModuleDto, EnvironmentDto } from '../models';
+import { ApiService } from './api.service';
+import { ModuleService, orderModulesForDisplay } from './module.service';
 
 const asModule = (key: string): ModuleDto => ({ key, label: key } as unknown as ModuleDto);
 
@@ -36,5 +39,64 @@ describe('orderModulesForDisplay', () => {
 
   it('returns an empty list unchanged', () => {
     expect(orderModulesForDisplay([])).toEqual([]);
+  });
+});
+
+describe('ModuleService environment selection', () => {
+  const testing: EnvironmentDto = {
+    key: 'UPC Testing',
+    environment: 'Testing',
+    isDefault: true
+  } as EnvironmentDto;
+  const production: EnvironmentDto = {
+    key: 'UPC Production',
+    environment: 'Production',
+    isDefault: false
+  } as EnvironmentDto;
+  const upc: ModuleDto = {
+    key: 'upc_ecommerce',
+    environments: [production, testing]
+  } as ModuleDto;
+
+  let service: ModuleService;
+  let api: { get: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    localStorage.clear();
+    api = { get: vi.fn().mockReturnValue(of({ module: upc, state: {} })) };
+    TestBed.configureTestingModule({
+      providers: [
+        ModuleService,
+        { provide: ApiService, useValue: api }
+      ]
+    });
+    service = TestBed.inject(ModuleService);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('persists a landing-page selection under the existing module-scoped key', () => {
+    service.selectEnvironment(production, upc);
+
+    expect(service.activeModule()).toBe(upc);
+    expect(service.activeEnvironment()).toBe(production);
+    expect(localStorage.getItem('onlineOrderTool.activeEnvironment.upc_ecommerce')).toBe('UPC Production');
+  });
+
+  it('restores the outside-module selection when the module shell loads', () => {
+    service.selectEnvironment(production, upc);
+
+    service.loadModuleDetails('upc_ecommerce').subscribe();
+
+    expect(service.activeEnvironment()?.key).toBe('UPC Production');
+    expect(api.get).toHaveBeenCalledWith('modules/upc_ecommerce');
+  });
+
+  it('keeps Testing as the default when no environment was persisted', () => {
+    service.modules.set([upc]);
+
+    service.loadModuleDetails('upc_ecommerce').subscribe();
+
+    expect(service.activeEnvironment()?.key).toBe('UPC Testing');
   });
 });

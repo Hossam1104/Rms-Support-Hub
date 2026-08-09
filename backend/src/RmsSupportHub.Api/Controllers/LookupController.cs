@@ -128,14 +128,6 @@ public class LookupController : ControllerBase
 
     private string GetConnectionString(Core.Models.ModuleEnvironment env)
     {
-        var name = env.ConnectionStringName
-            ?? throw new ConfigurationException($"Environment '{env.Key}' has no ConnectionStringName configured.");
-        var connStr = ConnectionStringResolver.Require(_configuration, name);
-
-        if (!connStr.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))
-        {
-            connStr += ";Connect Timeout=5;";
-        }
-        return connStr;
+        return ConnectionStringResolver.RequireForEnvironment(_configuration, env);
     }
 }

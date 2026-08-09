@@ -37,13 +37,13 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
           [placeholder]="endpoint ? 'No endpoint configured for this environment.' : 'Resolving endpoint…'"
           readonly
           aria-readonly="true" />
-        <div class="custom-toggle">
+        <div class="custom-toggle" *ngIf="!isProduction()">
           <label class="toggle-label">
             <input type="checkbox" [(ngModel)]="useCustomEndpoint" (ngModelChange)="onToggleCustom($event)" [disabled]="loading" />
             Use custom endpoint
           </label>
         </div>
-        <div class="input-group" *ngIf="useCustomEndpoint">
+        <div class="input-group" *ngIf="useCustomEndpoint && !isProduction()">
           <input
             type="text"
             class="token-input"
@@ -53,7 +53,7 @@ import { EnvironmentDto, ModuleEndpoint, SendOrderResult } from '../../../core/m
             [disabled]="loading"
             [attr.aria-invalid]="customUrlError ? true : null" />
         </div>
-        <p class="field-error" *ngIf="customUrlError">{{ customUrlError }}</p>
+        <p class="field-error" *ngIf="customUrlError && !isProduction()">{{ customUrlError }}</p>
       </div>
 
       <button type="button" class="send-button" *ngIf="showSend" [disabled]="loading" (click)="onSend()">
@@ -152,7 +152,7 @@ export class ApiConfigComponent {
   }
 
   onToggleCustom(enabled: boolean) {
-    this.useCustomEndpoint = enabled;
+    this.useCustomEndpoint = this.isProduction() ? false : enabled;
     if (!enabled) {
       this.customUrl = '';
       this.customUrlError = null;
@@ -176,6 +176,12 @@ export class ApiConfigComponent {
   }
 
   onSend() {
+    if (this.isProduction()) {
+      this.customUrlError = null;
+      this.sendRequest.emit({ url: '' });
+      return;
+    }
+
     let url = '';
     if (this.useCustomEndpoint) {
       const candidate = this.customUrl.trim();

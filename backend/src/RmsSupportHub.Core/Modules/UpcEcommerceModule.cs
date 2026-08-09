@@ -38,10 +38,10 @@ public class UpcEcommerceModule : IOrderModule
         HasDeliveryFields: false,
         BranchLookup: true);
 
-    // Real credentials are never hardcoded here. The connection string for each
-    // environment is resolved at request time via IConfiguration.GetConnectionString(
-    // "UpcEcommerceProd" | "UpcEcommerceTest"), sourced from .NET user-secrets (dev)
-    // or environment variables (prod). See README.md.
+    // Real credentials are never hardcoded here. UPC Production deliberately
+    // reuses the server-owned UPC Testing connection details and changes only
+    // its approved catalog through ModuleEnvironment.DatabaseOverride. See
+    // README.md and ConnectionStringResolver.
 
     public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; } = new Dictionary<string, ModuleEnvironment>
     {
@@ -57,9 +57,11 @@ public class UpcEcommerceModule : IOrderModule
             VisualUrl = "static/assets/upc_logo.svg",
             VisualAlt = "UPC logo",
             Available = true,
-            ApiUrl = "https://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "https://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
-            ConnectionStringName = "UpcEcommerceProd"
+            ApiUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
+            CancelUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
+            ConnectionStringName = "UpcEcommerceTest",
+            DatabaseOverride = "RmsMainProd",
+            AllowCustomApiUrl = false
         },
         ["UPC Testing"] = new ModuleEnvironment
         {

@@ -10,8 +10,10 @@ sync with the controllers, not the other way around.
 Every `{key}` path segment is a module key: `ghc_ecommerce`, `upc_ecommerce`,
 `ghc_unicommerce`, `oms`, `call_center`. Most action endpoints accept an
 optional `envKey` query parameter selecting a named environment (e.g.
-`"UPC Testing"`, `"UPC Production"`); when omitted, each module falls back to
-its first `Available` environment.
+`"UPC Testing"`, `"UPC Production"`); when omitted, each module resolves its
+explicitly flagged default environment, with Testing remaining the safe UPC
+default. Environment resolution is server-owned: the client selects only the
+environment key, not an API host or database catalog.
 
 ---
 
@@ -102,7 +104,10 @@ described in section 4 alongside item and consumer lookup capabilities.
 
 ### Send Order Request
 - **`POST /api/modules/{key}/send-request`**
-- **Request Body**: `{ environmentKey?: string, customApiUrl?: string }`
+- **Request Body**: `{ environmentKey?: string, customApiUrl?: string }`.
+  The existing optional custom endpoint remains available for environments that
+  allow it; UPC Production ignores browser overrides and always uses its
+  server-owned configured endpoint.
 - **Response `200 OK`**: `{ success: boolean, statusCode: int, responseText: string, urlSent: string }`
 - **`400 Bad Request`**: `{ success: false, errors: string[] }` when `module.Validate(draft)` fails — the request is never sent.
 - The sent request/response is **not** persisted locally; it is already recorded server-side by the upstream API into the `OrderRequests` table, which section 5 below reads from. There is no local `order-history` store or `historyEntryId` — that JSON-file feature was retired in R5.
@@ -161,7 +166,12 @@ drawer surfaces.
 ### Cancel
 - **`POST /api/modules/{key}/order-requests/{id}/cancel`**
 - **Request Body**: `{ reason: string, endpointKey?: string, customUrl?: string }`
-- URL resolution order: `customUrl` → `endpointKey` → `environment.CancelUrl` — **never** `environment.ApiUrl` (the historical bug this endpoint replaces silently posted cancellations to the create-order URL because the endpoint-picker field name was never wired up).
+- URL resolution uses the existing custom override only where the selected
+  environment allows it, otherwise `environment.CancelUrl` is used. UPC
+  Production always uses its server-owned `CancelUrl` and never accepts a
+  browser override; it never falls back to `environment.ApiUrl` (the
+  historical bug this endpoint replaces silently posted cancellations to the
+  create-order URL because the endpoint-picker field name was never wired up).
 - Server re-checks `OrderRequestStatus.CancelBlockedStatuses` (`{5,6,7,9}` — Rejected/CanceledByClient/CanceledByAdmin/Done) even if the client's button was enabled; a client-side check is not a trust boundary.
 - **`409 Conflict`**: `{ error: string, cancelBlockedReason: string }` if blocked — the upstream API is never called.
 - **`200 OK`** otherwise: `{ success, statusCode, responseText, urlSent, request: OrderRequestDetailDto }` — the detail is re-read after the call so the UI can show the refreshed status without a second round trip.

@@ -130,7 +130,9 @@ public class OrderController : ControllerBase
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
         var env = module.GetEnvironment(request.EnvironmentKey);
-        var targetUrl = !string.IsNullOrWhiteSpace(request.CustomApiUrl) ? request.CustomApiUrl : env.ApiUrl;
+        var targetUrl = env.AllowCustomApiUrl && !string.IsNullOrWhiteSpace(request.CustomApiUrl)
+            ? request.CustomApiUrl
+            : env.ApiUrl;
 
         if (string.IsNullOrWhiteSpace(targetUrl))
         {

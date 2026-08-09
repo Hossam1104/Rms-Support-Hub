@@ -76,9 +76,14 @@ export class ModuleService {
 
   /** Persists per module (U1, UI_Rework_Plan.md D4) so a Testing choice on
    * one module never leaks into another module's default. */
-  selectEnvironment(env: EnvironmentDto) {
+  selectEnvironment(env: EnvironmentDto, ownerModule?: ModuleDto) {
+    // Landing-page selection happens before the module shell is active. Keep
+    // that outside-module choice on the same active-module/persistence path as
+    // the navbar switcher so loading the module cannot silently restore its
+    // default lane over the operator's selection.
+    if (ownerModule) this.activeModule.set(ownerModule);
     this.activeEnvironment.set(env);
-    const moduleKey = this.activeModule()?.key;
+    const moduleKey = ownerModule?.key ?? this.activeModule()?.key;
     if (moduleKey) {
       try {
         localStorage.setItem(ENV_STORAGE_PREFIX + moduleKey, env.key);

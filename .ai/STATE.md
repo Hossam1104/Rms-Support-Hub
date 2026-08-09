@@ -35,12 +35,16 @@ path, and update the row above.
 - One Angular 22 SPA and one .NET 10 Web API. Registered tools:
   **QA Prompt Studio** (available), **Online Order Tool** (available), and
   **POS Maintenance Tool** (Coming Soon, informational, non-operational).
+- UPC Testing and UPC Production share the existing environment architecture;
+  Production uses server-owned UPC Testing connection details with the approved
+  `RmsMainProd` catalog override. No browser database/connection detail is
+  accepted; Production runtime validation was not executed locally.
 - Routes are lazy and typed through `ToolRouteData`; the current topology is in
   `docs/REPOSITORY_STRUCTURE.md`.
 - Prompt Studio behavior is frozen: deterministic local builders, canonical
   section counts (Bug 11, Story 7, Test Case 9), advisory quality semantics,
-  draft persistence, history capped at ten, copy, Markdown/text export, and
-  Ctrl/Cmd+Enter. No external AI execution.
+  drafts, ten-entry history, copy, Markdown/text export, and Ctrl/Cmd+Enter.
+  No external AI execution.
 - Online Order behavior is frozen and server-authoritative: API/DTO/payload
   contracts, validation, totals, filters, paging, statuses, capability guarding,
   send, cancel, and resend.
@@ -88,8 +92,7 @@ failure. Details are in `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded by the final cleanup session; see
-`docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the full gate table.
+Recorded by the final cleanup session; see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the full gate table.
 
 | Gate | Result |
 |---|---|
@@ -104,11 +107,12 @@ Recorded by the final cleanup session; see
 
 ## Boundaries and deferred scope
 
-- Production is out of bounds: no Production access, SQL, deployment, or
-  state-changing action is authorized. Testing is the default environment.
+- Production is out of bounds: no Production access, SQL, deployment, or state-changing action is authorized. Testing is the default environment.
 - `ConnectionStrings:UpcEcommerceTest` is not configured in the local Testing
   environment, so Testing-only UPC order and order-request calls return HTTP
   500. This is deferred environment setup, not an application defect.
+- UPC Production resolver tests use an in-memory connection configuration and
+  fakes only; no Production database or order API call was made.
 - UPC Testing fixture acceptance remains deferred; no live COD acceptance,
   send, resend, or cancellation claim is made.
 - Production database index work and deployment/Production acceptance remain

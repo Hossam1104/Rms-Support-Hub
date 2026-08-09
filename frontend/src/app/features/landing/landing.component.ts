@@ -70,7 +70,8 @@ export class LandingComponent {
   private router = inject(Router);
 
   onEnvironmentSelected(moduleKey: string, env: EnvironmentDto) {
-    this.moduleService.selectEnvironment(env);
+    const module = this.moduleService.modules().find(item => item.key === moduleKey);
+    this.moduleService.selectEnvironment(env, module);
     const targetTab = moduleKey === 'ghc_unicommerce' ? 'unicommerce' : 'order';
     this.router.navigate(['/tools/online-orders/modules', moduleKey, targetTab]);
   }

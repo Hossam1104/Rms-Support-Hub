@@ -61,6 +61,11 @@ canonical `/tools/online-orders/...` mount.
   keys, capabilities, payment values, statuses, filtering, sorting, paging,
   totals, and send/cancel/resend behavior are unchanged. No state-changing
   Online Order action was executed.
+- UPC Testing and UPC Production are supported through the existing environment
+  architecture. UPC Production read-side routing uses the server-owned
+  `RmsMainProd` catalog derived from the existing UPC Testing connection
+  details; Production database checks remain read-only and no Production order
+  mutation is validated here.
 - The Online Order landing now renders a neutral bounded empty state when no
   modules are available. It is presentation only: no API change, no service
   contract change, no retry behavior, and no claimed reason, because
@@ -88,6 +93,9 @@ WCAG certification, or a global security certification.
   500. Deferred environment setup, not an application defect.
 - UPC Testing fixture and live state-changing acceptance. No COD acceptance,
   send, resend, or cancellation claim is made here.
+- UPC Production database runtime validation was not executed in this local
+  session; resolver and repository-boundary tests use fakes and do not contact
+  the Production database or order API.
 - Production database performance indexes, pending database-owner approval.
 - Hosting and deployment topology, SPA fallback, target-server validation, and
   Production acceptance.
