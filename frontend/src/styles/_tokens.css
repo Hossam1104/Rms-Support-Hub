@@ -155,12 +155,12 @@
   --panel-padding-compact: clamp(10px, 1vw, 14px);
   --control-height: 42px;
   --control-height-compact: 36px;
-  --table-cell-padding-x: clamp(8px, .9vw, 12px);
-  --table-cell-padding-y: clamp(7px, .7vw, 10px);
+  --table-cell-padding-x: clamp(12px, 1.1vw, 16px);
+  --table-cell-padding-y: clamp(10px, .9vw, 14px);
   --table-cell-padding-x-compact: clamp(7px, .7vw, 10px);
   --table-cell-padding-y-compact: clamp(6px, .6vw, 8px);
-  --table-header-height: 40px;
-  --table-row-height: 44px;
+  --table-header-height: 44px;
+  --table-row-height: 48px;
   --table-inset-block: var(--panel-gap);
   --table-inset-inline: 0px;
   --table-min-width: 100%;

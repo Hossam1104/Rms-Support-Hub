@@ -19,11 +19,11 @@ import { Component, input } from '@angular/core';
   styles: [`
     :host { display: block; min-width: 0; }
     .ui-table-shell { overflow-x: auto; max-width: 100%; margin: var(--table-inset-block) var(--table-inset-inline) 0; border: 1px solid var(--table-border); border-radius: var(--radius-md); background: var(--surface-panel); scrollbar-color: var(--border-strong) transparent; }
-    table { width: 100%; min-width: var(--table-min-width); border-collapse: separate; border-spacing: 0; color: var(--text-primary); font-size: var(--text-sm); }
+    table { width: 100%; min-width: var(--table-min-width); border-collapse: separate; border-spacing: 0; color: var(--text-primary); font-family: var(--font-main); font-size: var(--text-md); }
     .ui-table--wide table { min-width: var(--table-min-width-wide); }
     caption { padding: var(--panel-padding-compact) var(--table-cell-padding-x); color: var(--text-secondary); text-align: left; }
-    th, td { padding: var(--table-cell-padding-y) var(--table-cell-padding-x); border-bottom: 1px solid var(--table-row-border); text-align: left; vertical-align: middle; line-height: 1.3; }
-    th { height: var(--table-header-height); color: var(--text-secondary); background: var(--table-header-surface); border-bottom-color: var(--table-border); font-size: var(--text-xs); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    th, td { padding: var(--table-cell-padding-y) var(--table-cell-padding-x); border-bottom: 1px solid var(--table-row-border); text-align: left; vertical-align: middle; line-height: var(--leading-normal); }
+    th { height: var(--table-header-height); color: var(--text-secondary); background: var(--table-header-surface); border-bottom-color: var(--table-border); font-size: var(--text-sm); font-weight: var(--weight-bold); letter-spacing: .025em; text-transform: uppercase; }
     th.numeric-cell, td.numeric-cell,
     th.align-right, td.align-right,
     th[data-align="numeric"], td[data-align="numeric"] { text-align: right; font-variant-numeric: tabular-nums; }
