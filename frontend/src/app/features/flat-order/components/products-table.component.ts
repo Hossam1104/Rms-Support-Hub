@@ -24,7 +24,6 @@ export interface ProductUpdate {
           <tr>
             <th scope="col" class="numeric-cell">#</th>
             <th scope="col" class="item-col">Item</th>
-            <th scope="col">Code</th>
             <th scope="col" class="numeric-cell">Unit price</th>
             <th scope="col" class="numeric-cell">Qty</th>
             <th scope="col" class="numeric-cell">Discount</th>
@@ -37,14 +36,16 @@ export interface ProductUpdate {
           <tr *ngFor="let product of products; let index = index; trackBy: trackByIndex">
             <td class="muted-cell numeric-cell">{{ index + 1 }}</td>
             <td class="item-col">
-              <strong>{{ product.itemName }}</strong>
+              <strong class="item-title">{{ product.itemName }}</strong>
               <span class="secondary-label" *ngIf="product.itemNameAr">{{ product.itemNameAr }}</span>
-              <span class="offer-mark" *ngIf="product.offerCode || product.offerMessage">
-                <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
-                <span>{{ product.offerCode || 'Offer' }}</span>
-              </span>
+              <div class="item-meta">
+                <span class="code-label" *ngIf="product.itemCode">{{ product.itemCode }}</span>
+                <span class="offer-mark" *ngIf="product.offerCode || product.offerMessage">
+                  <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
+                  <span>{{ product.offerCode || 'Offer' }}</span>
+                </span>
+              </div>
             </td>
-            <td><span class="code-label">{{ product.itemCode }}</span></td>
             <td class="numeric-cell"><app-riyal [size]=".82"></app-riyal>{{ product.unitPrice | number:'1.2-2' }}</td>
             <td class="numeric-cell">
               <input class="table-editor table-editor--quantity" type="number" min="0" step="1" [value]="product.quantity" [attr.aria-label]="'Quantity for ' + product.itemName" (change)="onEdit(index, 'quantity', $event)">
@@ -77,22 +78,24 @@ export interface ProductUpdate {
     .table-panel { min-width: 0; }
     .table-errors { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
     .table-errors p { display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: .78rem; line-height: 1.35; }
-    .item-col { width: 32%; }
-    td strong { display: block; font-weight: 750; }
-    .secondary-label { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--leading-normal); }
-    .offer-mark { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--state-warning-fg); font-size: var(--text-xs); font-weight: var(--weight-bold); }
-    .offer-mark img { width: 16px; height: 16px; object-fit: contain; }
-    .code-label { color: var(--text-secondary); font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-sm); }
-    .numeric-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .item-col { width: 40%; min-width: 200px; }
+    .item-title { display: block; font-weight: 750; color: var(--text-primary); line-height: 1.3; }
+    .secondary-label { display: block; margin-top: 1px; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
+    .item-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+    .code-label { display: inline-block; padding: 1px 6px; border-radius: var(--radius-xs); background: var(--surface-interactive); color: var(--text-secondary); font-family: var(--font-mono, ui-monospace, monospace); font-size: .74rem; font-weight: 500; }
+    .offer-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: var(--text-xs); font-weight: var(--weight-bold); }
+    .offer-mark img { width: 14px; height: 14px; object-fit: contain; }
+    .numeric-cell { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
     .total-cell { color: var(--text-primary); font-weight: 800; font-size: 1.02em; }
-    .muted-cell { color: var(--text-muted); }
-    .action-cell { width: 50px; text-align: right; }
+    .muted-cell { color: var(--text-muted); text-align: center; }
+    .action-cell { width: 48px; text-align: right; }
     .currency-editor { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; }
     .currency-editor app-riyal { color: var(--text-muted); }
-    .table-editor { width: 82px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-sm); }
-    .table-editor--quantity { width: 68px; }
+    .table-editor { width: 82px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-sm); text-align: right; font-variant-numeric: tabular-nums; }
+    .table-editor--quantity { width: 64px; text-align: center; }
     .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
     @container products-table (max-width: 640px) {
+      .item-col { width: 35%; }
       .table-editor { width: 68px; }
       .table-editor--quantity { width: 56px; }
     }

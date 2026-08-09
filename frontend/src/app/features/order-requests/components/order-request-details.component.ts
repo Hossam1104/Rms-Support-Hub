@@ -114,8 +114,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
               <ui-table class="detail-table items-table" [dense]="true" caption="Order items and Riyal amounts" [captionHidden]="true">
                   <thead>
                     <tr>
-                      <th scope="col" class="item-col">Item</th>
-                      <th scope="col">Material #</th>
+                      <th scope="col" class="item-col">Item / Material</th>
                       <th scope="col" class="align-right">Qty</th>
                       <th scope="col" class="align-right">Unit price <span class="sr-only">Saudi Riyal</span></th>
                       <th scope="col" class="align-right">Discount <span class="sr-only">Saudi Riyal</span></th>
@@ -128,12 +127,14 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                       <tr>
                         <td class="item-col">
                           <span class="item-identity">{{ line.itemName || '—' }}</span>
-                          <span class="commerce-offer-mark" *ngIf="line.offerMessage">
-                            <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
-                            <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
-                          </span>
+                          <div class="item-sub-row">
+                            <span class="material-num mono" *ngIf="line.materialNumber" [title]="'18-digit: ' + materialViews(line.materialNumber).full">#{{ materialViews(line.materialNumber).short || '—' }}</span>
+                            <span class="commerce-offer-mark" *ngIf="line.offerMessage">
+                              <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
+                              <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
+                            </span>
+                          </div>
                         </td>
-                        <td class="mono" [title]="'18-digit: ' + materialViews(line.materialNumber).full">{{ materialViews(line.materialNumber).short || '—' }}</td>
                         <td class="align-right">{{ line.quantity }}</td>
                         <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</td>
                         <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</td>
@@ -144,7 +145,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                   </tbody>
                   <tfoot class="detail-table-footer">
                     <tr>
-                      <th scope="row" colspan="4">Items summary</th>
+                      <th scope="row" colspan="3" class="footer-totals-title">Totals</th>
                       <td class="align-right amount footer-amount">
                         <span class="footer-amount__label">Discount total</span>
                         <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</span>
@@ -405,83 +406,6 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
   `,
   styles: [`
     :host { display: block; }
-    .order-details-page { display: flex; flex-direction: column; gap: var(--space-4); }
-    .detail-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
-    .detail-heading { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-    .heading-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-    .eyebrow { margin: 0 0 3px; }
-    h1.order-number { margin: 0; color: var(--text-primary); font-size: clamp(1.35rem, 3vw, 2rem); }
-    .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .header-total { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); font-size: 1rem; font-weight: 750; }
-    .action-btn, .attempt-row, .lineage-node { cursor: pointer; font: inherit; }
-    .action-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font-size: .82rem; font-weight: 650; }
-    .action-btn.brand { border: 0; background: var(--grad-brand); color: var(--on-gradient); }
-    .action-btn.danger { border: 0; background: var(--grad-danger); color: var(--on-gradient); }
-    .action-btn.secondary { background: var(--surface-interactive); }
-    .action-btn:disabled { cursor: not-allowed; opacity: .45; }
-    .detail-context { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 11px 14px; border: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: .78rem; }
-    .blocked-hint { color: var(--state-warning-fg); }
-    .detail-sections { display: flex; flex-direction: column; gap: var(--space-4); }
-    .amount, .transaction-amount { white-space: nowrap; }
-    .muted { color: var(--text-muted); }
-    .small { display: block; font-size: .72rem; }
-    .field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .eyebrow, .detail-context strong, .field dt, .field-label, .totals-grid span { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-    .field dd { margin: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: .86rem; }
-    .info-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
-    .info-group { min-width: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
-    .info-group__title { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-    .info-group__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin: 0; }
-    .amber-callout { display: flex; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .84rem; }
-    .subsection-title { margin: var(--space-5) 0 var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-    .subsection-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-    .totals-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
-    .totals-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; }
-    .totals-grid strong { color: var(--text-primary); font-size: .92rem; }
-    .totals-grid .net strong { color: var(--accent); font-size: 1.05rem; }
-    .consistency-check { display: flex; align-items: center; gap: 7px; margin-top: 14px; color: var(--state-success-fg); font-size: .78rem; }
-    .consistency-check.mismatch { color: var(--state-warning-fg); }
-    .items-table { --table-min-width: 100%; }
-    .items-table .item-col { width: 32%; min-width: 0; }
-    .item-identity { display: block; overflow-wrap: anywhere; color: var(--text-primary); font-weight: 700; }
-    .items-table .total-amount { color: var(--text-primary); font-weight: 750; }
-    .detail-table-footer th { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; vertical-align: bottom; }
-    .footer-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-    .footer-amount__label { color: var(--text-muted); font-size: .64rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-    .footer-amount__value { color: var(--text-primary); font-size: .88rem; font-weight: 750; }
-    .footer-amount--strong .footer-amount__value { color: var(--accent); font-size: 1.05rem; font-weight: 850; }
-    .mismatch-callout { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 14px; border: 1px solid var(--state-warning-border); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .78rem; font-weight: 650; }
-    .mismatch-callout.is-ok { border-color: var(--state-success-border); background: var(--state-success-bg); color: var(--state-success-fg); }
-    .detail-context, .invoice-card, .totals-grid > div, .transaction-card, .outcome-banner { border-radius: var(--radius-md); background: var(--surface-raised); }
-    .invoice-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); }
-    .attempt-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); font-size: .8rem; text-align: left; }
-    .attempt-row:hover { background: var(--surface-hover); }
-    .attempt-row.current { border-color: var(--accent); }
-    .outcome-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--text-muted); }
-    .dot-success { background: var(--state-success-fg); }
-    .dot-danger { background: var(--state-danger-fg); }
-    .lineage-trail { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-    .lineage-node { padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); font-size: .8rem; }
-    .lineage-node.current { border: 0; background: var(--grad-brand); color: var(--on-gradient); font-weight: 700; }
-    .transaction-list { display: flex; flex-direction: column; gap: 10px; }
-    .transaction-card { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); }
-    .transaction-main { display: flex; flex-direction: column; gap: 3px; min-width: 150px; }
-    .transaction-main span, .transaction-meta { color: var(--text-secondary); font-size: .78rem; }
-    .transaction-meta { display: flex; flex: 1; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
-    .outcome-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 14px; font-weight: 700; }
-    .outcome-banner.success { background: var(--state-success-bg); color: var(--state-success-fg); }
-    .outcome-banner.danger { background: var(--state-danger-bg); color: var(--state-danger-fg); }
-    .exception-card { margin-bottom: 14px; padding: 14px 16px; border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
-    .exception-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-    .exception-text { margin: 0; color: var(--state-danger-fg); font-family: 'JetBrains Mono', monospace; font-size: .8rem; white-space: pre-wrap; word-break: break-word; }
-    .state-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--panel-radius); background: var(--surface-panel); color: var(--text-secondary); text-align: center; }
-    .state-panel > i { color: var(--state-warning-fg); font-size: 2rem; }
-    .state-panel h1 { margin: 0; color: var(--text-primary); font-size: 1.2rem; }
-    .state-panel p { max-width: 520px; margin: 0 0 8px; }
-    .state-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-    .detail-skeleton { display: flex; flex-direction: column; gap: var(--space-4); }
-    @media (max-width: 720px) { .totals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .transaction-card { align-items: flex-start; flex-direction: column; gap: 8px; } .transaction-amount { align-self: flex-end; } }
-    @media (max-width: 520px) { .header-actions { justify-content: flex-start; } }
   `]
 })
 export class OrderRequestDetailsComponent implements OnDestroy {

@@ -4,6 +4,7 @@
 @import './styles/_typography.css';
 @import './styles/_animations.css';
 @import './styles/order-requests-filter.css';
+@import './styles/order-request-details.css';
 
 /* Global Reset & Container Utility */
 *, *::before, *::after {
