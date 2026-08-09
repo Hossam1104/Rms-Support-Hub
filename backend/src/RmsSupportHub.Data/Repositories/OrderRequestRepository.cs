@@ -64,7 +64,7 @@ public class OrderRequestRepository : IOrderRequestRepository
                 AND H.HeaderRank = 1";
 
     private const int ListCommandTimeoutSeconds = 15;
-    private const int LatestUnfilteredLimit = 10;
+    private const int LatestRequestLimit = 10;
 
     private static readonly Dictionary<string, string> SortColumns = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -191,21 +191,22 @@ public class OrderRequestRepository : IOrderRequestRepository
         string whereSql,
         string? sort,
         bool applyHeaderJoinsAfterPaging,
-        bool latestUnfilteredOnly = false)
+        bool latestTenOnly = false)
     {
         // RequestJson/ResponseJson are never selected here -- only
         // DATALENGTH/existence, so the list stays fast at any row count.
         // GetDetailAsync is the only place the raw blobs are read.
         var orderBy = ResolveSortColumn(sort);
-        if (latestUnfilteredOnly)
+        if (latestTenOnly)
         {
             return $@"
                 WITH LatestRequests AS (
-                    SELECT TOP ({LatestUnfilteredLimit})
+                    SELECT TOP ({LatestRequestLimit})
                         R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
                         DATALENGTH(R.RequestJson) AS RequestBytes,
                         CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse
                     FROM dbo.OrderRequests AS R
+                    {whereSql}
                     ORDER BY R.Id DESC
                 )
                 SELECT
@@ -277,9 +278,9 @@ public class OrderRequestRepository : IOrderRequestRepository
     {
         var safePageSize = Math.Clamp(pageSize, 1, 200);
         var (whereSql, p) = BuildFilters(filters);
-        var latestUnfilteredOnly = string.IsNullOrWhiteSpace(whereSql);
-        var safePage = latestUnfilteredOnly ? 1 : Math.Max(1, page);
-        if (!latestUnfilteredOnly)
+        var latestTenOnly = !RequiresHeaderJoin(filters);
+        var safePage = latestTenOnly ? 1 : Math.Max(1, page);
+        if (!latestTenOnly)
         {
             p.Add("Skip", (long)(safePage - 1) * safePageSize);
             p.Add("Take", safePageSize);
@@ -289,7 +290,7 @@ public class OrderRequestRepository : IOrderRequestRepository
             whereSql,
             sort,
             applyHeaderJoinsAfterPaging: !RequiresHeaderJoin(filters),
-            latestUnfilteredOnly);
+            latestTenOnly);
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(
@@ -308,15 +309,16 @@ public class OrderRequestRepository : IOrderRequestRepository
     internal static string BuildCountSql(
         string whereSql,
         bool requiresHeaderJoin,
-        bool latestUnfilteredOnly = false)
+        bool latestTenOnly = false)
     {
-        if (latestUnfilteredOnly)
+        if (latestTenOnly)
         {
             return $@"
                 SELECT COUNT(*)
                 FROM (
-                    SELECT TOP ({LatestUnfilteredLimit}) R.Id
+                    SELECT TOP ({LatestRequestLimit}) R.Id
                     FROM dbo.OrderRequests AS R
+                    {whereSql}
                     ORDER BY R.Id DESC
                 ) AS LatestRequests";
         }
@@ -341,7 +343,7 @@ public class OrderRequestRepository : IOrderRequestRepository
         var sql = BuildCountSql(
             whereSql,
             RequiresHeaderJoin(filters),
-            latestUnfilteredOnly: string.IsNullOrWhiteSpace(whereSql));
+            latestTenOnly: !RequiresHeaderJoin(filters));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(
@@ -350,28 +352,29 @@ public class OrderRequestRepository : IOrderRequestRepository
     }
 
     internal static string BuildStatsSql(string whereSql)
-        => BuildStatsSql(whereSql, useFilteredBaseRows: false, latestUnfilteredOnly: false);
+        => BuildStatsSql(whereSql, useFilteredBaseRows: false, latestTenOnly: false);
 
     /// <summary>Builds the aggregate query. A filtered search that only touches
     /// OrderRequests must narrow that base table before looking up the latest
     /// header; otherwise the windowed latest-header CTE ranks the entire
     /// RequestOrderHeaders table before applying an order-number predicate.
-    /// Header-derived filters and the unfiltered dashboard retain the ranked
-    /// shape so their filtering and aggregate semantics do not change. The
-    /// unfiltered dashboard is intentionally limited to the latest ten
-    /// requests by Id.</summary>
+    /// Header-derived filters retain the ranked shape so their filtering and
+    /// aggregate semantics do not change. Base-table searches, including the
+    /// dashboard's default date window, are intentionally limited to the
+    /// latest ten requests by Id.</summary>
     internal static string BuildStatsSql(
         string whereSql,
         bool useFilteredBaseRows,
-        bool latestUnfilteredOnly = false)
+        bool latestTenOnly = false)
     {
-        if (latestUnfilteredOnly)
+        if (latestTenOnly)
         {
             return $@"
                 WITH LatestRequests AS (
-                    SELECT TOP ({LatestUnfilteredLimit})
+                    SELECT TOP ({LatestRequestLimit})
                         R.Id, R.OrderNumber, R.IsSucceeded, R.ExceptionMessage
                     FROM dbo.OrderRequests AS R
+                    {whereSql}
                     ORDER BY R.Id DESC
                 )
                 SELECT
@@ -419,7 +422,7 @@ public class OrderRequestRepository : IOrderRequestRepository
         var sql = BuildStatsSql(
             whereSql,
             useFilteredBaseRows: !RequiresHeaderJoin(filters) && !string.IsNullOrWhiteSpace(whereSql),
-            latestUnfilteredOnly: string.IsNullOrWhiteSpace(whereSql));
+            latestTenOnly: !RequiresHeaderJoin(filters));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(

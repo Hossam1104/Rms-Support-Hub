@@ -48,7 +48,7 @@ path, and update the row above.
 - Online Order behavior is frozen and server-authoritative: API/DTO/payload
   contracts, validation, totals, filters, paging, statuses, capability guarding,
   send, cancel, and resend.
-- No POS operation or generic execution surface exists.
+- No POS operation or generic execution surface exists. Order Requests use a month-to-date default window and tokenized grouped filters; base-only queries cap matching results to ten newest `OrderRequests` by `Id DESC`, while header-derived filters retain paging.
 
 ## Compatibility contracts
 
@@ -96,14 +96,14 @@ Recorded by the final cleanup session; see `docs/RMS_SUPPORT_HUB_RELEASE_READINE
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 51 files / 262 tests passed, 0 skipped |
-| Backend tests | 161 passed, 0 failed, 0 skipped |
+| Frontend tests | 52 files / 272 tests passed, 0 skipped |
+| Backend tests | 173 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors |
-| Production initial bundle | 441.43 kB raw / 101.85 kB estimated transfer |
+| Production initial bundle | 443.44 kB raw / 102.13 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.78 kB estimated transfer |
 | Production-offline initial bundle | 427.11 kB raw / 101.30 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
-| Rendered browser pass | Not run this session; waived by the owner because the application source did not materially change |
+| Rendered browser pass | Not run for this UI change; browser verification remains pending |
 
 ## Boundaries and deferred scope
 

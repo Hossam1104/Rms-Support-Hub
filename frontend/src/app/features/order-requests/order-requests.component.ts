@@ -109,10 +109,11 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
     this.syncDetailRoute();
     const parentKey = this.route.parent?.snapshot.paramMap.get('key') || '';
     const qp = this.route.snapshot.queryParamMap;
+    const defaultFilters = createDefaultOrderRequestFilters();
 
     this.syncingFromUrl = true;
     const filters: OrderRequestsFilterState = {
-      ...createDefaultOrderRequestFilters(),
+      ...defaultFilters,
       search: qp.get('search') || qp.get('orderNumber') || qp.get('q') || qp.get('request') || '',
       exactMatch: qp.get('exactMatch') !== 'false',
       phone: qp.get('phone') || '',
@@ -123,8 +124,8 @@ export class OrderRequestsComponent implements OnInit, OnDestroy {
       outcome: ['all', 'succeeded', 'failed'].includes(qp.get('outcome') || '')
         ? qp.get('outcome') as OrderRequestsFilterState['outcome']
         : 'all',
-      dateFrom: qp.get('dateFrom'),
-      dateTo: qp.get('dateTo')
+      dateFrom: qp.has('dateFrom') ? qp.get('dateFrom') : defaultFilters.dateFrom,
+      dateTo: qp.has('dateTo') ? qp.get('dateTo') : defaultFilters.dateTo
     };
     const page = Number(qp.get('page')) || 1;
     const pageSize = Number(qp.get('pageSize')) || 25;

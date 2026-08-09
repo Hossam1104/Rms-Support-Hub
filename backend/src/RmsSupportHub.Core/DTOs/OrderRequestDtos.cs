@@ -1,8 +1,8 @@
 namespace RmsSupportHub.Core.DTOs;
 
 /// <summary>Normalized filters for OrderRequestRepository.ListAsync/CountAsync/StatsAsync.
-/// All optional -- an empty filter set produces no predicates; the default
-/// dashboard repository path limits the unfiltered view to the latest ten
+/// All optional -- an empty filter set produces no predicates; the base-only
+/// dashboard/search repository path limits matching results to the latest ten
 /// requests. Statuses (R9, multi-select status chips) takes precedence over the
 /// single-value Status when both are supplied; Status is kept for any
 /// other/older caller. Phone is normalized to its last nine digits by the API

@@ -36,9 +36,20 @@ describe('FilterBarComponent', () => {
     expect(element.textContent).toContain('Find and monitor order requests');
     expect(element.textContent).toContain('Status');
     expect(element.querySelector('#order-request-search')).not.toBeNull();
-    expect(element.querySelector('label[for="order-request-date-from"]')).not.toBeNull();
+    expect(element.querySelector('.date-trigger')).not.toBeNull();
+    expect(element.querySelector('.date-trigger')?.textContent).toContain('Date range');
     expect(element.querySelectorAll('.status-chip')).toHaveLength(9);
     expect(element.querySelectorAll('.status-chip[aria-pressed="false"]')).toHaveLength(9);
+  });
+
+  it('opens a modern range popover with presets and a six-week calendar grid', () => {
+    const trigger = fixture.nativeElement.querySelector('.date-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.date-popover')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.date-preset')).toHaveLength(4);
+    expect(fixture.nativeElement.querySelectorAll('.calendar-day')).toHaveLength(42);
   });
 
   it('keeps edits in a draft until Apply and sends one normalized filter set', () => {
@@ -59,8 +70,9 @@ describe('FilterBarComponent', () => {
     component.apply();
 
     expect(component.dateRangeError()).toContain('start date');
-    expect(store.filters().dateFrom).toBeNull();
-    expect(store.filters().dateTo).toBeNull();
+    const defaults = createDefaultOrderRequestFilters();
+    expect(store.filters().dateFrom).toBe(defaults.dateFrom);
+    expect(store.filters().dateTo).toBe(defaults.dateTo);
   });
 
   it('collapses the filter controls without losing the applied state', () => {
@@ -83,7 +95,10 @@ describe('FilterBarComponent', () => {
     expect(component.draft()).toEqual(createDefaultOrderRequestFilters());
     expect(component.draftDirty()).toBe(false);
     expect(store.filters()).toEqual(createDefaultOrderRequestFilters());
-    expect(store.activeFilterChips()).toEqual([]);
+    expect(store.activeFilterChips()).toEqual([
+      { key: 'dateFrom', label: `From: ${createDefaultOrderRequestFilters().dateFrom}` },
+      { key: 'dateTo', label: `To: ${createDefaultOrderRequestFilters().dateTo}` }
+    ]);
     expect(apiGet.mock.calls.filter(([path]) => path.endsWith('/order-requests'))).toHaveLength(requestCount + 1);
   });
 });

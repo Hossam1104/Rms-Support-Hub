@@ -13,6 +13,15 @@ function definedParams(params: unknown): Record<string, unknown> {
   return Object.fromEntries(Object.entries(params as Record<string, unknown>).filter(([, value]) => value !== undefined));
 }
 
+function defaultDateParams(): { dateFrom: string; dateTo: string } {
+  const defaults = createDefaultOrderRequestFilters();
+  return { dateFrom: defaults.dateFrom!, dateTo: defaults.dateTo! };
+}
+
+function defaultRequestParams(pageSize: number): Record<string, unknown> {
+  return { page: 1, pageSize, envKey: 'Testing', ...defaultDateParams() };
+}
+
 const clearAllScenarios: Array<{
   name: string;
   filters: Partial<OrderRequestsFilterState>;
@@ -25,7 +34,7 @@ const clearAllScenarios: Array<{
   { name: 'outcome only', filters: { outcome: 'failed' } },
   { name: 'one status', filters: { statuses: [3] } },
   { name: 'multiple statuses', filters: { statuses: [3, 7] } },
-  { name: 'date from only', filters: { dateFrom: '2026-08-01' } },
+  { name: 'date from only', filters: { dateFrom: '2026-07-01' } },
   { name: 'date to only', filters: { dateTo: '2026-08-05' } },
   { name: 'full date range', filters: { dateFrom: '2026-08-01', dateTo: '2026-08-05' } },
   { name: 'exact match changed from default', filters: { search: 'ORD_TEST_015', exactMatch: false } },
@@ -37,7 +46,7 @@ const clearAllScenarios: Array<{
   { name: 'Clear All after an API error', filters: { statuses: [3] }, mode: 'error' },
   { name: 'Clear All on page 2 or later', filters: { branchCode: 'P001' }, page: 2 },
   { name: 'Clear All in mobile/collapsed filter layout', filters: { outcome: 'failed' } },
-  { name: 'Clear All followed by page reload', filters: { dateFrom: '2026-08-01' } },
+  { name: 'Clear All followed by page reload', filters: { dateFrom: '2026-07-01' } },
   { name: 'Clear All followed by browser back/forward', filters: { dateTo: '2026-08-05' } }
 ];
 
@@ -84,6 +93,14 @@ describe('OrderRequestsStore list lifecycle', () => {
     first.statuses.push(7);
 
     expect(second.statuses).toEqual([]);
+  });
+
+  it('defaults the dashboard to the first day of the current month through today', () => {
+    const defaults = createDefaultOrderRequestFilters();
+    const today = new Date();
+
+    expect(defaults.dateFrom).toBe(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`);
+    expect(defaults.dateTo).toBe(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
   });
 
   it('normalizes filters, cancels stale requests, and skips no-op reloads', () => {
@@ -213,12 +230,15 @@ describe('OrderRequestsStore list lifecycle', () => {
     expect(api.requests).toHaveLength(3);
     expect(store.filters()).toEqual(createDefaultOrderRequestFilters());
     expect(store.page()).toBe(1);
-    expect(store.hasActiveFilters()).toBe(false);
-    expect(store.activeFilterChips()).toEqual([]);
+    expect(store.hasActiveFilters()).toBe(true);
+    expect(store.activeFilterChips()).toEqual([
+      { key: 'dateFrom', label: `From: ${defaultDateParams().dateFrom}` },
+      { key: 'dateTo', label: `To: ${defaultDateParams().dateTo}` }
+    ]);
     expect(store.items()).toEqual([]);
     expect(store.stats()).toBeNull();
     expect(store.total()).toBe(0);
-    expect(definedParams(api.requests[2].params)).toEqual({ page: 1, pageSize: 50, envKey: 'Testing' });
+    expect(definedParams(api.requests[2].params)).toEqual(defaultRequestParams(50));
 
     // A failed clear must not resurrect the previous filtered grid.
     api.requests[2].subject.error({ status: 502 });
@@ -235,7 +255,7 @@ describe('OrderRequestsStore list lifecycle', () => {
     store.clearFilters(true);
 
     expect(api.requests).toHaveLength(2);
-    expect(definedParams(api.requests[1].params)).toEqual({ page: 1, pageSize: 25, envKey: 'Testing' });
+    expect(definedParams(api.requests[1].params)).toEqual(defaultRequestParams(25));
     expect(store.filters()).toEqual(createDefaultOrderRequestFilters());
   });
 
@@ -269,10 +289,13 @@ describe('OrderRequestsStore list lifecycle', () => {
     expect(requestBeforeClear?.cancelled).toBe(scenario.mode === 'in-flight' || scenario.mode === 'manual-refresh' || scenario.mode === 'auto-refresh' || scenario.mode === 'error');
     expect(store.filters()).toEqual(createDefaultOrderRequestFilters());
     expect(store.page()).toBe(1);
-    expect(store.hasActiveFilters()).toBe(false);
-    expect(store.activeFilterChips()).toEqual([]);
+    expect(store.hasActiveFilters()).toBe(true);
+    expect(store.activeFilterChips()).toEqual([
+      { key: 'dateFrom', label: `From: ${defaultDateParams().dateFrom}` },
+      { key: 'dateTo', label: `To: ${defaultDateParams().dateTo}` }
+    ]);
     expect(store.status()).toBe('loading');
-    expect(definedParams(clearRequest?.params)).toEqual({ page: 1, pageSize: 25, envKey: 'Testing' });
+    expect(definedParams(clearRequest?.params)).toEqual(defaultRequestParams(25));
   });
 
   it('keeps manual and auto-refresh on the cleared filter generation', () => {
@@ -283,11 +306,11 @@ describe('OrderRequestsStore list lifecycle', () => {
     api.requests.at(-1)?.subject.next(response());
 
     store.refresh();
-    expect(definedParams(api.requests.at(-1)?.params)).toEqual({ page: 1, pageSize: 25, envKey: 'Testing' });
+    expect(definedParams(api.requests.at(-1)?.params)).toEqual(defaultRequestParams(25));
     api.requests.at(-1)?.subject.next(response());
 
     store.setAutoRefresh(true);
     store.autoRefreshTick();
-    expect(definedParams(api.requests.at(-1)?.params)).toEqual({ page: 1, pageSize: 25, envKey: 'Testing' });
+    expect(definedParams(api.requests.at(-1)?.params)).toEqual(defaultRequestParams(25));
   });
 });

@@ -234,12 +234,12 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
-    public void LatestUnfilteredCountSql_OnlyCountsTenNewestRequests()
+    public void LatestTenCountSql_OnlyCountsTenNewestRequests()
     {
         var sql = OrderRequestRepository.BuildCountSql(
             "",
             requiresHeaderJoin: false,
-            latestUnfilteredOnly: true);
+            latestTenOnly: true);
 
         Assert.Contains("SELECT TOP (10) R.Id", sql);
         Assert.Contains("ORDER BY R.Id DESC", sql);
@@ -262,13 +262,13 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
-    public void LatestUnfilteredListSql_TakesTenNewestRequestsById()
+    public void LatestTenListSql_TakesTenNewestRequestsById()
     {
         var sql = OrderRequestRepository.BuildListSql(
             "",
             null,
             applyHeaderJoinsAfterPaging: true,
-            latestUnfilteredOnly: true);
+            latestTenOnly: true);
 
         Assert.Contains("SELECT TOP (10)", sql);
         Assert.Contains("FROM dbo.OrderRequests AS R", sql);
@@ -278,12 +278,12 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
-    public void LatestUnfilteredStatsSql_UsesOnlyTenNewestRequests()
+    public void LatestTenStatsSql_UsesOnlyTenNewestRequests()
     {
         var sql = OrderRequestRepository.BuildStatsSql(
             "",
             useFilteredBaseRows: false,
-            latestUnfilteredOnly: true);
+            latestTenOnly: true);
 
         Assert.Contains("SELECT TOP (10)", sql);
         Assert.Contains("FROM LatestRequests AS R", sql);

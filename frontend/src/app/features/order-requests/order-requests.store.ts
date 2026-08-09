@@ -22,12 +22,22 @@ export interface OrderRequestsFilterState {
   dateTo: string | null;
 }
 
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /**
  * The only source of default filter state. A fresh object and status array
  * are returned for every caller so a draft/reset can never share mutable
  * state with the applied filters or another component instance.
  */
 export function createDefaultOrderRequestFilters(): OrderRequestsFilterState {
+  const today = new Date();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
   return {
     search: '',
     exactMatch: true,
@@ -35,8 +45,8 @@ export function createDefaultOrderRequestFilters(): OrderRequestsFilterState {
     branchCode: null,
     statuses: [],
     outcome: 'all',
-    dateFrom: null,
-    dateTo: null
+    dateFrom: formatDateInput(monthStart),
+    dateTo: formatDateInput(today)
   };
 }
 
@@ -141,7 +151,7 @@ export class OrderRequestsStore {
    * Resets the applied state and starts one unfiltered request. The explicit
    * force flag is used by the filter-bar Clear All action so a dirty draft is
    * still committed even when the applied store is already on page one with
-   * no filters.
+   * the default date window.
    */
   clearFilters(forceReload = false) {
     const defaults = createDefaultOrderRequestFilters();
@@ -179,11 +189,11 @@ export class OrderRequestsStore {
 
   applyQuickRange(range: QuickRange) {
     const today = new Date();
-    const to = today.toISOString().slice(0, 10);
+    const to = formatDateInput(today);
     const from = new Date(today);
     if (range === '7d') from.setDate(from.getDate() - 6);
     else if (range === '30d') from.setDate(from.getDate() - 29);
-    this.setFilters({ dateFrom: from.toISOString().slice(0, 10), dateTo: to });
+    this.setFilters({ dateFrom: formatDateInput(from), dateTo: to });
   }
 
   /** Applied when a stat tile is clicked -- same base filter as the list,
