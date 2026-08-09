@@ -318,6 +318,7 @@ const TOTALS_DEBOUNCE_MS = 300;
     <app-add-payment-dialog
       *ngIf="showAddPaymentDialog()"
       [moduleKey]="moduleKey()"
+      [requiredAmount]="paymentRequiredAmount()"
       (close)="showAddPaymentDialog.set(false)"
       (add)="onAddPayment($event)">
     </app-add-payment-dialog>
@@ -577,6 +578,12 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
    * keeps the operator informed without fabricating a zero-value payment. */
   isCashOnDelivery(): boolean {
     return this.draftStore.draft().payments.length === 0;
+  }
+
+  /** The server-owned balance is the amount a newly selected Visa payment
+   * should cover; no client-side total is fabricated when totals are pending. */
+  paymentRequiredAmount(): number {
+    return this.totals()?.remainingBalance ?? 0;
   }
 
   loadBranches(refresh = false) {

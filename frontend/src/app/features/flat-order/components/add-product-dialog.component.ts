@@ -25,7 +25,7 @@ function netUnitPriceOf(unitPrice: number, vatPercentage: number): number {
   standalone: true,
   imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent],
   template: `
-    <div class="modal-backdrop" (click)="close.emit()">
+    <div class="modal-backdrop" role="presentation">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
         <div uiCardHeader class="modal-header">
           <h3><i class="bi bi-box-seam" aria-hidden="true"></i> Add Product</h3>

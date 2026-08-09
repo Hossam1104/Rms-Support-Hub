@@ -30,7 +30,7 @@ export interface ProductUpdate {
         <p *ngFor="let message of errors"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
       </div>
 
-      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order products">
+      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="false" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order products">
         <thead>
           <tr>
             <th scope="col" class="numeric-cell">#</th>

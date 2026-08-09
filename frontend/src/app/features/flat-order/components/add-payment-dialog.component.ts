@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Payment } from '../../../core/models';
 import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
@@ -8,7 +8,7 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, U
   standalone: true,
   imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
   template: `
-    <div class="modal-backdrop" (click)="close.emit()">
+    <div class="modal-backdrop" role="presentation">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
         <div uiCardHeader class="modal-header">
           <h3><i class="bi bi-wallet2" aria-hidden="true"></i> Add Payment Method</h3>
@@ -23,9 +23,10 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, U
             <ui-select selectId="payment-status" [options]="paymentStatusOptions" [value]="payment.paymentStatus" (valueChange)="payment.paymentStatus = $any($event) || ''"></ui-select>
           </ui-field>
           <ui-field label="Amount" forId="payment-amount" [required]="true">
-            <ui-input inputId="payment-amount" type="number" step="0.01" [value]="payment.paymentAmount" (valueChange)="payment.paymentAmount = $any($event) || 0">
+            <ui-input inputId="payment-amount" type="number" step="0.01" [value]="payment.paymentAmount" (valueChange)="onAmountChange($event)">
               <app-riyal uiInputSuffix [size]=".9"></app-riyal>
             </ui-input>
+            <small class="amount-hint" *ngIf="payment.paymentMethod === 'Visa' && requiredAmount > 0">Required amount: {{ requiredAmount | number:'1.2-2' }}</small>
           </ui-field>
           <ui-field label="Transaction ID" forId="payment-transaction-id">
             <ui-input inputId="payment-transaction-id" placeholder="Optional" [value]="payment.transactionId || ''" (valueChange)="payment.transactionId = $any($event) || ''"></ui-input>
@@ -52,20 +53,23 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, U
     .modal-header h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.1rem; }
     .modal-header h3 i { color: var(--accent); }
     .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .amount-hint { display: block; margin-top: 5px; color: var(--text-secondary); font-size: .72rem; }
     .full-width { grid-column: 1 / -1; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
     @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
   `]
 })
-export class AddPaymentDialogComponent {
+export class AddPaymentDialogComponent implements OnChanges {
   @Input() moduleKey = '';
+  @Input() requiredAmount = 0;
   @Output() close = new EventEmitter<void>();
   @Output() add = new EventEmitter<Payment>();
 
   readonly paymentMethodOptions: UiSelectOption[] = [
-    { value: 'CashOnDelivery', label: 'CashOnDelivery' }, { value: 'Visa', label: 'Visa' }, { value: 'Tamara', label: 'Tamara' },
-    { value: 'Tabby', label: 'Tabby' }, { value: 'ApplePay', label: 'ApplePay' }, { value: 'STCPay', label: 'STCPay' }, { value: 'Mada', label: 'Mada' },
-    { value: 'PostToCredit', label: 'PostToCredit' }
+    { value: 'COD', label: 'COD' }, { value: 'Visa', label: 'Visa' }, { value: 'RajhiPoints', label: 'RajhiPoints' },
+    { value: 'Tamara', label: 'Tamara' }, { value: 'Tabby', label: 'Tabby' }, { value: 'NeqatyPoints', label: 'NeqatyPoints' },
+    { value: 'QitafPoints', label: 'QitafPoints' }, { value: 'MisPay', label: 'MisPay' }, { value: 'Emkan', label: 'Emkan' },
+    { value: 'YouGotaGift', label: 'YouGotaGift' }, { value: 'OgMoney', label: 'OgMoney' }, { value: 'PostToCredit', label: 'PostToCredit' }
   ];
   get availablePaymentMethodOptions(): UiSelectOption[] {
     return this.paymentMethodOptions.filter(option => option.value !== 'PostToCredit' || this.moduleKey !== 'upc_ecommerce');
@@ -73,10 +77,43 @@ export class AddPaymentDialogComponent {
   readonly paymentStatusOptions: UiSelectOption[] = [
     { value: 'not_payment', label: 'not_payment (COD)' }, { value: 'done_payment', label: 'done_payment (Paid)' }, { value: 'failed_payment', label: 'failed_payment' }
   ];
-  payment: Payment = { paymentMethod: 'CashOnDelivery', paymentStatus: 'not_payment', paymentAmount: 0, transactionId: '', customerName: '', customerNumber: '' };
+  payment: Payment = { paymentMethod: 'COD', paymentStatus: 'not_payment', paymentAmount: 0, transactionId: '', customerName: '', customerNumber: '' };
+  private amountAutoFilled = false;
 
-  onMethodChange() { this.payment.paymentStatus = this.payment.paymentMethod === 'CashOnDelivery' ? 'not_payment' : 'done_payment'; }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['requiredAmount'] && this.payment.paymentMethod === 'Visa' && this.amountAutoFilled) {
+      this.payment.paymentAmount = this.normalizedRequiredAmount();
+    }
+  }
+
+  onMethodChange() {
+    this.payment.paymentStatus = this.statusForMethod();
+    if (this.payment.paymentMethod === 'Visa') {
+      this.payment.paymentAmount = this.normalizedRequiredAmount();
+      this.amountAutoFilled = true;
+    } else {
+      this.amountAutoFilled = false;
+    }
+  }
+
+  onAmountChange(value: unknown) {
+    this.payment.paymentAmount = Number(value) || 0;
+    this.amountAutoFilled = false;
+  }
+
   onAdd() {
-    if (this.payment.paymentMethod && this.payment.paymentStatus && this.payment.paymentAmount > 0) this.add.emit(this.payment);
+    this.payment.paymentStatus = this.statusForMethod();
+    if (this.payment.paymentMethod && this.payment.paymentStatus && this.payment.paymentAmount > 0) this.add.emit({ ...this.payment });
+  }
+
+  private statusForMethod(): string {
+    return this.payment.paymentMethod === 'COD' || this.payment.paymentMethod === 'PostToCredit'
+      ? 'not_payment'
+      : 'done_payment';
+  }
+
+  private normalizedRequiredAmount(): number {
+    const amount = Number(this.requiredAmount);
+    return Number.isFinite(amount) && amount > 0 ? amount : 0;
   }
 }

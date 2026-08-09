@@ -30,7 +30,7 @@ export interface PaymentUpdate {
         <p *ngFor="let message of errors"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
       </div>
 
-      <ui-table *ngIf="payments.length > 0; else paymentsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order payments">
+      <ui-table *ngIf="payments.length > 0; else paymentsEmpty" [dense]="false" [stickyHeader]="true" [zebra]="true" [wide]="true" caption="Order payments">
         <thead>
           <tr>
             <th scope="col" class="numeric-cell">#</th>
