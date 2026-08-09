@@ -2,69 +2,105 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../../core/models';
 import { APP_ASSETS } from '../../../core/config/app-assets';
-import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent } from '../../../shared/ui';
+import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiIconButtonComponent } from '../../../shared/ui';
 
 export interface ProductUpdate {
   index: number;
   patch: Partial<Product>;
 }
 
+/**
+ * Product rows are a hybrid grid rather than a table: one product is one row
+ * entity whose identity (name / Arabic name / code) owns the flexible column
+ * while the editable financial cells stay fixed-width and compact. A column
+ * header strip supplies the visual labels at wide container widths; each cell
+ * still carries its own label, visually hidden there, so the row reflows into
+ * a labelled stack when the container narrows without losing accessible names.
+ */
 @Component({
   selector: 'app-products-table',
   standalone: true,
-  imports: [CommonModule, EmptyStateComponent, RiyalComponent, UiButtonComponent, UiTableComponent],
+  imports: [CommonModule, EmptyStateComponent, RiyalComponent, UiButtonComponent, UiIconButtonComponent],
   template: `
-    <div id="products-card" class="table-panel">
-      <div class="table-errors" role="alert" *ngIf="errors.length > 0">
+    <div id="products-card" class="pt">
+      <div class="pt__errors" role="alert" *ngIf="errors.length > 0">
         <p *ngFor="let message of errors"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
       </div>
 
-      <ui-table *ngIf="products.length > 0; else productsEmpty" [dense]="true" [stickyHeader]="true" [zebra]="true" caption="Order products">
-        <thead>
-          <tr>
-            <th scope="col" class="numeric-cell">#</th>
-            <th scope="col" class="item-col">Item</th>
-            <th scope="col" class="numeric-cell">Unit price</th>
-            <th scope="col" class="numeric-cell">Qty</th>
-            <th scope="col" class="numeric-cell">Discount</th>
-            <th scope="col" class="numeric-cell">VAT</th>
-            <th scope="col" class="numeric-cell">Row total</th>
-            <th scope="col"><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let product of products; let index = index; trackBy: trackByIndex">
-            <td class="muted-cell numeric-cell">{{ index + 1 }}</td>
-            <td class="item-col">
-              <strong class="item-title">{{ product.itemName }}</strong>
-              <span class="secondary-label" *ngIf="product.itemNameAr">{{ product.itemNameAr }}</span>
-              <div class="item-meta">
-                <span class="code-label" *ngIf="product.itemCode">{{ product.itemCode }}</span>
-                <span class="offer-mark" *ngIf="product.offerCode || product.offerMessage">
-                  <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
-                  <span>{{ product.offerCode || 'Offer' }}</span>
+      <ng-container *ngIf="products.length > 0; else productsEmpty">
+        <div class="pt__head" aria-hidden="true">
+          <span>Item</span>
+          <span>Unit price</span>
+          <span>Qty</span>
+          <span>Discount</span>
+          <span>VAT</span>
+          <span>Row total</span>
+          <span></span>
+        </div>
+
+        <ul class="pt__list">
+          <li class="prow" *ngFor="let product of products; let index = index; trackBy: trackByIndex">
+            <div class="prow__id">
+              <span class="prow__seq" aria-hidden="true">{{ index + 1 }}</span>
+              <span class="prow__names">
+                <strong class="prow__name">{{ product.itemName }}</strong>
+                <span class="prow__ar" *ngIf="product.itemNameAr">{{ product.itemNameAr }}</span>
+                <span class="prow__marks" *ngIf="product.itemCode || product.offerCode || product.offerMessage">
+                  <span class="prow__code" *ngIf="product.itemCode">{{ product.itemCode }}</span>
+                  <span class="prow__offer" *ngIf="product.offerCode || product.offerMessage">
+                    <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
+                    <span>{{ product.offerCode || 'Offer' }}</span>
+                  </span>
                 </span>
-              </div>
-            </td>
-            <td class="numeric-cell"><app-riyal [size]=".82"></app-riyal>{{ product.unitPrice | number:'1.2-2' }}</td>
-            <td class="numeric-cell">
-              <input class="table-editor table-editor--quantity" type="number" min="0" step="1" [value]="product.quantity" [attr.aria-label]="'Quantity for ' + product.itemName" (change)="onEdit(index, 'quantity', $event)">
-            </td>
-            <td class="numeric-cell">
-              <label class="sr-only" [for]="'product-discount-' + index">Discount for {{ product.itemName }}</label>
-              <span class="currency-editor">
-                <app-riyal [decorative]="true" [size]=".72"></app-riyal>
-                <input [id]="'product-discount-' + index" class="table-editor" type="number" min="0" step="0.01" [value]="product.discount" [attr.aria-label]="'Discount for ' + product.itemName" (change)="onEdit(index, 'discount', $event)">
               </span>
-            </td>
-            <td class="numeric-cell">{{ product.vatPercentage | number:'1.0-2' }}%</td>
-            <td class="numeric-cell total-cell"><app-riyal [size]=".85"></app-riyal>{{ getProductTotal(product) | number:'1.2-2' }}</td>
-            <td class="action-cell">
-              <ui-button variant="danger" size="sm" icon="bi bi-trash3" ariaLabel="Remove product" (pressed)="deleteProduct.emit(index)"></ui-button>
-            </td>
-          </tr>
-        </tbody>
-      </ui-table>
+            </div>
+
+            <div class="cell cell--unit">
+              <span class="cell__label">Unit price</span>
+              <span class="cell__value"><app-riyal [size]="0.78"></app-riyal>{{ product.unitPrice | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="cell cell--qty">
+              <label class="cell__label" [for]="'product-quantity-' + index">Qty</label>
+              <input
+                [id]="'product-quantity-' + index"
+                class="editor editor--qty"
+                type="number" min="0" step="1"
+                [value]="product.quantity"
+                [attr.aria-label]="'Quantity for ' + product.itemName"
+                (change)="onEdit(index, 'quantity', $event)">
+            </div>
+
+            <div class="cell cell--disc">
+              <label class="cell__label" [for]="'product-discount-' + index">Discount</label>
+              <span class="editor-wrap">
+                <app-riyal [decorative]="true" [size]="0.72"></app-riyal>
+                <input
+                  [id]="'product-discount-' + index"
+                  class="editor"
+                  type="number" min="0" step="0.01"
+                  [value]="product.discount"
+                  [attr.aria-label]="'Discount for ' + product.itemName"
+                  (change)="onEdit(index, 'discount', $event)">
+              </span>
+            </div>
+
+            <div class="cell cell--vat">
+              <span class="cell__label">VAT</span>
+              <span class="cell__value cell__value--quiet">{{ product.vatPercentage | number:'1.0-2' }}%</span>
+            </div>
+
+            <div class="cell cell--total">
+              <span class="cell__label">Row total</span>
+              <span class="cell__value cell__value--total"><app-riyal [size]="0.82"></app-riyal>{{ getProductTotal(product) | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="cell cell--act">
+              <ui-icon-button icon="bi-trash3" size="sm" variant="danger" ariaLabel="Remove product" (pressed)="deleteProduct.emit(index)"></ui-icon-button>
+            </div>
+          </li>
+        </ul>
+      </ng-container>
 
       <ng-template #productsEmpty>
         <app-empty-state icon="bi-box-seam" title="No products yet" description="Add an item to start building the order.">
@@ -74,30 +110,58 @@ export interface ProductUpdate {
     </div>
   `,
   styles: [`
-    :host { display: block; min-width: 0; container-type: inline-size; container-name: products-table; }
-    .table-panel { min-width: 0; }
-    .table-errors { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
-    .table-errors p { display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: .78rem; line-height: 1.35; }
-    .item-col { width: 40%; min-width: 200px; }
-    .item-title { display: block; font-weight: 750; color: var(--text-primary); line-height: 1.3; }
-    .secondary-label { display: block; margin-top: 1px; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
-    .item-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
-    .code-label { display: inline-block; padding: 1px 6px; border-radius: var(--radius-xs); background: var(--surface-interactive); color: var(--text-secondary); font-family: var(--font-mono, ui-monospace, monospace); font-size: .74rem; font-weight: 500; }
-    .offer-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: var(--text-xs); font-weight: var(--weight-bold); }
-    .offer-mark img { width: 14px; height: 14px; object-fit: contain; }
-    .numeric-cell { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
-    .total-cell { color: var(--text-primary); font-weight: 800; font-size: 1.02em; }
-    .muted-cell { color: var(--text-muted); text-align: center; }
-    .action-cell { width: 48px; text-align: right; }
-    .currency-editor { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; }
-    .currency-editor app-riyal { color: var(--text-muted); }
-    .table-editor { width: 82px; min-height: var(--control-height-compact); box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: var(--text-sm); text-align: right; font-variant-numeric: tabular-nums; }
-    .table-editor--quantity { width: 64px; text-align: center; }
-    .table-editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
-    @container products-table (max-width: 640px) {
-      .item-col { width: 35%; }
-      .table-editor { width: 68px; }
-      .table-editor--quantity { width: 56px; }
+    :host { display: block; min-width: 0; container-type: inline-size; container-name: products; }
+    .pt { min-width: 0; }
+    .pt__errors { display: flex; flex-direction: column; gap: 5px; margin-bottom: var(--space-3); padding: 10px 12px; border: 1px solid var(--state-danger-border); border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
+    .pt__errors p { display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: .78rem; line-height: 1.35; }
+
+    /* Rows bleed to the hosting panel's edges so a hovered row and its divider
+     * read as one continuous surface instead of a floating inner table. */
+    .pt__head, .prow { display: grid; grid-template-columns: minmax(0, 1fr) 104px 66px 108px 52px 118px 34px; column-gap: var(--space-3); align-items: center; margin-inline: calc(var(--panel-padding) * -1); padding-inline: var(--panel-padding); }
+    .pt__head { padding-bottom: 7px; border-bottom: 1px solid var(--border-strong); color: var(--text-muted); font-size: .67rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+    .pt__head > * { text-align: right; }
+    .pt__head > :first-child { text-align: left; }
+
+    .pt__list { margin: 0; padding: 0; list-style: none; }
+    .prow { padding-block: 9px; border-bottom: 1px solid var(--divider); transition: background var(--transition-fast); }
+    .prow:last-child { border-bottom: 0; }
+    .prow:hover { background: var(--table-row-hover); }
+
+    .prow__id { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+    .prow__seq { flex: 0 0 auto; min-width: 13px; color: var(--text-muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
+    .prow__names { display: flex; flex-direction: column; min-width: 0; }
+    .prow__name { color: var(--text-primary); font-size: .92rem; font-weight: 750; line-height: 1.3; overflow-wrap: anywhere; }
+    .prow__ar { margin-top: 1px; color: var(--text-secondary); font-size: .78rem; line-height: 1.35; }
+    .prow__marks { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: 3px; }
+    .prow__code { color: var(--text-muted); font-family: var(--font-mono); font-size: .7rem; }
+    .prow__offer { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: .7rem; font-weight: var(--weight-bold); }
+    .prow__offer img { width: 13px; height: 13px; object-fit: contain; }
+
+    .cell { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 0; }
+    .cell > .editor, .cell > .editor-wrap { align-self: stretch; }
+    .cell__label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .cell__value { display: inline-flex; align-items: center; gap: 3px; color: var(--text-secondary); font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .cell__value--quiet { color: var(--text-muted); font-size: .8rem; }
+    .cell__value--total { color: var(--text-primary); font-size: 1rem; font-weight: 800; }
+
+    .editor { width: 100%; min-height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: .85rem; text-align: right; font-variant-numeric: tabular-nums; }
+    .editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
+    .editor--qty { padding-inline: 4px; text-align: center; }
+    .editor-wrap { display: flex; align-items: center; gap: 4px; }
+    .editor-wrap app-riyal { flex: 0 0 auto; color: var(--text-muted); }
+
+    @container products (max-width: 780px) {
+      .pt__head { display: none; }
+      .prow { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "id id id id" "unit qty disc vat" "total total total act"; row-gap: 10px; padding-block: 12px; align-items: end; }
+      .prow__id { grid-area: id; }
+      .cell--unit { grid-area: unit; } .cell--qty { grid-area: qty; } .cell--disc { grid-area: disc; }
+      .cell--vat { grid-area: vat; } .cell--total { grid-area: total; } .cell--act { grid-area: act; }
+      .cell { align-items: stretch; }
+      .cell--act { align-items: flex-end; }
+      .cell__label { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; color: var(--text-muted); font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    }
+    @container products (max-width: 470px) {
+      .prow { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "id id" "unit qty" "disc vat" "total act"; }
     }
   `]
 })

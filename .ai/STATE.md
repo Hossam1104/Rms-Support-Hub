@@ -92,24 +92,25 @@ failure. Details are in `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded 2026-08-09 (Order Requests detail/builder/filter UI rework); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
+Recorded 2026-08-10 (Online Orders operational UI redesign); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 53 files / 288 tests passed, 0 skipped |
+| Frontend tests | 53 files / 293 tests passed, 0 skipped |
 | Backend tests | 174 passed, 0 failed, 0 skipped |
-| Release build | 0 warnings, 0 errors |
-| Production initial bundle | 441.57 kB raw / 101.85 kB estimated transfer |
-| Lazy `three-module` chunk | 734.66 kB raw / 153.93 kB estimated transfer |
-| Production-offline initial bundle | 427.26 kB raw / 101.44 kB estimated transfer |
+| Release build | 0 warnings, 0 errors; all Angular budgets clear |
+| Production initial bundle | 453.19 kB raw / 103.66 kB estimated transfer |
+| Lazy `three-module` chunk | 734.66 kB raw / 153.91 kB estimated transfer |
+| Production-offline initial bundle | 438.88 kB raw / 103.08 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
 | Rendered browser pass | Not run; no browser automation tool is available in this environment |
-
-`order-request-details.component.ts` styles exceed the 6 kB Angular budget (7.86 kB, warning only, build still succeeds).
 
 ## Boundaries and deferred scope
 
 - Production is out of bounds: no Production access, SQL, deployment, or state-changing action is authorized. Testing is the default environment.
+- A running local `RmsSupportHub.Api` locks `backend/src/**/bin`, failing
+  `scripts/build.ps1` with MSB3027/MSB3021. Stop it, or pass
+  `--artifacts-path <temp>` to `dotnet test`/`dotnet build`. Not a build defect.
 - `ConnectionStrings:UpcEcommerceTest` is not configured in the local Testing
   environment, so Testing-only UPC order and order-request calls return HTTP
   500. This is deferred environment setup, not an application defect.

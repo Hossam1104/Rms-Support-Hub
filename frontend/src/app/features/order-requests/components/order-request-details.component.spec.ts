@@ -139,33 +139,60 @@ describe('OrderRequestDetailsComponent', () => {
     expect(callout.textContent).toContain('does not match header net');
   });
 
-  it('renders the Order Info section as two grouped blocks with the expected field values', () => {
+  it('promotes branch, customer, delivery and payment method to the primary Order Info facts', () => {
     mockStore.selected.set(detailResponse());
     const fixture = createFixture();
 
-    const groups = fixture.nativeElement.querySelectorAll('.info-group');
-    expect(groups.length).toBe(2);
-
-    const titles = Array.from(groups as NodeListOf<HTMLElement>).map(g => g.querySelector('.info-group__title')?.textContent?.trim());
-    expect(titles).toEqual(['Order identity', 'Customer & fulfillment']);
-
-    const identityText = (groups[0] as HTMLElement).textContent as string;
-    expect(identityText).toContain('ORD-1');
-    expect(identityText).toContain('Succeeded');
-
-    const fulfillmentText = (groups[1] as HTMLElement).textContent as string;
-    expect(fulfillmentText).toContain('101');
-    expect(fulfillmentText).toContain('Main branch');
-    expect(fulfillmentText).toContain('0500000000');
-    expect(fulfillmentText).toContain('123 Street');
+    const primary = fixture.nativeElement.querySelector('.oi-primary') as HTMLElement;
+    const primaryText = primary.textContent as string;
+    expect(primaryText).toContain('101');
+    expect(primaryText).toContain('Main branch');
+    expect(primaryText).toContain('0500000000');
+    expect(primaryText).toContain('123 Street');
+    expect(primaryText).toContain('Card');
   });
 
-  it('omits the Customer & fulfillment block and shows the no-header empty state when there is no order header', () => {
+  it('keeps identifiers, status, dates and routing context as secondary Order Info metadata', () => {
+    mockStore.selected.set(detailResponse());
+    const fixture = createFixture();
+
+    const metaText = (fixture.nativeElement.querySelector('.oi-meta') as HTMLElement).textContent as string;
+    expect(metaText).toContain('501');
+    expect(metaText).toContain('ORD-1');
+    expect(metaText).toContain('Succeeded');
+    expect(metaText).toContain('UPC Ecommerce');
+    expect(metaText).toContain('UPC Testing');
+  });
+
+  it('renders the financial summary with the header totals and the net figure', () => {
+    mockStore.selected.set(detailResponse());
+    const fixture = createFixture();
+
+    const values = Array.from(fixture.nativeElement.querySelectorAll('.fin-bar .fin') as NodeListOf<HTMLElement>)
+      .map(fin => (fin.textContent as string).replace(/\s+/g, ' ').trim());
+    expect(values.length).toBe(4);
+    expect(values[0]).toContain('115.00');
+    expect(values[1]).toContain('10.00');
+    expect(values[2]).toContain('13.50');
+    expect(values[3]).toContain('103.50');
+    expect(fixture.nativeElement.querySelector('.fin--net')).not.toBeNull();
+  });
+
+  it('omits the primary fact block and shows the no-header empty state when there is no order header', () => {
     mockStore.selected.set(detailResponse({ header: null }));
     const fixture = createFixture();
 
-    const groups = fixture.nativeElement.querySelectorAll('.info-group');
-    expect(groups.length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.oi-primary')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.fin-bar')).toBeNull();
     expect((fixture.nativeElement.textContent as string)).toContain('No order header recorded');
+    // The request's own identifiers stay visible even without a header row.
+    expect((fixture.nativeElement.querySelector('.oi-meta') as HTMLElement).textContent).toContain('ORD-1');
+  });
+
+  it('hides the order note and parent order rows entirely when the header has neither', () => {
+    mockStore.selected.set(detailResponse());
+    const fixture = createFixture();
+
+    expect(fixture.nativeElement.querySelector('.oi-notes')).toBeNull();
   });
 });

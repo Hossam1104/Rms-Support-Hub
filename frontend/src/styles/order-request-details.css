@@ -1,83 +1,158 @@
-/* Order Request Details surface styling */
+/* Order Request Details surface styling.
+ *
+ * One visual boundary per section: `ui-section` owns the panel, and the content
+ * inside it uses hairlines, quiet strips and column alignment instead of nested
+ * bordered cards. Numeric columns stay shrink-to-fit so financial data reads as
+ * a compact block regardless of how wide the viewport is. */
+
 .order-details-page { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* ---- Page head ---- */
 .detail-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
 .detail-heading { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .heading-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.eyebrow { margin: 0 0 3px; }
-h1.order-number { margin: 0; color: var(--text-primary); font-size: clamp(1.35rem, 3vw, 2rem); }
-.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-.header-total { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); font-size: 1rem; font-weight: 750; }
-.action-btn, .attempt-row, .lineage-node { cursor: pointer; font: inherit; }
+.eyebrow { margin: 0 0 2px; }
+h1.order-number { margin: 0; color: var(--text-primary); font-size: clamp(1.3rem, 2.6vw, 1.85rem); letter-spacing: .01em; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
+.header-total { display: inline-flex; align-items: center; gap: 5px; margin-right: var(--space-2); color: var(--text-primary); font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.action-btn, .lineage-node, .link-node, .tl__btn { cursor: pointer; font: inherit; }
 .action-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font-size: .82rem; font-weight: 650; }
 .action-btn.brand { border: 0; background: var(--grad-brand); color: var(--on-gradient); }
 .action-btn.danger { border: 0; background: var(--grad-danger); color: var(--on-gradient); }
 .action-btn.secondary { background: var(--surface-interactive); }
 .action-btn:disabled { cursor: not-allowed; opacity: .45; }
-.detail-context { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 11px 14px; border: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: .78rem; }
-.blocked-hint { color: var(--state-warning-fg); }
+
+/* The context strip is the page head's own footer line, not a separate card. */
+.detail-context { display: flex; align-items: center; gap: 5px 18px; flex-wrap: wrap; padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: .76rem; }
+.blocked-hint { color: var(--state-warning-fg); font-weight: 650; }
 .detail-sections { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* ---- Shared primitives ---- */
 .amount, .transaction-amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-muted); }
-.small { display: block; font-size: .72rem; }
-.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.eyebrow, .detail-context strong, .field dt, .field-label, .totals-grid span { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-.field dd { margin: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: .86rem; }
-.info-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
-.info-group { min-width: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
-.info-group__title { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.info-group__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin: 0; }
-.amber-callout { display: flex; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .84rem; }
-.subsection-title { margin: var(--space-5) 0 var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-.subsection-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-.totals-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
-.totals-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; }
-.totals-grid strong { color: var(--text-primary); font-size: .92rem; font-variant-numeric: tabular-nums; }
-.totals-grid .net strong { color: var(--accent); font-size: 1.05rem; }
-.consistency-check { display: flex; align-items: center; gap: 7px; margin-top: 14px; color: var(--state-success-fg); font-size: .78rem; }
-.consistency-check.mismatch { color: var(--state-warning-fg); }
+.is-zero { color: var(--text-muted); }
+.quiet-note { display: inline-flex; align-items: center; gap: 6px; margin: var(--space-3) 0 0; color: var(--text-muted); font-size: .8rem; }
+.link-node { padding: 0; border: 0; background: none; color: var(--text-accent); font-size: .84rem; text-decoration: underline; text-underline-offset: 2px; }
+.eyebrow, .detail-context strong, .oi-fact__label, .oi-notes__label, .fin__label, .inv__label { color: var(--text-muted); font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.subsection-title { margin: var(--space-4) 0 0; padding-top: var(--space-3); border-top: 1px solid var(--divider); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+
+/* ---- Items ---- */
 .items-table { --table-min-width: 100%; }
-.items-table .item-col { width: 38%; min-width: 220px; }
-.item-identity { display: block; overflow-wrap: anywhere; color: var(--text-primary); font-weight: 700; line-height: 1.3; }
-.item-sub-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
-.material-num { display: inline-block; padding: 1px 5px; border-radius: var(--radius-xs); background: var(--surface-interactive); color: var(--text-secondary); font-size: .74rem; font-weight: 500; }
-.commerce-offer-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: .74rem; font-weight: var(--weight-bold); }
-.commerce-offer-mark img { width: 14px; height: 14px; object-fit: contain; }
+/* `width: 1%` + nowrap collapses every financial column to its content width so
+ * the item identity absorbs all remaining space instead of the numbers spreading. */
+.items-table .num-col { width: 1%; white-space: nowrap; }
+.items-table .qty-cell { color: var(--text-secondary); font-weight: 650; }
+.item-identity { display: block; overflow-wrap: anywhere; color: var(--text-primary); font-size: .9rem; font-weight: 700; line-height: 1.3; }
+.item-sub-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: 1px; }
+.material-num { color: var(--text-muted); font-size: .71rem; font-weight: 500; }
+.commerce-offer-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: .71rem; font-weight: var(--weight-bold); }
+.commerce-offer-mark img { width: 13px; height: 13px; object-fit: contain; }
+.items-table .amount { color: var(--text-secondary); }
 .items-table .total-amount { color: var(--text-primary); font-weight: 750; }
-.footer-totals-title { vertical-align: middle; text-align: left; padding-left: 12px; color: var(--text-muted); font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.detail-table-footer th { color: var(--text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; vertical-align: bottom; }
-.footer-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.footer-amount__label { color: var(--text-muted); font-size: .64rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-.footer-amount__value { color: var(--text-primary); font-size: .88rem; font-weight: 750; font-variant-numeric: tabular-nums; }
-.footer-amount--strong .footer-amount__value { color: var(--accent); font-size: 1.05rem; font-weight: 850; }
-.mismatch-callout { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 14px; border: 1px solid var(--state-warning-border); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .78rem; font-weight: 650; }
-.mismatch-callout.is-ok { border-color: var(--state-success-border); background: var(--state-success-bg); color: var(--state-success-fg); }
-.detail-context, .invoice-card, .totals-grid > div, .transaction-card, .outcome-banner { border-radius: var(--radius-md); background: var(--surface-raised); }
-.invoice-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); }
-.attempt-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); font-size: .8rem; text-align: left; }
-.attempt-row:hover { background: var(--surface-hover); }
-.attempt-row.current { border-color: var(--accent); }
-.outcome-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--text-muted); }
+.vat-rate { margin-left: 5px; color: var(--text-muted); font-size: .72rem; }
+.detail-table-footer .footer-totals-title { color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+.detail-table-footer .amount { color: var(--text-secondary); font-weight: 700; }
+.detail-table-footer .footer-total { color: var(--accent); font-size: 1.05rem; font-weight: 850; }
+/* A pill, not a banner: the matching state should read as a quiet confirmation. */
+.mismatch-callout { display: inline-flex; align-items: center; gap: 7px; margin: var(--space-3) 0 0; padding: 5px 12px; border-radius: var(--radius-pill); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .76rem; font-weight: 700; }
+.mismatch-callout.is-ok { background: var(--state-success-bg); color: var(--state-success-fg); font-weight: 600; }
+
+/* ---- Order Info: primary facts, secondary metadata, tertiary notes ---- */
+/* The fact grid is its own query container, so the delivery address widens with
+ * the panel rather than with the viewport (the sidebar changes the panel width
+ * without changing the viewport). */
+.oi-primary { container-type: inline-size; container-name: oiprimary; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3) var(--space-5); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
+@container oiprimary (min-width: 620px) { .oi-fact--wide { grid-column: span 2; } }
+.oi-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.oi-fact__value { color: var(--text-primary); font-size: 1rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.oi-fact__value--prose { font-size: .86rem; font-weight: 500; line-height: 1.4; }
+.oi-fact__sub { color: var(--text-secondary); font-size: .78rem; line-height: 1.3; }
+.oi-meta { display: flex; align-items: baseline; gap: var(--space-2) var(--space-5); flex-wrap: wrap; margin: var(--space-3) 0 0; padding: 0; }
+.oi-meta > div { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.oi-meta dt { color: var(--text-muted); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.oi-meta dd { margin: 0; overflow-wrap: anywhere; color: var(--text-secondary); font-size: .8rem; }
+.oi-notes { display: flex; flex-direction: column; gap: 5px; margin-top: var(--space-3); }
+.oi-notes p { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; margin: 0; color: var(--text-primary); font-size: .84rem; }
+.amber-callout { display: flex; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .84rem; }
+
+/* ---- Financial summary: one strip, Net carrying the emphasis ---- */
+/* `auto-fit` plus 1px gaps over the border colour keeps the segment separators
+ * correct at any wrap count, so no breakpoint owns this strip. */
+.fin-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 1px; overflow: hidden; margin-top: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--border-subtle); }
+.fin { display: flex; flex-direction: column; gap: 3px; padding: 10px var(--space-4); background: var(--surface-raised); }
+.fin__value { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fin:first-child .fin__value { color: var(--text-primary); font-size: 1.02rem; }
+.fin__value.is-zero { color: var(--text-muted); font-weight: 600; }
+.fin--net { background: var(--surface-selected); }
+.fin--net .fin__label { color: var(--text-accent); }
+.fin--net .fin__value { color: var(--text-primary); font-size: 1.32rem; font-weight: 850; }
+.consistency-check { display: flex; align-items: center; gap: 6px; margin: var(--space-3) 0 0; color: var(--state-success-fg); font-size: .74rem; }
+.consistency-check.mismatch { color: var(--state-warning-fg); font-weight: 700; }
+
+/* ---- Invoice ---- */
+.inv { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); flex-wrap: wrap; margin-top: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
+.inv__identity { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; min-width: 0; }
+.inv__barcode { overflow-wrap: anywhere; color: var(--text-primary); font-size: .95rem; font-weight: 700; letter-spacing: .02em; }
+.inv__facts { display: flex; align-items: flex-start; gap: var(--space-5); flex-wrap: wrap; }
+.inv__fact { display: flex; flex-direction: column; gap: 2px; }
+.inv__value { color: var(--text-secondary); font-size: .84rem; }
+.inv__value--num { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); font-size: .95rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+
+/* ---- Attempts timeline ---- */
+.tl { display: flex; flex-direction: column; margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.tl__item { position: relative; }
+.tl__item:not(:last-child)::before { content: ''; position: absolute; top: 22px; bottom: -4px; left: 10px; width: 1px; background: var(--border-strong); }
+.tl__btn { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: 6px 8px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-primary); font-size: .82rem; text-align: left; }
+.tl__btn:hover { background: var(--surface-hover); }
+.tl__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tl__dot { width: 9px; height: 9px; flex: 0 0 9px; margin-left: 2px; border-radius: 50%; background: var(--text-muted); box-shadow: 0 0 0 3px var(--surface-panel); }
 .dot-success { background: var(--state-success-fg); }
 .dot-danger { background: var(--state-danger-fg); }
-.lineage-trail { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.lineage-node { padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); font-size: .8rem; }
-.lineage-node.current { border: 0; background: var(--grad-brand); color: var(--on-gradient); font-weight: 700; }
-.transaction-list { display: flex; flex-direction: column; gap: 10px; }
-.transaction-card { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); }
-.transaction-main { display: flex; flex-direction: column; gap: 3px; min-width: 150px; }
+.tl__when { color: var(--text-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
+.tl__what { color: var(--text-muted); font-size: .76rem; }
+.tl__flag { color: var(--state-danger-fg); font-size: .72rem; font-weight: 700; }
+.tl__btn.is-current .tl__what { color: var(--text-accent); font-weight: 700; }
+
+/* ---- Lineage ---- */
+.lineage-trail { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3); }
+.lineage-node { padding: 4px 11px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); font-family: var(--font-mono); font-size: .76rem; }
+.lineage-node .muted { font-family: var(--font-main); }
+.lineage-node.current { border-color: transparent; background: var(--accent-soft); color: var(--text-accent); font-weight: 700; }
+.lineage-arrow { color: var(--text-muted); font-size: .8rem; }
+.lineage-trail .quiet-note { margin: 0; }
+
+/* ---- Transactions ---- */
+.transaction-list { display: flex; flex-direction: column; }
+.transaction-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--space-4); padding: 10px var(--space-2); border-bottom: 1px solid var(--divider); }
+.transaction-card:last-child { border-bottom: 0; }
+.transaction-main { grid-column: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .transaction-main span, .transaction-meta { color: var(--text-secondary); font-size: .78rem; }
-.transaction-meta { display: flex; flex: 1; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
-.outcome-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 14px; font-weight: 700; }
+.transaction-meta { grid-column: 1; display: flex; align-items: center; gap: 3px 14px; flex-wrap: wrap; }
+.transaction-amount { grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); font-size: 1.05rem; font-weight: 800; }
+.commerce-payment-method { display: inline-flex; align-items: center; gap: var(--space-2); }
+.commerce-payment-method img { width: 26px; height: 18px; object-fit: contain; }
+.commerce-payment-method strong { color: var(--text-primary); font-size: .92rem; font-weight: 750; }
+
+/* ---- Response diagnostics and page states ---- */
+.outcome-banner { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-3); padding: 9px 13px; border-radius: var(--radius-md); background: var(--surface-raised); font-size: .84rem; font-weight: 700; }
 .outcome-banner.success { background: var(--state-success-bg); color: var(--state-success-fg); }
 .outcome-banner.danger { background: var(--state-danger-bg); color: var(--state-danger-fg); }
-.exception-card { margin-bottom: 14px; padding: 14px 16px; border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
+.exception-card { margin-bottom: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--state-danger-bg); color: var(--state-danger-fg); }
 .exception-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.exception-text { margin: 0; color: var(--state-danger-fg); font-family: 'JetBrains Mono', monospace; font-size: .8rem; white-space: pre-wrap; word-break: break-word; }
+.exception-text { margin: 0; color: var(--state-danger-fg); font-family: var(--font-mono); font-size: .8rem; white-space: pre-wrap; word-break: break-word; }
 .state-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--panel-radius); background: var(--surface-panel); color: var(--text-secondary); text-align: center; }
 .state-panel > i { color: var(--state-warning-fg); font-size: 2rem; }
 .state-panel h1 { margin: 0; color: var(--text-primary); font-size: 1.2rem; }
 .state-panel p { max-width: 520px; margin: 0 0 8px; }
 .state-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .detail-skeleton { display: flex; flex-direction: column; gap: var(--space-4); }
-@media (max-width: 720px) { .totals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .transaction-card { align-items: flex-start; flex-direction: column; gap: 8px; } .transaction-amount { align-self: flex-end; } }
-@media (max-width: 520px) { .header-actions { justify-content: flex-start; } }
+
+/* ---- Narrow layouts ----
+ * The fact grid, the financial strip and the invoice row are already
+ * width-driven; only the page head and the transaction row need a breakpoint. */
+@media (max-width: 560px) {
+  .transaction-card { grid-template-columns: minmax(0, 1fr); }
+  .transaction-amount { grid-column: 1; grid-row: auto; margin-top: 4px; }
+  .header-actions { justify-content: flex-start; }
+  .oi-meta { gap: var(--space-2) var(--space-4); }
+}

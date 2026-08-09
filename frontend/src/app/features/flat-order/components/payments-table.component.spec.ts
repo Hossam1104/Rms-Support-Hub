@@ -54,7 +54,7 @@ describe('PaymentsTableComponent', () => {
     expect(deleted).toEqual([0]);
   });
 
-  it('shows the payment total in the footer, aligned with the Amount column', () => {
+  it('shows the payment total in the summary strip below the rows', () => {
     const fixture = TestBed.createComponent(PaymentsTableComponent);
     fixture.componentInstance.payments = [
       { paymentMethod: 'Visa', paymentStatus: 'done_payment', paymentAmount: 100 },
@@ -62,6 +62,18 @@ describe('PaymentsTableComponent', () => {
     ];
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('tfoot .total-cell')?.textContent).toContain('125.50');
+    expect(fixture.nativeElement.querySelector('.py__total-value')?.textContent).toContain('125.50');
+  });
+
+  it('keeps the reference and metadata inside the payment identity block rather than a dedicated column', () => {
+    const fixture = TestBed.createComponent(PaymentsTableComponent);
+    fixture.componentInstance.payments = [
+      { paymentMethod: 'Visa', paymentStatus: 'done_payment', paymentAmount: 100, transactionId: 'TX-9', cardName: 'Visa' }
+    ];
+    fixture.detectChanges();
+
+    const identity = fixture.nativeElement.querySelector('.pyrow__id') as HTMLElement;
+    expect(identity.querySelector('.reference-label')?.textContent?.trim()).toBe('TX-9');
+    expect(identity.querySelector('.metadata-label')?.textContent?.trim()).toBe('Visa');
   });
 });

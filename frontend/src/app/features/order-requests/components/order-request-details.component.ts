@@ -77,7 +77,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
           </div>
           <div class="header-actions">
             <span class="header-total" aria-label="Order net total">
-              {{ detail.request.netTotal | number:'1.2-2' }} <app-riyal [size]="0.9"></app-riyal>
+              <app-riyal [size]="0.9"></app-riyal>{{ detail.request.netTotal | number:'1.2-2' }}
             </span>
             <button
               type="button"
@@ -115,11 +115,11 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                   <thead>
                     <tr>
                       <th scope="col" class="item-col">Item / Material</th>
-                      <th scope="col" class="align-right">Qty</th>
-                      <th scope="col" class="align-right">Unit price <span class="sr-only">Saudi Riyal</span></th>
-                      <th scope="col" class="align-right">Discount <span class="sr-only">Saudi Riyal</span></th>
-                      <th scope="col" class="align-right">VAT <span class="sr-only">Saudi Riyal</span></th>
-                      <th scope="col" class="align-right">Total <span class="sr-only">Saudi Riyal</span></th>
+                      <th scope="col" class="align-right num-col">Qty</th>
+                      <th scope="col" class="align-right num-col">Unit <span class="sr-only">price, Saudi Riyal</span></th>
+                      <th scope="col" class="align-right num-col">Disc <span class="sr-only">discount, Saudi Riyal</span></th>
+                      <th scope="col" class="align-right num-col">VAT <span class="sr-only">Saudi Riyal</span></th>
+                      <th scope="col" class="align-right num-col">Total <span class="sr-only">Saudi Riyal</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -128,40 +128,33 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                         <td class="item-col">
                           <span class="item-identity">{{ line.itemName || '—' }}</span>
                           <div class="item-sub-row">
-                            <span class="material-num mono" *ngIf="line.materialNumber" [title]="'18-digit: ' + materialViews(line.materialNumber).full">#{{ materialViews(line.materialNumber).short || '—' }}</span>
+                            <span class="material-num mono" *ngIf="line.materialNumber" [title]="'18-digit: ' + materialViews(line.materialNumber).full">Material {{ materialViews(line.materialNumber).short || '—' }}</span>
                             <span class="commerce-offer-mark" *ngIf="line.offerMessage">
                               <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
                               <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
                             </span>
                           </div>
                         </td>
-                        <td class="align-right">{{ line.quantity }}</td>
-                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</td>
-                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</td>
-                        <td class="align-right amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.itemVat | number:'1.2-2' }} <span class="muted">({{ line.itemVatPercentage }}%)</span></td>
-                        <td class="align-right amount total-amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</td>
+                        <td class="align-right num-col qty-cell">{{ line.quantity }}</td>
+                        <td class="align-right num-col amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</td>
+                        <td class="align-right num-col amount" [class.is-zero]="!line.totalDiscount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</td>
+                        <td class="align-right num-col amount" [class.is-zero]="!line.itemVat">
+                          <app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.itemVat | number:'1.2-2' }}<span class="vat-rate">{{ line.itemVatPercentage }}%</span>
+                        </td>
+                        <td class="align-right num-col amount total-amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</td>
                       </tr>
                     }
                   </tbody>
                   <tfoot class="detail-table-footer">
                     <tr>
                       <th scope="row" colspan="3" class="footer-totals-title">Totals</th>
-                      <td class="align-right amount footer-amount">
-                        <span class="footer-amount__label">Discount total</span>
-                        <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</span>
-                      </td>
-                      <td class="align-right amount footer-amount">
-                        <span class="footer-amount__label">VAT total</span>
-                        <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</span>
-                      </td>
-                      <td class="align-right amount footer-amount footer-amount--strong">
-                        <span class="footer-amount__label">Items total</span>
-                        <span class="footer-amount__value"><app-riyal [decorative]="true" [size]="0.9"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</span>
-                      </td>
+                      <td class="align-right num-col amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</td>
+                      <td class="align-right num-col amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</td>
+                      <td class="align-right num-col amount footer-total"><app-riyal [decorative]="true" [size]="0.85"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</td>
                     </tr>
                   </tfoot>
               </ui-table>
-              <div class="mismatch-callout" [class.is-ok]="lineItemsConsistent(detail)" role="status">
+              <p class="mismatch-callout" [class.is-ok]="lineItemsConsistent(detail)" role="status">
                 <i class="bi" [class.bi-check-circle-fill]="lineItemsConsistent(detail)" [class.bi-exclamation-triangle-fill]="!lineItemsConsistent(detail)" aria-hidden="true"></i>
                 @if (lineItemsConsistent(detail)) {
                   <span>Items total matches header total</span>
@@ -171,109 +164,125 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
                     does not match header net {{ detail.request.header?.netTotal ?? 0 | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
                   </span>
                 }
-              </div>
+              </p>
             } @else {
               <app-empty-state icon="bi-box" title="No line items recorded"></app-empty-state>
             }
           </ui-section>
 
           <ui-section title="Order Info" [collapsible]="false">
-            <div class="info-groups">
-              <div class="info-group">
-                <h3 class="info-group__title">Order identity</h3>
-                <dl class="info-group__grid">
-                  <div class="field"><dt>Request ID</dt><dd class="mono">{{ detail.request.id }}</dd></div>
-                  <div class="field"><dt>Order/request number</dt><dd class="mono">{{ detail.request.orderNumber }}</dd></div>
-                  <div class="field"><dt>Module</dt><dd>{{ moduleService.activeModule()?.label || store.moduleKey() }}</dd></div>
-                  <div class="field"><dt>Environment</dt><dd>{{ store.envKey() || 'Default environment' }}</dd></div>
-                  @if (detail.request.header; as h) {
-                    <div class="field"><dt>Status</dt><dd>{{ h.orderStatusLabel }}</dd></div>
-                    <div class="field"><dt>Order date</dt><dd>{{ h.orderDate | date:'medium' }}</dd></div>
-                  }
-                  <div class="field"><dt>Created</dt><dd>{{ detail.request.orderDate | date:'medium' }}</dd></div>
-                </dl>
-              </div>
-
-              @if (detail.request.header; as h) {
-                <div class="info-group">
-                  <h3 class="info-group__title">Customer &amp; fulfillment</h3>
-                  <dl class="info-group__grid">
-                    <div class="field"><dt>Branch</dt><dd>{{ h.branchCode || '—' }} <span class="muted" *ngIf="h.branchName">({{ h.branchName }})</span></dd></div>
-                    <div class="field"><dt>Customer mobile</dt><dd>{{ h.consumerMobile || '—' }}</dd></div>
-                    <div class="field"><dt>Delivery address</dt><dd>{{ h.address || '—' }}</dd></div>
-                    <div class="field"><dt>Payment method</dt><dd>{{ h.orderPaymentMethod || '—' }}</dd></div>
-                    <div class="field"><dt>Order note</dt><dd>{{ h.orderNote || '—' }}</dd></div>
-                    <div class="field"><dt>Parent order</dt><dd>{{ h.parentOrderNumber || '—' }}</dd></div>
-                  </dl>
+            @if (detail.request.header; as h) {
+              <div class="oi-primary" aria-label="Customer and fulfillment">
+                <div class="oi-fact">
+                  <span class="oi-fact__label">Branch</span>
+                  <span class="oi-fact__value">{{ h.branchCode || '—' }}</span>
+                  <span class="oi-fact__sub" *ngIf="h.branchName">{{ h.branchName }}</span>
                 </div>
+                <div class="oi-fact">
+                  <span class="oi-fact__label">Customer mobile</span>
+                  <span class="oi-fact__value mono">{{ h.consumerMobile || '—' }}</span>
+                </div>
+                <div class="oi-fact oi-fact--wide">
+                  <span class="oi-fact__label">Delivery address</span>
+                  <span class="oi-fact__value oi-fact__value--prose">{{ h.address || '—' }}</span>
+                </div>
+                <div class="oi-fact">
+                  <span class="oi-fact__label">Payment method</span>
+                  <span class="oi-fact__value">{{ h.orderPaymentMethod || '—' }}</span>
+                </div>
+              </div>
+            }
+
+            <dl class="oi-meta">
+              <div><dt>Request ID</dt><dd class="mono">{{ detail.request.id }}</dd></div>
+              <div><dt>Order number</dt><dd class="mono">{{ detail.request.orderNumber }}</dd></div>
+              @if (detail.request.header; as h) {
+                <div><dt>Status</dt><dd>{{ h.orderStatusLabel }}</dd></div>
+                <div><dt>Order date</dt><dd>{{ h.orderDate | date:'MMM d, y, h:mm a' }}</dd></div>
               }
-            </div>
+              <div><dt>Received</dt><dd>{{ detail.request.orderDate | date:'MMM d, y, h:mm a' }}</dd></div>
+              <div><dt>Module</dt><dd>{{ moduleService.activeModule()?.label || store.moduleKey() }}</dd></div>
+              <div><dt>Environment</dt><dd>{{ store.envKey() || 'Default environment' }}</dd></div>
+            </dl>
 
             @if (detail.request.header; as h) {
+              <div class="oi-notes" *ngIf="h.orderNote || h.parentOrderNumber">
+                <p *ngIf="h.orderNote"><span class="oi-notes__label">Order note</span>{{ h.orderNote }}</p>
+                <p *ngIf="h.parentOrderNumber"><span class="oi-notes__label">Parent order</span><button type="button" class="link-node mono" (click)="viewByOrderNumber(h.parentOrderNumber!)">{{ h.parentOrderNumber }}</button></p>
+              </div>
+
               <div class="amber-callout" *ngIf="h.rejectionMessage" role="note">
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
                 <div><strong>Rejection message:</strong> {{ h.rejectionMessage }}</div>
               </div>
 
-              <h2 class="subsection-title">Financial</h2>
-              <div class="totals-grid" aria-label="Order totals">
-                <div><span>Gross</span><strong>{{ h.grossTotal | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
-                <div><span>Discount</span><strong>{{ h.totalDiscount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
-                <div><span>VAT</span><strong>{{ h.totalVat | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
-                <div class="net"><span>Net</span><strong>{{ h.netTotal | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></strong></div>
+              <h2 class="subsection-title">Financial summary</h2>
+              <div class="fin-bar" aria-label="Order totals">
+                <div class="fin"><span class="fin__label">Gross</span><span class="fin__value"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ h.grossTotal | number:'1.2-2' }}</span></div>
+                <div class="fin"><span class="fin__label">Discount</span><span class="fin__value" [class.is-zero]="!h.totalDiscount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ h.totalDiscount | number:'1.2-2' }}</span></div>
+                <div class="fin"><span class="fin__label">VAT</span><span class="fin__value" [class.is-zero]="!h.totalVat"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ h.totalVat | number:'1.2-2' }}</span></div>
+                <div class="fin fin--net"><span class="fin__label">Net</span><span class="fin__value"><app-riyal [size]="0.9"></app-riyal>{{ h.netTotal | number:'1.2-2' }}</span></div>
               </div>
 
-              <div class="consistency-check" [class.mismatch]="!totalsConsistent(detail)">
+              <p class="consistency-check" [class.mismatch]="!totalsConsistent(detail)">
                 <i class="bi" [class.bi-check-circle-fill]="totalsConsistent(detail)" [class.bi-exclamation-triangle-fill]="!totalsConsistent(detail)" aria-hidden="true"></i>
                 <span>
-                  OrderRequests: {{ detail.request.netTotal | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
-                  · Header: {{ h.netTotal | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
-                  · Invoice: {{ detail.request.invoice?.netAmount != null ? (detail.request.invoice!.netAmount | number:'1.2-2') : 'n/a' }}<span *ngIf="detail.request.invoice?.netAmount != null"> <app-riyal [decorative]="true" [size]="0.75"></app-riyal></span>
+                  Request <app-riyal [decorative]="true" [size]="0.72"></app-riyal>{{ detail.request.netTotal | number:'1.2-2' }}
+                  · Header <app-riyal [decorative]="true" [size]="0.72"></app-riyal>{{ h.netTotal | number:'1.2-2' }}
+                  · Invoice <span *ngIf="detail.request.invoice?.netAmount != null; else noInvoiceNet"><app-riyal [decorative]="true" [size]="0.72"></app-riyal>{{ detail.request.invoice!.netAmount | number:'1.2-2' }}</span>
                 </span>
-              </div>
+              </p>
             } @else {
               <app-empty-state icon="bi-file-earmark-x" title="No order header recorded" description="This request has no RequestOrderHeaders row. The stored request and response remain available below."></app-empty-state>
             }
 
             <h2 class="subsection-title">Invoice</h2>
-            <div class="invoice-card" *ngIf="detail.request.invoice as invoice; else noInvoice">
-              <div class="field"><span class="field-label">Barcode</span><span class="mono">{{ invoice.barcode || '—' }} <app-copy-button *ngIf="invoice.barcode" [value]="invoice.barcode" label="Copy invoice barcode"></app-copy-button></span></div>
-              <div class="field"><span class="field-label">Close date</span><span>{{ invoice.closeDateLocalTime ? (invoice.closeDateLocalTime | date:'medium') : '—' }}</span></div>
-              <div class="field"><span class="field-label">Net</span><span *ngIf="invoice.netAmount != null; else noInvoiceNet">{{ invoice.netAmount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></span></div>
-              <div class="field"><span class="field-label">Paid amount</span><span *ngIf="invoice.paidAmount != null; else noPaidAmount">{{ invoice.paidAmount | number:'1.2-2' }} <app-riyal [size]="0.8"></app-riyal></span></div>
+            <div class="inv" *ngIf="detail.request.invoice as invoice; else noInvoice">
+              <div class="inv__identity">
+                <span class="inv__label">Barcode</span>
+                <span class="inv__barcode mono">{{ invoice.barcode || '—' }}</span>
+                <app-copy-button *ngIf="invoice.barcode" [value]="invoice.barcode" label="Copy invoice barcode"></app-copy-button>
+              </div>
+              <div class="inv__facts">
+                <div class="inv__fact"><span class="inv__label">Closed</span><span class="inv__value">{{ invoice.closeDateLocalTime ? (invoice.closeDateLocalTime | date:'MMM d, y, h:mm a') : '—' }}</span></div>
+                <div class="inv__fact"><span class="inv__label">Net</span><span class="inv__value inv__value--num" *ngIf="invoice.netAmount != null; else noInvoiceNet"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ invoice.netAmount | number:'1.2-2' }}</span></div>
+                <div class="inv__fact"><span class="inv__label">Paid</span><span class="inv__value inv__value--num" *ngIf="invoice.paidAmount != null; else noPaidAmount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ invoice.paidAmount | number:'1.2-2' }}</span></div>
+              </div>
             </div>
-            <ng-template #noInvoice><app-empty-state icon="bi-receipt" title="Not invoiced yet"></app-empty-state></ng-template>
+            <ng-template #noInvoice><p class="quiet-note"><i class="bi bi-receipt" aria-hidden="true"></i> Not invoiced yet.</p></ng-template>
             <ng-template #noInvoiceNet>—</ng-template>
             <ng-template #noPaidAmount>—</ng-template>
 
-            <h2 class="subsection-title">Attempts timeline</h2>
+            <h2 class="subsection-title">Attempts</h2>
             @if (detail.attempts.length > 0) {
-              <div class="attempts-timeline">
+              <ol class="tl">
                 @for (attempt of detail.attempts; track attempt.id) {
-                  <button type="button" class="attempt-row" [class.current]="attempt.id === detail.request.id" (click)="viewAttempt(attempt.id)">
-                    <span class="outcome-dot" [class.dot-success]="attempt.isSucceeded === true" [class.dot-danger]="attempt.isSucceeded === false" aria-hidden="true"></span>
-                    <span>{{ attempt.orderDate | date:'short' }}</span>
-                    <span class="muted">{{ attempt.id === detail.request.id ? 'This attempt' : 'Request #' + attempt.id }}</span>
-                    <span class="muted" *ngIf="attempt.hasException">has exception</span>
-                  </button>
+                  <li class="tl__item">
+                    <button type="button" class="tl__btn" [class.is-current]="attempt.id === detail.request.id" (click)="viewAttempt(attempt.id)">
+                      <span class="tl__dot" [class.dot-success]="attempt.isSucceeded === true" [class.dot-danger]="attempt.isSucceeded === false" aria-hidden="true"></span>
+                      <span class="tl__when">{{ attempt.orderDate | date:'MMM d, y, h:mm a' }}</span>
+                      <span class="tl__what">{{ attempt.id === detail.request.id ? 'This attempt' : 'Request #' + attempt.id }}</span>
+                      <span class="tl__flag" *ngIf="attempt.hasException">exception</span>
+                    </button>
+                  </li>
                 }
-              </div>
+              </ol>
             } @else {
-              <p class="muted">No other attempts are recorded for this order number.</p>
+              <p class="quiet-note">No other attempts are recorded for this order number.</p>
             }
 
             <h2 class="subsection-title">Order lineage</h2>
             <div class="lineage-trail">
-              <button type="button" class="lineage-node" *ngIf="detail.lineage.parent as parent" (click)="viewByOrderNumber(parent.orderNumber)">{{ parent.orderNumber }} <span class="muted">(parent)</span></button>
-              <span *ngIf="detail.lineage.parent" aria-hidden="true">→</span>
+              <button type="button" class="lineage-node" *ngIf="detail.lineage.parent as parent" (click)="viewByOrderNumber(parent.orderNumber)">{{ parent.orderNumber }} <span class="muted">parent</span></button>
+              <span class="lineage-arrow" *ngIf="detail.lineage.parent" aria-hidden="true">→</span>
               <span class="lineage-node current">{{ detail.request.orderNumber }}</span>
               @if (detail.lineage.children.length > 0) {
-                <span aria-hidden="true">→</span>
+                <span class="lineage-arrow" aria-hidden="true">→</span>
                 @for (child of detail.lineage.children; track child.orderNumber) {
                   <button type="button" class="lineage-node" (click)="viewByOrderNumber(child.orderNumber)">{{ child.orderNumber }}</button>
                 }
               } @else if (!detail.lineage.parent) {
-                <span class="muted">No related orders.</span>
+                <span class="quiet-note">No related orders.</span>
               }
             </div>
           </ui-section>

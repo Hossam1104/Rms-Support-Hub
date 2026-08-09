@@ -78,10 +78,28 @@ describe('ProductsTableComponent', () => {
     fixture.componentInstance.openAddDialog.subscribe(() => opened = true);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('ui-table')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.pt__list')).toBeNull();
     const addButton = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
     addButton.click();
 
     expect(opened).toBe(true);
+  });
+
+  it('renders name, Arabic name, code and row total inside one product row entity', () => {
+    const fixture = TestBed.createComponent(ProductsTableComponent);
+    fixture.componentInstance.products = [
+      { itemCode: '000000000000103532', itemName: 'Vittoria 5/160Mg 28Tabs.', itemNameAr: 'فيتوريا', quantity: 1, unitPrice: 56.85, vatPercentage: 0, discount: 0 }
+    ];
+    fixture.detectChanges();
+
+    const rows = fixture.nativeElement.querySelectorAll('.prow');
+    expect(rows.length).toBe(1);
+
+    const row = rows[0] as HTMLElement;
+    expect(row.querySelector('.prow__name')?.textContent?.trim()).toBe('Vittoria 5/160Mg 28Tabs.');
+    expect(row.querySelector('.prow__ar')?.textContent?.trim()).toBe('فيتوريا');
+    expect(row.querySelector('.prow__code')?.textContent?.trim()).toBe('000000000000103532');
+    expect(row.querySelector('.cell--total')?.textContent).toContain('56.85');
+    expect((row.querySelector('.cell--qty input') as HTMLInputElement).value).toBe('1');
   });
 });
