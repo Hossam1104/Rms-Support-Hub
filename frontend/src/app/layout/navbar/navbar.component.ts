@@ -15,7 +15,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
   template: `
     <header class="navbar">
       <a routerLink="/" class="navbar-brand" aria-label="Return to RMS+ Support Hub">
-        <app-brand-mark class="navbar-logo" [src]="assets.brand.rms" size="2.5rem" [decorative]="true"></app-brand-mark>
+        <app-brand-mark class="navbar-logo" [src]="assets.brand.rms" size="3.75rem" [decorative]="true"></app-brand-mark>
         <span class="brand-copy">
           <span class="brand-title">RMS+ Support Hub</span>
           <span class="brand-subtitle">Unified QA & Support Workspace</span>
@@ -30,7 +30,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
         </app-env-badge>
         <ui-icon-button class="motion-toggle" size="sm"
           icon="bi-universal-access"
-          [active]="motionService.preference() !== 'system'"
+          [active]="motionService.preference() === 'reduce'"
           [ariaLabel]="motionToggleLabel()"
           [title]="motionToggleLabel()"
           (pressed)="motionService.cyclePreference()">

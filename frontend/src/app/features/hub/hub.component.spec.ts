@@ -56,7 +56,7 @@ describe('HubComponent', () => {
         ]);
     });
 
-    it('renders the RMS product mark and secondary DBS attribution', () => {
+    it('renders the larger RMS hero mark and DBS footer lockup', () => {
         const fixture = TestBed.createComponent(HubComponent);
         fixture.detectChanges();
 
@@ -64,6 +64,8 @@ describe('HubComponent', () => {
         expect(marks.map(mark => mark.getAttribute('alt'))).toEqual(['RMS+', 'DBS']);
         expect(marks[0].getAttribute('src')).toContain('/assets/brand/RMS_Logo.svg');
         expect(marks[1].getAttribute('src')).toContain('/assets/brand/DBS_Logo.svg');
+        expect(fixture.nativeElement.querySelector('.hub-footer')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.hub-footer__name')?.textContent?.trim()).toBe('DBS');
     });
 
     it('uses native links for keyboard-reachable card navigation', () => {

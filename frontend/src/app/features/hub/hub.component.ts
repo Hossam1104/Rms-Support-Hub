@@ -23,7 +23,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
           <div class="hub-hero__copy">
             <div class="hub-hero__identity">
               <span class="hub-hero__mark">
-                <app-brand-mark [src]="assets.brand.rms" alt="RMS+" size="4.75rem"></app-brand-mark>
+                <app-brand-mark [src]="assets.brand.rms" alt="RMS+" size="6.25rem"></app-brand-mark>
               </span>
               <div>
                 <p class="hub-eyebrow"><i class="bi bi-broadcast-pin" aria-hidden="true"></i>RMS+ operator workspace</p>
@@ -51,7 +51,6 @@ import { APP_ASSETS } from '../../core/config/app-assets';
               </div>
             </div>
 
-            <p class="hub-attribution">Built by <app-brand-mark [src]="assets.brand.dbs" alt="DBS" size="2rem" [framed]="true"></app-brand-mark></p>
           </div>
 
           <aside class="hub-hero__rail" aria-label="Tool availability">
@@ -113,6 +112,18 @@ import { APP_ASSETS } from '../../core/config/app-assets';
           }
         </section>
       </div>
+
+      <footer class="hub-footer" aria-label="RMS+ Support Hub footer">
+        <div class="hub-footer__inner">
+          <div class="hub-footer__brand">
+            <app-brand-mark [src]="assets.brand.dbs" alt="DBS" size="6.25rem" [framed]="true"></app-brand-mark>
+            <div class="hub-footer__copy">
+              <span class="hub-footer__label">Built by</span>
+              <strong class="hub-footer__name">DBS</strong>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   `,
   styles: [`
@@ -127,8 +138,6 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     .hub-hero__copy { display: flex; min-width: 0; flex-direction: column; justify-content: center; }
     .hub-hero__identity { display: flex; align-items: flex-start; gap: var(--space-4); }
     .hub-hero__mark { display: grid; flex: 0 0 auto; place-items: center; padding: var(--space-2); border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--card-sheen), var(--surface-interactive); box-shadow: var(--card-shadow); }
-    .hub-attribution { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-5) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
-
     .hub-eyebrow, .hub-tools__eyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; }
     .hub-eyebrow i, .hub-tools__eyebrow i { font-size: .9rem; }
     .hub-hero h1 { max-width: 15ch; margin: 0; color: var(--text-primary); font-size: clamp(2.35rem, 5vw, 3.55rem); font-weight: var(--weight-heavy); letter-spacing: -.035em; line-height: 1.02; }
@@ -169,6 +178,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     .hub-tools__grid > app-tool-card:nth-child(2) { animation-delay: 70ms; }
     .hub-tools__grid > app-tool-card:nth-child(3) { animation-delay: 140ms; }
     .hub-tools__empty { border: 1px solid var(--card-border); border-radius: var(--card-radius); background: var(--surface-panel); }
+
     @keyframes hub-card-in {
       from { opacity: 0; transform: translateY(12px); }
       to { opacity: 1; transform: translateY(0); }
