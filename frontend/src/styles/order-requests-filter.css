@@ -12,6 +12,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--section-gap);
+  container: order-request-filter / inline-size;
 }
 
 .order-request-filter .workbench-header {
@@ -483,4 +484,51 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .order-request-filter .loading-dot { animation: none; }
+}
+
+/* The filter card can become narrower than the browser viewport when DevTools
+   or a split workspace is open. Container rules keep the fields aligned to
+   the card they actually occupy instead of the outer viewport. */
+@container order-request-filter (max-width: 900px) {
+  .order-request-filter .workbench-header,
+  .order-request-filter .filter-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .order-request-filter .workbench-actions,
+  .order-request-filter .filter-actions { justify-content: flex-start; }
+  .order-request-filter .cluster-fields--locate { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .order-request-filter .cluster-fields--locate > ui-field:first-child { grid-column: 1 / -1; }
+  .order-request-filter .cluster-fields--refine { grid-template-columns: 1fr; }
+  .order-request-filter .filter-actions { width: 100%; }
+}
+
+@container order-request-filter (max-width: 600px) {
+  .order-request-filter .heading-line { display: block; }
+  .order-request-filter .heading-line h2 { display: block; }
+  .order-request-filter .filter-count { display: inline-flex; margin-top: 8px; }
+  .order-request-filter .workbench-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+  .order-request-filter .workbench-actions ui-button { flex: 1 1 auto; min-width: 0; }
+  .order-request-filter .workbench-actions .environment-badge,
+  .order-request-filter .auto-refresh-control { flex: 1 1 auto; }
+  .order-request-filter .filter-cluster { padding: 12px; }
+  .order-request-filter .cluster-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .order-request-filter .cluster-fields--locate,
+  .order-request-filter .cluster-fields--refine { grid-template-columns: 1fr; gap: var(--form-gap); }
+  .order-request-filter .cluster-fields--locate > ui-field:first-child { grid-column: auto; }
+  .order-request-filter .status-heading > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .order-request-filter .status-chip-row { gap: 7px; }
+  .order-request-filter .status-chip {
+    flex: 1 1 calc(50% - 7px);
+    justify-content: center;
+  }
+  .order-request-filter .filter-actions > ui-button { flex: 1 1 130px; }
+  .order-request-filter .result-context { width: 100%; }
 }

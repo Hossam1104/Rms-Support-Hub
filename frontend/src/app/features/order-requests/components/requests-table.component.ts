@@ -103,6 +103,8 @@ const CANCELLED_STATUSES = new Set([6, 7]);
       gap: var(--panel-gap);
       padding: 0 var(--table-cell-padding-x);
       min-width: 1090px;
+      box-sizing: border-box;
+      border-left: 3px solid transparent;
     }
     .table-head { height: var(--table-header-height); border-bottom: 1px solid var(--table-border); background: var(--table-header-surface); font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; }
     .table-body { min-width: 1090px; transition: opacity var(--transition-normal); }
@@ -115,7 +117,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
       box-sizing: border-box;
       border-bottom: 1px solid var(--table-row-border);
       border-top: 0;
-      border-left: 0;
+      border-left: 3px solid transparent;
       border-right: 0;
       background: transparent;
       cursor: pointer;
@@ -129,7 +131,7 @@ const CANCELLED_STATUSES = new Set([6, 7]);
     .table-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .table-row:hover { background: var(--table-row-hover); }
     .table-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .table-row.row-failed { border-left: 3px solid var(--state-danger-border); background: var(--state-danger-bg); }
+    .table-row.row-failed { border-left-color: var(--state-danger-border); background: var(--state-danger-bg); }
     .table-row.row-cancelled { opacity: 0.65; }
     @keyframes rowStaggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .skeleton-row { display: flex; align-items: center; }

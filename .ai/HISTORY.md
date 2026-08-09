@@ -54,3 +54,4 @@ gates are not implementation work: safe UPC **Testing** acceptance, the
 Production database index decision, and deployment/Production acceptance.
 
 | Order Requests filter and query refresh | 2026-08-09 validation | Added a month-to-date default range, a tokenized calendar picker, grouped filter clusters, and a ten-newest base-query fast path; frontend 272/272 tests, backend 173/173 tests, Release build, and production Angular build passed. |
+| Order Requests timeout and alignment hardening | 2026-08-09 validation | Replaced repeated latest-row probes with bounded set-based enrichment, reserved the table row accent gutter, and added container-responsive filter layout; frontend 272/272 tests, backend 174/174 tests, Release build, and production Angular build passed. |

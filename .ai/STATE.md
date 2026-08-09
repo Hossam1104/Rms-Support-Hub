@@ -97,9 +97,9 @@ Recorded by the final cleanup session; see `docs/RMS_SUPPORT_HUB_RELEASE_READINE
 | Gate | Result |
 |---|---|
 | Frontend tests | 52 files / 272 tests passed, 0 skipped |
-| Backend tests | 173 passed, 0 failed, 0 skipped |
+| Backend tests | 174 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors |
-| Production initial bundle | 443.44 kB raw / 102.13 kB estimated transfer |
+| Production initial bundle | 445.25 kB raw / 102.22 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.78 kB estimated transfer |
 | Production-offline initial bundle | 427.11 kB raw / 101.30 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |

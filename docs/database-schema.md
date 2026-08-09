@@ -301,7 +301,10 @@ out around the 15-second command limit. `RequestOrderHeaders.OrderNumber` and
 Testing database, while the base `OrderRequests` search was already indexed.
 The repository now also avoids loading raw JSON in list results, pages base
 rows before lookups when filters permit, and ranks headers once when a
-header-derived filter is required.
+header-derived filter is required. The ten-row dashboard path first selects
+the newest base rows, then enriches only their order numbers through bounded
+set-based header/invoice CTEs so an unindexed external database does not run
+one full-table lookup per returned row.
 
 The reviewed, idempotent external-database script is
 [`docs/sql/order-requests-performance-indexes.sql`](sql/order-requests-performance-indexes.sql).

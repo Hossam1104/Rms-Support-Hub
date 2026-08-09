@@ -272,9 +272,12 @@ public class OrderRequestRepositoryTests
 
         Assert.Contains("SELECT TOP (10)", sql);
         Assert.Contains("FROM dbo.OrderRequests AS R", sql);
+        Assert.Contains("LatestRequestOrderNumbers AS", sql);
+        Assert.Contains("LEFT JOIN LatestHeaders AS H", sql);
+        Assert.Contains("LEFT JOIN LatestInvoices AS I", sql);
         Assert.Contains("ORDER BY R.Id DESC", sql);
-        Assert.True(sql.IndexOf("ORDER BY R.Id DESC", StringComparison.Ordinal)
-            < sql.IndexOf("OUTER APPLY", StringComparison.Ordinal));
+        Assert.Contains("OPTION (HASH JOIN)", sql);
+        Assert.DoesNotContain("OUTER APPLY", sql);
     }
 
     [Fact]
@@ -287,7 +290,30 @@ public class OrderRequestRepositoryTests
 
         Assert.Contains("SELECT TOP (10)", sql);
         Assert.Contains("FROM LatestRequests AS R", sql);
+        Assert.Contains("LatestRequestOrderNumbers AS", sql);
+        Assert.Contains("LEFT JOIN LatestHeaders AS H", sql);
         Assert.Contains("ORDER BY R.Id DESC", sql);
+        Assert.Contains("OPTION (HASH JOIN)", sql);
+        Assert.DoesNotContain("OUTER APPLY", sql);
         Assert.DoesNotContain("WITH LatestHeaders AS", sql);
+    }
+
+    [Fact]
+    public void LatestTenBaseFiltersAreAppliedBeforeSetBasedEnrichment()
+    {
+        var listSql = OrderRequestRepository.BuildListSql(
+            "WHERE R.OrderDate >= @DateFrom",
+            null,
+            applyHeaderJoinsAfterPaging: true,
+            latestTenOnly: true);
+        var statsSql = OrderRequestRepository.BuildStatsSql(
+            "WHERE R.OrderDate >= @DateFrom",
+            useFilteredBaseRows: true,
+            latestTenOnly: true);
+
+        Assert.True(listSql.IndexOf("WHERE R.OrderDate", StringComparison.Ordinal)
+            < listSql.IndexOf("LatestRequestOrderNumbers", StringComparison.Ordinal));
+        Assert.True(statsSql.IndexOf("WHERE R.OrderDate", StringComparison.Ordinal)
+            < statsSql.IndexOf("LatestRequestOrderNumbers", StringComparison.Ordinal));
     }
 }

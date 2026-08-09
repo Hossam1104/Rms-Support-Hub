@@ -186,7 +186,9 @@ public class OrderRequestRepository : IOrderRequestRepository
     /// unindexed header/invoice lookups run, so the normal first page does not
     /// scan those tables once per historical request. Header-derived filters
     /// keep the original query shape because they must be applied before
-    /// paging.</summary>
+    /// paging. The ten-row path narrows the enrichment joins to the selected
+    /// order numbers and uses hash joins, avoiding one unindexed probe per row
+    /// when the external support indexes are not present.</summary>
     internal static string BuildListSql(
         string whereSql,
         string? sort,
@@ -208,6 +210,34 @@ public class OrderRequestRepository : IOrderRequestRepository
                     FROM dbo.OrderRequests AS R
                     {whereSql}
                     ORDER BY R.Id DESC
+                ),
+                LatestRequestOrderNumbers AS (
+                    SELECT DISTINCT OrderNumber
+                    FROM LatestRequests
+                    WHERE OrderNumber IS NOT NULL
+                ),
+                LatestHeaders AS (
+                    SELECT
+                        H.Id, H.OrderNumber, H.BranchCode, H.BranchName, H.OrderStatus,
+                        H.ParentOrderNumber,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY H.OrderNumber
+                            ORDER BY H.Id DESC
+                        ) AS HeaderRank
+                    FROM dbo.RequestOrderHeaders AS H
+                    INNER JOIN LatestRequestOrderNumbers AS O
+                        ON O.OrderNumber = H.OrderNumber
+                ),
+                LatestInvoices AS (
+                    SELECT
+                        I.OnlineOrderNumber, I.Barcode, I.CloseDateLocalTime,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY I.OnlineOrderNumber
+                            ORDER BY I.Id DESC
+                        ) AS InvoiceRank
+                    FROM dbo.Invoices AS I
+                    INNER JOIN LatestRequestOrderNumbers AS O
+                        ON O.OrderNumber = I.OnlineOrderNumber
                 )
                 SELECT
                     R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
@@ -215,9 +245,14 @@ public class OrderRequestRepository : IOrderRequestRepository
                     H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber,
                     I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
                 FROM LatestRequests AS R
-                {HeaderApplyClause}
-                {InvoiceApplyClause}
-                ORDER BY R.Id DESC";
+                LEFT JOIN LatestHeaders AS H
+                    ON H.OrderNumber = R.OrderNumber
+                    AND H.HeaderRank = 1
+                LEFT JOIN LatestInvoices AS I
+                    ON I.OnlineOrderNumber = R.OrderNumber
+                    AND I.InvoiceRank = 1
+                ORDER BY R.Id DESC
+                OPTION (HASH JOIN)";
         }
 
         if (applyHeaderJoinsAfterPaging)
@@ -376,6 +411,22 @@ public class OrderRequestRepository : IOrderRequestRepository
                     FROM dbo.OrderRequests AS R
                     {whereSql}
                     ORDER BY R.Id DESC
+                ),
+                LatestRequestOrderNumbers AS (
+                    SELECT DISTINCT OrderNumber
+                    FROM LatestRequests
+                    WHERE OrderNumber IS NOT NULL
+                ),
+                LatestHeaders AS (
+                    SELECT
+                        H.OrderNumber, H.OrderStatus,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY H.OrderNumber
+                            ORDER BY H.Id DESC
+                        ) AS HeaderRank
+                    FROM dbo.RequestOrderHeaders AS H
+                    INNER JOIN LatestRequestOrderNumbers AS O
+                        ON O.OrderNumber = H.OrderNumber
                 )
                 SELECT
                     COUNT(DISTINCT R.Id) AS Total,
@@ -383,7 +434,10 @@ public class OrderRequestRepository : IOrderRequestRepository
                     SUM(CASE WHEN R.IsSucceeded = 0 OR R.ExceptionMessage IS NOT NULL THEN 1 ELSE 0 END) AS Failed,
                     SUM(CASE WHEN H.OrderStatus IN (6, 7) THEN 1 ELSE 0 END) AS Cancelled
                 FROM LatestRequests AS R
-                {HeaderApplyClause}";
+                LEFT JOIN LatestHeaders AS H
+                    ON H.OrderNumber = R.OrderNumber
+                    AND H.HeaderRank = 1
+                OPTION (HASH JOIN)";
         }
 
         if (useFilteredBaseRows)
