@@ -20,6 +20,11 @@ export interface AppAssetCatalog {
     readonly mada: AssetPath;
     readonly tabby: AssetPath;
     readonly tamara: AssetPath;
+    readonly stcPay: AssetPath;
+    readonly emkan: AssetPath;
+    readonly misPay: AssetPath;
+    readonly ogMoney: AssetPath;
+    readonly youGotaGift: AssetPath;
   };
   readonly commerce: {
     readonly offer: AssetPath;
@@ -76,7 +81,12 @@ export const APP_ASSETS: AppAssetCatalog = {
     mastercard: '/assets/payments/MasterCard.png',
     mada: '/assets/payments/MADA.png',
     tabby: '/assets/payments/tabby.png',
-    tamara: '/assets/payments/tamara.png'
+    tamara: '/assets/payments/tamara.png',
+    stcPay: '/assets/payments/STC_PAY.png',
+    emkan: '/assets/payments/emkan.png',
+    misPay: '/assets/payments/mispay.png',
+    ogMoney: '/assets/payments/ogmoney.png',
+    youGotaGift: '/assets/payments/yougotagift.png'
   },
   commerce: {
     offer: '/assets/commerce/offer_logo.png'
@@ -112,6 +122,17 @@ export function paymentAssetForMethod(method: string | null | undefined): AssetP
       return APP_ASSETS.payments.tabby;
     case 'tamara':
       return APP_ASSETS.payments.tamara;
+    case 'stcpay':
+    case 'stc_pay':
+      return APP_ASSETS.payments.stcPay;
+    case 'emkan':
+      return APP_ASSETS.payments.emkan;
+    case 'mispay':
+      return APP_ASSETS.payments.misPay;
+    case 'ogmoney':
+      return APP_ASSETS.payments.ogMoney;
+    case 'yougotagift':
+      return APP_ASSETS.payments.youGotaGift;
     default:
       return null;
   }

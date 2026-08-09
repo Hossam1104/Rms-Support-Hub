@@ -26,7 +26,7 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, U
             <ui-input inputId="payment-amount" type="number" step="0.01" [value]="payment.paymentAmount" (valueChange)="onAmountChange($event)">
               <app-riyal uiInputSuffix [size]=".9"></app-riyal>
             </ui-input>
-            <small class="amount-hint" *ngIf="payment.paymentMethod === 'Visa' && requiredAmount > 0">Required amount: {{ requiredAmount | number:'1.2-2' }}</small>
+            <small class="amount-hint" *ngIf="payment.paymentMethod !== 'COD' && requiredAmount > 0">Required amount: {{ requiredAmount | number:'1.2-2' }}</small>
           </ui-field>
           <ui-field label="Transaction ID" forId="payment-transaction-id">
             <ui-input inputId="payment-transaction-id" placeholder="Optional" [value]="payment.transactionId || ''" (valueChange)="payment.transactionId = $any($event) || ''"></ui-input>
@@ -81,17 +81,18 @@ export class AddPaymentDialogComponent implements OnChanges {
   private amountAutoFilled = false;
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['requiredAmount'] && this.payment.paymentMethod === 'Visa' && this.amountAutoFilled) {
+    if (changes['requiredAmount'] && this.amountAutoFilled && this.payment.paymentMethod !== 'COD') {
       this.payment.paymentAmount = this.normalizedRequiredAmount();
     }
   }
 
   onMethodChange() {
     this.payment.paymentStatus = this.statusForMethod();
-    if (this.payment.paymentMethod === 'Visa') {
+    if (this.payment.paymentMethod !== 'COD') {
       this.payment.paymentAmount = this.normalizedRequiredAmount();
       this.amountAutoFilled = true;
     } else {
+      this.payment.paymentAmount = 0;
       this.amountAutoFilled = false;
     }
   }

@@ -10,14 +10,26 @@ describe('AddPaymentDialogComponent', () => {
     ]);
   });
 
-  it('sets Visa to the server-required amount and done_payment', () => {
+  it('sets paid methods to the server-required amount and done_payment', () => {
     const component = new AddPaymentDialogComponent();
     component.requiredAmount = 107.9;
-    component.payment.paymentMethod = 'Visa';
-    component.onMethodChange();
 
+    for (const method of ['Visa', 'RajhiPoints', 'Tamara', 'Tabby', 'NeqatyPoints', 'QitafPoints', 'MisPay', 'Emkan', 'YouGotaGift', 'OgMoney']) {
+      component.payment.paymentMethod = method;
+      component.onMethodChange();
+
+      expect(component.payment.paymentAmount).toBe(107.9);
+      expect(component.payment.paymentStatus).toBe('done_payment');
+    }
+
+    component.payment.paymentMethod = 'PostToCredit';
+    component.onMethodChange();
     expect(component.payment.paymentAmount).toBe(107.9);
-    expect(component.payment.paymentStatus).toBe('done_payment');
+    expect(component.payment.paymentStatus).toBe('not_payment');
+
+    component.payment.paymentMethod = 'COD';
+    component.onMethodChange();
+    expect(component.payment.paymentAmount).toBe(0);
   });
 
   it('keeps COD as not_payment while paid methods are done_payment on add', () => {

@@ -20,7 +20,12 @@ describe('APP_ASSETS', () => {
       mastercard: '/assets/payments/MasterCard.png',
       mada: '/assets/payments/MADA.png',
       tabby: '/assets/payments/tabby.png',
-      tamara: '/assets/payments/tamara.png'
+      tamara: '/assets/payments/tamara.png',
+      stcPay: '/assets/payments/STC_PAY.png',
+      emkan: '/assets/payments/emkan.png',
+      misPay: '/assets/payments/mispay.png',
+      ogMoney: '/assets/payments/ogmoney.png',
+      youGotaGift: '/assets/payments/yougotagift.png'
     });
     expect(APP_ASSETS.commerce.offer).toBe('/assets/commerce/offer_logo.png');
     expect(APP_ASSETS.system.loader).toBe('/assets/system/loader.svg');
@@ -33,6 +38,11 @@ describe('APP_ASSETS', () => {
     expect(paymentAssetForMethod('MADA')).toBe(APP_ASSETS.payments.mada);
     expect(paymentAssetForMethod(' tabby ')).toBe(APP_ASSETS.payments.tabby);
     expect(paymentAssetForMethod('Tamara')).toBe(APP_ASSETS.payments.tamara);
+    expect(paymentAssetForMethod('STCPay')).toBe(APP_ASSETS.payments.stcPay);
+    expect(paymentAssetForMethod('MisPay')).toBe(APP_ASSETS.payments.misPay);
+    expect(paymentAssetForMethod('Emkan')).toBe(APP_ASSETS.payments.emkan);
+    expect(paymentAssetForMethod('OgMoney')).toBe(APP_ASSETS.payments.ogMoney);
+    expect(paymentAssetForMethod('YouGotaGift')).toBe(APP_ASSETS.payments.youGotaGift);
     expect(paymentAssetForMethod('Card')).toBeNull();
     expect(paymentAssetForMethod('ApplePay')).toBeNull();
     expect(paymentAssetForMethod(undefined)).toBeNull();
