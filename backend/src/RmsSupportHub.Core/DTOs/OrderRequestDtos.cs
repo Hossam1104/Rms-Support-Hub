@@ -1,12 +1,14 @@
 namespace RmsSupportHub.Core.DTOs;
 
 /// <summary>Normalized filters for OrderRequestRepository.ListAsync/CountAsync/StatsAsync.
-/// All optional -- an empty filter set returns everything. Statuses (R9,
-/// multi-select status chips) takes precedence over the single-value Status
-/// when both are supplied; Status is kept for any other/older caller. Phone is
-/// normalized to its last nine digits by the API before this model reaches the
-/// repository. ExactOrderNumber defaults to true to preserve the original
-/// exact-search behavior; false opts into an escaped contains search.</summary>
+/// All optional -- an empty filter set produces no predicates; the default
+/// dashboard repository path limits the unfiltered view to the latest ten
+/// requests. Statuses (R9, multi-select status chips) takes precedence over the
+/// single-value Status when both are supplied; Status is kept for any
+/// other/older caller. Phone is normalized to its last nine digits by the API
+/// before this model reaches the repository. ExactOrderNumber defaults to true
+/// to preserve the original exact-search behavior; false opts into an escaped
+/// contains search.</summary>
 public record OrderRequestFilters(
     string? OrderNumber = null,
     string? Phone = null,

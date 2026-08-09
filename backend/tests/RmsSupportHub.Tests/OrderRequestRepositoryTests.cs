@@ -234,6 +234,19 @@ public class OrderRequestRepositoryTests
     }
 
     [Fact]
+    public void LatestUnfilteredCountSql_OnlyCountsTenNewestRequests()
+    {
+        var sql = OrderRequestRepository.BuildCountSql(
+            "",
+            requiresHeaderJoin: false,
+            latestUnfilteredOnly: true);
+
+        Assert.Contains("SELECT TOP (10) R.Id", sql);
+        Assert.Contains("ORDER BY R.Id DESC", sql);
+        Assert.Contains("SELECT COUNT(*)", sql);
+    }
+
+    [Fact]
     public void StatsWithBaseFilter_NarrowsRequestsBeforeLatestHeaderLookup()
     {
         var sql = OrderRequestRepository.BuildStatsSql(
@@ -246,5 +259,35 @@ public class OrderRequestRepositoryTests
         Assert.DoesNotContain("WITH LatestHeaders AS", sql);
         Assert.True(sql.IndexOf("WHERE R.OrderNumber", StringComparison.Ordinal)
             < sql.IndexOf("OUTER APPLY", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void LatestUnfilteredListSql_TakesTenNewestRequestsById()
+    {
+        var sql = OrderRequestRepository.BuildListSql(
+            "",
+            null,
+            applyHeaderJoinsAfterPaging: true,
+            latestUnfilteredOnly: true);
+
+        Assert.Contains("SELECT TOP (10)", sql);
+        Assert.Contains("FROM dbo.OrderRequests AS R", sql);
+        Assert.Contains("ORDER BY R.Id DESC", sql);
+        Assert.True(sql.IndexOf("ORDER BY R.Id DESC", StringComparison.Ordinal)
+            < sql.IndexOf("OUTER APPLY", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void LatestUnfilteredStatsSql_UsesOnlyTenNewestRequests()
+    {
+        var sql = OrderRequestRepository.BuildStatsSql(
+            "",
+            useFilteredBaseRows: false,
+            latestUnfilteredOnly: true);
+
+        Assert.Contains("SELECT TOP (10)", sql);
+        Assert.Contains("FROM LatestRequests AS R", sql);
+        Assert.Contains("ORDER BY R.Id DESC", sql);
+        Assert.DoesNotContain("WITH LatestHeaders AS", sql);
     }
 }

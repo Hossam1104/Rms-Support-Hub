@@ -64,6 +64,7 @@ public class OrderRequestRepository : IOrderRequestRepository
                 AND H.HeaderRank = 1";
 
     private const int ListCommandTimeoutSeconds = 15;
+    private const int LatestUnfilteredLimit = 10;
 
     private static readonly Dictionary<string, string> SortColumns = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -186,12 +187,38 @@ public class OrderRequestRepository : IOrderRequestRepository
     /// scan those tables once per historical request. Header-derived filters
     /// keep the original query shape because they must be applied before
     /// paging.</summary>
-    internal static string BuildListSql(string whereSql, string? sort, bool applyHeaderJoinsAfterPaging)
+    internal static string BuildListSql(
+        string whereSql,
+        string? sort,
+        bool applyHeaderJoinsAfterPaging,
+        bool latestUnfilteredOnly = false)
     {
         // RequestJson/ResponseJson are never selected here -- only
         // DATALENGTH/existence, so the list stays fast at any row count.
         // GetDetailAsync is the only place the raw blobs are read.
         var orderBy = ResolveSortColumn(sort);
+        if (latestUnfilteredOnly)
+        {
+            return $@"
+                WITH LatestRequests AS (
+                    SELECT TOP ({LatestUnfilteredLimit})
+                        R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
+                        DATALENGTH(R.RequestJson) AS RequestBytes,
+                        CAST(CASE WHEN R.ResponseJson IS NULL THEN 0 ELSE 1 END AS BIT) AS HasResponse
+                    FROM dbo.OrderRequests AS R
+                    ORDER BY R.Id DESC
+                )
+                SELECT
+                    R.Id, R.OrderNumber, R.OrderDate, R.NetTotal, R.ItemCount, R.IsSucceeded,
+                    R.RequestBytes, R.HasResponse,
+                    H.Id AS OrderHeaderId, H.BranchCode, H.BranchName, H.OrderStatus, H.ParentOrderNumber,
+                    I.Barcode AS InvoiceBarcode, I.CloseDateLocalTime AS InvoiceDate
+                FROM LatestRequests AS R
+                {HeaderApplyClause}
+                {InvoiceApplyClause}
+                ORDER BY R.Id DESC";
+        }
+
         if (applyHeaderJoinsAfterPaging)
         {
             return $@"
@@ -248,13 +275,21 @@ public class OrderRequestRepository : IOrderRequestRepository
         string connectionString, OrderRequestFilters filters, int page, int pageSize, string? sort,
         CancellationToken cancellationToken = default)
     {
-        var safePage = Math.Max(1, page);
         var safePageSize = Math.Clamp(pageSize, 1, 200);
         var (whereSql, p) = BuildFilters(filters);
-        p.Add("Skip", (long)(safePage - 1) * safePageSize);
-        p.Add("Take", safePageSize);
+        var latestUnfilteredOnly = string.IsNullOrWhiteSpace(whereSql);
+        var safePage = latestUnfilteredOnly ? 1 : Math.Max(1, page);
+        if (!latestUnfilteredOnly)
+        {
+            p.Add("Skip", (long)(safePage - 1) * safePageSize);
+            p.Add("Take", safePageSize);
+        }
 
-        var sql = BuildListSql(whereSql, sort, applyHeaderJoinsAfterPaging: !RequiresHeaderJoin(filters));
+        var sql = BuildListSql(
+            whereSql,
+            sort,
+            applyHeaderJoinsAfterPaging: !RequiresHeaderJoin(filters),
+            latestUnfilteredOnly);
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(
@@ -270,8 +305,22 @@ public class OrderRequestRepository : IOrderRequestRepository
         )).ToList();
     }
 
-    internal static string BuildCountSql(string whereSql, bool requiresHeaderJoin)
+    internal static string BuildCountSql(
+        string whereSql,
+        bool requiresHeaderJoin,
+        bool latestUnfilteredOnly = false)
     {
+        if (latestUnfilteredOnly)
+        {
+            return $@"
+                SELECT COUNT(*)
+                FROM (
+                    SELECT TOP ({LatestUnfilteredLimit}) R.Id
+                    FROM dbo.OrderRequests AS R
+                    ORDER BY R.Id DESC
+                ) AS LatestRequests";
+        }
+
         if (!requiresHeaderJoin)
         {
             return $"SELECT COUNT(DISTINCT R.Id) FROM dbo.OrderRequests AS R {whereSql}";
@@ -289,7 +338,10 @@ public class OrderRequestRepository : IOrderRequestRepository
         string connectionString, OrderRequestFilters filters, CancellationToken cancellationToken = default)
     {
         var (whereSql, p) = BuildFilters(filters);
-        var sql = BuildCountSql(whereSql, RequiresHeaderJoin(filters));
+        var sql = BuildCountSql(
+            whereSql,
+            RequiresHeaderJoin(filters),
+            latestUnfilteredOnly: string.IsNullOrWhiteSpace(whereSql));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(
@@ -298,16 +350,39 @@ public class OrderRequestRepository : IOrderRequestRepository
     }
 
     internal static string BuildStatsSql(string whereSql)
-        => BuildStatsSql(whereSql, useFilteredBaseRows: false);
+        => BuildStatsSql(whereSql, useFilteredBaseRows: false, latestUnfilteredOnly: false);
 
     /// <summary>Builds the aggregate query. A filtered search that only touches
     /// OrderRequests must narrow that base table before looking up the latest
     /// header; otherwise the windowed latest-header CTE ranks the entire
     /// RequestOrderHeaders table before applying an order-number predicate.
     /// Header-derived filters and the unfiltered dashboard retain the ranked
-    /// shape so their filtering and aggregate semantics do not change.</summary>
-    internal static string BuildStatsSql(string whereSql, bool useFilteredBaseRows)
+    /// shape so their filtering and aggregate semantics do not change. The
+    /// unfiltered dashboard is intentionally limited to the latest ten
+    /// requests by Id.</summary>
+    internal static string BuildStatsSql(
+        string whereSql,
+        bool useFilteredBaseRows,
+        bool latestUnfilteredOnly = false)
     {
+        if (latestUnfilteredOnly)
+        {
+            return $@"
+                WITH LatestRequests AS (
+                    SELECT TOP ({LatestUnfilteredLimit})
+                        R.Id, R.OrderNumber, R.IsSucceeded, R.ExceptionMessage
+                    FROM dbo.OrderRequests AS R
+                    ORDER BY R.Id DESC
+                )
+                SELECT
+                    COUNT(DISTINCT R.Id) AS Total,
+                    SUM(CASE WHEN R.IsSucceeded = 1 THEN 1 ELSE 0 END) AS Succeeded,
+                    SUM(CASE WHEN R.IsSucceeded = 0 OR R.ExceptionMessage IS NOT NULL THEN 1 ELSE 0 END) AS Failed,
+                    SUM(CASE WHEN H.OrderStatus IN (6, 7) THEN 1 ELSE 0 END) AS Cancelled
+                FROM LatestRequests AS R
+                {HeaderApplyClause}";
+        }
+
         if (useFilteredBaseRows)
         {
             return $@"
@@ -343,7 +418,8 @@ public class OrderRequestRepository : IOrderRequestRepository
         var (whereSql, p) = BuildFilters(filters);
         var sql = BuildStatsSql(
             whereSql,
-            useFilteredBaseRows: !RequiresHeaderJoin(filters) && !string.IsNullOrWhiteSpace(whereSql));
+            useFilteredBaseRows: !RequiresHeaderJoin(filters) && !string.IsNullOrWhiteSpace(whereSql),
+            latestUnfilteredOnly: string.IsNullOrWhiteSpace(whereSql));
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var command = new CommandDefinition(
