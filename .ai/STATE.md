@@ -92,16 +92,16 @@ failure. Details are in `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded 2026-08-10 (Online Orders UI redesign, then the items detail grid, then the date range picker fix); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table. Backend rows are from the same day against unchanged backend code.
+Recorded 2026-08-10 (Online Orders UI redesign, then the items detail grid, then the date picker move to a CDK overlay); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table. Backend rows are from the same day against unchanged backend code.
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 54 files / 303 tests passed, 0 skipped |
+| Frontend tests | 54 files / 304 tests passed, 0 skipped |
 | Backend tests | 174 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; all Angular budgets clear |
-| Production initial bundle | 456.46 kB raw / 104.27 kB estimated transfer |
+| Production initial bundle | 456.35 kB raw / 104.20 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.79 kB estimated transfer |
-| Production-offline initial bundle | 442.14 kB raw / 103.64 kB estimated transfer |
+| Production-offline initial bundle | 442.03 kB raw / 103.66 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
 | Rendered browser pass | Not run; no browser automation tool is available in this environment |
 
