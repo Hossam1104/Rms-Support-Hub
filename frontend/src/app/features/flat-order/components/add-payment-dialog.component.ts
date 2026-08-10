@@ -116,8 +116,11 @@ export class AddPaymentDialogComponent implements OnChanges {
     this.amountAutoFilled = false;
   }
 
+  /** The status shown in the dropdown is the status that is added. A method
+   * change assigns that method's default, but an explicit operator choice made
+   * afterwards survives -- re-deriving it here would make the visible control a
+   * lie. An invalid method/status combination remains the backend's call. */
   onAdd() {
-    this.payment.paymentStatus = this.statusForMethod();
     if (this.payment.paymentMethod && this.payment.paymentStatus && this.payment.paymentAmount > 0) this.add.emit({ ...this.payment });
   }
 

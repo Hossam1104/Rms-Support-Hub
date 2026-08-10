@@ -133,7 +133,7 @@ describe('AddPaymentDialogComponent', () => {
 
     component.payment.paymentAmount = 10;
     component.onAdd();
-    component.payment.paymentMethod = 'Tamara';
+    component.onMethodChange('Tamara');
     component.payment.paymentAmount = 10;
     component.onAdd();
 
@@ -141,6 +141,47 @@ describe('AddPaymentDialogComponent', () => {
       ['COD', 'not_payment'],
       ['Tamara', 'done_payment']
     ]);
+  });
+
+  it('adds the status the operator explicitly chose instead of re-deriving it', () => {
+    const component = new AddPaymentDialogComponent();
+    component.requiredAmount = 107.9;
+    openFor(component, 'upc_ecommerce');
+    const added: string[] = [];
+    component.add.subscribe(payment => added.push(payment.paymentStatus));
+
+    expect(component.payment.paymentStatus).toBe('done_payment');
+    component.payment.paymentStatus = 'failed_payment';
+    component.onAdd();
+
+    expect(added).toEqual(['failed_payment']);
+  });
+
+  /** A Visa row marked not_payment is an invalid combination, but rejecting it
+   * is the validator's job. The dialog must not quietly rewrite the operator's
+   * choice into a valid-looking one. */
+  it('adds an operator-chosen status even when the backend will reject the combination', () => {
+    const component = new AddPaymentDialogComponent();
+    component.requiredAmount = 107.9;
+    openFor(component, 'upc_ecommerce');
+    const added: Array<[string, string]> = [];
+    component.add.subscribe(payment => added.push([payment.paymentMethod, payment.paymentStatus]));
+
+    component.payment.paymentStatus = 'not_payment';
+    component.onAdd();
+
+    expect(added).toEqual([['Visa', 'not_payment']]);
+  });
+
+  it('reassigns the new method default when the method changes after a manual override', () => {
+    const component = new AddPaymentDialogComponent();
+    component.requiredAmount = 107.9;
+    openFor(component, 'upc_ecommerce');
+
+    component.payment.paymentStatus = 'failed_payment';
+    component.onMethodChange('Tabby');
+
+    expect(component.payment.paymentStatus).toBe('done_payment');
   });
 
   it('does not overwrite a manually edited Visa amount when the required balance changes', () => {
