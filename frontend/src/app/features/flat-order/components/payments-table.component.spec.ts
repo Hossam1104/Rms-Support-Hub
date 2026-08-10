@@ -8,8 +8,8 @@ describe('PaymentsTableComponent', () => {
     const updates: unknown[] = [];
     component.updatePayment.subscribe(update => updates.push(update));
 
-    component.onEdit(1, 'paymentAmount', { target: { value: '125.50' } } as unknown as Event);
-    component.onEdit(1, 'paymentStatus', { target: { value: 'done_payment' } } as unknown as Event);
+    component.onAmountEdit(1, { target: { value: '125.50' } } as unknown as Event);
+    component.onStatusChange(1, 'done_payment');
 
     expect(updates).toEqual([
       { index: 1, patch: { paymentAmount: 125.5 } },
@@ -63,6 +63,48 @@ describe('PaymentsTableComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.py__total-value')?.textContent).toContain('125.50');
+  });
+
+  it('labels the status for operators while the payload value stays raw', () => {
+    const fixture = TestBed.createComponent(PaymentsTableComponent);
+    fixture.componentInstance.payments = samplePayments;
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector('#payment-status-0') as HTMLButtonElement;
+    expect(status.textContent).toContain('Paid');
+    expect(status.textContent).not.toContain('done_payment');
+    expect(fixture.componentInstance.paymentStatusOptions.map(option => option.value))
+      .toEqual(['not_payment', 'done_payment', 'failed_payment']);
+  });
+
+  it('replaces the native select so the open list is not an OS popup', () => {
+    const fixture = TestBed.createComponent(PaymentsTableComponent);
+    fixture.componentInstance.payments = samplePayments;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('select')).toBeNull();
+    expect(fixture.nativeElement.querySelector('ui-dropdown-select')).not.toBeNull();
+  });
+
+  it('keeps the status editable for a Visa row -- done_payment is a default, not a lock', () => {
+    const fixture = TestBed.createComponent(PaymentsTableComponent);
+    fixture.componentInstance.payments = samplePayments;
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement.querySelector('#payment-status-0') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  /** A draft saved before the UPC policy can still hold a method UPC no longer
+   * accepts. The row shows what is actually stored so the operator can remove
+   * it; it is never silently rewritten to an allowed method. */
+  it('renders a payment method that policy no longer allows as its own identity', () => {
+    const fixture = TestBed.createComponent(PaymentsTableComponent);
+    fixture.componentInstance.payments = [{ paymentMethod: 'MisPay', paymentStatus: 'done_payment', paymentAmount: 100 }];
+    fixture.componentInstance.errors = ["Payment method 'MisPay' is not allowed. The allowed payment methods: [Visa, Tamara, Tabby]"];
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.pyrow__method')?.textContent?.trim()).toBe('MisPay');
+    expect(fixture.nativeElement.querySelector('.py__errors')?.textContent).toContain("Payment method 'MisPay' is not allowed");
   });
 
   it('keeps the reference and metadata inside the payment identity block rather than a dedicated column', () => {

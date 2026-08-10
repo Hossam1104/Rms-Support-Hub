@@ -128,7 +128,7 @@ public class ValidatorFixtureTests
             ["INVALID: Credit Payment with Partial Amount"] = new[] { "Credit payments must cover full order amount" },
             ["INVALID: COD with done_payment status"] = new[] { "COD payments must have 'not_payment' status" },
             ["INVALID: Visa with not_payment status"] = new[] { "Visa", "done_payment" },
-            ["INVALID: Cash method used instead of COD"] = new[] { "Unknown payment method", "COD" }
+            ["INVALID: Cash method used instead of COD"] = new[] { "Payment method 'cash' is not allowed", "COD" }
         };
 
         foreach (var entry in array.EnumerateArray())

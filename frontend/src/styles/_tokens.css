@@ -201,6 +201,9 @@
   --z-dropdown: 1200;
   --z-overlay: 2000;
   --z-dialog: 2100;
+  /* CDK overlay panels open from inside panels AND dialogs, so the container
+     they all share sits above the dialog layer and below toasts. */
+  --z-cdk-overlay: 2150;
   --z-toast: 2200;
 
   /* ---- Radius scale ---- */

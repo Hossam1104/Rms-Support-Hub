@@ -15,8 +15,22 @@ public sealed record FlatVariant(
     bool IncludeDeliveryFields,
     bool IncludeCreditInfo,
     bool IncludeCardBankInfo,
-    bool IncludePaymentStatus)
+    bool IncludePaymentStatus,
+    IReadOnlyList<string> AllowedPaymentMethods)
 {
+    /// <summary>Every method the GHC flat-order API accepts on a payment row.</summary>
+    public static readonly IReadOnlyList<string> GhcPaymentMethods = new[]
+    {
+        "COD", "Visa", "RajhiPoints", "Tamara", "Tabby", "NeqatyPoints",
+        "QitafPoints", "MisPay", "Emkan", "YouGotaGift", "OgMoney", "PostToCredit"
+    };
+
+    /// <summary>UPC only settles through these three providers. Cash on delivery
+    /// is not an explicit method there: a UPC order with no payment rows is the
+    /// COD shape (order_payment_method COD / order_payment_status not_payment),
+    /// so a "COD" row is a malformed payload rather than a cash order.</summary>
+    public static readonly IReadOnlyList<string> UpcPaymentMethods = new[] { "Visa", "Tamara", "Tabby" };
+
     /// <summary>order_country_code/order_phone, delivery_date/from/to,
     /// shipping_address_2, fullfilment_plant, card_name/bank_code and a nested
     /// credit_customer_info are present in the GHC reference; payment_status is not.</summary>
@@ -25,7 +39,8 @@ public sealed record FlatVariant(
         IncludeDeliveryFields: true,
         IncludeCreditInfo: true,
         IncludeCardBankInfo: true,
-        IncludePaymentStatus: false);
+        IncludePaymentStatus: false,
+        AllowedPaymentMethods: GhcPaymentMethods);
 
     /// <summary>UPC's reference payload has none of the GHC-only fields above,
     /// but does include payment_status on every payment.</summary>
@@ -34,7 +49,8 @@ public sealed record FlatVariant(
         IncludeDeliveryFields: false,
         IncludeCreditInfo: false,
         IncludeCardBankInfo: false,
-        IncludePaymentStatus: true);
+        IncludePaymentStatus: true,
+        AllowedPaymentMethods: UpcPaymentMethods);
 }
 
 public interface IFlatOrderPayloadBuilder

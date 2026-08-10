@@ -53,8 +53,11 @@ This divergence predates this ADR and is systemic rather than COD-specific:
 the builder emits the application's canonical method vocabulary
 (`"Visa"`, `"Tamara"`, ...) while the fixtures use lowercase (`"visa"`,
 `"tamara"`). `"COD"` is also the vocabulary `FlatOrderValidator`
-depends on: it is in `AllowedPaymentMethods` and drives the
-`method == "COD"` status rule.
+depends on: it is a GHC allowed method and drives the
+`method == "COD"` status rule. (ADR-0014 later moved the allowed-method list
+onto `FlatVariant`; UPC no longer accepts an explicit `COD` payment row, but
+the payment-free `order_payment_method` `"COD"` shape described here is
+unchanged for both variants.)
 
 It was previously unreachable. Validation blocked payment-free orders, so the
 `"COD"` fallback never actually shipped to a client RMS. This ADR makes that

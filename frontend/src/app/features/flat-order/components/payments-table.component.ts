@@ -2,7 +2,8 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Payment } from '../../../core/models';
 import { AssetPath, paymentAssetForMethod } from '../../../core/config/app-assets';
-import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiIconButtonComponent } from '../../../shared/ui';
+import { EmptyStateComponent, RiyalComponent, UiButtonComponent, UiDropdownSelectComponent, UiIconButtonComponent } from '../../../shared/ui';
+import { PAYMENT_STATUS_OPTIONS } from '../payment-policy';
 
 export interface PaymentUpdate {
   index: number;
@@ -19,7 +20,7 @@ export interface PaymentUpdate {
 @Component({
   selector: 'app-payments-table',
   standalone: true,
-  imports: [CommonModule, EmptyStateComponent, RiyalComponent, UiButtonComponent, UiIconButtonComponent],
+  imports: [CommonModule, EmptyStateComponent, RiyalComponent, UiButtonComponent, UiDropdownSelectComponent, UiIconButtonComponent],
   template: `
     <div id="payments-card" class="py">
       <div class="py__errors" role="alert" *ngIf="errors.length > 0">
@@ -57,9 +58,13 @@ export interface PaymentUpdate {
 
             <div class="cell cell--status">
               <label class="cell__label" [for]="'payment-status-' + index">Status</label>
-              <select [id]="'payment-status-' + index" class="editor editor--select" [value]="payment.paymentStatus" (change)="onEdit(index, 'paymentStatus', $event)">
-                <option *ngFor="let status of paymentStatuses" [value]="status">{{ status }}</option>
-              </select>
+              <ui-dropdown-select
+                [buttonId]="'payment-status-' + index"
+                size="sm"
+                [options]="paymentStatusOptions"
+                [value]="payment.paymentStatus"
+                [ariaLabel]="'Status for ' + payment.paymentMethod"
+                (valueChange)="onStatusChange(index, $event)"></ui-dropdown-select>
             </div>
 
             <div class="cell cell--amount">
@@ -72,7 +77,7 @@ export interface PaymentUpdate {
                   type="number" min="0" step="0.01"
                   [value]="payment.paymentAmount"
                   [attr.aria-label]="'Amount for ' + payment.paymentMethod"
-                  (change)="onEdit(index, 'paymentAmount', $event)">
+                  (change)="onAmountEdit(index, $event)">
               </span>
             </div>
 
@@ -131,7 +136,6 @@ export interface PaymentUpdate {
 
     .editor { width: 100%; min-height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); font: inherit; font-size: .85rem; text-align: right; font-variant-numeric: tabular-nums; }
     .editor:focus-visible { outline: none; border-color: var(--border-focus); box-shadow: var(--focus-ring); }
-    .editor--select { text-align: left; }
     .editor-wrap { display: flex; align-items: center; gap: 4px; }
     .editor-wrap app-riyal { flex: 0 0 auto; color: var(--text-muted); }
 
@@ -158,7 +162,8 @@ export class PaymentsTableComponent {
   @Output() deletePayment = new EventEmitter<number>();
   @Output() updatePayment = new EventEmitter<PaymentUpdate>();
 
-  readonly paymentStatuses = ['not_payment', 'done_payment', 'failed_payment'];
+  /** Labelled Not paid / Paid / Failed; the emitted values stay raw. */
+  readonly paymentStatusOptions = PAYMENT_STATUS_OPTIONS;
 
   trackByIndex(index: number): number { return index; }
 
@@ -170,12 +175,16 @@ export class PaymentsTableComponent {
     return this.payments.reduce((total, payment) => total + (Number(payment.paymentAmount) || 0), 0);
   }
 
-  onEdit(index: number, field: 'paymentAmount' | 'paymentStatus', event: Event) {
-    const raw = (event.target as HTMLInputElement | HTMLSelectElement).value;
-    const patch: Partial<Payment> = field === 'paymentAmount'
-      ? { paymentAmount: Number.isFinite(Number(raw)) ? Number(raw) : 0 }
-      : { paymentStatus: raw };
+  onAmountEdit(index: number, event: Event) {
+    const raw = (event.target as HTMLInputElement).value;
+    const patch: Partial<Payment> = { paymentAmount: Number.isFinite(Number(raw)) ? Number(raw) : 0 };
     this.updatePayment.emit({ index, patch });
+  }
+
+  /** The row status stays editable for every method: done_payment is a default,
+   * not a lock. The raw payload value is emitted, never the display label. */
+  onStatusChange(index: number, paymentStatus: string) {
+    this.updatePayment.emit({ index, patch: { paymentStatus } });
   }
 
   metadata(payment: Payment): string {

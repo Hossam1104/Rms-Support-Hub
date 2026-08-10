@@ -19,6 +19,7 @@ export * from './ui-section/ui-section.component';
 export * from './ui-field/ui-field.component';
 export * from './ui-input/ui-input.component';
 export * from './ui-select/ui-select.component';
+export * from './ui-dropdown-select/ui-dropdown-select.component';
 export * from './ui-button/ui-button.component';
 export * from './ui-icon-button/ui-icon-button.component';
 export * from './tool-card/tool-card.component';

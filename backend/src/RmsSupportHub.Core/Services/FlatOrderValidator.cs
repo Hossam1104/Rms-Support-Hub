@@ -23,15 +23,6 @@ public interface IFlatOrderValidator
 
 public class FlatOrderValidator : IFlatOrderValidator
 {
-    /// <summary>From config.PAYMENT_METHODS in _legacy_flask/config.py, plus
-    /// PostToCredit (checked separately throughout flat_order.py but never
-    /// listed in PAYMENT_METHODS itself).</summary>
-    private static readonly string[] AllowedPaymentMethods =
-    {
-        "COD", "Visa", "RajhiPoints", "Tamara", "Tabby", "NeqatyPoints",
-        "QitafPoints", "MisPay", "Emkan", "YouGotaGift", "OgMoney", "PostToCredit"
-    };
-
     private static readonly string[] DigitalWallets = { "Tamara", "Tabby", "MisPay", "Emkan", "Visa" };
 
     private static readonly string[] RequiredFields =
@@ -77,9 +68,14 @@ public class FlatOrderValidator : IFlatOrderValidator
         {
             var method = p.GetValueOrDefault("payment_method")?.ToString() ?? "";
 
-            if (!string.IsNullOrEmpty(method) && !AllowedPaymentMethods.Contains(method))
+            // The accepted method set is a property of the variant, not of the
+            // module key: GHC keeps the full legacy list while UPC settles only
+            // through Visa/Tamara/Tabby. A UPC cash order carries no payment row
+            // at all, so an explicit "COD" row is rejected here like any other
+            // method the variant does not accept.
+            if (!string.IsNullOrEmpty(method) && !variant.AllowedPaymentMethods.Contains(method))
             {
-                errors.Add($"Unknown payment method '{method}'. Use one of: {string.Join(", ", AllowedPaymentMethods)}.");
+                errors.Add($"Payment method '{method}' is not allowed. The allowed payment methods: [{string.Join(", ", variant.AllowedPaymentMethods)}]");
             }
 
             if (method == "PostToCredit" && !variant.IncludeCreditInfo)

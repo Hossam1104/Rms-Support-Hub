@@ -34,6 +34,12 @@ html, body {
   transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
+/* The CDK renders every connected overlay (branch search, date range picker,
+   dropdown selects) into one body-level container. Its default z-index sits
+   below the app's dialog layer, which would hide a dropdown opened inside the
+   Add Payment dialog. */
+.cdk-overlay-container { z-index: var(--z-cdk-overlay); }
+
 /* Shared commerce visuals used by order builders and request details. */
 .commerce-offer-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: .72rem; font-weight: 700; }
 .commerce-offer-mark img { width: 16px; height: 16px; object-fit: contain; }

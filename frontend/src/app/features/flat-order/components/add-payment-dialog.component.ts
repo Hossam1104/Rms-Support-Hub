@@ -1,12 +1,13 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Payment } from '../../../core/models';
-import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent, UiSelectOption } from '../../../shared/ui';
+import { RiyalComponent, UiButtonComponent, UiCardComponent, UiDropdownOption, UiDropdownSelectComponent, UiFieldComponent, UiInputComponent } from '../../../shared/ui';
+import { PAYMENT_STATUS_OPTIONS, defaultPaymentMethod, defaultPaymentStatus, paymentMethodOptions } from '../payment-policy';
 
 @Component({
   selector: 'app-add-payment-dialog',
   standalone: true,
-  imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, UiInputComponent, UiSelectComponent],
+  imports: [CommonModule, RiyalComponent, UiButtonComponent, UiCardComponent, UiDropdownSelectComponent, UiFieldComponent, UiInputComponent],
   template: `
     <div class="modal-backdrop" role="presentation">
       <ui-card variant="raised" class="modal-dialog" (click)="$event.stopPropagation()">
@@ -17,10 +18,10 @@ import { RiyalComponent, UiButtonComponent, UiCardComponent, UiFieldComponent, U
 
         <div class="form-grid">
           <ui-field label="Payment Method" forId="payment-method" [required]="true">
-            <ui-select selectId="payment-method" [options]="availablePaymentMethodOptions" [value]="payment.paymentMethod" (valueChange)="payment.paymentMethod = $any($event) || ''; onMethodChange()"></ui-select>
+            <ui-dropdown-select buttonId="payment-method" ariaLabel="Payment method" [options]="availablePaymentMethodOptions" [value]="payment.paymentMethod" (valueChange)="onMethodChange($event)"></ui-dropdown-select>
           </ui-field>
           <ui-field label="Payment Status" forId="payment-status" [required]="true">
-            <ui-select selectId="payment-status" [options]="paymentStatusOptions" [value]="payment.paymentStatus" (valueChange)="payment.paymentStatus = $any($event) || ''"></ui-select>
+            <ui-dropdown-select buttonId="payment-status" ariaLabel="Payment status" [options]="paymentStatusOptions" [value]="payment.paymentStatus" (valueChange)="payment.paymentStatus = $event"></ui-dropdown-select>
           </ui-field>
           <ui-field label="Amount" forId="payment-amount" [required]="true">
             <ui-input inputId="payment-amount" type="number" step="0.01" [value]="payment.paymentAmount" (valueChange)="onAmountChange($event)">
@@ -65,28 +66,28 @@ export class AddPaymentDialogComponent implements OnChanges {
   @Output() close = new EventEmitter<void>();
   @Output() add = new EventEmitter<Payment>();
 
-  readonly paymentMethodOptions: UiSelectOption[] = [
-    { value: 'COD', label: 'COD' }, { value: 'Visa', label: 'Visa' }, { value: 'RajhiPoints', label: 'RajhiPoints' },
-    { value: 'Tamara', label: 'Tamara' }, { value: 'Tabby', label: 'Tabby' }, { value: 'NeqatyPoints', label: 'NeqatyPoints' },
-    { value: 'QitafPoints', label: 'QitafPoints' }, { value: 'MisPay', label: 'MisPay' }, { value: 'Emkan', label: 'Emkan' },
-    { value: 'YouGotaGift', label: 'YouGotaGift' }, { value: 'OgMoney', label: 'OgMoney' }, { value: 'PostToCredit', label: 'PostToCredit' }
-  ];
-  get availablePaymentMethodOptions(): UiSelectOption[] {
-    return this.paymentMethodOptions.filter(option => option.value !== 'PostToCredit' || this.moduleKey !== 'upc_ecommerce');
+  /** The methods the active module accepts, in policy order. UPC offers only
+   * Visa, Tamara and Tabby; GHC keeps the full legacy list. */
+  get availablePaymentMethodOptions(): UiDropdownOption[] {
+    return paymentMethodOptions(this.moduleKey);
   }
-  readonly paymentStatusOptions: UiSelectOption[] = [
-    { value: 'not_payment', label: 'not_payment (COD)' }, { value: 'done_payment', label: 'done_payment (Paid)' }, { value: 'failed_payment', label: 'failed_payment' }
-  ];
+  readonly paymentStatusOptions = PAYMENT_STATUS_OPTIONS;
   payment: Payment = { paymentMethod: 'COD', paymentStatus: 'not_payment', paymentAmount: 0, transactionId: '', customerName: '', customerNumber: '' };
   private amountAutoFilled = false;
 
   ngOnChanges(changes: SimpleChanges) {
+    // The dialog is recreated on every open, so this is also the first-open
+    // path: start on a method the active module actually accepts rather than
+    // on whatever the previous module left behind.
+    if (changes['moduleKey']) this.resetForModule();
+
     if (changes['requiredAmount'] && this.amountAutoFilled && this.payment.paymentMethod !== 'COD') {
       this.payment.paymentAmount = this.normalizedRequiredAmount();
     }
   }
 
-  onMethodChange() {
+  onMethodChange(method: string) {
+    this.payment.paymentMethod = method;
     this.payment.paymentStatus = this.statusForMethod();
     if (this.payment.paymentMethod !== 'COD') {
       this.payment.paymentAmount = this.normalizedRequiredAmount();
@@ -95,6 +96,19 @@ export class AddPaymentDialogComponent implements OnChanges {
       this.payment.paymentAmount = 0;
       this.amountAutoFilled = false;
     }
+  }
+
+  private resetForModule() {
+    const method = defaultPaymentMethod(this.moduleKey);
+    this.payment = {
+      paymentMethod: method,
+      paymentStatus: defaultPaymentStatus(method),
+      paymentAmount: method === 'COD' ? 0 : this.normalizedRequiredAmount(),
+      transactionId: '',
+      customerName: '',
+      customerNumber: ''
+    };
+    this.amountAutoFilled = method !== 'COD';
   }
 
   onAmountChange(value: unknown) {
@@ -108,9 +122,7 @@ export class AddPaymentDialogComponent implements OnChanges {
   }
 
   private statusForMethod(): string {
-    return this.payment.paymentMethod === 'COD' || this.payment.paymentMethod === 'PostToCredit'
-      ? 'not_payment'
-      : 'done_payment';
+    return defaultPaymentStatus(this.payment.paymentMethod);
   }
 
   private normalizedRequiredAmount(): number {

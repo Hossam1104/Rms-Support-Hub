@@ -124,6 +124,88 @@ public class PayloadAndValidationTests
         Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for this module"));
     }
 
+    /// <summary>UPC settles only through Visa, Tamara and Tabby. The rule lives
+    /// on FlatVariant.AllowedPaymentMethods, so the validator enforces it
+    /// independently of whatever the Angular dialog happens to offer.</summary>
+    private static OrderDraft PaymentPolicyDraft(string method, string status)
+        => new()
+        {
+            OrderData = new Dictionary<string, object?>
+            {
+                ["branch_code"] = "201",
+                ["order_code"] = "POLICY-1",
+                ["client_first_name"] = "Jane",
+                ["client_last_name"] = "Smith",
+                ["client_phone"] = "0559876543",
+                ["order_address"] = "King Road"
+            },
+            Products = new List<Product> { new() { ItemCode = "1", ItemName = "P1", Quantity = 1, UnitPrice = 100, VatPercentage = 15 } },
+            Payments = new List<Payment> { new() { PaymentMethod = method, PaymentStatus = status, PaymentAmount = 115m } }
+        };
+
+    [Theory]
+    [InlineData("Visa")]
+    [InlineData("Tamara")]
+    [InlineData("Tabby")]
+    public void UpcValidation_AcceptsTheThreeAllowedPaymentMethods(string method)
+    {
+        var payload = _flatBuilder.BuildPayload(PaymentPolicyDraft(method, "done_payment"), FlatVariant.UpcVariant);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid: 115m);
+
+        Assert.Empty(errors);
+    }
+
+    [Theory]
+    [InlineData("MisPay")]
+    [InlineData("Emkan")]
+    [InlineData("RajhiPoints")]
+    public void UpcValidation_RejectsPaymentMethodsOutsideTheAllowedSet(string method)
+    {
+        var payload = _flatBuilder.BuildPayload(PaymentPolicyDraft(method, "done_payment"), FlatVariant.UpcVariant);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid: 115m);
+
+        Assert.Contains(errors, e => e == $"Payment method '{method}' is not allowed. The allowed payment methods: [Visa, Tamara, Tabby]");
+    }
+
+    /// <summary>UPC cash on delivery is the zero-payment shape, never a payment
+    /// row -- so an explicit COD row is a malformed payload, not a cash order.</summary>
+    [Fact]
+    public void UpcValidation_RejectsAnExplicitCodPaymentRow()
+    {
+        var payload = _flatBuilder.BuildPayload(PaymentPolicyDraft("COD", "not_payment"), FlatVariant.UpcVariant);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid: 115m);
+
+        Assert.Contains(errors, e => e == "Payment method 'COD' is not allowed. The allowed payment methods: [Visa, Tamara, Tabby]");
+    }
+
+    /// <summary>The status rules still apply to the methods UPC does allow.</summary>
+    [Theory]
+    [InlineData("Visa")]
+    [InlineData("Tamara")]
+    [InlineData("Tabby")]
+    public void UpcValidation_StillRequiresDonePaymentStatusOnAllowedMethods(string method)
+    {
+        var payload = _flatBuilder.BuildPayload(PaymentPolicyDraft(method, "not_payment"), FlatVariant.UpcVariant);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid: 115m);
+
+        Assert.Contains(errors, e => e.Contains($"{method} payment status must be 'done_payment'"));
+    }
+
+    /// <summary>UPC's three-method whitelist is scoped to UPC: GHC keeps the
+    /// full legacy method list, including the wallets UPC now refuses.</summary>
+    [Theory]
+    [InlineData("MisPay")]
+    [InlineData("Emkan")]
+    [InlineData("RajhiPoints")]
+    [InlineData("COD")]
+    public void GhcValidation_StillAcceptsTheFullLegacyPaymentMethodList(string method)
+    {
+        var payload = _flatBuilder.BuildPayload(PaymentPolicyDraft(method, "done_payment"), FlatVariant.GhcVariant);
+        var errors = _flatValidator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid: 115m);
+
+        Assert.DoesNotContain(errors, e => e.Contains("is not allowed"));
+    }
+
     /// <summary>An order with no payment rows is a valid Cash-on-Delivery
     /// order, not an incomplete one. The builder already emitted the COD shape
     /// for that state; the validator used to reject it before the payload ever
@@ -205,7 +287,7 @@ public class PayloadAndValidationTests
         var payload = _flatBuilder.BuildPayload(draft, FlatVariant.UpcVariant);
         var errors = _flatValidator.ValidatePayload(payload, FlatVariant.UpcVariant, totalPaid: 115m);
 
-        Assert.Contains(errors, e => e.Contains("Unknown payment method 'Bitcoin'"));
+        Assert.Contains(errors, e => e.Contains("Payment method 'Bitcoin' is not allowed. The allowed payment methods: [Visa, Tamara, Tabby]"));
         Assert.Contains(errors, e => e.Contains("Visa payment status must be 'done_payment'"));
         Assert.Contains(errors, e => e.Contains("PostToCredit payment method is not allowed for this module."));
     }

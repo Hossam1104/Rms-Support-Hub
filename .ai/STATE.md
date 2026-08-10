@@ -73,8 +73,9 @@ contracts, not host identity:
   request fixtures; database, table, and SQL column names.
 - Module keys `upc_ecommerce`, `ghc_ecommerce`, `ghc_unicommerce`; behavior is
   gated by `IOrderModule.Capabilities`, never a module-key comparison.
-- Payment and integration values such as `COD`, `Visa`, `Tamara`, `Tabby`,
-  `Mada`, and `CashOnDelivery`.
+- Payment values `COD`, `Visa`, `Tamara`, `Tabby`, `Mada`, `CashOnDelivery`;
+  statuses `not_payment`/`done_payment`/`failed_payment` (Not paid/Paid/Failed).
+  Allowed methods are per variant: UPC only Visa/Tamara/Tabby (ADR-0014).
 - Feature wording: `QA Prompt Studio`, `Online Order Tool`,
   `POS Maintenance Tool`.
 - Supplied asset filenames and case, including the deliberate `warrning.svg`
@@ -92,16 +93,16 @@ failure. Details are in `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded 2026-08-10 (Online Orders UI redesign, then the items detail grid, then the date picker move to a CDK overlay); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table. Backend rows are from the same day against unchanged backend code.
+Recorded 2026-08-10 (Online Orders UI redesign, the items detail grid, the date picker move to a CDK overlay, then the UPC payment policy and modern payment dropdowns); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 54 files / 304 tests passed, 0 skipped |
-| Backend tests | 174 passed, 0 failed, 0 skipped |
+| Frontend tests | 55 files / 325 tests passed, 0 skipped |
+| Backend tests | 188 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; all Angular budgets clear |
-| Production initial bundle | 456.35 kB raw / 104.20 kB estimated transfer |
-| Lazy `three-module` chunk | 734.66 kB raw / 153.79 kB estimated transfer |
-| Production-offline initial bundle | 442.03 kB raw / 103.66 kB estimated transfer |
+| Production initial bundle | 456.42 kB raw / 104.28 kB estimated transfer |
+| Lazy `three-module` chunk | 734.66 kB raw / 153.90 kB estimated transfer |
+| Production-offline initial bundle | 442.11 kB raw / 103.63 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
 | Rendered browser pass | Not run; no browser automation tool is available in this environment |
 
