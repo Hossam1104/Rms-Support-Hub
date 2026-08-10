@@ -49,16 +49,18 @@ Closed. Sessions 00-08 ran on dedicated branches, each validated before merge.
 ## Programme status
 
 The standalone RMS+ Support Hub refactor is complete. INT-00 POS Maintenance
-cross-project architecture closure is complete; the architecture checkpoint is
-the next gate and INT-01 implementation remains blocked. Remaining external
-gates are not implementation work: safe UPC **Testing** acceptance, the
+cross-project architecture closure and INT-00R transport hardening are
+complete; the architecture checkpoint passed and INT-01 is owner-authorization
+required/not executed. Remaining external gates are not implementation work:
+safe UPC **Testing** acceptance, the
 Production database index decision, and deployment/Production acceptance.
 
 ## POS Maintenance integration planning
 
 | Milestone | Evidence | Outcome |
 |---|---|---|
-| INT-00 - POS cross-project architecture decision closure | Documentation/reference checks, memory checks, `git diff --check`, scope and secret scans | Canonical direct browser-to-loopback Windows Agent architecture, browser/LNA/Negotiate/CORS/antiforgery/certificate decisions, clean snapshot/import boundary, contract ownership, and destination CI lanes recorded. INT-01 blocked pending the architecture checkpoint. |
+| INT-00 - POS cross-project architecture decision closure | Documentation/reference checks, memory checks, `git diff --check`, scope and secret scans | Canonical direct browser-to-loopback Windows Agent architecture, browser/LNA/Negotiate/CORS/antiforgery/certificate decisions, clean snapshot/import boundary, contract ownership, and destination CI lanes recorded. INT-01 remained gated pending the later architecture checkpoint. |
+| INT-00R - transport architecture hardening | Source/provenance checks at POS SHA `25922b499d33bd73f241ffc26c212dd000e81433`, official Chrome/Edge policy verification, documentation-only validation | Hardened loopback/back-connection, HTTP/1.1, anonymous CORS preflight, read-only SSE, authenticated artifact fetch, server-operation-bound single-use tokens, per-device scope, mandatory certificate trust, Support Hub session-identity prohibition, and versioned LNA policy matrix. Claude MEDIUM-8 is not applicable/already closed by source. INT-01 was not executed. |
 
 | Order Requests filter and query refresh | 2026-08-09 validation | Added a month-to-date default range, a tokenized calendar picker, grouped filter clusters, and a ten-newest base-query fast path; frontend 272/272 tests, backend 173/173 tests, Release build, and production Angular build passed. |
 | Order Requests timeout and alignment hardening | 2026-08-09 validation | Replaced repeated latest-row probes with bounded set-based enrichment, reserved the table row accent gutter, and added container-responsive filter layout; frontend 272/272 tests, backend 174/174 tests, Release build, and production Angular build passed. |

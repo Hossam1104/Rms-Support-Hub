@@ -3,8 +3,10 @@
 - **Updated:** 2026-08-10
 - **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 POS
-  cross-project architecture decision closure complete.
-- **Next gate:** CLAUDE OPUS 5 POS INTEGRATION ARCHITECTURE CHECKPOINT - review required / no execution authorized; INT-01 blocked.
+  cross-project architecture decision closure and INT-00R transport hardening
+  complete.
+- **Next gate:** INT-01 destination project/build/CI skeleton - owner
+  authorization required / not yet executed.
 
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 
@@ -34,31 +36,37 @@ This file records durable facts only; milestone history lives in `.ai/HISTORY.md
   tokenized filters, a ten-newest base-only path, and paging for header-derived filters.
 
 ## POS integration architecture checkpoint
-
-INT-00 is documentation/governance complete. The canonical target is a separate
-Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub Angular over
-HTTPS on fixed loopback; `RmsSupportHub.Api`, `Core`, and `Data` are not its path.
+INT-00 and INT-00R are documentation/governance complete. The canonical target
+is a separate Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub
+Angular over trusted HTTPS on fixed loopback using HTTP/1.1 only;
+`RmsSupportHub.Api`, `Core`, and `Data` are not its path.
 
 ```text
-INT-00: COMPLETE
-CROSS-PROJECT INTEGRATION PLAN: COMPLETE
+INT-00 / INT-00R: COMPLETE; CLAUDE ARCHITECTURE CHECKPOINT: PASS
 POS SOURCE: MERGE-READY CANDIDATE AT 25922b499d33bd73f241ffc26c212dd000e81433
 PRIVILEGED POS BOUNDARY: SEPARATE WINDOWS POS AGENT
+TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
+LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
+WINDOWS LOOPBACK AUTH: BACK-CONNECTION / HOSTNAME EVIDENCE OPEN
+CORS: ANONYMOUS EXACT-ORIGIN PREFLIGHT; APP: NEGOTIATE + LOCAL ADMIN
+MACHINE TRUST: MANDATORY; SSE: READ-ONLY / NO MUTATION TOKEN
+ARTIFACTS: AUTHENTICATED FETCH / OPAQUE HANDLE; TOKEN: SINGLE-USE / OPERATION-BOUND
+DIRECT BROWSER TO LOOPBACK AGENT: PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
 PREFERRED TRANSPORT: SUPPORT HUB BROWSER → LOCAL LOOPBACK POS AGENT
-LOCAL NETWORK ACCESS: ARCHITECTURE DECIDED / LIVE EVIDENCE OPEN
-STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY
-WINUI: RETAINED
-REPOSITORY IMPORT: NOT AUTHORIZED
-INTEGRATION IMPLEMENTATION: NOT AUTHORIZED
-INT-01: BLOCKED
-CLAUDE OPUS 5 ARCHITECTURE CHECKPOINT: REQUIRED
+STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY; WINUI: RETAINED
+REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: NOT AUTHORIZED
+INT-01: OWNER AUTHORIZATION REQUIRED / NOT EXECUTED; MEDIUM-8 CLOSED BY SOURCE
 ```
-
-Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`. Future transport
-uses exact-origin CORS/LNA, Windows Negotiate, and the selected one-use request-token contract; Kerberos preferred, NTLM fallback acceptable pending evidence, no delegation.
+Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`; trusted machine
+certificate provisioning is mandatory. Kerberos is preferred but `.localhost`
+SPN and NTLM loopback/back-connection behavior remain open; REST is state
+truth, SSE is read-only/no-token progress, and artifacts use authenticated
+fetch with opaque handles.
 
 Future destination: `/pos/src` contains portable Domain/Application/Contracts,
-Windows Infrastructure/Agent, retained WinUI, and `/pos/tests`; it is not created by INT-00. Raw history merge, import, OpenAPI/client, CI, and runtime work remain blocked.
+Windows Infrastructure/Agent, retained WinUI, and `/pos/tests`; it is not
+created by INT-00R. Raw history merge, import, OpenAPI/client, CI, and runtime
+work remain blocked until owner authorization; next owner uses a fresh context.
 
 ## Compatibility contracts
 

@@ -10,17 +10,18 @@ re-validated after the architecture checkpoint.
 The cross-project architecture is closed in
 [POS_MAINTENANCE_INTEGRATION_PLAN.md](POS_MAINTENANCE_INTEGRATION_PLAN.md).
 This document is its Support Hub readiness companion. The independent POS
-project remains a read-only provenance source for the authorized SHA; INT-00
-did not import or inspect POS source and did not implement an Agent or Angular
-feature.
+project remains a read-only provenance source for the authorized SHA. INT-00R
+performed only the required read-only provenance spot checks (`BackupApiClient`,
+current Agent hosting/security boundary, and POS ADR-012); it did not import
+source or implement an Agent or Angular feature.
 
-**Status: ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process boundary, direct
-browser transport, LNA, managed-browser policy, Negotiate, hostname/port/
-certificate, CORS, antiforgery, identity, ownership, source-import, contract,
-and CI decisions are recorded in the canonical plan and ADRs. Live Agent,
-browser-policy, representative-device, and real-operation evidence remains
-open. INT-01 is blocked until the narrow architecture checkpoint passes and
-the owner explicitly authorizes execution.
+**Status: INT-00R COMPLETE / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+boundary, direct browser transport, LNA version/policy matrix, Negotiate and
+loopback back-connection behavior, hostname/port/certificate, CORS preflight,
+antiforgery, identity, ownership, source-import, contract, and CI decisions are
+recorded in the canonical plan and ADRs. Live Agent, browser-policy,
+representative-device, and real-operation evidence remains open. INT-01 is
+owner-authorization required and has not been executed.
 
 ## Current RMS+ architecture
 
@@ -60,8 +61,11 @@ The future path is:
 ```text
 Support Hub Angular
     |
-    | HTTPS + Local Network Access + Windows Negotiate
-    | exact Origin/CORS + approved antiforgery contract
+    | Trusted HTTPS secure context + HTTP/1.1 only
+    | LNA version/policy matrix + Windows Negotiate
+    | anonymous exact-origin CORS preflight
+    | authenticated/authorized application request
+    | server-operation-bound single-use mutation token
     v
 Separate Windows RmsSupportHub.Pos.Agent
     |
@@ -76,10 +80,61 @@ operations, and never becomes a generic command or script execution surface.
 See [POS_MAINTENANCE_INTEGRATION_PLAN.md](POS_MAINTENANCE_INTEGRATION_PLAN.md)
 and ADR-0015/0016 for the full security and ownership decisions.
 
+The initial seam is explicitly per-device local maintenance:
+
+```text
+DIRECT BROWSER -> LOOPBACK AGENT:
+PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
+```
+
+It is not a remote branch-fleet architecture. A future LAN, central, or
+remote-device requirement needs a new architecture/security programme and
+must not be solved by widening the Agent listener or adding an ad-hoc API
+proxy.
+
+### Transport contract reminders
+
+- Windows loopback/back-connection behavior for the custom Agent hostname is a
+  separate evidence item. `BackConnectionHostNames` may contain only the exact
+  approved hostname when required; `DisableLoopbackCheck = 1` is prohibited.
+- Trusted machine certificate provisioning is mandatory. `.localhost` public-CA
+  issuance is not a production assumption; per-device certificate designs
+  require device keys, minimum LocalSystem access, lifecycle handling, and
+  trust cleanup.
+- CORS preflight is an anonymous exact-origin transport check. The application
+  request still requires Windows Negotiate, local Administrators authorization,
+  exact Origin, and the mutation token.
+- REST is state truth and SSE is read-only progress transport with no mutation
+  token. Artifacts use authenticated typed fetch plus opaque handles and Blob
+  object URLs, not top-level Agent navigation or persistent download URLs.
+- The mutation token is not authentication. It is issued and consumed once per
+  mutation, per tab, and binds the authenticated principal, exact Origin,
+  method, server-owned operation ID, expiry, and anti-replay ID.
+
+### LNA deployment matrix
+
+The matrix below was checked against current first-party Chrome and Edge policy
+documentation on 2026-08-10. Chrome and Edge are recorded independently; an
+allowlist is not effective until existing block policies and precedence are
+inspected.
+
+| Browser generation | Local-network policy | Loopback-specific policy | Readiness requirement |
+| --- | --- | --- | --- |
+| Chrome 139-145 | `LocalNetworkAccessAllowedForUrls` / `LocalNetworkAccessBlockedForUrls` | Current policy precedence also names `LoopbackNetworkAccessAllowedForUrls` / `LoopbackNetworkAccessBlockedForUrls`; split `LoopbackNetworkAllowedForUrls` starts at 146 | Inspect the actual browser policy surface and use any exposed loopback-specific control. |
+| Chrome 146+ | `LocalNetworkAllowedForUrls` / `LocalNetworkBlockedForUrls` and `LocalNetworkAccess*` | `LoopbackNetworkAllowedForUrls` / `LoopbackNetworkBlockedForUrls` | Use the applicable loopback-specific policy for the loopback Agent. |
+| Edge 140-145 | `LocalNetworkAccessAllowedForUrls` / `LocalNetworkAccessBlockedForUrls` | Current policy precedence also names `LoopbackNetworkAccessAllowedForUrls` / `LoopbackNetworkAccessBlockedForUrls`; split `LoopbackNetworkAllowedForUrls` starts at 146 | Inspect the actual browser policy surface and use any exposed loopback-specific control. |
+| Edge 146+ | `LocalNetworkAllowedForUrls` / `LocalNetworkBlockedForUrls` and `LocalNetworkAccess*` | `LoopbackNetworkAllowedForUrls` / `LoopbackNetworkBlockedForUrls` | Use the applicable loopback-specific policy for the loopback Agent. |
+
+Use no wildcard allowlists, global permanent LNA disablement, or permanent
+temporary opt-out policy. The Support Hub origin must be HTTPS/a trusted secure
+context. The exact browser build, permission generation, target address space,
+allow policy, block policy, policy scope, and precedence belong in the live
+evidence record.
+
 ## Integration entry points
 
 These are the Support Hub seams a future authorized POS feature may attach to.
-They are not implementation authorization and are not changed by INT-00.
+They are not implementation authorization and are not changed by INT-00R.
 
 | Seam | File or destination | Future integration responsibility |
 | --- | --- | --- |
@@ -156,14 +211,20 @@ These hold before, during, and after future integration:
    namespace and does not disturb the eight keys listed in `.ai/STATE.md`.
 5. The placeholder stays safe until it is deliberately replaced on an
    authorized integration branch.
+6. Hub session identifiers, including `oot_sid`, never become Agent Windows
+   identities, authorization principals, operation/resource owners,
+   idempotency identities, audit principals, or mutation-token principals.
+7. The direct browser-to-loopback Agent remains per-device local maintenance;
+   remote-fleet requirements are out of scope for INT-01.
 
-## INT-01 entry sequence (blocked)
+## INT-01 entry sequence (owner authorization required)
 
-1. Pass the narrowly scoped `CLAUDE OPUS 5 POS INTEGRATION ARCHITECTURE
-   CHECKPOINT` covering process isolation, browser-to-loopback transport, LNA,
-   managed browser policy, Negotiate, hostname/port/certificate, CORS,
-   antiforgery, identity, audit/resource ownership, destination isolation, and
-   clean source import.
+1. Confirm the passed `CLAUDE OPUS 5 POS INTEGRATION ARCHITECTURE CHECKPOINT`
+   and the INT-00R hardening record covering process isolation,
+   browser-to-loopback HTTP/1.1 transport, the versioned LNA/browser-policy
+   matrix, Negotiate and loopback back-connection behavior,
+   hostname/port/certificate, CORS preflight, antiforgery, identity,
+   audit/resource ownership, destination isolation, and clean source import.
 2. Supply and review the POS source at the authorized provenance SHA, complete
    the `[REQUIRES SOURCE REVIEW]` rows in
    `POS_MAINTENANCE_MIGRATION_INTAKE.md`, and produce a clean tracked snapshot.
@@ -178,7 +239,9 @@ These hold before, during, and after future integration:
    representative-device evidence, and the existing Support Hub regression
    gate before any merge.
 
-INT-01 is not staged for execution by this document.
+INT-01 is owner-authorization required, not yet executed, and must start from a
+fresh context after owner/planner verification. This document does not
+authorize implementation.
 
 ## Required post-integration validation
 
@@ -193,7 +256,7 @@ INT-01 is not staged for execution by this document.
 | Persisted keys | All eight keys remain byte-exact in source |
 | Business contracts | Prompt Studio 11/7/9 and the Online Order API/DTO/payload surface remain unchanged |
 | Rendered pass | POS plus one Online Order and one Prompt Studio route, desktop/mobile, light/dark, reduced motion; one H1/main landmark, no shell overflow, no unlabeled control |
-| Browser transport | Managed/unmanaged Chrome and Edge LNA, exact-origin CORS, Negotiate, certificate, antiforgery, denial/revocation, and Agent-unreachable evidence |
+| Browser transport | Managed/unmanaged Chrome and Edge independently: versioned LNA policy matrix and precedence, pre-existing block policy, HTTPS secure context, HTTP/1.1-only Agent, exact-origin anonymous preflight, Negotiate/loopback back-connection, certificate trust/lifecycle, application authorization, mutation-token binding/lifecycle, read-only SSE, authenticated artifact fetch, denial/revocation, and Agent-unreachable evidence |
 | Device evidence | LocalSystem/Session 0 SMB, SQL, SCM, restore/maintenance, downloader, and cross-process behavior on representative hardware |
 | Secrets | No credential, token, or connection-string value in the diff |
 
@@ -207,14 +270,34 @@ converted into architecture claims:
 - Live Agent/browser transport: open.
 - LNA and managed-browser policy: open; architecture defined, live evidence
   required.
-- Negotiate browser policy and Kerberos/NTLM behavior: open; live evidence
-  required. SPN behavior is not guessed.
+- Negotiate browser policy, Kerberos/NTLM, custom-hostname loopback/back-
+  connection, and any SPN registration: open; live evidence required. SPN
+  behavior is not guessed, and `DisableLoopbackCheck = 1` is prohibited.
+- Support Hub HTTPS secure context and trusted Agent machine certificate
+  provisioning/lifecycle: open; mandatory deployment evidence required.
+- Anonymous exact-origin CORS preflight, HTTP/1.1-only transport, read-only
+  SSE, authenticated artifact fetch/opaque handles, and single-use
+  server-operation-bound mutation tokens: open; implementation evidence
+  required.
+- Per-device scope and explicit rejection of remote/LAN widening: open;
+  deployment evidence required.
 - Real SQL, SCM, restore, maintenance, downloader, and remote-trigger
   reconciliation/idempotency: open or unverified.
 - SQL TLS: `TrustServerCertificate = true` remains an open deployment decision;
   it must be resolved before deployment or a Production claim.
 - WinUI cutover: open by design.
 - Integration implementation: not authorized.
+
+The INT-00R source finding is closed by the verified POS source:
+
+```text
+CLAUDE MEDIUM-8:
+NOT APPLICABLE / ALREADY CLOSED BY SOURCE
+```
+
+`BackupApiClient` at the approved provenance SHA already maps post-dispatch
+non-success responses to `OutcomeUnknown` without an authoritative
+side-effect-free remote contract; no automatic retry follows unknown.
 
 The pre-existing local Testing gap (`ConnectionStrings:UpcEcommerceTest` is not
 configured) remains unrelated to INT-00 and does not authorize Production

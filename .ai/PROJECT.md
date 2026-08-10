@@ -41,9 +41,11 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Drafts are JSON under API `var/drafts`, isolated by HttpOnly session GUID plus
   module key, serialized per key, and replaced atomically.
 - Angular uses standalone lazy components, typed models, signals, relative
-  `/api`, and a dev proxy. Existing Hub API hosting is not documented; future
-  privileged POS is direct HTTPS browser -> loopback `RmsSupportHub.Pos.Agent`,
-  not a path through `RmsSupportHub.Api`, `Core`, or `Data`.
+  `/api`, and a dev proxy. Future privileged POS is direct trusted HTTPS/
+  HTTP/1.1 browser -> loopback `RmsSupportHub.Pos.Agent`, not a path through
+  `RmsSupportHub.Api`, `Core`, or `Data`; CORS preflight is anonymous exact
+  origin; application requests use Windows Negotiate/authorization; token is
+  single-use/server-operation-bound; SSE is read-only; artifacts use authenticated fetch.
 - Supplied assets use the typed `app-assets.ts` catalog and semantic public
   folders; `frontend/public/assets/Saudi_Riyal.svg` remains verifier-required.
   Shared identity marks use `app-brand-mark` with contain-fit sizing and
@@ -70,10 +72,10 @@ Do not copy facts that can be cheaply discovered from the repository.
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
 - No background workers, queues, repository migrations, E2E framework, or
-  application auth scheme exists. POS INT-00 is closed but unauthorized to
-  implement: loopback-only Agent, Windows Negotiate, exact-origin CORS/LNA,
-  explicit antiforgery, frozen POS Angular reference, retained WinUI, and no
-  raw POS history import. See the integration plan and ADR-0015..0018.
+  application auth scheme exists. POS INT-00/INT-00R is closed; INT-01 requires
+  owner authorization for the loopback-only Agent, trusted HTTPS/HTTP/1.1,
+  Negotiate, exact-origin CORS/LNA, antiforgery, frozen POS reference, retained
+  WinUI, and no raw history import (see plan and ADR-0015..0018).
 
 ## Build and Validation Entry Points
 
@@ -110,9 +112,12 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Local draft persistence is owned by `SessionIdMiddleware` and `DraftManager`;
   `var/` is ignored and must not be treated as durable multi-instance storage.
 - Future POS machine-local ownership belongs to the separate Agent/deployment:
-  LocalSystem, machine certificate/private-key ACL, browser policy, explicit
-  SQL/SMB credentials, allowlisted operations, and privileged audit. Evidence
-  gates, not current Hub runtime facts.
+  LocalSystem, mandatory trusted machine certificate/private-key ACL, browser
+  policy matrix, explicit SQL/SMB credentials, allowlisted operations, and
+  privileged audit. The architecture is per-device local maintenance; remote
+  fleet/LAN scope is a new security programme. Windows loopback/back-connection
+  behavior, managed-browser/LNA, Negotiate/SPN, certificate lifecycle, and
+  device-operation evidence are gates, not current Hub runtime facts.
 
 ## Critical Conventions
 

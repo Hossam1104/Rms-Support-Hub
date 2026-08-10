@@ -1,6 +1,6 @@
 # ADR-0015: Separate Windows POS Agent and direct browser trust boundary
 
-- Status: Accepted; deployment evidence remains open
+- Status: Accepted; INT-00R transport hardening complete; deployment evidence remains open
 - Affected area: POS process isolation, privileged operations, Support Hub API boundary
 
 ## Context
@@ -37,6 +37,30 @@ from this ADR.
 The Agent never widens to a LAN listener when browser permission, LNA policy,
 certificate trust, or authentication fails. POS becomes unavailable instead.
 
+The initial browser-to-Agent architecture is explicitly per-device local
+maintenance:
+
+```text
+DIRECT BROWSER -> LOOPBACK AGENT:
+PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
+```
+
+The Agent installed on the same Windows device as the browser is the only
+initial target. This is not a remote branch-fleet or central-management
+architecture. A future requirement for fleet, LAN, remote-device, or central
+maintenance is a new architecture and security programme; the Agent must not
+widen to LAN access or be routed through the general Support Hub API as an
+ad-hoc workaround.
+
+Support Hub identifiers are never POS security identities. In particular,
+`oot_sid` and any other Hub session or draft identifier must never become a
+Windows identity, authorization principal, POS operation owner, artifact
+owner, file-handle owner, idempotency identity, destructive audit principal,
+or mutation-token principal. Privileged ownership is derived exclusively from
+the authenticated Agent-side Windows principal and server-owned POS contracts.
+The Hub session identifier remains limited to its existing Online Orders
+draft/session responsibilities; Online Orders behavior is unchanged.
+
 ## Consequences
 
 - The privileged boundary is visible and separately deployable, auditable, and
@@ -52,6 +76,7 @@ certificate trust, or authentication fails. POS becomes unavailable instead.
 ## R2 disposition
 
 The R2 non-blocking CI ownership finding is resolved by destination-owned CI
-lanes. The conservative trigger-truth wording is canonicalized in the
-integration plan and contract ADR. No runtime code changes are part of this
-decision.
+lanes. INT-00R hardens the browser transport and ownership wording in this ADR
+and ADR-0016; it does not authorize implementation or runtime code changes.
+The conservative trigger-truth wording is canonicalized in the integration
+plan and intake record.

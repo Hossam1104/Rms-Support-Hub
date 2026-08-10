@@ -7,9 +7,9 @@ future dedicated POS integration session. The POS Maintenance Tool is
 developed independently. RMS+ Support Hub does not implement, connect to, or
 infer POS operations today.
 
-INT-00 closed the destination-side architecture only. The POS repository is
-read-only in that session and no source was imported or inspected here. The
-planning candidate is:
+INT-00 closed the destination-side architecture only. INT-00R kept the POS
+repository read-only and performed only the required provenance spot checks;
+no source was imported. The planning candidate is:
 
 ```text
 POS SOURCE: MERGE-READY CANDIDATE AT 25922b499d33bd73f241ffc26c212dd000e81433
@@ -19,6 +19,20 @@ That SHA is provenance, not proof that deployment, device, browser, SQL, SMB,
 SCM, restore, maintenance, downloader, or remote-trigger behavior has been
 validated. The next owner must assess the candidate source and complete the
 rows below from actual evidence.
+
+The spot checks verified `BackupApiClient`, the current Agent hosting/security
+boundary, and POS ADR-012 at the approved SHA. The source already maps every
+post-dispatch non-success trigger response to `OutcomeUnknown` when no
+authoritative side-effect-free remote contract exists. Therefore:
+
+```text
+CLAUDE MEDIUM-8:
+NOT APPLICABLE / ALREADY CLOSED BY SOURCE
+```
+
+Preserve `NotAttempted`, `Accepted`, and `OutcomeUnknown`; `Failed` requires
+future authoritative evidence of a definitive side-effect-free remote
+rejection, and no automatic retry follows `OutcomeUnknown`.
 
 ## Required source inputs
 
@@ -185,14 +199,65 @@ The future Agent origin uses the fixed shape:
 https://rms-pos-agent.localhost:<fixed-port>
 ```
 
-The Agent binds only to loopback, uses HTTPS and a machine-trusted certificate,
-and has no discovery, LAN hostname, wildcard listener, or certificate-warning
-bypass. Managed Chrome/Edge deployment uses exact Support Hub origin entries in
-`LocalNetworkAccessAllowedForUrls` and, where supported,
-`LoopbackNetworkAllowedForUrls`. `AuthServerAllowlist` contains the exact Agent
-hostname. Kerberos is preferred; NTLM fallback is acceptable pending evidence
-unless a deployment baseline requires Kerberos-only behavior. Credential
-delegation is not required, so `AuthNegotiateDelegateAllowlist` remains unset.
+The Agent binds only to loopback, uses trusted HTTPS and **HTTP/1.1 only** for
+the Negotiate-authenticated browser endpoint, and has no discovery, LAN
+hostname, wildcard listener, or certificate-warning bypass. The Support Hub
+origin must itself be HTTPS/a trusted secure context.
+
+Managed Chrome/Edge deployment is a versioned, browser-independent matrix:
+
+| Browser generation | Local-network policy family | Loopback-specific family |
+| --- | --- | --- |
+| Chrome 139-145 | `LocalNetworkAccessAllowedForUrls` / `LocalNetworkAccessBlockedForUrls` | Current policy precedence also names `LoopbackNetworkAccessAllowedForUrls` / `LoopbackNetworkAccessBlockedForUrls`; split `LoopbackNetworkAllowedForUrls` starts at 146 |
+| Chrome 146+ | `LocalNetworkAllowedForUrls` / `LocalNetworkBlockedForUrls` plus `LocalNetworkAccess*` | `LoopbackNetworkAllowedForUrls` / `LoopbackNetworkBlockedForUrls` |
+| Edge 140-145 | `LocalNetworkAccessAllowedForUrls` / `LocalNetworkAccessBlockedForUrls` | Current policy precedence also names `LoopbackNetworkAccessAllowedForUrls` / `LoopbackNetworkAccessBlockedForUrls`; split `LoopbackNetworkAllowedForUrls` starts at 146 |
+| Edge 146+ | `LocalNetworkAllowedForUrls` / `LocalNetworkBlockedForUrls` plus `LocalNetworkAccess*` | `LoopbackNetworkAllowedForUrls` / `LoopbackNetworkBlockedForUrls` |
+
+For generations with a loopback-specific policy, it is required for the
+loopback Agent rather than optional. Record browser version, permission
+generation, target address space, exact allow/block entries, policy scope, and
+precedence; inspect pre-existing block policies before claiming an allowlist is
+effective. No wildcard allowlist, global permanent LNA disablement, or
+permanent temporary opt-out policy is allowed.
+
+`AuthServerAllowlist` contains the exact Agent hostname. Kerberos is preferred,
+but `.localhost` SPN behavior is an open evidence item and Kerberos is not
+assumed impossible; explicit `HTTP/<approved-hostname>` SPN registration may
+be required. NTLM behavior for the approved local alias and the Windows
+loopback/back-connection check must also be validated. If required, deployment
+may add only the exact hostname to
+`HKLM\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0\BackConnectionHostNames`.
+`DisableLoopbackCheck = 1` is prohibited. `AuthNegotiateDelegateAllowlist`
+remains unset unless a separately reviewed delegation requirement exists.
+
+Trusted machine certificate provisioning is mandatory. No production design
+may rely on a public CA issuing `.localhost`; future enterprise-PKI or
+per-device/local models must cover per-device key generation, non-exportability
+where supported, minimum LocalSystem key access, renewal, rotation, upgrade,
+rollback, uninstall/trust cleanup, and expiry behavior.
+
+CORS preflight is an anonymous exact-origin transport check; the subsequent
+application request is Windows-authenticated and authorized. REST is state
+truth and SSE is read-only progress transport with no mutation token. SSE must
+still use Negotiate, principal authorization, exact trusted Origin/CORS,
+credentialed EventSource behavior, and principal-scoped visibility. Artifacts
+are retrieved through authenticated typed fetch and opaque handles, converted
+to browser Blob/object URLs only for user downloads. No mutation or artifact
+token may appear in a query string, path, fragment, or loggable redirect.
+
+The selected mutation token binds the authenticated Windows principal SID,
+exact Origin, HTTP method, server-defined operation/endpoint ID, expiry, and
+anti-replay ID. It is one-use and per-mutation:
+
+```text
+ONE MUTATION -> ONE TOKEN ISSUANCE -> ONE IMMEDIATE CONSUMPTION
+```
+
+Tabs do not share or persist tokens, and abandoned tokens are not reused. The
+token is not authentication and never replaces Windows authentication,
+authorization, or Origin enforcement. `oot_sid` and all Support Hub session
+identifiers must never become POS operation, artifact, file-handle,
+idempotency, audit, Windows, authorization, or mutation-token identities.
 
 ## Explicit prohibited generic execution surfaces
 
@@ -258,4 +323,5 @@ are available:
 
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
-privileges. INT-01 remains blocked after INT-00.
+privileges. INT-01 remains owner-authorization required and not executed after
+INT-00R.
