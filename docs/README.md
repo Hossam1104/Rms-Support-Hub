@@ -19,7 +19,7 @@ them, and `.ai/HISTORY.md` indexes the milestones.
 | --- | --- |
 | [design-system.md](design-system.md) | Token catalogue, the shared card contract, the "no raw hex outside token files" rule, theme and motion behavior, and the Hub scene. |
 | [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md) | Where code, styles, and documentation belong, and what to read first. |
-| [UI_Rework_Plan.md](UI_Rework_Plan.md) | The closed U0-U8 programme. Retained because its D1-D13 decisions are cited by name from backend and frontend source comments. |
+| `UI_Rework_Plan.md` (historical) | The closed U0-U8 programme. Its D1-D13 decisions are retained in Git history because source comments cite the rationale by name. |
 
 Source comments also cite `remediation_plan.md` by filename for its `B1`-`B26`
 rationale IDs. That plan was executed and removed; it exists only in Git
@@ -31,6 +31,7 @@ because they identify the reasoning behind specific lines.
 | Document | What it governs |
 | --- | --- |
 | [RMS_SUPPORT_HUB_RELEASE_READINESS.md](RMS_SUPPORT_HUB_RELEASE_READINESS.md) | The release-candidate validation record, deferred items, and deployment preconditions. |
+| [POS_MAINTENANCE_INTEGRATION_PLAN.md](POS_MAINTENANCE_INTEGRATION_PLAN.md) | The canonical INT-00 cross-project architecture, security boundary, destination layout, ownership, and evidence gates. |
 | [POS_MAINTENANCE_INTEGRATION_READINESS.md](POS_MAINTENANCE_INTEGRATION_READINESS.md) | RMS+'s side of the POS integration seam: entry points, primitives to reuse, collision areas, and required post-merge validation. |
 | [POS_MAINTENANCE_MIGRATION_INTAKE.md](POS_MAINTENANCE_MIGRATION_INTAKE.md) | The security boundary and source inputs any future POS integration must satisfy. POS stays Coming Soon until then. |
 

@@ -5,11 +5,9 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Product and Business Boundaries
 
-- RMS+ Support Hub is an internal browser application hosting the QA support
-  tools. Its Online Order Tool composes, validates, sends, inspects, cancels,
-  and resends pharmacy/e-commerce orders and invoices to client RMS systems;
-  QA Prompt Studio generates refinement prompts locally; POS Maintenance is an
-  informational placeholder with no operations.
+- RMS+ Support Hub is an internal browser application hosting QA support tools;
+  Online Orders compose/validate/send/inspect/cancel/resend pharmacy orders;
+  Prompt Studio generates locally; POS Maintenance is informational only.
 - Implemented user-facing domains are UPC E-Commerce, GHC E-Commerce,
   GHC Uni-Commerce, and SQL-backed Order Requests. OMS and Call Center are
   registered unavailable stubs.
@@ -29,37 +27,30 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Architecture Invariants
 
-- Backend layering is Core (domain, module capabilities, builders, validators)
-  -> Data (Dapper repositories) -> API (controllers, middleware, DI). Core has
-  no external package dependency.
-- `ModuleRegistry` and `IOrderModule.Capabilities` own availability,
-  environment, lookup, history, cancel, and resend behavior. Frontend routing
-  consumes these flags; avoid module-key branching.
+- Backend layering is Core (domain, capabilities, builders, validators) -> Data
+  (Dapper repositories) -> API (controllers, middleware, DI); Core has no
+  external package dependency.
+- `ModuleRegistry` and `IOrderModule.Capabilities` own availability, environment,
+  lookup, history, cancel, and resend; frontend routing consumes these flags.
 - Payload construction, validation, totals, and draft persistence are
-  server-owned. Reference JSON fixtures are executable payload contracts.
-- External SQL Server schemas are not migrated by this repository. Dapper
-  repositories use explicit SQL; current source is authoritative when it
-  differs from documentation.
+  server-owned; reference JSON fixtures are executable payload contracts.
+- External SQL Server schemas are not migrated here. Dapper uses explicit SQL;
+  current source is authoritative when it differs from documentation.
 - `OrderRequests` is the history base table. Request/response blobs are
-  detail-only; related header/invoice rows use the most recent matching record
-  to avoid duplicate attempts.
-- Drafts are JSON under API `var/drafts`, isolated by an HttpOnly session GUID
-  plus module key, serialized per key, and replaced atomically.
-- Angular uses standalone lazy-loaded components, typed API models, signals,
-  relative `/api`, and a dev proxy. Production API calls are same-origin; the
-  hosting/deployment topology is not documented.
-- Supplied visual assets are exposed through the typed
-  `frontend/src/app/core/config/app-assets.ts` catalog. Public copies use
-  semantic `brand`, `modules`, `payments`, `commerce`, and `system` folders;
-  `frontend/public/assets/Saudi_Riyal.svg` remains the verifier-required
-  compatibility path. Shared identity marks use the standalone
-  `app-brand-mark` primitive with contain-fit sizing and explicit decorative
-  accessibility state.
-- Prompt Studio generators use typed reactive forms with feature-local
-  namespaced drafts, deterministic builders, advisory `PromptQualityService`
-  analysis, and `PromptHistoryService` local history capped at ten records.
-  History stores generated prompt text and labels only; it never stores
-  attachment contents or sends data to an external provider.
+  detail-only; related rows use the most recent matching record.
+- Drafts are JSON under API `var/drafts`, isolated by HttpOnly session GUID plus
+  module key, serialized per key, and replaced atomically.
+- Angular uses standalone lazy components, typed models, signals, relative
+  `/api`, and a dev proxy. Existing Hub API hosting is not documented; future
+  privileged POS is direct HTTPS browser -> loopback `RmsSupportHub.Pos.Agent`,
+  not a path through `RmsSupportHub.Api`, `Core`, or `Data`.
+- Supplied assets use the typed `app-assets.ts` catalog and semantic public
+  folders; `frontend/public/assets/Saudi_Riyal.svg` remains verifier-required.
+  Shared identity marks use `app-brand-mark` with contain-fit sizing and
+  explicit decorative accessibility state.
+- Prompt Studio uses typed reactive forms, namespaced drafts, deterministic
+  builders, advisory quality analysis, and local history capped at ten records;
+  it never stores attachments or sends data to an external provider.
 - U4 exposes only the resolved send environment's key, label, and API URL via
   `GET /api/modules/{key}/endpoint`; module catalog responses do not disclose
   URLs or connection metadata.
@@ -78,8 +69,11 @@ Do not copy facts that can be cheaply discovered from the repository.
   has no standalone validation endpoint, so the U6 Validate action is a
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
-- No background workers, queues, repository-owned migrations, E2E framework, or
-  application authentication/authorization scheme are present.
+- No background workers, queues, repository migrations, E2E framework, or
+  application auth scheme exists. POS INT-00 is closed but unauthorized to
+  implement: loopback-only Agent, Windows Negotiate, exact-origin CORS/LNA,
+  explicit antiforgery, frozen POS Angular reference, retained WinUI, and no
+  raw POS history import. See the integration plan and ADR-0015..0018.
 
 ## Build and Validation Entry Points
 
@@ -103,20 +97,22 @@ Do not copy facts that can be cheaply discovered from the repository.
 
 ## Integrations
 
-- SQL Server supports lookups and request history. Ownership:
-  `RmsSupportHub.Data`; schema contract: `docs/database-schema.md`; named
-  configuration: `backend/src/RmsSupportHub.Api/appsettings.json`. Tracked
+- SQL Server supports lookups and request history. Ownership `RmsSupportHub.Data`;
+  schema `docs/database-schema.md`; named config `appsettings.json`; tracked
   connection-string values stay empty.
 - Branch options use the capability-gated `/api/modules/{key}/branches`
   endpoint, the verified `dbo.Branches` contract, and a short in-memory cache;
   the frontend persists and submits only the branch code.
-- Client RMS HTTP APIs support send/cancel by module environment. Ownership:
-  `IOrderModule` definitions plus `ApiClient`; configuration contract: module
-  definitions and `appsettings.json`. Never record endpoint values in AI memory.
+- Client RMS HTTP APIs support send/cancel by module environment; ownership is
+  `IOrderModule` plus `ApiClient`. Never record endpoint values in AI memory.
 - Development secrets use the API project's .NET user-secrets; deployed values
   use environment variables. See `README.md` without copying values.
 - Local draft persistence is owned by `SessionIdMiddleware` and `DraftManager`;
   `var/` is ignored and must not be treated as durable multi-instance storage.
+- Future POS machine-local ownership belongs to the separate Agent/deployment:
+  LocalSystem, machine certificate/private-key ACL, browser policy, explicit
+  SQL/SMB credentials, allowlisted operations, and privileged audit. Evidence
+  gates, not current Hub runtime facts.
 
 ## Critical Conventions
 

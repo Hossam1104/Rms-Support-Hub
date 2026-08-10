@@ -1,14 +1,12 @@
-﻿# Current Project State
+# Current Project State
 
-- **Updated:** 2026-08-09
+- **Updated:** 2026-08-10
 - **Branch:** `main`
-- **Programme:** No active standalone refactor. The RMS+ Support Hub UI /
-  branding / rename programme is complete and closed.
-- **Next programme:** POS Maintenance integration planning. See
-  `docs/POS_MAINTENANCE_INTEGRATION_READINESS.md`.
+- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 POS
+  cross-project architecture decision closure complete.
+- **Next gate:** CLAUDE OPUS 5 POS INTEGRATION ARCHITECTURE CHECKPOINT - review required / no execution authorized; INT-01 blocked.
 
-This file records durable current facts only. Milestone history lives in
-`.ai/HISTORY.md`; implementation evidence lives in Git.
+This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 
 ## Identity
 
@@ -19,41 +17,52 @@ This file records durable current facts only. Milestone history lives in
 | npm package | `rms-support-hub` |
 | GitHub repository | `Hossam1104/Rms-Support-Hub` |
 | Canonical origin | `https://github.com/Hossam1104/Rms-Support-Hub.git` |
-| Local folder | `D:\AI Tools\DBS\online_order_tool` â€” rename to `Rms-Support-Hub` still pending, see below |
-| Visibility | Public by explicit owner decision; the owner intends to return it to Private after the POS integration work |
-
-The local folder rename was attempted and refused by Windows: live processes
-hold the directory (the open VS Code workspace, the C# Dev Kit and Roslyn
-language servers, and the agent shells). Nothing in the repository depends on
-the folder name. Close everything rooted there, then from a shell **outside**
-it run `Rename-Item -LiteralPath "D:\AI Tools\DBS\online_order_tool" -NewName
-"Rms-Support-Hub"`, re-check `git status` and `git remote -v` from the new
-path, and update the row above.
+| Local folder | `D:\AI Tools\DBS\online_order_tool` (rename to `Rms-Support-Hub` pending; live processes previously held it) |
+| Visibility | Public by explicit owner decision; owner intends Private after POS integration |
 
 ## Application
 
-- One Angular 22 SPA and one .NET 10 Web API. Registered tools:
-  **QA Prompt Studio** (available), **Online Order Tool** (available), and
-  **POS Maintenance Tool** (Coming Soon, informational, non-operational).
-- UPC Testing and UPC Production share the existing environment architecture;
-  Production uses server-owned UPC Testing connection details with the approved
-  `RmsMainProd` catalog override. No browser database/connection detail is
-  accepted; Production runtime validation was not executed locally.
-- Routes are lazy and typed through `ToolRouteData`; the current topology is in
-  `docs/REPOSITORY_STRUCTURE.md`.
-- Prompt Studio behavior is frozen: deterministic local builders, canonical
-  section counts (Bug 11, Story 7, Test Case 9), advisory quality semantics,
-  drafts, ten-entry history, copy, Markdown/text export, and Ctrl/Cmd+Enter.
-  No external AI execution.
-- Online Order behavior is frozen and server-authoritative: API/DTO/payload
-  contracts, validation, totals, filters, paging, statuses, capability guarding,
-  send, cancel, and resend.
-- No POS operation or generic execution surface exists. Order Requests use a month-to-date default window and tokenized grouped filters; base-only queries cap matching results to ten newest `OrderRequests` by `Id DESC`, while header-derived filters retain paging.
+- One Angular 22 SPA and one .NET 10 Web API. QA Prompt Studio and Online Order
+  Tool are available; POS Maintenance is Coming Soon and non-operational.
+- Routes are lazy/typed through `ToolRouteData`; topology is in `docs/REPOSITORY_STRUCTURE.md`.
+- Prompt Studio is frozen: deterministic builders, Bug 11/Story 7/Test Case 9,
+  advisory quality, drafts, ten-entry history, copy/exports, shortcuts; no external AI execution.
+- Online Order is frozen/server-authoritative: API/DTO/payload contracts,
+  validation, totals, filters, paging, statuses, capability guarding, send/cancel/resend.
+- UPC Testing/Production retain existing architecture; no browser connection detail or local Production validation.
+- No POS operation/generic execution surface exists. Order Requests use month-to-date,
+  tokenized filters, a ten-newest base-only path, and paging for header-derived filters.
+
+## POS integration architecture checkpoint
+
+INT-00 is documentation/governance complete. The canonical target is a separate
+Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub Angular over
+HTTPS on fixed loopback; `RmsSupportHub.Api`, `Core`, and `Data` are not its path.
+
+```text
+INT-00: COMPLETE
+CROSS-PROJECT INTEGRATION PLAN: COMPLETE
+POS SOURCE: MERGE-READY CANDIDATE AT 25922b499d33bd73f241ffc26c212dd000e81433
+PRIVILEGED POS BOUNDARY: SEPARATE WINDOWS POS AGENT
+PREFERRED TRANSPORT: SUPPORT HUB BROWSER -> LOCAL LOOPBACK POS AGENT
+LOCAL NETWORK ACCESS: ARCHITECTURE DECIDED / LIVE EVIDENCE OPEN
+STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY
+WINUI: RETAINED
+REPOSITORY IMPORT: NOT AUTHORIZED
+INTEGRATION IMPLEMENTATION: NOT AUTHORIZED
+INT-01: BLOCKED
+CLAUDE OPUS 5 ARCHITECTURE CHECKPOINT: REQUIRED
+```
+
+Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`. Future transport
+uses exact-origin CORS/LNA, Windows Negotiate, and the selected one-use request-token contract; Kerberos preferred, NTLM fallback acceptable pending evidence, no delegation.
+
+Future destination: `/pos/src` contains portable Domain/Application/Contracts,
+Windows Infrastructure/Agent, retained WinUI, and `/pos/tests`; it is not created by INT-00. Raw history merge, import, OpenAPI/client, CI, and runtime work remain blocked.
 
 ## Compatibility contracts
 
-These persisted storage keys are byte-exact and must never be "cleaned" because
-their prefix reflects an earlier product name. No migration exists.
+These persisted storage keys are byte-exact; no migration exists:
 
 ```text
 onlineOrderTool.activeEnvironment.<moduleKey>
@@ -66,55 +75,38 @@ qa-support-hub.prompt-studio.test-case-draft
 order-tool.sidebar-collapsed
 ```
 
-Other identifiers that survive renames because they are external or business
-contracts, not host identity:
-
-- API paths and the `/api` proxy contract; JSON property names; payload shapes;
-  request fixtures; database, table, and SQL column names.
-- Module keys `upc_ecommerce`, `ghc_ecommerce`, `ghc_unicommerce`; behavior is
-  gated by `IOrderModule.Capabilities`, never a module-key comparison.
-- Payment values `COD`, `Visa`, `Tamara`, `Tabby`, `Mada`, `CashOnDelivery`;
-  statuses `not_payment`/`done_payment`/`failed_payment` (Not paid/Paid/Failed).
-  Allowed methods are per variant: UPC only Visa/Tamara/Tabby (ADR-0014).
-- Feature wording: `QA Prompt Studio`, `Online Order Tool`,
-  `POS Maintenance Tool`.
-- Supplied asset filenames and case, including the deliberate `warrning.svg`
-  spelling and the root `/assets/Saudi_Riyal.svg` verifier path.
+External/business identifiers remain unchanged: API `/api`, JSON/payload contracts,
+fixtures, database/table/SQL names, module keys, payment values, statuses, wording, and asset filenames. Behavior is capability-gated; UPC methods are Visa/Tamara/Tabby (ADR-0014).
 
 ## Design system
 
-Semantic tokens, density and surface geometry, gradients, typography,
-animations, shared cards, tables, forms, `ThemeService`, and `MotionService` are
-the UI touch points; raw color literals stay in the token and gradient files.
-The Hub-only Three.js scene is dynamically imported, decorative, pointer-
-transparent, aria-hidden, DPR-capped, visibility-pausing, and disposable, and
-degrades to a CSS gradient under reduced motion, absent WebGL, or import
-failure. Details are in `docs/design-system.md`.
+Semantic tokens, density, surfaces, typography, cards, tables, forms,
+`ThemeService`, and `MotionService` are UI touch points; raw colors stay in token files. The decorative lazy Hub Three.js scene degrades safely; details: `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded 2026-08-10 (Online Orders UI redesign, the items detail grid, the date picker move to a CDK overlay, then the UPC payment policy and modern payment dropdowns); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
+Recorded 2026-08-10; see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
 
 | Gate | Result |
 |---|---|
 | Frontend tests | 55 files / 325 tests passed, 0 skipped |
 | Backend tests | 188 passed, 0 failed, 0 skipped |
-| Release build | 0 warnings, 0 errors; all Angular budgets clear |
+| Release build | 0 warnings, 0 errors; Angular budgets clear |
 | Production initial bundle | 456.42 kB raw / 104.28 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.90 kB estimated transfer |
 | Production-offline initial bundle | 442.11 kB raw / 103.63 kB estimated transfer |
-| Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
-| Rendered browser pass | Not run; no browser automation tool is available in this environment |
+| Riyal asset verifier | Passed; SHA-1 verified, 924 bytes |
+| Rendered browser pass | Not run; browser automation unavailable in this environment |
 
 ## Boundaries and deferred scope
 
-- Production is out of bounds: no Production access, SQL, deployment, or state-changing action is authorized. Testing is the default environment.
-- A running local `RmsSupportHub.Api` locks `backend/src/**/bin`, failing
-  `scripts/build.ps1` with MSB3027/MSB3021. Stop it, or pass
-  `--artifacts-path <temp>` to `dotnet test`/`dotnet build`. Not a build defect.
-- `ConnectionStrings:UpcEcommerceTest` is not configured in the local Testing
-  environment, so Testing-only UPC order and order-request calls return HTTP
-  500. This is deferred environment setup, not an application defect.
-- UPC Production resolver tests use an in-memory connection configuration and fakes only; no Production database or order API call was made.
-- UPC Testing fixture acceptance, live COD acceptance/send/resend/cancellation, and Production database index/deployment work all remain deferred and unauthorized.
-- POS integration is the next programme and has not started.
+- Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.
+- `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
+  order/request calls return HTTP 500; deferred environment setup.
+- UPC fixture/live acceptance, Production index/deployment, and all POS
+  implementation remain deferred and unauthorized.
+- POS evidence gates remain open: LocalSystem/Session 0 SMB, live transport,
+  LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
+  downloader, remote-trigger reconciliation/idempotency, SQL TLS
+  (`TrustServerCertificate = true`), and WinUI cutover by design. Architecture
+  decisions are not evidence.

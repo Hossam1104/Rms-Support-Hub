@@ -1,18 +1,29 @@
 # RMS+ Support Hub — Maintenance
 
-**Role:** Implement (small, scoped maintenance only)
+**Role:** Review (POS architecture checkpoint only; no execution)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
 ## Current phase
 
 No active refactor programme. The RMS+ Support Hub UI, branding, and rename
-programme is complete, reviewed, and closed. The repository is in post-release
-maintenance.
+programme is complete, reviewed, and closed. INT-00 POS cross-project
+architecture decision closure is complete.
 
-The next programme is **POS Maintenance integration planning**. It has not
-started, and no external POS source has been supplied to this repository. Read
-`docs/POS_MAINTENANCE_INTEGRATION_READINESS.md` before proposing any POS work.
+CLAUDE OPUS 5
+POS INTEGRATION ARCHITECTURE CHECKPOINT
+
+STATUS:
+REVIEW REQUIRED / NO EXECUTION AUTHORIZED
+
+The checkpoint is narrowly limited to process isolation; browser -> loopback
+architecture; Local Network Access; managed Chrome/Edge policy;
+Negotiate/browser policy; hostname/port/certificate; CORS; antiforgery;
+identity; audit/resource ownership; destination project isolation; and the
+clean source import boundary. Do not request another full R2 review.
+
+INT-01 remains blocked until this checkpoint passes and the owner explicitly
+authorizes it. No POS source is imported or modified by this task.
 
 ## Standing constraints
 
@@ -27,6 +38,9 @@ started, and no external POS source has been supplied to this repository. Read
   No external AI execution.
 - POS stays Coming Soon and non-operational. No generic execution surface —
   no arbitrary PowerShell, command, SQL, script upload, or executable launcher.
+- POS privileged operations belong to a separate Windows Agent reached directly
+  by the Support Hub browser. The general `RmsSupportHub.Api` is not their
+  proxy or execution path.
 - Production is out of bounds: no Production access, SQL, deployment, or
   state-changing action. Testing is the default environment.
 - No credential, token, or connection-string value in a tracked file.

@@ -48,10 +48,17 @@ Closed. Sessions 00-08 ran on dedicated branches, each validated before merge.
 
 ## Programme status
 
-The standalone RMS+ Support Hub refactor is complete. The next programme is POS
-Maintenance integration planning; the merge has not started. Remaining external
+The standalone RMS+ Support Hub refactor is complete. INT-00 POS Maintenance
+cross-project architecture closure is complete; the architecture checkpoint is
+the next gate and INT-01 implementation remains blocked. Remaining external
 gates are not implementation work: safe UPC **Testing** acceptance, the
 Production database index decision, and deployment/Production acceptance.
+
+## POS Maintenance integration planning
+
+| Milestone | Evidence | Outcome |
+|---|---|---|
+| INT-00 - POS cross-project architecture decision closure | Documentation/reference checks, memory checks, `git diff --check`, scope and secret scans | Canonical direct browser-to-loopback Windows Agent architecture, browser/LNA/Negotiate/CORS/antiforgery/certificate decisions, clean snapshot/import boundary, contract ownership, and destination CI lanes recorded. INT-01 blocked pending the architecture checkpoint. |
 
 | Order Requests filter and query refresh | 2026-08-09 validation | Added a month-to-date default range, a tokenized calendar picker, grouped filter clusters, and a ten-newest base-query fast path; frontend 272/272 tests, backend 173/173 tests, Release build, and production Angular build passed. |
 | Order Requests timeout and alignment hardening | 2026-08-09 validation | Replaced repeated latest-row probes with bounded set-based enrichment, reserved the table row accent gutter, and added container-responsive filter layout; frontend 272/272 tests, backend 174/174 tests, Release build, and production Angular build passed. |
