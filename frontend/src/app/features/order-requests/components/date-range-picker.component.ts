@@ -1,18 +1,14 @@
 import { CommonModule } from '@angular/common';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import {
   Component,
-  ElementRef,
   EventEmitter,
-  HostListener,
   Input,
   OnChanges,
   Output,
   SimpleChanges,
   computed,
-  effect,
-  inject,
-  signal,
-  viewChild
+  signal
 } from '@angular/core';
 
 export interface DateRangeSelection {
@@ -39,16 +35,19 @@ interface CalendarDay {
   isInRange: boolean;
 }
 
-/** Placement budget for the popover. The filter card is sticky, so a popover
- * taller than the room below its trigger can never be scrolled into view -- the
- * card travels with the viewport. The picker therefore measures the space it
- * actually has, flips above the trigger when below is too tight, and scrolls
- * its own body for the remainder. */
-const POPOVER_GAP = 10;
-const VIEWPORT_MARGIN = 12;
-const POPOVER_MIN_HEIGHT = 220;
-const POPOVER_MAX_HEIGHT = 560;
-const POPOVER_MOBILE_BREAKPOINT = 600;
+/**
+ * Preferred placements, tried in order. The trigger sits at the right edge of
+ * the filter row, so the panel hangs from that edge first and only falls back
+ * to start-aligned when the left side has more room. The CDK picks the best
+ * fitting entry and, with push enabled, slides it fully inside the viewport --
+ * no placement arithmetic lives in this component.
+ */
+const OVERLAY_POSITIONS: ConnectedPosition[] = [
+  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 10 },
+  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -10 },
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 10 },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -10 }
+];
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const PRESETS: DatePreset[] = [
@@ -122,11 +121,12 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
 @Component({
   selector: 'app-date-range-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, OverlayModule],
   template: `
     <div class="date-picker-shell">
       <button
-        #dateTrigger
+        cdkOverlayOrigin
+        #dateOrigin="cdkOverlayOrigin"
         type="button"
         class="date-trigger"
         [class.is-open]="open()"
@@ -140,12 +140,21 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
         <i class="bi bi-chevron-down date-trigger-chevron" aria-hidden="true"></i>
       </button>
 
-      @if (open()) {
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="dateOrigin"
+        [cdkConnectedOverlayOpen]="open()"
+        [cdkConnectedOverlayPositions]="overlayPositions"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayFlexibleDimensions]="false"
+        [cdkConnectedOverlayViewportMargin]="16"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="date-range-backdrop"
+        cdkConnectedOverlayPanelClass="date-range-pane"
+        (backdropClick)="closePicker()"
+        (detach)="closePicker()">
         <div
-          #datePopover
           class="date-popover"
-          [class.is-above]="dropUp()"
-          [style.max-height.px]="popoverMaxHeight()"
           role="dialog"
           aria-label="Order request date range picker">
           <div class="date-popover-header">
@@ -226,12 +235,12 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
             </div>
           </div>
         </div>
-      }
+      </ng-template>
     </div>
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .date-picker-shell { position: relative; min-width: 0; }
+    .date-picker-shell { min-width: 0; }
     /* The closed trigger is a plain form control: same height, padding and
      * radius as the ui-input and segmented control it sits beside, so the
      * filter row keeps one baseline. Its field label lives outside, in the
@@ -290,26 +299,21 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       white-space: nowrap;
     }
     .date-trigger-chevron { color: var(--text-muted); font-size: .7rem; }
-    /* A column so the header and the footer stay pinned and only the calendar
-     * body scrolls. On a short window that keeps Apply/Cancel reachable instead
-     * of pushing them past the bottom of the screen. */
+    /* The CDK overlay owns where this panel sits; the panel only owns its own
+     * size. It is a column so the header and footer stay pinned and only the
+     * calendar body scrolls -- which happens only on a viewport too short for
+     * the panel's natural height, since the overlay is pushed into view first. */
     .date-popover {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      z-index: 100;
       display: flex;
       flex-direction: column;
       width: min(620px, calc(100vw - 32px));
-      max-height: min(70vh, 560px);
+      max-height: calc(100vh - 32px);
       overflow: hidden;
       border: 1px solid var(--border-strong);
       border-radius: var(--radius-lg);
       background: var(--surface-overlay);
       box-shadow: var(--shadow-lg);
     }
-    /* Set by the component when the room below the trigger is too tight. */
-    .date-popover.is-above { top: auto; bottom: calc(100% + 10px); }
     .date-popover-header,
     .date-popover-footer {
       display: flex;
@@ -427,10 +431,10 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
     .date-apply-button { border: 1px solid transparent; background: var(--grad-brand); color: var(--on-gradient); }
     .date-apply-button:disabled { cursor: not-allowed; opacity: .45; }
 
+    /* Narrow screens keep the same overlay; only the panel reflows. */
     @media (max-width: 600px) {
       .date-trigger-meta { display: none; }
-      .date-popover,
-      .date-popover.is-above { position: fixed; top: auto; right: 16px; bottom: 16px; left: 16px; width: auto; max-height: calc(100vh - 32px); overflow-y: auto; }
+      .date-popover { width: calc(100vw - 32px); }
       .date-popover-body { grid-template-columns: 1fr; }
       .date-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); border-right: 0; border-bottom: 1px solid var(--divider); }
       .date-section-label { grid-column: 1 / -1; }
@@ -444,9 +448,8 @@ export class DateRangePickerComponent implements OnChanges {
 
   readonly weekdays = WEEKDAYS;
   readonly presets = PRESETS;
+  readonly overlayPositions = OVERLAY_POSITIONS;
   readonly open = signal(false);
-  readonly dropUp = signal(false);
-  readonly popoverMaxHeight = signal<number | null>(null);
   readonly viewMonth = signal(monthStart(new Date()));
   readonly draftFrom = signal<string | null>(null);
   readonly draftTo = signal<string | null>(null);
@@ -458,18 +461,6 @@ export class DateRangePickerComponent implements OnChanges {
     if (!this.draftFrom()) return 'Choose a start date or use a preset.';
     return 'Ready to apply to the request list.';
   });
-
-  private readonly host = inject(ElementRef<HTMLElement>);
-  private readonly triggerRef = viewChild<ElementRef<HTMLButtonElement>>('dateTrigger');
-  private readonly popoverRef = viewChild<ElementRef<HTMLElement>>('datePopover');
-
-  constructor() {
-    // The popover only exists while open, so its query resolving is the signal
-    // that placement can be measured against the live viewport.
-    effect(() => {
-      if (this.popoverRef()) this.measurePlacement();
-    });
-  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.open() && (changes['dateFrom'] || changes['dateTo'])) {
@@ -559,48 +550,6 @@ export class DateRangePickerComponent implements OnChanges {
   clearSelection() {
     this.rangeChange.emit({ dateFrom: null, dateTo: null });
     this.closePicker();
-  }
-
-  @HostListener('document:pointerdown', ['$event'])
-  onDocumentPointerDown(event: PointerEvent) {
-    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.closePicker();
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscape() {
-    if (this.open()) this.closePicker();
-  }
-
-  @HostListener('window:resize')
-  @HostListener('window:scroll')
-  onViewportChanged() {
-    if (this.open()) this.measurePlacement();
-  }
-
-  /**
-   * Sizes and places the popover from the room the trigger actually has. Below
-   * is preferred; the picker flips above only when that side is too tight and
-   * the other side is roomier. Mobile keeps its viewport-anchored fixed layout,
-   * so it opts out of both the flip and the measured cap.
-   */
-  private measurePlacement() {
-    const trigger = this.triggerRef()?.nativeElement;
-    if (!trigger || typeof window === 'undefined') return;
-
-    if (window.innerWidth <= POPOVER_MOBILE_BREAKPOINT) {
-      this.dropUp.set(false);
-      this.popoverMaxHeight.set(null);
-      return;
-    }
-
-    const rect = trigger.getBoundingClientRect();
-    const roomBelow = window.innerHeight - rect.bottom - POPOVER_GAP - VIEWPORT_MARGIN;
-    const roomAbove = rect.top - POPOVER_GAP - VIEWPORT_MARGIN;
-    const above = roomBelow < POPOVER_MIN_HEIGHT && roomAbove > roomBelow;
-    const room = above ? roomAbove : roomBelow;
-
-    this.dropUp.set(above);
-    this.popoverMaxHeight.set(Math.round(Math.min(POPOVER_MAX_HEIGHT, Math.max(POPOVER_MIN_HEIGHT, room))));
   }
 
   private presetRange(key: PresetKey): DateRangeSelection {

@@ -1,3 +1,4 @@
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
@@ -30,6 +31,8 @@ describe('FilterBarComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => TestBed.inject(OverlayContainer).ngOnDestroy());
+
   it('renders a grouped, accessible search workbench', () => {
     const element = fixture.nativeElement as HTMLElement;
 
@@ -55,9 +58,10 @@ describe('FilterBarComponent', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.date-popover')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.date-preset')).toHaveLength(4);
-    expect(fixture.nativeElement.querySelectorAll('.calendar-day')).toHaveLength(42);
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+    expect(overlay.querySelector('.date-popover')).not.toBeNull();
+    expect(overlay.querySelectorAll('.date-preset')).toHaveLength(4);
+    expect(overlay.querySelectorAll('.calendar-day')).toHaveLength(42);
   });
 
   it('keeps edits in a draft until Apply and sends one normalized filter set', () => {
