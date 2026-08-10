@@ -1,4 +1,4 @@
-# Current Project State
+﻿# Current Project State
 
 - **Updated:** 2026-08-09
 - **Branch:** `main`
@@ -19,7 +19,7 @@ This file records durable current facts only. Milestone history lives in
 | npm package | `rms-support-hub` |
 | GitHub repository | `Hossam1104/Rms-Support-Hub` |
 | Canonical origin | `https://github.com/Hossam1104/Rms-Support-Hub.git` |
-| Local folder | `D:\AI Tools\DBS\online_order_tool` — rename to `Rms-Support-Hub` still pending, see below |
+| Local folder | `D:\AI Tools\DBS\online_order_tool` â€” rename to `Rms-Support-Hub` still pending, see below |
 | Visibility | Public by explicit owner decision; the owner intends to return it to Private after the POS integration work |
 
 The local folder rename was attempted and refused by Windows: live processes
@@ -96,12 +96,12 @@ Recorded 2026-08-10 (Online Orders UI redesign, then the items detail grid, then
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 54 files / 300 tests passed, 0 skipped |
+| Frontend tests | 54 files / 303 tests passed, 0 skipped |
 | Backend tests | 174 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; all Angular budgets clear |
-| Production initial bundle | 456.40 kB raw / 104.24 kB estimated transfer |
+| Production initial bundle | 456.46 kB raw / 104.27 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.79 kB estimated transfer |
-| Production-offline initial bundle | 442.09 kB raw / 103.65 kB estimated transfer |
+| Production-offline initial bundle | 442.14 kB raw / 103.64 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
 | Rendered browser pass | Not run; no browser automation tool is available in this environment |
 
