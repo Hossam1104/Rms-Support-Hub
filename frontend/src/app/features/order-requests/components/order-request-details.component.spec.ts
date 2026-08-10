@@ -120,12 +120,12 @@ describe('OrderRequestDetailsComponent', () => {
     mockStore.selected.set(detailResponse());
     const fixture = createFixture();
 
-    const footerText = fixture.nativeElement.textContent as string;
-    expect(footerText).toContain('10.00'); // discount total
-    expect(footerText).toContain('13.50'); // VAT total
-    expect(footerText).toContain('103.50'); // items total, matches header.netTotal
+    const summary = fixture.nativeElement.querySelector('.items-summary') as HTMLElement;
+    expect(summary.querySelector('.isum--disc')!.textContent).toContain('10.00');
+    expect(summary.querySelector('.isum--vat')!.textContent).toContain('13.50');
+    expect(summary.querySelector('.isum--total')!.textContent).toContain('103.50'); // matches header.netTotal
 
-    const callout = fixture.nativeElement.querySelector('.mismatch-callout');
+    const callout = summary.querySelector('.mismatch-callout')!;
     expect(callout.classList.contains('is-ok')).toBe(true);
     expect(callout.textContent).toContain('Items total matches header total');
   });
@@ -136,7 +136,26 @@ describe('OrderRequestDetailsComponent', () => {
 
     const callout = fixture.nativeElement.querySelector('.mismatch-callout');
     expect(callout.classList.contains('is-ok')).toBe(false);
-    expect(callout.textContent).toContain('does not match header net');
+    expect(callout.textContent).toContain('Mismatch');
+    expect(callout.textContent).toContain('103.50'); // summed line items
+    expect(callout.textContent).toContain('999.00'); // header net total
+  });
+
+  it('renders each line item as one grid row with identity, material and financial cells', () => {
+    mockStore.selected.set(detailResponse());
+    const fixture = createFixture();
+
+    const rows = fixture.nativeElement.querySelectorAll('.items-grid .irow');
+    expect(rows.length).toBe(1);
+    const row = rows[0] as HTMLElement;
+    expect(row.querySelector('.item-identity')!.textContent).toContain('Widget');
+    expect(row.querySelector('.material-num')!.textContent).toContain('Material');
+    expect(row.querySelector('.icell--qty .icell__value')!.textContent).toContain('2');
+    expect(row.querySelector('.icell--unit .icell__value')!.textContent).toContain('50.00');
+    expect(row.querySelector('.icell--disc .icell__value')!.textContent).toContain('10.00');
+    expect(row.querySelector('.icell--vat .icell__value')!.textContent).toContain('13.50');
+    expect(row.querySelector('.icell--vat .icell__rate')!.textContent).toContain('15%');
+    expect(row.querySelector('.icell--total .icell__value')!.textContent).toContain('103.50');
   });
 
   it('promotes branch, customer, delivery and payment method to the primary Order Info facts', () => {

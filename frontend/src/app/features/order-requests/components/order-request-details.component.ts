@@ -10,7 +10,7 @@ import { ModuleService } from '../../../core/services/module.service';
 import { APP_ASSETS, AssetPath, paymentAssetForMethod } from '../../../core/config/app-assets';
 import {
   StatusPillComponent, JsonTreeComponent, RiyalComponent, UiSectionComponent,
-  CopyButtonComponent, EmptyStateComponent, SkeletonComponent, ConfirmDialogComponent, UiTableComponent
+  CopyButtonComponent, EmptyStateComponent, SkeletonComponent, ConfirmDialogComponent
 } from '../../../shared/ui';
 import { CancelRequestDialogComponent, CancelDialogResult, CancelErrorState } from './cancel-request-dialog.component';
 import { ResendRequestDialogComponent } from './resend-request-dialog.component';
@@ -34,7 +34,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
   imports: [
     CommonModule, StatusPillComponent, JsonTreeComponent, RiyalComponent, UiSectionComponent,
     CopyButtonComponent, EmptyStateComponent, SkeletonComponent, CancelRequestDialogComponent,
-    ResendRequestDialogComponent, ConfirmDialogComponent, UiTableComponent
+    ResendRequestDialogComponent, ConfirmDialogComponent
   ],
   template: `
     <main class="order-details-page">
@@ -111,60 +111,93 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
         <div class="detail-sections">
           <ui-section title="Items" [collapsible]="false">
             @if (detail.request.details.length > 0) {
-              <ui-table class="detail-table items-table" [dense]="true" caption="Order items and Riyal amounts" [captionHidden]="true">
-                  <thead>
-                    <tr>
-                      <th scope="col" class="item-col">Item / Material</th>
-                      <th scope="col" class="align-right num-col">Qty</th>
-                      <th scope="col" class="align-right num-col">Unit <span class="sr-only">price, Saudi Riyal</span></th>
-                      <th scope="col" class="align-right num-col">Disc <span class="sr-only">discount, Saudi Riyal</span></th>
-                      <th scope="col" class="align-right num-col">VAT <span class="sr-only">Saudi Riyal</span></th>
-                      <th scope="col" class="align-right num-col">Total <span class="sr-only">Saudi Riyal</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (line of detail.request.details; track $index) {
-                      <tr>
-                        <td class="item-col">
-                          <span class="item-identity">{{ line.itemName || '—' }}</span>
-                          <div class="item-sub-row">
-                            <span class="material-num mono" *ngIf="line.materialNumber" [title]="'18-digit: ' + materialViews(line.materialNumber).full">Material {{ materialViews(line.materialNumber).short || '—' }}</span>
-                            <span class="commerce-offer-mark" *ngIf="line.offerMessage">
-                              <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
-                              <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
-                            </span>
+              <div class="items-shell">
+                <div class="items-layout">
+                  <div class="items-grid" role="table" aria-label="Order items and Riyal amounts">
+                    <div class="ihead" role="row">
+                      <span role="columnheader">Item / Material</span>
+                      <span role="columnheader">Qty</span>
+                      <span role="columnheader">Unit<span class="sr-only"> price, Saudi Riyal</span></span>
+                      <span role="columnheader">Discount<span class="sr-only">, Saudi Riyal</span></span>
+                      <span role="columnheader">VAT<span class="sr-only">, Saudi Riyal</span></span>
+                      <span role="columnheader">Total<span class="sr-only">, Saudi Riyal</span></span>
+                    </div>
+
+                    <div class="ibody" role="rowgroup">
+                      @for (line of detail.request.details; track $index) {
+                        <div class="irow" role="row">
+                          <div class="irow__id" role="rowheader">
+                            <span class="item-identity">{{ line.itemName || '—' }}</span>
+                            <div class="item-sub-row">
+                              <span class="material-num mono" *ngIf="line.materialNumber" [title]="'18-digit: ' + materialViews(line.materialNumber).full">Material {{ materialViews(line.materialNumber).short || '—' }}</span>
+                              <span class="commerce-offer-mark" *ngIf="line.offerMessage">
+                                <img [src]="assets.commerce.offer" alt="" aria-hidden="true">
+                                <span>{{ line.offerCode || 'Offer' }}: {{ line.offerMessage }}</span>
+                              </span>
+                            </div>
                           </div>
-                        </td>
-                        <td class="align-right num-col qty-cell">{{ line.quantity }}</td>
-                        <td class="align-right num-col amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</td>
-                        <td class="align-right num-col amount" [class.is-zero]="!line.totalDiscount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</td>
-                        <td class="align-right num-col amount" [class.is-zero]="!line.itemVat">
-                          <app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.itemVat | number:'1.2-2' }}<span class="vat-rate">{{ line.itemVatPercentage }}%</span>
-                        </td>
-                        <td class="align-right num-col amount total-amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                  <tfoot class="detail-table-footer">
-                    <tr>
-                      <th scope="row" colspan="3" class="footer-totals-title">Totals</th>
-                      <td class="align-right num-col amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</td>
-                      <td class="align-right num-col amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</td>
-                      <td class="align-right num-col amount footer-total"><app-riyal [decorative]="true" [size]="0.85"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</td>
-                    </tr>
-                  </tfoot>
-              </ui-table>
-              <p class="mismatch-callout" [class.is-ok]="lineItemsConsistent(detail)" role="status">
-                <i class="bi" [class.bi-check-circle-fill]="lineItemsConsistent(detail)" [class.bi-exclamation-triangle-fill]="!lineItemsConsistent(detail)" aria-hidden="true"></i>
-                @if (lineItemsConsistent(detail)) {
-                  <span>Items total matches header total</span>
-                } @else {
-                  <span>
-                    Items total {{ sumTotal(detail) | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
-                    does not match header net {{ detail.request.header?.netTotal ?? 0 | number:'1.2-2' }} <app-riyal [decorative]="true" [size]="0.75"></app-riyal>
-                  </span>
-                }
-              </p>
+
+                          <div class="icell icell--qty" role="cell">
+                            <span class="icell__label">Qty</span>
+                            <span class="icell__value icell__value--qty">{{ line.quantity }}</span>
+                          </div>
+
+                          <div class="icell icell--unit" role="cell">
+                            <span class="icell__label">Unit</span>
+                            <span class="icell__value amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.unitPrice | number:'1.2-2' }}</span>
+                          </div>
+
+                          <div class="icell icell--disc" role="cell">
+                            <span class="icell__label">Discount</span>
+                            <span class="icell__value amount" [class.is-zero]="!line.totalDiscount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.totalDiscount | number:'1.2-2' }}</span>
+                          </div>
+
+                          <div class="icell icell--vat" role="cell">
+                            <span class="icell__label">VAT</span>
+                            <span class="icell__value amount" [class.is-zero]="!line.itemVat"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ line.itemVat | number:'1.2-2' }}</span>
+                            <span class="icell__rate">{{ line.itemVatPercentage }}%</span>
+                          </div>
+
+                          <div class="icell icell--total" role="cell">
+                            <span class="icell__label">Total</span>
+                            <span class="icell__value amount total-amount"><app-riyal [decorative]="true" [size]="0.8"></app-riyal>{{ line.totalPrice | number:'1.2-2' }}</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="items-summary" role="group" aria-label="Items totals">
+                    <div class="isum-row">
+                      <span class="isum isum--disc">
+                        <span class="isum__label">Discount</span>
+                        <span class="isum__value amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ sumDiscount(detail) | number:'1.2-2' }}</span>
+                      </span>
+                      <span class="isum isum--vat">
+                        <span class="isum__label">VAT</span>
+                        <span class="isum__value amount"><app-riyal [decorative]="true" [size]="0.78"></app-riyal>{{ sumVat(detail) | number:'1.2-2' }}</span>
+                      </span>
+                      <span class="isum isum--total">
+                        <span class="isum__label">Items total</span>
+                        <span class="isum__value amount"><app-riyal [size]="0.88"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}</span>
+                      </span>
+                    </div>
+
+                    <p class="mismatch-callout" [class.is-ok]="lineItemsConsistent(detail)" role="status">
+                      <i class="bi" [class.bi-check-circle-fill]="lineItemsConsistent(detail)" [class.bi-exclamation-triangle-fill]="!lineItemsConsistent(detail)" aria-hidden="true"></i>
+                      @if (lineItemsConsistent(detail)) {
+                        <span>Items total matches header total</span>
+                      } @else {
+                        <span>
+                          <strong>Mismatch</strong>
+                          Items <app-riyal [decorative]="true" [size]="0.75"></app-riyal>{{ sumTotal(detail) | number:'1.2-2' }}
+                          · Header <app-riyal [decorative]="true" [size]="0.75"></app-riyal>{{ detail.request.header?.netTotal ?? 0 | number:'1.2-2' }}
+                        </span>
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
             } @else {
               <app-empty-state icon="bi-box" title="No line items recorded"></app-empty-state>
             }

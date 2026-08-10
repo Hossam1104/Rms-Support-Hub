@@ -2,8 +2,8 @@
  *
  * One visual boundary per section: `ui-section` owns the panel, and the content
  * inside it uses hairlines, quiet strips and column alignment instead of nested
- * bordered cards. Numeric columns stay shrink-to-fit so financial data reads as
- * a compact block regardless of how wide the viewport is. */
+ * bordered cards. Financial columns are sized explicitly rather than left to
+ * browser auto-layout, and reflow with their own container, not the viewport. */
 
 .order-details-page { display: flex; flex-direction: column; gap: var(--space-4); }
 
@@ -36,26 +36,93 @@ h1.order-number { margin: 0; color: var(--text-primary); font-size: clamp(1.3rem
 .eyebrow, .detail-context strong, .oi-fact__label, .oi-notes__label, .fin__label, .inv__label { color: var(--text-muted); font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .subsection-title { margin: var(--space-4) 0 0; padding-top: var(--space-3); border-top: 1px solid var(--divider); color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 
-/* ---- Items ---- */
-.items-table { --table-min-width: 100%; }
-/* `width: 1%` + nowrap collapses every financial column to its content width so
- * the item identity absorbs all remaining space instead of the numbers spreading. */
-.items-table .num-col { width: 1%; white-space: nowrap; }
-.items-table .qty-cell { color: var(--text-secondary); font-weight: 650; }
+/* ---- Items grid ----
+ * An explicit six-column CSS grid, never table auto-layout. The header strip,
+ * every row and the totals share one `--items-cols` template, so each financial
+ * column keeps an intentional width and the three bands align by construction.
+ * `.items-shell` exists only to own the container query: a query container
+ * cannot restyle itself, and the wide layout changes `.items-layout` itself. */
+.items-shell { container-type: inline-size; container-name: items; }
+.items-layout {
+  --items-cols: minmax(200px, 1fr) 64px minmax(108px, .34fr) minmax(108px, .34fr) minmax(116px, .36fr) minmax(120px, .38fr);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+/* A small symmetric bleed so the hover band and the column rules breathe past
+ * the text without moving any column. All three bands share it, so they align. */
+.items-grid, .items-summary { margin-inline: calc(var(--space-2) * -1); }
+.ihead, .irow, .isum-row { display: grid; grid-template-columns: var(--items-cols); column-gap: var(--space-5); padding-inline: var(--space-2); }
+.ihead { padding-bottom: 7px; border-bottom: 1px solid var(--border-strong); color: var(--text-muted); font-size: .67rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.ihead > * { text-align: right; }
+.ihead > :first-child { text-align: left; }
+
+.irow { align-items: start; padding-block: 9px; border-bottom: 1px solid var(--divider); transition: background var(--transition-fast); }
+.irow:last-child { border-bottom: 0; }
+.irow:hover { background: var(--table-row-hover); }
+.irow__id { min-width: 0; }
 .item-identity { display: block; overflow-wrap: anywhere; color: var(--text-primary); font-size: .9rem; font-weight: 700; line-height: 1.3; }
 .item-sub-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: 1px; }
 .material-num { color: var(--text-muted); font-size: .71rem; font-weight: 500; }
 .commerce-offer-mark { display: inline-flex; align-items: center; gap: 4px; color: var(--state-warning-fg); font-size: .71rem; font-weight: var(--weight-bold); }
 .commerce-offer-mark img { width: 13px; height: 13px; object-fit: contain; }
-.items-table .amount { color: var(--text-secondary); }
-.items-table .total-amount { color: var(--text-primary); font-weight: 750; }
-.vat-rate { margin-left: 5px; color: var(--text-muted); font-size: .72rem; }
-.detail-table-footer .footer-totals-title { color: var(--text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
-.detail-table-footer .amount { color: var(--text-secondary); font-weight: 700; }
-.detail-table-footer .footer-total { color: var(--accent); font-size: 1.05rem; font-weight: 850; }
+
+.icell { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; min-width: 0; }
+/* Each cell keeps its own accessible label; the header strip supplies the
+ * visible one until the container is too narrow to hold six columns. */
+.icell__label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.icell__value { display: inline-flex; align-items: center; gap: 3px; color: var(--text-secondary); font-size: .86rem; line-height: 1.35; }
+.icell__value.is-zero { color: var(--text-muted); }
+.icell__value--qty { font-weight: 650; }
+.icell__rate { color: var(--text-muted); font-size: .7rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.total-amount { color: var(--text-primary); font-size: .92rem; font-weight: 780; }
+
+/* ---- Items totals: same columns as the rows, so each total sits under its
+ * own financial column instead of drifting to the table edge. ---- */
+.isum-row { padding-block: 12px; border-top: 1px solid var(--border-strong); }
+.isum { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.isum--disc { grid-column: 4; }
+.isum--vat { grid-column: 5; }
+.isum--total { grid-column: 6; }
+.isum__label { color: var(--text-muted); font-size: .64rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.isum__value { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); font-size: .92rem; font-weight: 700; }
+.isum--total .isum__label { color: var(--text-accent); }
+.isum--total .isum__value { color: var(--text-primary); font-size: 1.12rem; font-weight: 850; }
 /* A pill, not a banner: the matching state should read as a quiet confirmation. */
-.mismatch-callout { display: inline-flex; align-items: center; gap: 7px; margin: var(--space-3) 0 0; padding: 5px 12px; border-radius: var(--radius-pill); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .76rem; font-weight: 700; }
+.mismatch-callout { display: inline-flex; align-items: center; gap: 7px; margin: var(--space-3) var(--space-2) 0; padding: 5px 12px; border-radius: var(--radius-pill); background: var(--state-warning-bg); color: var(--state-warning-fg); font-size: .76rem; font-weight: 700; }
 .mismatch-callout.is-ok { background: var(--state-success-bg); color: var(--state-success-fg); font-weight: 600; }
+
+/* Wide panels: the space the item column would otherwise waste becomes a
+ * totals rail, so the row still ends where the data ends. */
+@container items (min-width: 1180px) {
+  .items-layout { grid-template-columns: minmax(0, 1fr) clamp(268px, 20%, 340px); gap: var(--space-5); align-items: start; }
+  .items-grid { margin-right: 0; }
+  .items-summary { margin-inline: 0; padding-left: var(--space-5); border-left: 1px solid var(--divider); }
+  .isum-row { display: flex; flex-direction: column; gap: var(--space-3); padding: 0; border-top: 0; }
+  .isum { flex-direction: row; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+  .isum--total { padding-top: var(--space-3); border-top: 1px solid var(--border-strong); }
+  .mismatch-callout { align-items: flex-start; margin: var(--space-4) 0 0; padding: 7px 12px; border-radius: var(--radius-md); line-height: 1.4; }
+}
+
+/* Narrow panels: six columns would collide, so a row becomes one labelled
+ * record with its total on its own emphasised line. */
+@container items (max-width: 880px) {
+  .ihead { display: none; }
+  .irow { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "id id id id" "qty unit disc vat" "total total total total"; row-gap: 10px; padding-block: 12px; }
+  .irow__id { grid-area: id; }
+  .icell { align-items: flex-start; }
+  .icell--qty { grid-area: qty; }
+  .icell--unit { grid-area: unit; }
+  .icell--disc { grid-area: disc; }
+  .icell--vat { grid-area: vat; }
+  .icell--total { grid-area: total; flex-direction: row; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding-top: 8px; border-top: 1px solid var(--divider); }
+  .icell__label { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; color: var(--text-muted); font-size: .64rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .isum-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .isum { align-items: flex-start; }
+  .isum--disc, .isum--vat, .isum--total { grid-column: auto; }
+}
+@container items (max-width: 560px) {
+  .irow { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "id id" "qty unit" "disc vat" "total total"; }
+}
 
 /* ---- Order Info: primary facts, secondary metadata, tertiary notes ---- */
 /* The fact grid is its own query container, so the delivery address widens with

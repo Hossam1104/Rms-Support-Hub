@@ -92,16 +92,16 @@ failure. Details are in `docs/design-system.md`.
 
 ## Validation baseline
 
-Recorded 2026-08-10 (Online Orders operational UI redesign); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
+Recorded 2026-08-10 (Online Orders UI redesign, then the items detail grid); see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table. Backend rows are from the same day against unchanged backend code.
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 53 files / 293 tests passed, 0 skipped |
+| Frontend tests | 53 files / 294 tests passed, 0 skipped |
 | Backend tests | 174 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; all Angular budgets clear |
-| Production initial bundle | 453.19 kB raw / 103.66 kB estimated transfer |
-| Lazy `three-module` chunk | 734.66 kB raw / 153.91 kB estimated transfer |
-| Production-offline initial bundle | 438.88 kB raw / 103.08 kB estimated transfer |
+| Production initial bundle | 456.35 kB raw / 104.21 kB estimated transfer |
+| Lazy `three-module` chunk | 734.66 kB raw / 153.79 kB estimated transfer |
+| Production-offline initial bundle | 442.03 kB raw / 103.68 kB estimated transfer |
 | Riyal asset verifier | Passed (SHA-1 verified, 924 bytes) |
 | Rendered browser pass | Not run; no browser automation tool is available in this environment |
 
