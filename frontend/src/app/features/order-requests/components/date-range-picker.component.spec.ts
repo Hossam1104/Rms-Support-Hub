@@ -20,7 +20,20 @@ describe('DateRangePickerComponent', () => {
     return Array.from(fixture.nativeElement.querySelectorAll('.calendar-day'));
   }
 
+  function popover(): HTMLElement {
+    return fixture.nativeElement.querySelector('.date-popover') as HTMLElement;
+  }
+
+  /** Places the closed trigger at a chosen viewport offset so placement can be
+   * exercised; jsdom otherwise reports every rect as zero. */
+  function placeTriggerAt(top: number) {
+    const trigger = fixture.nativeElement.querySelector('.date-trigger') as HTMLButtonElement;
+    trigger.getBoundingClientRect = () => ({ top, bottom: top + 42, height: 42 }) as DOMRect;
+  }
+
   beforeEach(() => {
+    Object.defineProperty(window, 'innerHeight', { value: 768, configurable: true });
+    Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true });
     TestBed.configureTestingModule({ imports: [DateRangePickerComponent] });
     fixture = TestBed.createComponent(DateRangePickerComponent);
     component = fixture.componentInstance;
@@ -66,6 +79,35 @@ describe('DateRangePickerComponent', () => {
 
     expect(emitted).toEqual([{ dateFrom: '2026-08-01', dateTo: '2026-08-10' }]);
     expect(component.open()).toBe(false);
+  });
+
+  it('caps its height to the room left below the trigger', () => {
+    placeTriggerAt(400); // 768 - 442 - 10 - 12 = 304px of usable room
+    openOn('2026-08-01', '2026-08-10');
+
+    expect(popover().style.maxHeight).toBe('304px');
+    expect(popover().classList.contains('is-above')).toBe(false);
+  });
+
+  it('opens above the trigger when the room below is too tight', () => {
+    placeTriggerAt(700); // only 16px below, 678px above
+
+    openOn('2026-08-01', '2026-08-10');
+
+    expect(popover().classList.contains('is-above')).toBe(true);
+    expect(popover().style.maxHeight).toBe('560px');
+  });
+
+  it('re-measures when the viewport moves under an open popover', () => {
+    placeTriggerAt(400);
+    openOn('2026-08-01', '2026-08-10');
+    expect(popover().style.maxHeight).toBe('304px');
+
+    placeTriggerAt(200);
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+
+    expect(popover().style.maxHeight).toBe('504px');
   });
 
   it('clears both range ends and closes', () => {

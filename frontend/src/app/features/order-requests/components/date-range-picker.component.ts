@@ -9,8 +9,10 @@ import {
   Output,
   SimpleChanges,
   computed,
+  effect,
   inject,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 
 export interface DateRangeSelection {
@@ -36,6 +38,17 @@ interface CalendarDay {
   isEnd: boolean;
   isInRange: boolean;
 }
+
+/** Placement budget for the popover. The filter card is sticky, so a popover
+ * taller than the room below its trigger can never be scrolled into view -- the
+ * card travels with the viewport. The picker therefore measures the space it
+ * actually has, flips above the trigger when below is too tight, and scrolls
+ * its own body for the remainder. */
+const POPOVER_GAP = 10;
+const VIEWPORT_MARGIN = 12;
+const POPOVER_MIN_HEIGHT = 220;
+const POPOVER_MAX_HEIGHT = 560;
+const POPOVER_MOBILE_BREAKPOINT = 600;
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const PRESETS: DatePreset[] = [
@@ -113,6 +126,7 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
   template: `
     <div class="date-picker-shell">
       <button
+        #dateTrigger
         type="button"
         class="date-trigger"
         [class.is-open]="open()"
@@ -127,7 +141,13 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       </button>
 
       @if (open()) {
-        <div class="date-popover" role="dialog" aria-label="Order request date range picker">
+        <div
+          #datePopover
+          class="date-popover"
+          [class.is-above]="dropUp()"
+          [style.max-height.px]="popoverMaxHeight()"
+          role="dialog"
+          aria-label="Order request date range picker">
           <div class="date-popover-header">
             <div>
               <span class="date-popover-eyebrow">Time window</span>
@@ -288,6 +308,8 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       background: var(--surface-overlay);
       box-shadow: var(--shadow-lg);
     }
+    /* Set by the component when the room below the trigger is too tight. */
+    .date-popover.is-above { top: auto; bottom: calc(100% + 10px); }
     .date-popover-header,
     .date-popover-footer {
       display: flex;
@@ -407,7 +429,8 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
 
     @media (max-width: 600px) {
       .date-trigger-meta { display: none; }
-      .date-popover { position: fixed; top: auto; right: 16px; bottom: 16px; left: 16px; width: auto; max-height: calc(100vh - 32px); overflow-y: auto; }
+      .date-popover,
+      .date-popover.is-above { position: fixed; top: auto; right: 16px; bottom: 16px; left: 16px; width: auto; max-height: calc(100vh - 32px); overflow-y: auto; }
       .date-popover-body { grid-template-columns: 1fr; }
       .date-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); border-right: 0; border-bottom: 1px solid var(--divider); }
       .date-section-label { grid-column: 1 / -1; }
@@ -422,6 +445,8 @@ export class DateRangePickerComponent implements OnChanges {
   readonly weekdays = WEEKDAYS;
   readonly presets = PRESETS;
   readonly open = signal(false);
+  readonly dropUp = signal(false);
+  readonly popoverMaxHeight = signal<number | null>(null);
   readonly viewMonth = signal(monthStart(new Date()));
   readonly draftFrom = signal<string | null>(null);
   readonly draftTo = signal<string | null>(null);
@@ -435,6 +460,16 @@ export class DateRangePickerComponent implements OnChanges {
   });
 
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly triggerRef = viewChild<ElementRef<HTMLButtonElement>>('dateTrigger');
+  private readonly popoverRef = viewChild<ElementRef<HTMLElement>>('datePopover');
+
+  constructor() {
+    // The popover only exists while open, so its query resolving is the signal
+    // that placement can be measured against the live viewport.
+    effect(() => {
+      if (this.popoverRef()) this.measurePlacement();
+    });
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.open() && (changes['dateFrom'] || changes['dateTo'])) {
@@ -534,6 +569,38 @@ export class DateRangePickerComponent implements OnChanges {
   @HostListener('document:keydown.escape')
   onEscape() {
     if (this.open()) this.closePicker();
+  }
+
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  onViewportChanged() {
+    if (this.open()) this.measurePlacement();
+  }
+
+  /**
+   * Sizes and places the popover from the room the trigger actually has. Below
+   * is preferred; the picker flips above only when that side is too tight and
+   * the other side is roomier. Mobile keeps its viewport-anchored fixed layout,
+   * so it opts out of both the flip and the measured cap.
+   */
+  private measurePlacement() {
+    const trigger = this.triggerRef()?.nativeElement;
+    if (!trigger || typeof window === 'undefined') return;
+
+    if (window.innerWidth <= POPOVER_MOBILE_BREAKPOINT) {
+      this.dropUp.set(false);
+      this.popoverMaxHeight.set(null);
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const roomBelow = window.innerHeight - rect.bottom - POPOVER_GAP - VIEWPORT_MARGIN;
+    const roomAbove = rect.top - POPOVER_GAP - VIEWPORT_MARGIN;
+    const above = roomBelow < POPOVER_MIN_HEIGHT && roomAbove > roomBelow;
+    const room = above ? roomAbove : roomBelow;
+
+    this.dropUp.set(above);
+    this.popoverMaxHeight.set(Math.round(Math.min(POPOVER_MAX_HEIGHT, Math.max(POPOVER_MIN_HEIGHT, room))));
   }
 
   private presetRange(key: PresetKey): DateRangeSelection {
