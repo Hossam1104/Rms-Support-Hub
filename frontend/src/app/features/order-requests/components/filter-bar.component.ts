@@ -82,8 +82,7 @@ import {
           <div class="primary-filter-grid" role="group" aria-label="Order request filters">
             <ui-field
               label="Order number"
-              forId="order-request-search"
-              hint="Exact match by default">
+              forId="order-request-search">
               <ui-input
                 inputId="order-request-search"
                 type="search"
@@ -152,6 +151,7 @@ import {
             </div>
 
             <div class="field-block date-range-field">
+              <span class="field-label" id="order-request-date-label">Date range</span>
               <app-date-range-picker
                 [dateFrom]="draft().dateFrom"
                 [dateTo]="draft().dateTo"

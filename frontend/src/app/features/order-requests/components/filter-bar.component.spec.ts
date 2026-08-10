@@ -37,9 +37,17 @@ describe('FilterBarComponent', () => {
     expect(element.textContent).toContain('Status');
     expect(element.querySelector('#order-request-search')).not.toBeNull();
     expect(element.querySelector('.date-trigger')).not.toBeNull();
-    expect(element.querySelector('.date-trigger')?.textContent).toContain('Date range');
     expect(element.querySelectorAll('.status-chip')).toHaveLength(9);
     expect(element.querySelectorAll('.status-chip[aria-pressed="false"]')).toHaveLength(9);
+  });
+
+  it('labels the date range from outside the trigger, like every other filter control', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const field = element.querySelector('.date-range-field') as HTMLElement;
+
+    expect(field.querySelector('.field-label')?.textContent).toContain('Date range');
+    expect(element.querySelector('.date-trigger')?.textContent).not.toContain('Date range');
+    expect(element.querySelector('.date-trigger-value')?.textContent?.trim()).not.toBe('');
   });
 
   it('opens a modern range popover with presets and a six-week calendar grid', () => {

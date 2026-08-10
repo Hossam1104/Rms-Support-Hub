@@ -8,6 +8,13 @@
   margin-bottom: var(--section-gap);
 }
 
+/* `ui-card` clips its content so its radius and accent rail stay clean. The
+   date range popover is an absolutely positioned child of this card, so that
+   clip cut the calendar off before its last week. Only this one card opts out;
+   the element selector keeps it more specific than the component's own rule,
+   and nothing else in this card overflows its bounds. */
+ui-card.order-request-filter > .ui-card { overflow: visible; }
+
 .order-request-filter .filter-workbench {
   display: flex;
   flex-direction: column;

@@ -120,11 +120,8 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
         [attr.aria-expanded]="open()"
         aria-label="Choose order request date range"
         (click)="togglePicker()">
-        <span class="date-trigger-icon" aria-hidden="true"><i class="bi bi-calendar3"></i></span>
-        <span class="date-trigger-copy">
-          <span class="date-trigger-label">Date range</span>
-          <strong>{{ selectionLabel() }}</strong>
-        </span>
+        <i class="bi bi-calendar3 date-trigger-icon" aria-hidden="true"></i>
+        <strong class="date-trigger-value">{{ selectionLabel() }}</strong>
         <span class="date-trigger-meta">{{ presetLabel() }}</span>
         <i class="bi bi-chevron-down date-trigger-chevron" aria-hidden="true"></i>
       </button>
@@ -215,17 +212,22 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
   styles: [`
     :host { display: block; min-width: 0; }
     .date-picker-shell { position: relative; min-width: 0; }
+    /* The closed trigger is a plain form control: same height, padding and
+     * radius as the ui-input and segmented control it sits beside, so the
+     * filter row keeps one baseline. Its field label lives outside, in the
+     * filter bar, exactly like every other control in that row. */
     .date-trigger {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto auto;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       width: 100%;
-      min-height: var(--control-height);
-      padding: 7px 11px;
+      height: var(--control-height);
+      padding: 0 var(--panel-padding-compact);
       border: 1px solid var(--input-border);
       border-radius: var(--radius-md);
       background: var(--input-bg);
+      box-shadow: inset 0 1px 0 var(--input-highlight);
       color: var(--text-primary);
       text-align: left;
       cursor: pointer;
@@ -240,18 +242,7 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
     .date-clear-button:focus-visible,
     .date-cancel-button:focus-visible,
     .date-apply-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-    .date-trigger-icon {
-      display: inline-grid;
-      place-items: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-sm);
-      background: var(--accent-soft);
-      color: var(--text-accent);
-      font-size: .9rem;
-    }
-    .date-trigger-copy { display: grid; gap: 1px; min-width: 0; }
-    .date-trigger-label,
+    .date-trigger-icon { color: var(--text-accent); font-size: .88rem; line-height: 1; }
     .date-popover-eyebrow,
     .date-section-label {
       color: var(--text-muted);
@@ -260,11 +251,11 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       letter-spacing: .08em;
       text-transform: uppercase;
     }
-    .date-trigger-copy strong {
+    .date-trigger-value {
       overflow: hidden;
       color: var(--text-primary);
-      font-size: .78rem;
-      font-weight: 800;
+      font-size: .8rem;
+      font-weight: 750;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -279,12 +270,18 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       white-space: nowrap;
     }
     .date-trigger-chevron { color: var(--text-muted); font-size: .7rem; }
+    /* A column so the header and the footer stay pinned and only the calendar
+     * body scrolls. On a short window that keeps Apply/Cancel reachable instead
+     * of pushing them past the bottom of the screen. */
     .date-popover {
       position: absolute;
       top: calc(100% + 10px);
       right: 0;
       z-index: 100;
+      display: flex;
+      flex-direction: column;
       width: min(620px, calc(100vw - 32px));
+      max-height: min(70vh, 560px);
       overflow: hidden;
       border: 1px solid var(--border-strong);
       border-radius: var(--radius-lg);
@@ -296,6 +293,7 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex: 0 0 auto;
       gap: var(--panel-gap);
       padding: 14px 16px;
     }
@@ -316,7 +314,7 @@ function buildCalendarDays(viewMonth: Date, dateFrom: string | null, dateTo: str
       cursor: pointer;
     }
     .date-icon-button:hover { border-color: var(--border-focus); background: var(--surface-hover); color: var(--text-accent); }
-    .date-popover-body { display: grid; grid-template-columns: 168px minmax(0, 1fr); }
+    .date-popover-body { display: grid; grid-template-columns: 168px minmax(0, 1fr); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .date-presets {
       display: grid;
       align-content: start;
