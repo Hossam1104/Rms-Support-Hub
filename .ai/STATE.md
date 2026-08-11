@@ -1,10 +1,10 @@
 # Current Project State
 
 - **Updated:** 2026-08-11
-- **Branch:** `main`
+- **Branch:** `int-02-pos-portable-import`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00, INT-00R,
-  and INT-01 destination skeleton complete.
-- **Next gate:** INT-02 portable Domain/Application/Contracts import - owner authorization required / not yet executed.
+  INT-01, and INT-02 portable POS source import complete.
+- **Next gate:** INT-03 Windows Infrastructure + retained WinUI import - owner authorization required / not yet executed.
 
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 
@@ -19,7 +19,6 @@ This file records durable facts only; milestone history lives in `.ai/HISTORY.md
 | Canonical origin | `https://github.com/Hossam1104/Rms-Support-Hub.git` |
 | Local folder | `D:\AI Tools\DBS\online_order_tool` (rename to `Rms-Support-Hub` pending; live processes previously held it) |
 | Visibility | Public by explicit owner decision; owner intends Private after POS integration |
-
 ## Application
 
 - One Angular 22 SPA and one .NET 10 Web API. QA Prompt Studio and Online Order
@@ -32,7 +31,6 @@ This file records durable facts only; milestone history lives in `.ai/HISTORY.md
 - UPC Testing/Production retain existing architecture; no browser connection detail or local Production validation.
 - No POS operation/generic execution surface exists. Order Requests use month-to-date,
   tokenized filters, a ten-newest base-only path, and paging for header-derived filters.
-
 ## POS integration architecture checkpoint
 INT-00 and INT-00R are documentation/governance complete. The canonical target
 is a separate Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub
@@ -52,8 +50,9 @@ ARTIFACTS: AUTHENTICATED FETCH / OPAQUE HANDLE; TOKEN: SINGLE-USE / OPERATION-BO
 DIRECT BROWSER TO LOOPBACK AGENT: PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
 PREFERRED TRANSPORT: SUPPORT HUB BROWSER → LOCAL LOOPBACK POS AGENT
 STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY; WINUI: RETAINED
-REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: NOT AUTHORIZED
-INT-01: DESTINATION SKELETON COMPLETE; POS SOURCE IMPORT NOT STARTED
+REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-02 PORTABLE BOUNDARY IMPORTED; WINDOWS RUNTIME NOT EXECUTED
+INT-01: DESTINATION SKELETON COMPLETE; INT-02: PORTABLE SOURCE + TESTS IMPORTED / PASSING
+INT-03: WINDOWS INFRASTRUCTURE + RETAINED WINUI OWNER-GATED
 ```
 Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`; trusted machine
 certificate provisioning is mandatory. Kerberos is preferred but `.localhost`
@@ -61,13 +60,14 @@ SPN and NTLM loopback/back-connection behavior remain open; REST is state
 truth, SSE is read-only/no-token progress, and artifacts use authenticated
 fetch with opaque handles.
 
-INT-01 destination: `/pos/RmsSupportHub.Pos.slnx` contains five buildable
-skeletons: portable Domain/Application/Contracts, Windows-targeted
-Infrastructure, and inert Agent. Graph: Application→Domain; Infrastructure→Application+Domain; Agent→Contracts+Domain+Application+Infrastructure.
-No packages, tests, WinUI, POS Angular, business/runtime source, or raw POS
-history was imported; CI has portable/Windows build lanes. INT-02 remains
-owner-gated.
-
+INT-02 destination: `/pos/RmsSupportHub.Pos.slnx` contains five source and two
+test projects. Graph: Application→Domain; Infrastructure→Application+Domain;
+Agent→Contracts+Domain+Application+Infrastructure; tests→their portable
+source projects. Domain/Contracts have no packages; Application uses
+`Microsoft.Extensions.Logging.Abstractions` 10.0.10; tests use the approved
+baseline. No Infrastructure, Agent runtime, WinUI, POS Angular, raw history,
+  or privileged implementation was imported. CI builds/tests portable on Ubuntu
+  and builds the POS solution on Windows. INT-03 remains owner-gated.
 ## Compatibility contracts
 
 These persisted storage keys are byte-exact; no migration exists:
@@ -112,7 +112,7 @@ Recorded 2026-08-10; see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the pri
 - `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
   order/request calls return HTTP 500; deferred environment setup.
 - UPC fixture/live acceptance, Production index/deployment, and all POS
-  implementation remain deferred and unauthorized.
+  Windows/runtime implementation remain deferred and unauthorized.
 - POS evidence gates remain open: LocalSystem/Session 0 SMB, live transport,
   LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS

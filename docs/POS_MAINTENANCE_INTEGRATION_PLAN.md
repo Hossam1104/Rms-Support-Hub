@@ -2,8 +2,8 @@
 
 ## Status and authorization
 
-This is the canonical destination-side architecture record for INT-00 and the
-current INT-01 destination status.
+This is the canonical destination-side architecture record for INT-00 through
+INT-02 and the current INT-03 owner gate.
 
 ```text
 INT-00: COMPLETE
@@ -24,13 +24,17 @@ POS SOURCE PROVENANCE:
 25922b499d33bd73f241ffc26c212dd000e81433
 
 INT-02:
+COMPLETE - PORTABLE DOMAIN / APPLICATION / CONTRACTS IMPORTED
+
+INT-03:
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
 
 INT-00 closes the cross-project architecture decision. INT-01 has now created
-only the authorized isolated destination skeleton and its build/CI boundary.
-It did not import POS source, change Support Hub application behavior, or
-change the POS repository.
+the isolated destination skeleton and its build/CI boundary. INT-02 imported
+only the approved portable Domain/Application/Contracts source and the two
+portable test boundaries. It did not import Windows Infrastructure, Agent
+runtime, WinUI, POS Angular, or change Support Hub application behavior.
 
 The POS repository is a read-only provenance source. INT-00R verified the
 Support Hub `main` head and `origin/main` at
@@ -55,8 +59,8 @@ working-tree changes at the verification point. No POS source was imported.
 | Service identity | Preserve POS ADR-012: Windows service identity is `LocalSystem`, with loopback-only hosting, local Administrators authorization, server-owned allowlists, strict typed operations, explicit SQL credentials, and explicit SMB credential flow. |
 | POS frontend | The standalone POS Angular workspace is frozen and reference-only. Support Hub owns the final route, UI, design system, package files, and typed generated consumer. |
 | Desktop client | WinUI is retained and receives a destination-side publish-validation lane. It is not cut over by INT-00. |
-| Source import | A clean tracked source snapshot is the future import shape. Raw POS Git history merge is prohibited. No source is imported by INT-00. |
-| CI | POS historic `.github/workflows/ci.yml` is reference-only; its responsibilities are decomposed into destination-owned lanes. No workflow is created by INT-00. |
+| Source import | INT-02 uses a clean tracked source snapshot from the approved SHA. Raw POS Git history merge is prohibited; project/lock metadata is reconciled into destination-owned projects. |
+| CI | POS historic `.github/workflows/ci.yml` is reference-only; destination-owned `pos-ci.yml` now restores/builds/tests the portable boundary and builds the POS solution on Windows. |
 
 The focused records are [ADR-0015](../.ai/decisions/ADR-0015-separate-pos-agent-trust-boundary.md),
 [ADR-0016](../.ai/decisions/ADR-0016-pos-browser-transport-security-boundary.md),
@@ -418,9 +422,10 @@ The isolated destination concept is:
 
 Portable POS projects target `net10.0`. Windows Infrastructure and Agent
 projects are Windows-targeted. Existing Support Hub backend projects remain
-portable. INT-01 establishes only the five empty project boundaries and does
-not import the Domain, Application, Contracts, Infrastructure, Agent, WinUI,
-test, or Angular source from the provenance repository.
+portable. INT-02 populated the Domain, Application, and Contracts destination
+projects plus the Domain/Application test projects from the approved tracked
+snapshot. Infrastructure and Agent remain destination-owned skeletons; WinUI,
+POS Angular, and runtime source remain unimported.
 
 The future source boundary is:
 
@@ -465,9 +470,10 @@ The destination CI plan has separate lanes for:
    SQL, SCM, restore/maintenance, downloader, and live transport behavior.
 
 No workflow was created by INT-00. INT-01 created the destination-owned
-`.github/workflows/pos-ci.yml` with meaningful portable and Windows skeleton
-build lanes. The R2 CI finding is closed by ownership decomposition, not by
-copying the historical POS workflow into the Hub.
+`.github/workflows/pos-ci.yml`; INT-02 extended its portable lane with real
+test-project restore/build/test steps. The R2 CI finding is closed by
+ownership decomposition, not by copying the historical POS workflow into the
+Hub.
 
 ## Deployment decisions and evidence gates
 
@@ -529,14 +535,17 @@ OPEN DEPLOYMENT DECISION
 WINUI CUTOVER:
 OPEN BY DESIGN
 
-INTEGRATION IMPLEMENTATION:
+PORTABLE INT-02 SOURCE IMPORT:
+COMPLETE
+
+WINDOWS / AGENT INTEGRATION IMPLEMENTATION:
 NOT AUTHORIZED
 ```
 
 ## Next gate
 
-INT-00R is complete and INT-01 is complete. The root task now stages the next
-portable source-import gate:
+INT-00R, INT-01, and INT-02 are complete. The root task now stages the next
+Windows-only owner gate:
 
 ```text
 INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
@@ -544,13 +553,31 @@ INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
 INT-02 - PORTABLE DOMAIN / APPLICATION / CONTRACTS IMPORT
 
 STATUS:
+COMPLETE
+
+INT-03 - WINDOWS INFRASTRUCTURE + RETAINED WINUI IMPORT
+
+STATUS:
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
 
+INT-02 completion inventory from the approved provenance SHA is:
+
+```text
+DOMAIN: 46 tracked / 44 .cs imported
+APPLICATION: 17 tracked / 15 .cs imported
+CONTRACTS: 65 tracked / 63 .cs imported
+DOMAIN TESTS: 6 tracked / 4 .cs imported
+APPLICATION TESTS: 11 tracked / 9 .cs imported
+EXCLUDED: 5 source .csproj files (destination identity owned by INT-01)
+EXCLUDED: 5 packages.lock.json files (destination package graph is reconciled in .csproj)
+```
+
 The next owner must start from a fresh context after owner/planner verification
-and explicit authorization. INT-02 may import only the portable source
-boundary; Windows Infrastructure, Agent runtime, WinUI, POS Angular, and
-privileged operations remain out of scope.
+and explicit authorization. INT-03 may import only the authorized Windows
+Infrastructure and retained WinUI boundary. Agent runtime, POS Angular,
+privileged operations, and representative-device evidence remain out of scope
+until their later authorized gates.
 
 ## Reference material
 

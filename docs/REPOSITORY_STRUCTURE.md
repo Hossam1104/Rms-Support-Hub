@@ -20,12 +20,15 @@ Rms-Support-Hub/
 │
 ├── pos/
 │   ├── RmsSupportHub.Pos.slnx
-│   └── src/
-│       ├── RmsSupportHub.Pos.Domain/
-│       ├── RmsSupportHub.Pos.Application/
-│       ├── RmsSupportHub.Pos.Contracts/
-│       ├── RmsSupportHub.Pos.Infrastructure/
-│       └── RmsSupportHub.Pos.Agent/
+│   ├── src/
+│   │   ├── RmsSupportHub.Pos.Domain/
+│   │   ├── RmsSupportHub.Pos.Application/
+│   │   ├── RmsSupportHub.Pos.Contracts/
+│   │   ├── RmsSupportHub.Pos.Infrastructure/
+│   │   └── RmsSupportHub.Pos.Agent/
+│   └── tests/
+│       ├── RmsSupportHub.Pos.Domain.Tests/
+│       └── RmsSupportHub.Pos.Application.Tests/
 │
 ├── frontend/src/
 │   ├── app/
@@ -53,8 +56,8 @@ Rms-Support-Hub/
 └── .ai/                       # Agent working set: PROJECT, STATE, DECISIONS, decisions/, HANDOFF, HISTORY, scripts
 ```
 
-INT-01 established the isolated POS build boundary without importing POS
-business source. Its current destination is:
+INT-02 established the isolated POS build boundary with the approved portable
+POS source snapshot. Its current destination is:
 
 ```text
 /pos
@@ -64,14 +67,19 @@ business source. Its current destination is:
     RmsSupportHub.Pos.Contracts
     RmsSupportHub.Pos.Infrastructure
     RmsSupportHub.Pos.Agent
+  /tests
+    RmsSupportHub.Pos.Domain.Tests
+    RmsSupportHub.Pos.Application.Tests
 ```
 
 Portable POS projects remain `net10.0`; Windows Infrastructure and Agent
-projects are Windows-targeted. The current skeleton contains no tests, WinUI,
-POS Angular workspace, packages, business source, or runtime behavior. Existing
-Support Hub `Core`, `Data`, and `Api` remain portable. The Agent owns privileged
-POS operations and the Support Hub general API is not their proxy or execution
-path.
+projects are Windows-targeted. Domain/Application/Contracts contain the
+namespace-migrated portable source from provenance
+`25922b499d33bd73f241ffc26c212dd000e81433`, and the two portable test suites
+are destination-owned. There is no WinUI, POS Angular workspace, Agent runtime,
+or privileged implementation. Existing Support Hub `Core`, `Data`, and `Api`
+remain portable. The Agent owns privileged POS operations and the Support Hub
+general API is not their proxy or execution path.
 
 ## Route topology
 
@@ -102,7 +110,7 @@ Every tool is a lazy route with typed `ToolRouteData`, declared in
 | Module behavior difference | A flag on `IOrderModule.Capabilities`. Never a module-key string comparison. |
 | New shared UI primitive | `frontend/src/app/shared/ui/<name>/`, exported from `shared/ui/index.ts`, demonstrated in the kitchen sink. |
 | New feature screen | `frontend/src/app/features/<feature>/`, lazy-loaded from `app.routes.ts` with typed route data. The future POS screen remains a Support Hub-owned consumer of the separate Agent contract. |
-| POS destination project | `pos/src/<project>/`; the separate `pos/RmsSupportHub.Pos.slnx` is the POS build boundary. Portable projects must not reference Windows-targeted POS projects. |
+| POS destination project | `pos/src/<project>/` and `pos/tests/<project>/`; the separate `pos/RmsSupportHub.Pos.slnx` is the POS build boundary. Portable projects must not reference Windows-targeted POS projects. |
 | Card surface of any kind | Consume the `--card-*` tokens; do not introduce new radii, padding, or hover values. See `docs/design-system.md`. |
 | Any color | A semantic token. Raw hex is allowed only in `styles/_tokens.css` and `styles/_gradients.css`. |
 | A lasting technical decision | One ADR in `.ai/decisions/`, one row in `.ai/DECISIONS.md`. |

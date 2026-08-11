@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'pos/**'
-      - '.github/workflows/pos-ci.yml'
+      - "pos/**"
+      - ".github/workflows/pos-ci.yml"
   pull_request:
     paths:
-      - 'pos/**'
-      - '.github/workflows/pos-ci.yml'
+      - "pos/**"
+      - ".github/workflows/pos-ci.yml"
 
 permissions:
   contents: read
@@ -25,19 +25,28 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: '10.0.302'
+          dotnet-version: "10.0.302"
 
       - name: Restore portable projects
         run: |
           dotnet restore pos/src/RmsSupportHub.Pos.Domain/RmsSupportHub.Pos.Domain.csproj --nologo
           dotnet restore pos/src/RmsSupportHub.Pos.Application/RmsSupportHub.Pos.Application.csproj --nologo
           dotnet restore pos/src/RmsSupportHub.Pos.Contracts/RmsSupportHub.Pos.Contracts.csproj --nologo
+          dotnet restore pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj --nologo
+          dotnet restore pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj --nologo
 
-      - name: Build portable projects
+      - name: Build portable projects and tests
         run: |
           dotnet build pos/src/RmsSupportHub.Pos.Domain/RmsSupportHub.Pos.Domain.csproj -c Release --no-restore --nologo --warnaserror
           dotnet build pos/src/RmsSupportHub.Pos.Application/RmsSupportHub.Pos.Application.csproj -c Release --no-restore --nologo --warnaserror
           dotnet build pos/src/RmsSupportHub.Pos.Contracts/RmsSupportHub.Pos.Contracts.csproj -c Release --no-restore --nologo --warnaserror
+          dotnet build pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore --nologo --warnaserror
+          dotnet build pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore --nologo --warnaserror
+
+      - name: Run portable tests
+        run: |
+          dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-build --no-restore --nologo
+          dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-build --no-restore --nologo
 
   windows:
     name: POS Windows skeleton
@@ -49,7 +58,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: '10.0.302'
+          dotnet-version: "10.0.302"
 
       - name: Restore POS solution
         run: dotnet restore pos/RmsSupportHub.Pos.slnx --nologo

@@ -2,23 +2,37 @@
 
 ## Purpose and current intake status
 
-This document preserves the source, security, and architecture questions for a
-future dedicated POS integration session. The POS Maintenance Tool is
-developed independently. RMS+ Support Hub does not implement, connect to, or
-infer POS operations today.
+This document preserves the source, security, and architecture questions for
+the staged POS integration. INT-02 has imported only the portable
+Domain/Application/Contracts boundary and its existing portable tests. The POS
+Maintenance Tool is developed independently; RMS+ Support Hub does not
+implement, connect to, or infer privileged POS operations today.
 
 INT-00 closed the destination-side architecture only. INT-00R kept the POS
-repository read-only and performed only the required provenance spot checks;
-no source was imported. The planning candidate is:
+repository read-only and performed only the required provenance spot checks.
+INT-02 verified and imported the clean tracked portable snapshot; the POS
+repository remains read-only. The approved provenance is:
 
 ```text
-POS SOURCE: MERGE-READY CANDIDATE AT 25922b499d33bd73f241ffc26c212dd000e81433
+POS SOURCE: VERIFIED / IMPORTED PORTABLE SNAPSHOT AT 25922b499d33bd73f241ffc26c212dd000e81433
 ```
 
 That SHA is provenance, not proof that deployment, device, browser, SQL, SMB,
 SCM, restore, maintenance, downloader, or remote-trigger behavior has been
-validated. The next owner must assess the candidate source and complete the
-rows below from actual evidence.
+validated. INT-02 established source parity only for the portable boundary;
+the remaining operational rows below still require later evidence.
+
+The clean portable import inventory is:
+
+```text
+DOMAIN: 46 tracked / 44 .cs imported
+APPLICATION: 17 tracked / 15 .cs imported
+CONTRACTS: 65 tracked / 63 .cs imported
+DOMAIN TESTS: 6 tracked / 4 .cs imported
+APPLICATION TESTS: 11 tracked / 9 .cs imported
+EXCLUDED: source .csproj files because destination-owned project files preserve identity
+EXCLUDED: packages.lock.json files because destination project package graphs are reconciled explicitly
+```
 
 The spot checks verified `BackupApiClient`, the current Agent hosting/security
 boundary, and POS ADR-012 at the approved SHA. The source already maps every
@@ -295,8 +309,10 @@ is prohibited. The approved destination concept is:
 
 Portable POS projects target `net10.0`. Windows Infrastructure and Agent
 projects remain Windows-targeted. Existing Support Hub backend projects remain
-portable. INT-01 has established only the empty destination project
-boundaries; actual POS source import remains deferred to its owning gate.
+portable. INT-01 established the destination project boundaries. INT-02
+imported the authorized Domain/Application/Contracts `.cs` source and the two
+portable test boundaries into those destination roots; no source project files
+or lock files were copied.
 
 The clean snapshot must exclude generated output, build/runtime directories,
 local environment debris, secrets/certificates, and raw repository/history
@@ -319,9 +335,11 @@ are available:
 - No credentials are committed to the supplied source or intake materials.
 - The Agent/browser LNA, Negotiate, certificate, CORS, and antiforgery
   evidence plan is approved.
-- The owner explicitly authorizes INT-01.
+- The owner explicitly authorizes the applicable integration gate.
 
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
-privileges. INT-02 and later implementation gates remain owner-authorization
-required.
+privileges. INT-03 and later implementation gates remain owner-authorization
+required. INT-03 is the next gate for Windows Infrastructure and retained
+WinUI; Agent runtime, POS Angular, and privileged operations remain out of
+scope until their own authorization.

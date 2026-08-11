@@ -71,12 +71,12 @@ Do not copy facts that can be cheaply discovered from the repository.
   has no standalone validation endpoint, so the U6 Validate action is a
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
-- No background workers, queues, repository migrations, E2E framework, or
-  application auth scheme exists. POS INT-00/INT-00R/INT-01 are closed; INT-01 established
-  `pos/RmsSupportHub.Pos.slnx` with portable Domain/Application/Contracts,
-  Windows Infrastructure/Agent, inert Agent, and no POS source. Loopback security,
-  retained WinUI, and raw-history exclusion remain future constraints (see plan
-  and ADR-0015..0018).
+ - No background workers, queues, repository migrations, E2E framework, or application auth scheme exists; POS INT-00/INT-00R/INT-01/INT-02 are closed.
+  INT-02 populated `pos/RmsSupportHub.Pos.slnx` with approved portable source and
+  Domain/Application tests. Infrastructure is Windows-targeted/empty,
+  Agent inert; POS source isolated from the general backend/frontend. Loopback
+  security, retained WinUI, and raw-history exclusion remain future constraints
+  (see plan and ADR-0015..0018).
 ## Build and Validation Entry Points
 
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
@@ -94,7 +94,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   4200. Agent-run live verification uses Testing only, never Production.
 - Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
   npm ci`.
-- POS skeleton: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo`.
+- POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 
 ## Integrations
