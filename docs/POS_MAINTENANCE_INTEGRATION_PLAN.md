@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-05 and the current INT-06 owner gate.
+INT-05F and the current INT-06 owner gate.
 
 ```text
 INT-00: COMPLETE
@@ -48,7 +48,10 @@ INT-04:
 COMPLETE - AGENT HOST / RUNTIME COMPOSITION
 
 INT-05:
-COMPLETE - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
+COMPLETE / ACCEPTED AFTER INT-05F - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
+
+INT-05F:
+COMPLETE - OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION
 
 NEXT:
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE / OWNER AUTHORIZATION REQUIRED
@@ -67,8 +70,9 @@ exact-origin CORS/Origin enforcement, mutation-token and service-owned storage
 foundations, and only health/live, health/ready, authenticated session, and
 mutation-token foundation routes. INT-05 adds the destination-owned versioned
 OpenAPI document, deterministic Support Hub generated types, and a dedicated
-direct-Agent Angular transport; it does not add feature operations or activate
-the POS UI.
+direct-Agent Angular transport; INT-05F isolates the generator's TypeScript 5
+peer dependency from Angular's TypeScript 6 graph. Neither gate adds feature
+operations or activates the POS UI.
 
 The POS repository is a read-only provenance source. INT-04 started from the
 Support Hub `main` head and `origin/main` at
@@ -487,9 +491,11 @@ source `.csproj` and `packages.lock.json` files remain excluded.
 
 - The Agent owns the authoritative versioned OpenAPI contract and server-owned
   operation semantics at `/pos/openapi`.
-- Support Hub owns the exact `openapi-typescript@7.13.0` dependency, lockfile,
-  deterministic generated Angular types, and dedicated `HttpBackend` transport.
-  Generated code is derived output and is not imported as POS application source.
+- Support Hub owns the deterministic generated Angular types and dedicated
+  `HttpBackend` transport. The exact `openapi-typescript@7.13.0` dependency
+  and its TypeScript 5 peer-compatible lockfile are isolated in the
+  destination-owned `tools/pos-agent-client-generator` workspace. Generated
+  code is derived output and is not imported as POS application source.
 - The standalone POS Angular workspace remains frozen/reference-only.
 - Support Hub owns `package.json`, the lockfile, routes, UI primitives, design
   tokens, and the final POS feature implementation.
@@ -517,9 +523,10 @@ No workflow was created by INT-00. INT-01 created the destination-owned
 `.github/workflows/pos-ci.yml`; INT-02 extended its portable lane with real
 test-project restore/build/test steps; INT-03 added the Windows Infrastructure
 test lane and retained WinUI publish validation; INT-05 added the pinned
-OpenAPI/generated-client drift lane and frontend path triggers. The R2 CI finding
-is closed by ownership decomposition, not by copying the historical POS workflow
-into the Hub.
+OpenAPI/generated-client drift lane and frontend path triggers, and INT-05F
+isolated its generator install/lockfile from the frontend graph. The R2 CI
+finding is closed by ownership decomposition, not by copying the historical POS
+workflow into the Hub.
 
 ## Deployment decisions and evidence gates
 

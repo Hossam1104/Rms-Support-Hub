@@ -11,5 +11,14 @@ $env:PosAgentSecurity__SupportHubOrigin = 'https://support-hub.integration.test'
 dotnet build pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj -c Release
 ```
 
-The Support Hub TypeScript contract is then regenerated separately with
-`npm run generate:pos-agent-client` from `frontend`.
+The Support Hub TypeScript contract is then regenerated separately. Install
+the isolated generator workspace, then run the existing frontend convenience
+command:
+
+```powershell
+npm ci --prefix tools/pos-agent-client-generator
+npm run generate:pos-agent-client --prefix frontend
+```
+
+The generator is build-only tooling and is not part of the Angular
+application dependency graph.

@@ -46,8 +46,14 @@ types:
 
 ```bash
 npm ci
+npm ci --prefix ../tools/pos-agent-client-generator
 npm run generate:pos-agent-client
 ```
+
+The OpenAPI generator is installed from the isolated
+`../tools/pos-agent-client-generator` workspace; it is not a frontend
+dependency. The repository generation script uses its committed lockfile and
+does not download a global or floating CLI.
 
 The generated output is
 `src/app/core/pos-agent/generated/pos-agent-api.generated.ts`; it is derived

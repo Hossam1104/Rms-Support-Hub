@@ -9,7 +9,8 @@ has now imported the approved Windows Infrastructure, Infrastructure tests, and
 retained WinUI boundary. The POS Maintenance Tool is developed independently;
 RMS+ Support Hub does not implement, connect to, or infer privileged POS
 operations today. INT-05 now supplies only the destination-owned Agent
-contract/type/transport foundation; it does not activate POS UI or feature
+contract/type/transport foundation; INT-05F isolates its generator toolchain
+from Angular's TypeScript 6 graph. Neither gate activates POS UI or feature
 operations.
 
 INT-00 closed the destination-side architecture only. INT-00R kept the POS
@@ -105,7 +106,7 @@ evidence.
 | Secret storage and protected configuration | Source uses Windows DPAPI `DataProtectionScope.LocalMachine` and the `PosAdminTool.Agent.Secrets.v1` protected-data identity; no secret value is tracked. |
 | Logging, audit, and error handling | Imported code uses `Microsoft.Extensions.Logging`; Agent host composition, privileged audit, and live error/outcome evidence remain future work. |
 | Deployment, certificate, browser policy, and rollback requirements | Source/build facts are reviewed; trusted machine certificate, browser/LNA policy, service deployment, rollback, and representative-device evidence remain open. |
-| OpenAPI surface and generated-client inputs | INT-05 complete: the Agent owns the versioned build-time document under `/pos/openapi`; Support Hub owns `openapi-typescript@7.13.0`, the lockfile, and generated types under `frontend/src/app/core/pos-agent/generated/`. |
+| OpenAPI surface and generated-client inputs | INT-05F complete: the Agent owns the versioned build-time document under `/pos/openapi`; the destination-owned `tools/pos-agent-client-generator` workspace owns the exact `openapi-typescript@7.13.0` / TypeScript 5 peer-compatible toolchain, while Support Hub owns generated types under `frontend/src/app/core/pos-agent/generated/`. |
 
 ## Dependency review checklist
 
@@ -369,7 +370,7 @@ If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
 privileges. INT-03 is complete for the approved Windows Infrastructure and
 retained WinUI source/build boundary, INT-04 is complete for the Agent host
-composition boundary, and INT-05 is complete for the contract/client foundation.
-INT-06 and later implementation gates remain owner-authorization required; POS
-Angular feature activation and privileged operations remain out of scope until
-their own authorization.
+composition boundary, and INT-05 is accepted after the complete INT-05F
+contract/client toolchain correction. INT-06 and later implementation gates
+remain owner-authorization required; POS Angular feature activation and
+privileged operations remain out of scope until their own authorization.

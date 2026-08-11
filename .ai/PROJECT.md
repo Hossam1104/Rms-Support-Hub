@@ -73,12 +73,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   `25922b499d33bd73f241ffc26c212dd000e81433`.
 - INT-04 composes a Windows-targeted, headless ASP.NET Core host capable of
   Windows Service deployment at `https://rms-pos-agent.localhost:5001`.
-  INT-05 adds the Agent-owned versioned OpenAPI source/generation under
-  `/pos/openapi`, the Support Hub-owned `openapi-typescript@7.13.0` generated
-  contract, and a dedicated `HttpBackend` direct-Agent transport under
-  `frontend/src/app/core/pos-agent`. Production registers no feature operations
-  and does not expose runtime OpenAPI; POS UI activation, feature operations,
-  and live-device/browser evidence remain governed gates.
+  INT-05 adds the Agent-owned versioned OpenAPI source under `/pos/openapi`,
+  Support Hub-owned generated types, and dedicated `HttpBackend` transport
+  under `frontend/src/app/core/pos-agent`; INT-05F isolates exact
+  `openapi-typescript@7.13.0` in `tools/pos-agent-client-generator` with a
+  TypeScript 5 peer-compatible lockfile. Production registers no feature
+  operations and does not expose runtime OpenAPI; POS UI activation, feature
+  operations, and live-device/browser evidence remain governed gates.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.
@@ -93,13 +94,11 @@ Do not copy facts that can be cheaply discovered from the repository.
 - AI context budget check: `python .ai/scripts/check_memory.py`.
 - Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
   4200. Agent-run live verification uses Testing only, never Production.
-- Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
-  npm ci`.
-- POS Agent contract generation: set the deployment-owned
-  `PosAgentSecurity__SupportHubOrigin` environment value, build
-  `pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj` to generate
-  `pos/openapi/RmsSupportHub.Pos.Agent.json`, then run `cd frontend; npm ci;
-  npm run generate:pos-agent-client`. The generated TypeScript output is under
+- Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend; npm ci`.
+- POS Agent contract generation: set `PosAgentSecurity__SupportHubOrigin`, build
+  `pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj`, run
+  `npm ci --prefix tools/pos-agent-client-generator` and `npm ci --prefix frontend`,
+  then `npm --prefix frontend run generate:pos-agent-client`. Output is under
   `frontend/src/app/core/pos-agent/generated/` and is not edited manually.
 - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj -c Release --no-build --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.

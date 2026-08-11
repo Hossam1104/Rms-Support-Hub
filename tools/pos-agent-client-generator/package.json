@@ -1,0 +1,12 @@
+{
+  "name": "rms-support-hub-pos-agent-client-generator",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "openapi-typescript ../../pos/openapi/RmsSupportHub.Pos.Agent.json -o ../../frontend/src/app/core/pos-agent/generated/pos-agent-api.generated.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

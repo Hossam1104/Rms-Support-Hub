@@ -1,8 +1,7 @@
 # Current Project State
 - **Updated:** 2026-08-11
 - **Branch:** `main`
-- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through
-  INT-05 POS integration work complete within their approved boundaries.
+- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F POS integration work complete within their approved boundaries.
 - **Next gate:** INT-06 Live Transport Security Evidence requires fresh owner authorization; it is not executed in this session.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
@@ -34,7 +33,9 @@ ORIGINAL IMPORT PROVENANCE (INT-01/02/03): 25922b499d33bd73f241ffc26c212dd000e81
 CORRECTED AGENT PROVENANCE BASELINE (INT-04): 010abc52dc110cfde3dc2c53e057890ff6edaf97
 CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW: PROV-1 CLOSED BY INT-03R / LIVE EVIDENCE OPEN
 INT-04: AGENT HOST / RUNTIME COMPOSITION COMPLETE
-INT-05: BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER COMPLETE
+INT-05: BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER COMPLETE / ACCEPTED AFTER INT-05F
+INT-05F: OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION COMPLETE; ISOLATED TOOLING DEPENDENCY GRAPH
+ANGULAR TYPESCRIPT: 6.x; GENERATOR TYPESCRIPT: 5.x PEER-COMPATIBLE; GLOBAL LEGACY PEER BYPASS: NONE
 NEXT: INT-06 LIVE TRANSPORT SECURITY EVIDENCE - OWNER AUTHORIZATION REQUIRED
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
@@ -42,16 +43,15 @@ WINDOWS LOOPBACK AUTH: BACK-CONNECTION / HOSTNAME EVIDENCE OPEN
 CORS: ANONYMOUS EXACT-ORIGIN PREFLIGHT; APP: NEGOTIATE + LOCAL ADMIN
 MACHINE TRUST: MANDATORY; SSE: READ-ONLY / NO MUTATION TOKEN
 REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-05 Agent contract/client foundation composed; no Support Hub backend relay or POS UI activation
-INT-05: BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER COMPLETE; INT-06 LIVE EVIDENCE OWNER-GATED
 ```
 Agent origin: `https://rms-pos-agent.localhost:5001`; the host is headless, Windows
 Service-capable, loopback-only, HTTPS-only, and HTTP/1.1-only. It
 registers Negotiate in production, uses exact-origin CORS and local-Administrators/
 SID ownership checks, and exposes only health/live, health/ready,
-authenticated session, and mutation-token foundation routes. INT-05 adds the destination-owned
-versioned OpenAPI document at `/pos/openapi`, build-time
-generation, the exact `openapi-typescript@7.13.0` Support Hub type output under
-`frontend/src/app/core/pos-agent/generated/`, and a dedicated `HttpBackend` transport
+authenticated session, and mutation-token foundation routes. INT-05 adds the
+versioned `/pos/openapi` document and exact `openapi-typescript@7.13.0` output
+from isolated `tools/pos-agent-client-generator` under
+`frontend/src/app/core/pos-agent/generated/`, plus dedicated `HttpBackend` transport
 with credentialed session/token requests and conservative error classification.
 Production registers no feature mutation descriptors and does
 not expose runtime OpenAPI. Trusted machine certificate provisioning is

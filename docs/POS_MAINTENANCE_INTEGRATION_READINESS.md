@@ -19,10 +19,11 @@ two portable test suites. INT-03 imported the approved Windows Infrastructure,
 Infrastructure test, and retained WinUI boundaries. INT-03R corrected the
 source provenance snapshot. Owner-authorized INT-04 composed the destination
 Agent host foundation; INT-05 added the Agent-owned OpenAPI contract and
-Support Hub transport/type foundation. No POS Angular feature or Support Hub
-API relay/UI integration was implemented.
+Support Hub transport/type foundation. INT-05F subsequently isolated the
+OpenAPI generator toolchain from the Angular dependency graph. No POS Angular
+feature or Support Hub API relay/UI integration was implemented.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 / INT-05 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -276,19 +277,20 @@ The following remain future owner-gated work:
    Negotiate/SPN, browser policy, loopback back-connection, and representative
    device behavior in the authorized evidence gate.
 2. Implement and validate the final Support Hub feature and later privileged
-   operations in their separately authorized gates. INT-05's contract/client
-   foundation is complete; live SQL/SCM/SMB/device behavior remains evidence
-   work.
+operations in their separately authorized gates. INT-05's contract/client
+foundation is accepted after INT-05F; live SQL/SCM/SMB/device behavior remains
+evidence work.
 
-INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-05 are complete. `PROV-1` is
-closed for the composition gate. INT-06 Live Transport Security Evidence
-remains owner-authorization required and is not executed by this integration.
+INT-01, INT-02, INT-03, INT-03R, and INT-04 are complete; INT-05 is accepted
+after INT-05F, which is complete. `PROV-1` is closed for the composition gate.
+INT-06 Live Transport Security Evidence remains owner-authorization required
+and is not executed by this integration.
 
 ## Required post-integration validation
 
 | Gate | Requirement |
 | --- | --- |
-| Frontend suite | `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 341 tests across 56 files passed |
+| Frontend suite | `npm --prefix tools/pos-agent-client-generator ci`; `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 341 tests across 56 files passed |
 | Backend suite | POS Domain 7, Application 75, Infrastructure 60, and Agent 69 tests pass |
 | Full gate | `./scripts/build.ps1` or the repository's Windows equivalent: backend tests, Release build with 0 warnings, and Angular production build |
 | Bundle budgets | POS stays out of the initial bundle beyond its route chunk; investigate meaningful growth |

@@ -7,8 +7,8 @@ on:
       - "pos/**"
       - "frontend/package.json"
       - "frontend/package-lock.json"
-      - "frontend/.npmrc"
       - "frontend/src/app/core/pos-agent/**"
+      - "tools/pos-agent-client-generator/**"
       - "scripts/generate-pos-agent-client.*"
       - ".github/workflows/pos-ci.yml"
   pull_request:
@@ -16,8 +16,8 @@ on:
       - "pos/**"
       - "frontend/package.json"
       - "frontend/package-lock.json"
-      - "frontend/.npmrc"
       - "frontend/src/app/core/pos-agent/**"
+      - "tools/pos-agent-client-generator/**"
       - "scripts/generate-pos-agent-client.*"
       - ".github/workflows/pos-ci.yml"
 
@@ -125,12 +125,18 @@ jobs:
         with:
           node-version: "24.x"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            tools/pos-agent-client-generator/package-lock.json
 
       - name: Restore and build Agent contract source
         run: |
           dotnet restore pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj --nologo
           dotnet build pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj -c Release --no-restore --nologo --warnaserror
+
+      - name: Install isolated generator dependencies
+        run: npm ci
+        working-directory: tools/pos-agent-client-generator
 
       - name: Install Support Hub dependencies
         run: npm ci
@@ -141,7 +147,7 @@ jobs:
         working-directory: frontend
 
       - name: Fail on stale contract artifacts
-        run: git diff --exit-code -- pos/openapi frontend/src/app/core/pos-agent/generated
+        run: git diff --exit-code -- pos/openapi/RmsSupportHub.Pos.Agent.json frontend/src/app/core/pos-agent/generated/pos-agent-api.generated.ts
 
   winui-publish:
     name: Retained WinUI publish validation

@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Implemented (INT-05 Browser Transport / OpenAPI / Client Adapter; next gate owner authorization)
+**Role:** Implemented (INT-05F OpenAPI Generator Peer-Dependency Isolation; next gate owner authorization)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -30,7 +30,23 @@ owner-authorized INT-03R correction produced the Agent source provenance
 `010abc52dc110cfde3dc2c53e057890ff6edaf97` for INT-04+.
 
 STATUS:
-INT-05 COMPLETE
+INT-05:
+COMPLETE / ACCEPTED AFTER INT-05F
+
+INT-05F:
+COMPLETE
+
+OPENAPI GENERATOR:
+ISOLATED TOOLING DEPENDENCY GRAPH
+
+ANGULAR TYPESCRIPT:
+6.x
+
+GENERATOR TYPESCRIPT:
+5.x PEER-COMPATIBLE
+
+GLOBAL LEGACY PEER BYPASS:
+NONE
 
 INT-03:
 COMPLETE
@@ -60,7 +76,9 @@ loopback binding, Negotiate/local-Administrators policy, exact-origin CORS and
 Origin enforcement, server-owned mutation-token issuance, safe service-owned
 storage ports, and only the health/session/token foundation routes. INT-05 adds
 the authoritative versioned OpenAPI document, deterministic Support Hub
-generated types, and an isolated direct-Agent Angular transport. No feature
+generated types, and an isolated direct-Agent Angular transport. INT-05F
+isolates the OpenAPI generator's TypeScript 5 peer dependency from the
+Angular TypeScript 6 graph. No feature
 operations or POS UI activation was added.
 
 NEXT:
