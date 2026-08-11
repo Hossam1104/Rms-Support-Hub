@@ -1,0 +1,120 @@
+<Page
+    x:Class="PosAdminTool.WinUI.Views.ServicesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PosAdminTool.WinUI.Controls">
+
+    <Grid Padding="28" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Style="{StaticResource HeroBorderStyle}">
+            <Grid ColumnSpacing="24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="SERVICE CONTROL CENTER" />
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Services" />
+                    <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Monitor RMS+ Windows services, inspect live state, and issue operator-safe control actions." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12">
+                    <Border Style="{StaticResource StatusPillStyle}">
+                        <TextBlock FontWeight="Bold" FontSize="12" Foreground="{StaticResource InfoBrush}" Text="Auto-refresh every 5 seconds" />
+                    </Border>
+                    <Button Command="{Binding RefreshCommand}" Content="Refresh" HorizontalAlignment="Right" Style="{StaticResource PrimaryButtonStyle}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="WATCHLIST" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="{Binding Services.Count}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="POLLING" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="5s" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="PRIVILEGE" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="Admin" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Style="{StaticResource PanelBorderStyle}">
+            <Grid RowSpacing="14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Service catalog" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Start, stop, or restart the configured RMS+ services from a single command deck." />
+                    </StackPanel>
+                    <Border Grid.Column="1" Style="{StaticResource StatusPillStyle}">
+                        <TextBlock FontWeight="Bold" FontSize="12" Foreground="{StaticResource InfoBrush}" Text="Live state monitoring" />
+                    </Border>
+                </Grid>
+
+                <GridView
+                    Grid.Row="1"
+                    ItemsSource="{Binding Services}"
+                    SelectionMode="None">
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <controls:ServiceCard
+                                Width="360"
+                                Margin="0,0,12,12"
+                                RestartCommand="{Binding RestartCommand}"
+                                ServiceName="{Binding Name}"
+                                StartCommand="{Binding StartCommand}"
+                                Status="{Binding Status}"
+                                StopCommand="{Binding StopCommand}" />
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                </GridView>
+            </Grid>
+        </Border>
+
+        <Grid
+            Grid.RowSpan="3"
+            Background="#88000000"
+            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ProgressRing
+                Width="48"
+                Height="48"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsActive="{Binding IsBusy}" />
+        </Grid>
+    </Grid>
+</Page>

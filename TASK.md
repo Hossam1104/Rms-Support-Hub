@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Plan (INT-03 Windows Infrastructure + retained WinUI import; owner gate)
+**Role:** Plan (INT-04 Agent Host / Runtime Composition; owner gate)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -15,27 +15,28 @@ documents.
 
 INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
 
-The isolated `/pos` solution, portable project boundaries, Windows skeletons,
-and destination-owned build lanes are established. INT-02 imported the approved
-portable Domain/Application/Contracts source and its two portable test suites.
-The existing Support Hub backend and POS frontend remain independent; no POS
-UI, Agent runtime, Infrastructure, WinUI, or privileged operation was added.
+INT-02 - PORTABLE DOMAIN / APPLICATION / CONTRACTS IMPORT: COMPLETE
+
+INT-03 - WINDOWS INFRASTRUCTURE + RETAINED WINUI IMPORT: COMPLETE
+
+The approved POS provenance snapshot at
+`25922b499d33bd73f241ffc26c212dd000e81433` was imported into destination-owned
+projects. Windows Infrastructure and its tests build and pass; retained WinUI
+publishes successfully with packaged resources. The Agent remains inert, and
+the Support Hub backend/frontend remain independent.
 
 STATUS:
-INT-01 COMPLETE
+INT-03 COMPLETE
 
-INT-02 COMPLETE
-
-INT-03 - WINDOWS INFRASTRUCTURE + RETAINED WINUI IMPORT
+INT-04 - AGENT HOST / RUNTIME COMPOSITION
 
 STATUS:
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 
-INT-02 imported only the authorized portable Domain/Application/Contracts
-boundary from POS provenance `25922b499d33bd73f241ffc26c212dd000e81433`.
-Domain/Application/Contracts target `net10.0`; Infrastructure remains a
-skeleton and Agent remains inert. Do not import POS Infrastructure, Agent
-runtime, WinUI, POS Angular, or privileged operations until INT-03 or a later
-authorized gate.
+INT-03:
+COMPLETE
 
-INT-03 MUST NOT BE EXECUTED IN THIS SESSION.
+INT-04:
+NOT EXECUTED
+
+INT-04 MUST NOT BE EXECUTED WITHOUT EXPLICIT OWNER AUTHORIZATION.

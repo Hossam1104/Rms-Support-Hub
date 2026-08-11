@@ -15,16 +15,19 @@ performed only the required read-only provenance spot checks (`BackupApiClient`,
 current Agent hosting/security boundary, and POS ADR-012). INT-01 then
 established the isolated destination solution and inert project boundaries;
 INT-02 imported only the approved portable Domain/Application/Contracts source
-and the two portable test suites. No Agent or Angular feature was implemented.
+and the two portable test suites. INT-03 imported the approved Windows
+Infrastructure, Infrastructure test, and retained WinUI boundaries. No Agent
+runtime or Angular feature was implemented.
 
-**Status: INT-00R / INT-01 / INT-02 COMPLETE / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 COMPLETE / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
 recorded in the canonical plan and ADRs. Live Agent, browser-policy,
 representative-device, and real-operation evidence remains open. INT-02
-portable source import is complete; Windows Infrastructure, Agent runtime,
-WinUI, and Support Hub feature work remain owner-gated.
+  portable source import is complete; Windows Infrastructure tests and retained
+  WinUI publish validation are complete. Agent runtime, Support Hub feature
+  work, and live operation evidence remain owner-gated/open.
 
 ## Current RMS+ architecture
 
@@ -146,8 +149,8 @@ They are not implementation authorization and are not changed by INT-00R.
 | Hub tile | `frontend/src/app/features/hub/tool-registry.ts` | Update capability and action text only with the real feature. |
 | Feature folder | `frontend/src/app/features/pos-maintenance/` | The final Support Hub feature replaces the placeholder here and owns the UI. |
 | Agent contract | `/pos/src/RmsSupportHub.Pos.Contracts` (portable source imported by INT-02) and future `RmsSupportHub.Pos.Agent` | Own typed POS operations and authoritative OpenAPI; do not place privileged endpoints in `RmsSupportHub.Api`. |
-| DI and configuration | Future Agent composition root and deployment configuration | Keep Agent identity, certificate, port, browser policy, and operation allowlists outside tracked secrets. Do not add POS DI to the general API during INT-00. |
-| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests` and `/pos/tests/RmsSupportHub.Pos.Application.Tests` | Portable provenance suites are imported and passing; future work adds Agent security, OpenAPI, cross-process, WinUI, and representative-device lanes in the destination. |
+| DI and configuration | Future Agent composition root and deployment configuration | Keep Agent identity, certificate, port, browser policy, and operation allowlists outside tracked secrets. Do not add POS DI to the general API during INT-03 or before INT-04 authorization. |
+| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, and `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests` | Domain 7/7, Application 75/75, and Infrastructure 58/58 passed; future work adds Agent security, OpenAPI, cross-process, WinUI cutover, and representative-device lanes in the destination. |
 
 ## Shared primitives to reuse
 
@@ -220,36 +223,38 @@ These hold before, during, and after future integration:
 7. The direct browser-to-loopback Agent remains per-device local maintenance;
    remote-fleet requirements are out of scope for INT-01.
 
-## INT-01 / INT-02 result and next gate
+## INT-01 / INT-02 / INT-03 result and next gate
 
 INT-01 verified the accepted architecture checkpoint and established the
 isolated `/pos` solution, five buildable project boundaries, and destination-
 owned portable and Windows build lanes. INT-02 then imported 44 Domain, 15
 Application, and 63 Contracts `.cs` files plus 4 Domain and 9 Application test
 `.cs` files from the approved tracked snapshot, reconciled the destination
-project graph, and extended the portable CI lane with real tests. No privileged
-POS execution was added to `RmsSupportHub.Api`, `Core`, or `Data`.
+project graph, and extended the portable CI lane with real tests. INT-03
+imported 23 Infrastructure `.cs` files, 7 Infrastructure test `.cs` files, and
+34 retained WinUI source/resource files, with destination-owned project
+metadata and dependencies. No privileged POS execution was added to
+`RmsSupportHub.Api`, `Core`, or `Data`.
 
-The imported portable suites pass with Domain 7/0/0 and Application 75/0/0
-(passed/failed/skipped). Infrastructure remains a skeleton and Agent remains
-inert; no Windows implementation, Angular, WinUI, or raw POS history was
-imported.
+The imported suites pass with Domain 7/0/0, Application 75/0/0, and
+Infrastructure 58/0/0 (passed/failed/skipped). The POS solution and backend
+Release builds pass with zero warnings/errors. Retained WinUI publishes for
+`win-x64` and contains `PosAdminTool.WinUI.exe`, 7 `.pri`, and 11 `.xbf`
+resources. The Agent remains inert; no Angular source, raw POS history, or live
+Windows/device runtime was executed.
 
 The following remain future owner-gated work:
 
-1. Supply and review the POS source at the authorized provenance SHA, complete
-   the `[REQUIRES SOURCE REVIEW]` rows in
-   `POS_MAINTENANCE_MIGRATION_INTAKE.md`, and produce a clean tracked snapshot.
-   Do not merge raw POS Git history.
-2. Inventory real operations and privileges, then define the Agent-owned typed
+1. Inventory real operations and privileges, then define the Agent-owned typed
    OpenAPI contract and Support Hub generated consumer.
-3. Implement and validate the Windows Infrastructure, Agent runtime, final
-   Support Hub feature, browser transport, cross-process behavior, and
-   representative-device evidence in their authorized gates.
+2. Implement and validate the Agent runtime, final Support Hub feature, browser
+   transport, cross-process behavior, and representative-device evidence in
+   their authorized gates. INT-03's source import/build boundary is complete;
+   live SQL/SCM/SMB/device behavior remains evidence work.
 
-INT-01 and INT-02 are complete. INT-03 is owner-authorization required and
-must start from a fresh context after owner/planner verification. INT-03 is
-limited to the Windows Infrastructure and retained WinUI boundary.
+INT-01, INT-02, and INT-03 are complete. INT-04 Agent Host / Runtime
+Composition is owner-authorization required and must start from a fresh context
+after owner/planner verification. INT-04 is not executed by this integration.
 
 ## Required post-integration validation
 

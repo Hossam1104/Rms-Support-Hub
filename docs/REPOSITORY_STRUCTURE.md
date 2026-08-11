@@ -25,10 +25,12 @@ Rms-Support-Hub/
 │   │   ├── RmsSupportHub.Pos.Application/
 │   │   ├── RmsSupportHub.Pos.Contracts/
 │   │   ├── RmsSupportHub.Pos.Infrastructure/
-│   │   └── RmsSupportHub.Pos.Agent/
+│   │   ├── RmsSupportHub.Pos.Agent/
+│   │   └── PosAdminTool.WinUI/
 │   └── tests/
 │       ├── RmsSupportHub.Pos.Domain.Tests/
-│       └── RmsSupportHub.Pos.Application.Tests/
+│       ├── RmsSupportHub.Pos.Application.Tests/
+│       └── RmsSupportHub.Pos.Infrastructure.Tests/
 │
 ├── frontend/src/
 │   ├── app/
@@ -56,8 +58,9 @@ Rms-Support-Hub/
 └── .ai/                       # Agent working set: PROJECT, STATE, DECISIONS, decisions/, HANDOFF, HISTORY, scripts
 ```
 
-INT-02 established the isolated POS build boundary with the approved portable
-POS source snapshot. Its current destination is:
+INT-03 established the isolated POS build boundary with the approved portable,
+Windows Infrastructure, and retained WinUI source snapshot. Its current
+destination is:
 
 ```text
 /pos
@@ -67,19 +70,22 @@ POS source snapshot. Its current destination is:
     RmsSupportHub.Pos.Contracts
     RmsSupportHub.Pos.Infrastructure
     RmsSupportHub.Pos.Agent
+    PosAdminTool.WinUI
   /tests
     RmsSupportHub.Pos.Domain.Tests
     RmsSupportHub.Pos.Application.Tests
+    RmsSupportHub.Pos.Infrastructure.Tests
 ```
 
-Portable POS projects remain `net10.0`; Windows Infrastructure and Agent
-projects are Windows-targeted. Domain/Application/Contracts contain the
-namespace-migrated portable source from provenance
-`25922b499d33bd73f241ffc26c212dd000e81433`, and the two portable test suites
-are destination-owned. There is no WinUI, POS Angular workspace, Agent runtime,
-or privileged implementation. Existing Support Hub `Core`, `Data`, and `Api`
-remain portable. The Agent owns privileged POS operations and the Support Hub
-general API is not their proxy or execution path.
+Portable POS projects remain `net10.0`; Windows Infrastructure, Agent, and
+retained WinUI projects are Windows-targeted. Domain/Application/Contracts,
+Infrastructure, Infrastructure tests, and WinUI contain the namespace-reconciled
+source from provenance `25922b499d33bd73f241ffc26c212dd000e81433`, and all three
+POS test suites are destination-owned. The Agent remains inert, with no POS
+Angular workspace, runtime host, or privileged execution path imported. Existing
+Support Hub `Core`, `Data`, and `Api` remain portable. The Agent owns privileged
+POS operations and the Support Hub general API is not their proxy or execution
+path.
 
 ## Route topology
 

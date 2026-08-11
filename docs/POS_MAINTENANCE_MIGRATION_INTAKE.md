@@ -3,14 +3,16 @@
 ## Purpose and current intake status
 
 This document preserves the source, security, and architecture questions for
-the staged POS integration. INT-02 has imported only the portable
-Domain/Application/Contracts boundary and its existing portable tests. The POS
-Maintenance Tool is developed independently; RMS+ Support Hub does not
-implement, connect to, or infer privileged POS operations today.
+the staged POS integration. INT-02 imported the portable
+Domain/Application/Contracts boundary and its existing portable tests; INT-03
+has now imported the approved Windows Infrastructure, Infrastructure tests, and
+retained WinUI boundary. The POS Maintenance Tool is developed independently;
+RMS+ Support Hub does not implement, connect to, or infer privileged POS
+operations today.
 
 INT-00 closed the destination-side architecture only. INT-00R kept the POS
 repository read-only and performed only the required provenance spot checks.
-INT-02 verified and imported the clean tracked portable snapshot; the POS
+INT-02 and INT-03 verified and imported clean tracked snapshots; the POS
 repository remains read-only. The approved provenance is:
 
 ```text
@@ -19,8 +21,9 @@ POS SOURCE: VERIFIED / IMPORTED PORTABLE SNAPSHOT AT 25922b499d33bd73f241ffc26c2
 
 That SHA is provenance, not proof that deployment, device, browser, SQL, SMB,
 SCM, restore, maintenance, downloader, or remote-trigger behavior has been
-validated. INT-02 established source parity only for the portable boundary;
-the remaining operational rows below still require later evidence.
+validated. INT-03 establishes source/build parity for the imported Windows and
+WinUI boundary only; the remaining operational rows below still require later
+evidence.
 
 The clean portable import inventory is:
 
@@ -30,8 +33,13 @@ APPLICATION: 17 tracked / 15 .cs imported
 CONTRACTS: 65 tracked / 63 .cs imported
 DOMAIN TESTS: 6 tracked / 4 .cs imported
 APPLICATION TESTS: 11 tracked / 9 .cs imported
-EXCLUDED: source .csproj files because destination-owned project files preserve identity
-EXCLUDED: packages.lock.json files because destination project package graphs are reconciled explicitly
+EXCLUDED: 5 portable source .csproj files because destination-owned project files preserve identity
+EXCLUDED: 5 portable packages.lock.json files because destination project package graphs are reconciled explicitly
+INFRASTRUCTURE: 25 tracked / 23 .cs imported
+INFRASTRUCTURE TESTS: 9 tracked / 7 .cs imported
+RETAINED WINUI: 36 tracked / 34 source/resource files imported
+EXCLUDED: 3 source .csproj files because destination-owned project files preserve identity and dependencies
+EXCLUDED: 3 packages.lock.json files because destination project package graphs are reconciled explicitly
 ```
 
 The spot checks verified `BackupApiClient`, the current Agent hosting/security
@@ -74,17 +82,17 @@ evidence.
 
 | Input | Current status |
 | --- | --- |
-| Framework and runtime | [REQUIRES SOURCE REVIEW] |
-| UI framework | [REQUIRES SOURCE REVIEW] |
-| Windows-specific dependencies | [REQUIRES SOURCE REVIEW] |
-| Libraries and packages | [REQUIRES SOURCE REVIEW] |
-| External tools or processes invoked | [REQUIRES SOURCE REVIEW] |
-| Environment and branch/POS identity configuration | [REQUIRES SOURCE REVIEW] |
-| Database connection and authentication model | [REQUIRES SOURCE REVIEW] |
-| Secret storage and protected configuration | [REQUIRES SOURCE REVIEW] |
-| Logging, audit, and error handling | [REQUIRES SOURCE REVIEW] |
-| Deployment, certificate, browser policy, and rollback requirements | [REQUIRES SOURCE REVIEW] |
-| OpenAPI surface and generated-client inputs | [REQUIRES SOURCE REVIEW] |
+| Framework and runtime | Verified from INT-03 source: `.NET 10`; Windows Infrastructure and retained WinUI target `net10.0-windows10.0.19041.0` with the same `SupportedOSPlatformVersion`. |
+| UI framework | Retained WinUI 3 / Windows App SDK `1.8.260710003`; publish validation passed. |
+| Windows-specific dependencies | Infrastructure: `System.ServiceProcess.ServiceController 10.0.10`, `System.Security.Cryptography.ProtectedData 9.0.11`; WinUI: Windows App SDK `1.8.260710003`. |
+| Libraries and packages | Infrastructure: `Microsoft.Data.SqlClient 6.1.6`, `Microsoft.Extensions.Logging.Abstractions 10.0.10`; tests: `coverlet.collector 6.0.4`, `Microsoft.NET.Test.Sdk 17.14.1`, `xunit 2.9.3`, `xunit.runner.visualstudio 3.1.4`; WinUI: `CommunityToolkit.Mvvm 8.4.2`, `Microsoft.Extensions.DependencyInjection 10.0.10`, `Microsoft.Extensions.Logging 10.0.10`. |
+| External tools or processes invoked | Imported Infrastructure contains the `sc.exe` Windows service-control boundary; `run_app.cmd` was not imported. No service or process was launched by INT-03. |
+| Environment and branch/POS identity configuration | Source provenance is `25922b499d33bd73f241ffc26c212dd000e81433`; destination identities are `RmsSupportHub.Pos.*` plus retained `PosAdminTool.WinUI`. No environment credential or endpoint was added. |
+| Database connection and authentication model | `Microsoft.Data.SqlClient`; source preserves SQL connection behavior including `TrustServerCertificate=true`. Real SQL access and TLS deployment validation remain open. |
+| Secret storage and protected configuration | Source uses Windows DPAPI `DataProtectionScope.LocalMachine` and the `PosAdminTool.Agent.Secrets.v1` protected-data identity; no secret value is tracked. |
+| Logging, audit, and error handling | Imported code uses `Microsoft.Extensions.Logging`; Agent host composition, privileged audit, and live error/outcome evidence remain future work. |
+| Deployment, certificate, browser policy, and rollback requirements | Source/build facts are reviewed; trusted machine certificate, browser/LNA policy, service deployment, rollback, and representative-device evidence remain open. |
+| OpenAPI surface and generated-client inputs | Not implemented by INT-03; owned by the future Agent/runtime gate. |
 
 ## Dependency review checklist
 
@@ -307,12 +315,13 @@ is prohibited. The approved destination concept is:
     ...
 ```
 
-Portable POS projects target `net10.0`. Windows Infrastructure and Agent
-projects remain Windows-targeted. Existing Support Hub backend projects remain
-portable. INT-01 established the destination project boundaries. INT-02
-imported the authorized Domain/Application/Contracts `.cs` source and the two
-portable test boundaries into those destination roots; no source project files
-or lock files were copied.
+Portable POS projects target `net10.0`. Windows Infrastructure, Agent, and
+retained WinUI projects are Windows-targeted. Existing Support Hub backend
+projects remain portable. INT-01 established the destination project
+boundaries. INT-02 imported the authorized Domain/Application/Contracts `.cs`
+source and the two portable test boundaries; INT-03 imported the authorized
+Infrastructure, Infrastructure test, and retained WinUI source/resource files.
+No source project files or lock files were copied.
 
 The clean snapshot must exclude generated output, build/runtime directories,
 local environment debris, secrets/certificates, and raw repository/history
@@ -339,7 +348,7 @@ are available:
 
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
-privileges. INT-03 and later implementation gates remain owner-authorization
-required. INT-03 is the next gate for Windows Infrastructure and retained
-WinUI; Agent runtime, POS Angular, and privileged operations remain out of
-scope until their own authorization.
+privileges. INT-03 is complete for the approved Windows Infrastructure and
+retained WinUI source/build boundary. INT-04 and later implementation gates
+remain owner-authorization required; Agent runtime, POS Angular, and
+privileged operations remain out of scope until their own authorization.

@@ -46,10 +46,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   `RmsSupportHub.Api`, `Core`, or `Data`; CORS preflight is anonymous exact
   origin; application requests use Windows Negotiate/authorization; token is
   single-use/server-operation-bound; SSE is read-only; artifacts use authenticated fetch.
-- Supplied assets use the typed `app-assets.ts` catalog and semantic public
-  folders; `frontend/public/assets/Saudi_Riyal.svg` remains verifier-required.
-  Shared identity marks use `app-brand-mark` with contain-fit sizing and
-  explicit decorative accessibility state.
+- Supplied assets use the typed `app-assets.ts` catalog; public folders mirror
+  the supplied `assets/` drop (`CompanyLogos/`, `ClientsLogo/`, `Payments/`,
+  `CustomMessageBox/`) and `frontend/public/assets/Saudi_Riyal.svg` remains
+  verifier-required. Shared identity marks use `app-brand-mark` with
+  contain-fit sizing, optional wordmark width, and explicit decorative
+  accessibility state; the RMS+ and DBS lockups resolve per theme through
+  `themedAsset`.
 - Prompt Studio uses typed reactive forms, namespaced drafts, deterministic
   builders, advisory quality analysis, and local history capped at ten records;
   it never stores attachments or sends data to an external provider.
@@ -71,12 +74,10 @@ Do not copy facts that can be cheaply discovered from the repository.
   has no standalone validation endpoint, so the U6 Validate action is a
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
- - No background workers, queues, repository migrations, E2E framework, or application auth scheme exists; POS INT-00/INT-00R/INT-01/INT-02 are closed.
-  INT-02 populated `pos/RmsSupportHub.Pos.slnx` with approved portable source and
-  Domain/Application tests. Infrastructure is Windows-targeted/empty,
-  Agent inert; POS source isolated from the general backend/frontend. Loopback
-  security, retained WinUI, and raw-history exclusion remain future constraints
-  (see plan and ADR-0015..0018).
+  - No background workers, queues, repository migrations, E2E framework, or application auth scheme exists; POS INT-00/INT-00R/INT-01/INT-02 are closed. INT-03 populated `pos/RmsSupportHub.Pos.slnx` with the approved portable source, Windows Infrastructure/tests, and retained WinUI.
+  Infrastructure is Windows-targeted; Agent remains inert; POS is isolated
+  from the general backend/frontend. Loopback, live-device, WinUI-cutover, and
+  raw-history constraints remain governed (see plan and ADR-0015..0018).
 ## Build and Validation Entry Points
 
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
@@ -94,7 +95,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   4200. Agent-run live verification uses Testing only, never Production.
 - Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
   npm ci`.
-- POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`.
+- POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 
 ## Integrations
@@ -111,12 +112,11 @@ Do not copy facts that can be cheaply discovered from the repository.
   use environment variables. See `README.md` without copying values.
 - Local draft persistence is owned by `SessionIdMiddleware` and `DraftManager`;
   `var/` is ignored and must not be treated as durable multi-instance storage.
-- Future POS machine-local ownership belongs to the separate Agent/deployment:
-  LocalSystem, mandatory trusted machine certificate/private-key ACL, browser
-  policy matrix, explicit SQL/SMB credentials, allowlisted operations, and
-  privileged audit. The architecture is per-device local maintenance; remote
-  fleet/LAN scope is a new security programme. Windows loopback/back-connection
-  behavior, managed-browser/LNA, Negotiate/SPN, certificate lifecycle, and
+  - Future POS machine-local ownership belongs to the separate Agent/deployment:
+  LocalSystem, trusted machine certificate/private-key ACL, browser policy,
+  explicit SQL/SMB credentials, allowlisted operations, and privileged audit.
+  Per-device scope is required; remote fleet/LAN scope is a new programme.
+  Loopback, managed-browser/LNA, Negotiate/SPN, certificate lifecycle, and
   device-operation evidence are gates, not current Hub runtime facts.
 
 ## Critical Conventions

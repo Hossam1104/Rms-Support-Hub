@@ -2,12 +2,10 @@
 
 - **Updated:** 2026-08-11
 - **Branch:** `main`
-- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00, INT-00R,
-  INT-01, and INT-02 portable POS source import complete.
-- **Next gate:** INT-03 Windows Infrastructure + retained WinUI import - owner authorization required / not yet executed.
-
+- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through
+  INT-03 POS integration work complete within their approved boundaries.
+- **Next gate:** INT-04 Agent Host / Runtime Composition - owner authorization required / not yet executed.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
-
 ## Identity
 
 | Facet | Value |
@@ -50,24 +48,25 @@ ARTIFACTS: AUTHENTICATED FETCH / OPAQUE HANDLE; TOKEN: SINGLE-USE / OPERATION-BO
 DIRECT BROWSER TO LOOPBACK AGENT: PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
 PREFERRED TRANSPORT: SUPPORT HUB BROWSER → LOCAL LOOPBACK POS AGENT
 STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY; WINUI: RETAINED
-REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-02 PORTABLE BOUNDARY IMPORTED; WINDOWS RUNTIME NOT EXECUTED
+REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-03 WINDOWS INFRASTRUCTURE + RETAINED WINUI IMPORTED; AGENT RUNTIME NOT EXECUTED
 INT-01: DESTINATION SKELETON COMPLETE; INT-02: PORTABLE SOURCE + TESTS IMPORTED / PASSING
-INT-03: WINDOWS INFRASTRUCTURE + RETAINED WINUI OWNER-GATED
+INT-03: WINDOWS INFRASTRUCTURE + TESTS PASSING; RETAINED WINUI PUBLISH VALIDATED
+INT-04: AGENT HOST / RUNTIME COMPOSITION OWNER-GATED
 ```
 Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`; trusted machine
-certificate provisioning is mandatory. Kerberos is preferred but `.localhost`
-SPN and NTLM loopback/back-connection behavior remain open; REST is state
-truth, SSE is read-only/no-token progress, and artifacts use authenticated
-fetch with opaque handles.
-
-INT-02 destination: `/pos/RmsSupportHub.Pos.slnx` contains five source and two
+certificate provisioning is mandatory. Kerberos is preferred; `.localhost` SPN
+and NTLM loopback/back-connection behavior remain open. REST is state truth, SSE
+is read-only/no-token progress, and artifacts use authenticated opaque handles.
+INT-03 destination: `/pos/RmsSupportHub.Pos.slnx` contains six source and three
 test projects. Graph: Application→Domain; Infrastructure→Application+Domain;
-Agent→Contracts+Domain+Application+Infrastructure; tests→their portable
-source projects. Domain/Contracts have no packages; Application uses
-`Microsoft.Extensions.Logging.Abstractions` 10.0.10; tests use the approved
-baseline. No Infrastructure, Agent runtime, WinUI, POS Angular, raw history,
-  or privileged implementation was imported. CI builds/tests portable on Ubuntu
-  and builds the POS solution on Windows. INT-03 remains owner-gated.
+Agent→Contracts+Domain+Application+Infrastructure; WinUI→Application+Domain+
+Infrastructure; tests→their source projects. Domain/Contracts have no packages;
+Application uses `Microsoft.Extensions.Logging.Abstractions` 10.0.10.
+Infrastructure owns the Windows SQL/SCM/DPAPI package graph; WinUI retains
+Windows App SDK and CommunityToolkit packages. The Agent remains inert, POS
+Angular/raw history/general backend/frontend integration remain excluded. CI
+builds/tests portable on Ubuntu, runs Infrastructure tests and the POS solution
+build on Windows, and validates a WinUI publish artifact. INT-04 is owner-gated.
 ## Compatibility contracts
 
 These persisted storage keys are byte-exact; no migration exists:
@@ -82,7 +81,6 @@ qa-support-hub.prompt-studio.story-draft
 qa-support-hub.prompt-studio.test-case-draft
 order-tool.sidebar-collapsed
 ```
-
 External/business identifiers remain unchanged: API `/api`, JSON/payload contracts,
 fixtures, database/table/SQL names, module keys, payment values, statuses, wording, and asset filenames. Behavior is capability-gated; UPC methods are Visa/Tamara/Tabby (ADR-0014).
 
@@ -111,10 +109,12 @@ Recorded 2026-08-10; see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the pri
 - Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
   order/request calls return HTTP 500; deferred environment setup.
-- UPC fixture/live acceptance, Production index/deployment, and all POS
-  Windows/runtime implementation remain deferred and unauthorized.
+- UPC fixture/live acceptance, Production index/deployment, and POS Agent
+  Windows/runtime implementation remain deferred and unauthorized. INT-03's
+  source was only build/test/publish validated; no live service, SQL, SCM, SMB,
+  device, or browser runtime was executed.
 - POS evidence gates remain open: LocalSystem/Session 0 SMB, live transport,
   LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS
-  (`TrustServerCertificate = true`), and WinUI cutover by design. Architecture
+  (`TrustServerCertificate = true`), and WinUI cutover by design; architecture
   decisions are not evidence.

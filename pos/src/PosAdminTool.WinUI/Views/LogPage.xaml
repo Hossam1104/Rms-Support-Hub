@@ -1,0 +1,50 @@
+<Page
+    x:Class="PosAdminTool.WinUI.Views.LogPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Padding="28" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Style="{StaticResource HeroBorderStyle}">
+            <Grid ColumnSpacing="24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="EVENT STREAM" />
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Log" />
+                    <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Timestamped activity from configuration, services, operations, and automation collected into a single live console." />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="10">
+                    <Border Style="{StaticResource StatusPillStyle}" HorizontalAlignment="Right">
+                        <TextBlock FontWeight="Bold" FontSize="12" Foreground="{StaticResource ConsoleTextBrush}" Text="Live" />
+                    </Border>
+                    <Button Command="{Binding ClearLogCommand}" Content="Clear Log" HorizontalAlignment="Right" Style="{StaticResource GhostButtonStyle}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource ConsolePanelStyle}">
+            <Grid RowSpacing="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Padding="18,14" Background="{ThemeResource ConsoleHeaderBrush}" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock FontWeight="Bold" Foreground="{ThemeResource ConsoleTextBrush}" Text="Activity Console" />
+                    <TextBlock Grid.Column="1" FontFamily="Cascadia Mono" FontSize="12" Foreground="{ThemeResource ConsoleMetaBrush}" Text="scrollback" />
+                </Grid>
+                <TextBox Grid.Row="1" Style="{StaticResource ConsoleTextBoxStyle}" Text="{Binding Hub.LogText}" />
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

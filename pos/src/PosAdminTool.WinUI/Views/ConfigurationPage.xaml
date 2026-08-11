@@ -1,0 +1,214 @@
+<Page
+    x:Class="PosAdminTool.WinUI.Views.ConfigurationPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Padding="28" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Style="{StaticResource HeroBorderStyle}">
+            <Grid ColumnSpacing="24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="CONFIGURATION WORKSPACE" />
+                    <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Configuration" />
+                    <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Manage encrypted SQL credentials, branch identity, and runtime folders from one fluent workspace." />
+                    <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="{Binding ConfigPath}" />
+                </StackPanel>
+
+                <Border Grid.Column="1" Style="{StaticResource StatusPillStyle}" VerticalAlignment="Center">
+                    <TextBlock FontWeight="Bold" FontSize="12" Text="{Binding ServerStatusText}" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="BRANCH" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="{Binding BranchCode}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="POS" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="{Binding PosNumber}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="CLIENT" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="{Binding ClientName}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="3" Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="RELEASE" />
+                    <TextBlock Style="{StaticResource MetricValueTextStyle}" Text="{Binding Release}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.05*" />
+                <ColumnDefinition Width="1.05*" />
+                <ColumnDefinition Width="0.9*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="SQL and branch identity" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Credentials are stored encrypted in the compatibility configuration file." />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="12" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="SQL INSTANCE" />
+                            <TextBox PlaceholderText="e.g. .\SQLEXPRESS" Text="{Binding SqlInstance, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="SQL USER" />
+                            <TextBox PlaceholderText="e.g. sa" Text="{Binding SqlUser, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="SQL PASSWORD" />
+                            <PasswordBox
+                                x:Name="SqlPasswordBox"
+                                PasswordChanged="OnSqlPasswordChanged"
+                                PlaceholderText="Enter SQL password" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="API URL" />
+                            <TextBox PlaceholderText="e.g. http://server:8080" Text="{Binding ApiBaseUrl, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="BRANCH CODE" />
+                            <TextBox PlaceholderText="e.g. 101" Text="{Binding BranchCode, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="POS NUMBER" />
+                            <TextBox PlaceholderText="e.g. 1" Text="{Binding PosNumber, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Style="{StaticResource StatusPillStyle}">
+                        <TextBlock FontWeight="Bold" FontSize="12" Foreground="{StaticResource SuccessBrush}" Text="Secrets stay encrypted at rest" />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource PanelBorderStyle}">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Runtime paths" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Backup and restore folders used by the maintenance flows." />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="12" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="BACKUP FOLDER" />
+                            <TextBox PlaceholderText="e.g. D:\DB Backups" Text="{Binding BackupFolder, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="DB FILES PATH" />
+                            <TextBox PlaceholderText="e.g. D:\DB Backups" Text="{Binding DbFilesPath, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Style="{StaticResource StatusPillStyle}">
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Backup and restore operations read these folders." />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource PanelBorderStyle}">
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="System lists" />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Databases and Windows services loaded from the saved configuration." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="DATABASES" />
+                        <TextBox
+                            Height="170"
+                            AcceptsReturn="True"
+                            Text="{Binding DatabasesText, Mode=TwoWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="SERVICES" />
+                        <TextBox
+                            Height="170"
+                            AcceptsReturn="True"
+                            Text="{Binding ServicesText, Mode=TwoWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="3" Style="{StaticResource PanelBorderStyle}">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Style="{StaticResource SecondaryTextStyle}" Text="{Binding StatusMessage}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button Command="{Binding ImportFromRmsCommand}" Content="Import RMS+" Style="{StaticResource TealButtonStyle}" />
+                    <Button Command="{Binding VerifyBranchCommand}" Content="Verify Branch" Style="{StaticResource PrimaryButtonStyle}" />
+                    <Button Command="{Binding TestDbCommand}" Content="Test DB" Style="{StaticResource GhostButtonStyle}" />
+                    <Button Command="{Binding SaveConfigCommand}" Content="Save Config" Style="{StaticResource PrimaryButtonStyle}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid
+            Grid.RowSpan="4"
+            Background="#88000000"
+            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ProgressRing
+                Width="48"
+                Height="48"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsActive="{Binding IsBusy}" />
+        </Grid>
+    </Grid>
+</Page>

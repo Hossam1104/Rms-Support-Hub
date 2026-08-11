@@ -50,8 +50,9 @@ Closed. Sessions 00-08 ran on dedicated branches, each validated before merge.
 
 The standalone RMS+ Support Hub refactor is complete. INT-00 POS Maintenance
 cross-project architecture closure and INT-00R transport hardening are
-complete; the architecture checkpoint passed and INT-01 is owner-authorization
-required/not executed. Remaining external gates are not implementation work:
+complete; the architecture checkpoint passed and INT-01 through INT-03 are
+complete within their approved boundaries. Remaining external gates are not
+implementation work:
 safe UPC **Testing** acceptance, the
 Production database index decision, and deployment/Production acceptance.
 
@@ -63,6 +64,7 @@ Production database index decision, and deployment/Production acceptance.
 | INT-00R - transport architecture hardening | Source/provenance checks at POS SHA `25922b499d33bd73f241ffc26c212dd000e81433`, official Chrome/Edge policy verification, documentation-only validation | Hardened loopback/back-connection, HTTP/1.1, anonymous CORS preflight, read-only SSE, authenticated artifact fetch, server-operation-bound single-use tokens, per-device scope, mandatory certificate trust, Support Hub session-identity prohibition, and versioned LNA policy matrix. Claude MEDIUM-8 is not applicable/already closed by source. INT-01 was not executed. |
 | INT-01 - destination project/build/CI skeleton | 2026-08-11: POS solution restore/build, independent portable builds, backend build, boundary scans, workflow inspection, and memory checks | Established isolated `/pos` solution and five empty project boundaries; kept Domain/Application/Contracts portable, Infrastructure/Agent Windows-targeted, Agent inert, Support Hub backend/frontend independent, and POS source/Angular/WinUI/history unimported. |
 | INT-02 - portable Domain/Application/Contracts import | 2026-08-11: approved provenance manifest, POS restore/build/tests, independent portable builds, backend regression, namespace/dependency/isolation scans, CI inspection, and memory checks | Imported 44 Domain, 15 Application, and 63 Contracts source files plus 4 Domain and 9 Application test files from POS SHA `25922b499d33bd73f241ffc26c212dd000e81433`; reconciled the portable package/test baseline; kept Infrastructure as a skeleton, Agent inert, and WinUI/POS Angular/general backend out of scope. |
+| INT-03 - Windows Infrastructure + retained WinUI import | 2026-08-11: approved provenance snapshot, destination restore/build, Domain/Application/Infrastructure tests, WinUI publish validation, backend regression, boundary scans, workflow inspection, and memory checks | Imported 23 Infrastructure `.cs` files, 7 Infrastructure test `.cs` files, and 34 retained WinUI source/resource files from POS SHA `25922b499d33bd73f241ffc26c212dd000e81433`; reconciled destination-owned Windows project metadata and CI lanes. Infrastructure tests passed 58/58; WinUI publish produced the executable plus 7 `.pri` and 11 `.xbf` resources. Agent runtime and Support Hub integration remained out of scope. |
 
 | Order Requests filter and query refresh | 2026-08-09 validation | Added a month-to-date default range, a tokenized calendar picker, grouped filter clusters, and a ten-newest base-query fast path; frontend 272/272 tests, backend 173/173 tests, Release build, and production Angular build passed. |
 | Order Requests timeout and alignment hardening | 2026-08-09 validation | Replaced repeated latest-row probes with bounded set-based enrichment, reserved the table row accent gutter, and added container-responsive filter layout; frontend 272/272 tests, backend 174/174 tests, Release build, and production Angular build passed. |

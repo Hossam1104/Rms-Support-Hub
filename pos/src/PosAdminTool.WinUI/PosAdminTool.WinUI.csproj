@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>PosAdminTool.WinUI</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationTitle>DBS POS Admin Tool</ApplicationTitle>
+    <ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RmsSupportHub.Pos.Application\RmsSupportHub.Pos.Application.csproj" />
+    <ProjectReference Include="..\RmsSupportHub.Pos.Domain\RmsSupportHub.Pos.Domain.csproj" />
+    <ProjectReference Include="..\RmsSupportHub.Pos.Infrastructure\RmsSupportHub.Pos.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+  </ItemGroup>
+
+  <!--
+    WindowsAppSDK 1.8 regression (unpackaged, RID-specific publish): the app's
+    resources.pri and compiled-XAML .xbf files land in the intermediate OutDir
+    but are not copied into the RID-specific PublishDir, so Application.LoadComponent
+    throws XamlParseException (HRESULT 0x802b000a) at runtime and the process fail-fasts
+    with 0xc000027b. See microsoft/WindowsAppSDK#3451, microsoft/microsoft-ui-xaml#10803.
+  -->
+  <Target Name="CopyXamlResourcesToPublishDir" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
+    <ItemGroup>
+      <_XamlPublishFixItems Include="$(OutDir)**\*.pri" />
+      <_XamlPublishFixItems Include="$(OutDir)**\*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_XamlPublishFixItems)"
+          DestinationFiles="@(_XamlPublishFixItems->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="'@(_XamlPublishFixItems)' != ''" />
+  </Target>
+
+</Project>
