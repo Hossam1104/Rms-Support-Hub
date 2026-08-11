@@ -1,13 +1,12 @@
 # Current Project State
-
 - **Updated:** 2026-08-11
 - **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through
-  INT-03 POS integration work complete within their approved boundaries.
-- **Next gate:** INT-04 Agent Host / Runtime Composition - owner authorization required / not yet executed.
+  INT-03 and INT-03R POS integration/provenance work complete within their
+  approved boundaries.
+- **Next gate:** Claude Opus privileged-boundary follow-up required after INT-03R; INT-04 Agent Host / Runtime Composition remains owner authorization required / not yet executed.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
-
 | Facet | Value |
 |---|---|
 | Display name | RMS+ Support Hub |
@@ -18,7 +17,6 @@ This file records durable facts only; milestone history lives in `.ai/HISTORY.md
 | Local folder | `D:\AI Tools\DBS\online_order_tool` (rename to `Rms-Support-Hub` pending; live processes previously held it) |
 | Visibility | Public by explicit owner decision; owner intends Private after POS integration |
 ## Application
-
 - One Angular 22 SPA and one .NET 10 Web API. QA Prompt Studio and Online Order
   Tool are available; POS Maintenance is Coming Soon and non-operational.
 - Routes are lazy/typed through `ToolRouteData`; topology is in `docs/REPOSITORY_STRUCTURE.md`.
@@ -34,10 +32,13 @@ INT-00 and INT-00R are documentation/governance complete. The canonical target
 is a separate Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub
 Angular over trusted HTTPS on fixed loopback using HTTP/1.1 only;
 `RmsSupportHub.Api`, `Core`, and `Data` are not its path.
-
 ```text
 INT-00 / INT-00R: COMPLETE; CLAUDE ARCHITECTURE CHECKPOINT: PASS
-POS SOURCE: MERGE-READY CANDIDATE AT 25922b499d33bd73f241ffc26c212dd000e81433
+ORIGINAL IMPORT PROVENANCE (INT-01/02/03): 25922b499d33bd73f241ffc26c212dd000e81433
+CORRECTED AGENT PROVENANCE CANDIDATE (INT-04+): 010abc52dc110cfde3dc2c53e057890ff6edaf97
+CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW: BLOCKED ON PROV-1
+INT-03R: COMPLETE
+NEXT: CLAUDE OPUS PRIVILEGED-BOUNDARY FOLLOW-UP
 PRIVILEGED POS BOUNDARY: SEPARATE WINDOWS POS AGENT
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
@@ -51,7 +52,7 @@ STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY; WINUI: RETAINED
 REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-03 WINDOWS INFRASTRUCTURE + RETAINED WINUI IMPORTED; AGENT RUNTIME NOT EXECUTED
 INT-01: DESTINATION SKELETON COMPLETE; INT-02: PORTABLE SOURCE + TESTS IMPORTED / PASSING
 INT-03: WINDOWS INFRASTRUCTURE + TESTS PASSING; RETAINED WINUI PUBLISH VALIDATED
-INT-04: AGENT HOST / RUNTIME COMPOSITION OWNER-GATED
+INT-04: AGENT HOST / RUNTIME COMPOSITION OWNER-GATED / NOT EXECUTED
 ```
 Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`; trusted machine
 certificate provisioning is mandatory. Kerberos is preferred; `.localhost` SPN
@@ -68,9 +69,7 @@ Angular/raw history/general backend/frontend integration remain excluded. CI
 builds/tests portable on Ubuntu, runs Infrastructure tests and the POS solution
 build on Windows, and validates a WinUI publish artifact. INT-04 is owner-gated.
 ## Compatibility contracts
-
 These persisted storage keys are byte-exact; no migration exists:
-
 ```text
 onlineOrderTool.activeEnvironment.<moduleKey>
 qa-support-hub:theme
@@ -85,7 +84,6 @@ External/business identifiers remain unchanged: API `/api`, JSON/payload contrac
 fixtures, database/table/SQL names, module keys, payment values, statuses, and wording. Behavior is capability-gated; UPC methods are Visa/Tamara/Tabby (ADR-0014).
 Asset filenames/folders are owner-supplied, not a contract: `frontend/public/assets/` mirrors the supplied `assets/` drop (`CompanyLogos/`, `ClientsLogo/`, `Payments/`, `CustomMessageBox/`, root `Saudi_Riyal.svg`, `loader.svg`, and `offer_logo.png`); `app-assets.ts` is the only path source, and RMS+/DBS use `themedAsset` colourway pairs.
 ## Design system
-
 Semantic tokens, density, surfaces, typography, cards, tables, forms,
 `ThemeService`, and `MotionService` are UI touch points; raw colors stay in token files. The decorative lazy Hub Three.js scene degrades safely; details: `docs/design-system.md`.
 The Hub is a two-band single-viewport layout: a hero carrying the paired RMS+ and DBS lockups in one plate at a shared height, and an elastic tool grid. There is no footer band. Above 1024x720 the page is locked to `100dvh`, while smaller viewports scroll normally.

@@ -71,7 +71,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   has no standalone validation endpoint, so the U6 Validate action is a
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
-  - No background workers, queues, repository migrations, E2E framework, or application auth scheme exists; POS INT-00/INT-00R/INT-01/INT-02 are closed. INT-03 populated `pos/RmsSupportHub.Pos.slnx` with the approved portable source, Windows Infrastructure/tests, and retained WinUI.
+  - No background workers, queues, repository migrations, E2E framework, or application auth scheme exists; POS INT-00/INT-00R/INT-01/INT-02 are closed. INT-03 populated `pos/RmsSupportHub.Pos.slnx` with the approved portable source, Windows Infrastructure/tests, and retained WinUI. INT-03R corrected the Agent provenance for future work to `010abc52dc110cfde3dc2c53e057890ff6edaf97`; the INT-01/02/03 imports remain historically attributed to `25922b499d33bd73f241ffc26c212dd000e81433`.
   Infrastructure is Windows-targeted; Agent remains inert; POS is isolated
   from the general backend/frontend. Loopback, live-device, WinUI-cutover, and
   raw-history constraints remain governed (see plan and ADR-0015..0018).

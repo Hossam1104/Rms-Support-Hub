@@ -42,6 +42,28 @@ authoritative contract proves the remote operation was not accepted. No generic
 HTTP status supplies that proof, and no automatic retry follows
 `OutcomeUnknown`.
 
+## Provenance amendment (INT-03R)
+
+The original INT-01 through INT-03 destination imports remain attributed to
+the historical POS provenance snapshot:
+
+```text
+25922b499d33bd73f241ffc26c212dd000e81433
+```
+
+The post-Opus Agent provenance correction is:
+
+```text
+010abc52dc110cfde3dc2c53e057890ff6edaf97
+```
+
+The original snapshot's broad `artifacts/` ignore rule omitted
+`src/PosAdminTool.Agent/Artifacts/ArtifactCatalog.cs`. INT-03R narrowed that
+rule and tracked the existing source. The corrected SHA is the candidate
+Agent provenance baseline for INT-04+; prior imports remain historically
+attributed to the original SHA. This amendment does not change the accepted
+contract-authority or conservative trigger-truth decisions.
+
 The POS `.github/workflows/ci.yml` is recorded as:
 
 ```text

@@ -25,6 +25,11 @@ projects. Windows Infrastructure and its tests build and pass; retained WinUI
 publishes successfully with packaged resources. The Agent remains inert, and
 the Support Hub backend/frontend remain independent.
 
+That SHA remains the historical INT-01/INT-02/INT-03 import provenance. The
+owner-authorized INT-03R correction produced the candidate Agent source
+provenance `010abc52dc110cfde3dc2c53e057890ff6edaf97` for INT-04+; it tracks
+the existing Agent artifact catalog without authorizing Agent runtime work.
+
 STATUS:
 INT-03 COMPLETE
 
@@ -35,7 +40,16 @@ INT-03F:
 COMPLETE
 
 NEXT:
-CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW
+CLAUDE OPUS PRIVILEGED-BOUNDARY FOLLOW-UP
+
+CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW:
+BLOCKED - PROV-1
+
+INT-03R:
+COMPLETE
+
+CORRECTED POS AGENT PROVENANCE:
+010abc52dc110cfde3dc2c53e057890ff6edaf97
 
 INT-04 — AGENT HOST / RUNTIME COMPOSITION:
 
@@ -45,4 +59,4 @@ NOT YET EXECUTED
 INT-04:
 NOT EXECUTED
 
-INT-04 MUST NOT BE EXECUTED WITHOUT EXPLICIT OWNER AUTHORIZATION.
+INT-04 MUST NOT BE EXECUTED IN THIS SESSION.

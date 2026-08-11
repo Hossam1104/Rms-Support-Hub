@@ -13,10 +13,16 @@ operations today.
 INT-00 closed the destination-side architecture only. INT-00R kept the POS
 repository read-only and performed only the required provenance spot checks.
 INT-02 and INT-03 verified and imported clean tracked snapshots; the POS
-repository remains read-only. The approved provenance is:
+repository remains read-only. The historical import provenance is:
 
 ```text
 POS SOURCE: VERIFIED / IMPORTED PORTABLE SNAPSHOT AT 25922b499d33bd73f241ffc26c212dd000e81433
+```
+
+The corrected Agent provenance candidate for future INT-04+ source intake is:
+
+```text
+POS AGENT SOURCE: CORRECTED CANDIDATE AT 010abc52dc110cfde3dc2c53e057890ff6edaf97
 ```
 
 That SHA is provenance, not proof that deployment, device, browser, SQL, SMB,
@@ -87,7 +93,7 @@ evidence.
 | Windows-specific dependencies | Infrastructure: `System.ServiceProcess.ServiceController 10.0.10`, `System.Security.Cryptography.ProtectedData 9.0.11`; WinUI: Windows App SDK `1.8.260710003`. |
 | Libraries and packages | Infrastructure: `Microsoft.Data.SqlClient 6.1.6`, `Microsoft.Extensions.Logging.Abstractions 10.0.10`; tests: `coverlet.collector 6.0.4`, `Microsoft.NET.Test.Sdk 17.14.1`, `xunit 2.9.3`, `xunit.runner.visualstudio 3.1.4`; WinUI: `CommunityToolkit.Mvvm 8.4.2`, `Microsoft.Extensions.DependencyInjection 10.0.10`, `Microsoft.Extensions.Logging 10.0.10`. |
 | External tools or processes invoked | Imported Infrastructure contains the `sc.exe` Windows service-control boundary; `run_app.cmd` was not imported. No service or process was launched by INT-03. |
-| Environment and branch/POS identity configuration | Source provenance is `25922b499d33bd73f241ffc26c212dd000e81433`; destination identities are `RmsSupportHub.Pos.*` plus retained `PosAdminTool.WinUI`. No environment credential or endpoint was added. |
+| Environment and branch/POS identity configuration | Historical destination import provenance is `25922b499d33bd73f241ffc26c212dd000e81433`; corrected future Agent candidate is `010abc52dc110cfde3dc2c53e057890ff6edaf97`; destination identities are `RmsSupportHub.Pos.*` plus retained `PosAdminTool.WinUI`. No environment credential or endpoint was added. |
 | Database connection and authentication model | `Microsoft.Data.SqlClient`; source preserves SQL connection behavior including `TrustServerCertificate=true`. Real SQL access and TLS deployment validation remain open. |
 | Secret storage and protected configuration | Source uses Windows DPAPI `DataProtectionScope.LocalMachine` and the `PosAdminTool.Agent.Secrets.v1` protected-data identity; no secret value is tracked. |
 | Logging, audit, and error handling | Imported code uses `Microsoft.Extensions.Logging`; Agent host composition, privileged audit, and live error/outcome evidence remain future work. |
@@ -345,6 +351,10 @@ are available:
 - The Agent/browser LNA, Negotiate, certificate, CORS, and antiforgery
   evidence plan is approved.
 - The owner explicitly authorizes the applicable integration gate.
+
+The corrected Agent provenance candidate must receive the required Claude Opus
+privileged-boundary follow-up before INT-04 is opened. INT-04 remains
+owner-authorization required and is not executed by this intake.
 
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or

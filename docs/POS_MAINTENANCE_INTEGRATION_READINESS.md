@@ -10,16 +10,17 @@ re-validated after the architecture checkpoint.
 The cross-project architecture is closed in
 [POS_MAINTENANCE_INTEGRATION_PLAN.md](POS_MAINTENANCE_INTEGRATION_PLAN.md).
 This document is its Support Hub readiness companion. The independent POS
-project remains a read-only provenance source for the authorized SHA. INT-00R
+project remains a read-only provenance source. INT-00R
 performed only the required read-only provenance spot checks (`BackupApiClient`,
 current Agent hosting/security boundary, and POS ADR-012). INT-01 then
 established the isolated destination solution and inert project boundaries;
 INT-02 imported only the approved portable Domain/Application/Contracts source
 and the two portable test suites. INT-03 imported the approved Windows
 Infrastructure, Infrastructure test, and retained WinUI boundaries. No Agent
-runtime or Angular feature was implemented.
+runtime or Angular feature was implemented. INT-03R corrected the source
+provenance snapshot without composing or executing the Agent.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 COMPLETE / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R COMPLETE / INITIAL OPUS REVIEW BLOCKED ON PROV-1 / FOLLOW-UP REQUIRED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -28,6 +29,26 @@ representative-device, and real-operation evidence remains open. INT-02
   portable source import is complete; Windows Infrastructure tests and retained
   WinUI publish validation are complete. Agent runtime, Support Hub feature
   work, and live operation evidence remain owner-gated/open.
+
+## INT-03R provenance integrity correction
+
+The original INT-01/INT-02/INT-03 import provenance remains:
+
+```text
+25922b499d33bd73f241ffc26c212dd000e81433
+```
+
+The corrected Agent provenance candidate for INT-04+ is:
+
+```text
+010abc52dc110cfde3dc2c53e057890ff6edaf97
+```
+
+The initial Claude Opus privileged-boundary review was blocked on `PROV-1`
+because the original snapshot omitted the tracked Agent
+`ArtifactCatalog.cs`. INT-03R narrowed only the root generated-artifact ignore
+rule and tracked the existing source. The follow-up Opus review is required;
+INT-04 remains closed and no other Opus guardrail is implemented here.
 
 ## Current RMS+ architecture
 
@@ -252,9 +273,11 @@ The following remain future owner-gated work:
    their authorized gates. INT-03's source import/build boundary is complete;
    live SQL/SCM/SMB/device behavior remains evidence work.
 
-INT-01, INT-02, and INT-03 are complete. INT-04 Agent Host / Runtime
-Composition is owner-authorization required and must start from a fresh context
-after owner/planner verification. INT-04 is not executed by this integration.
+INT-01, INT-02, INT-03, and INT-03R are complete. The initial privileged review
+is blocked on `PROV-1`, and the follow-up Opus review is required. INT-04 Agent
+Host / Runtime Composition remains owner-authorization required, must start
+from a fresh context after owner/planner verification, and is not executed by
+this integration.
 
 ## Required post-integration validation
 
