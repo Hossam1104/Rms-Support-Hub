@@ -79,7 +79,9 @@ Do not copy facts that can be cheaply discovered from the repository.
   `openapi-typescript@7.13.0` in `tools/pos-agent-client-generator` with a
   TypeScript 5 peer-compatible lockfile. Production registers no feature
   operations and does not expose runtime OpenAPI; POS UI activation, feature
-  operations, and live-device/browser evidence remain governed gates.
+  operations, and live-device/browser evidence remain governed gates. INT-CI01
+  makes Windows maintenance/SMB path semantics deterministic in portable
+  Application code and all five POS CI lanes are green.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.

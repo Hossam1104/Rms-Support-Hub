@@ -8,7 +8,9 @@ namespace RmsSupportHub.Pos.Application.Tests;
 
 public sealed class MaintenancePathPolicyTests
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "pos-maintenance-policy-root");
+    // The policy protects Windows Agent paths. Keep the fixture independent of the host OS and
+    // avoid using whichever TEMP/TMP variables happen to exist on a CI runner.
+    private readonly string _root = @"C:\ProgramData\RMS_Plus\TestData\pos-maintenance-policy-root";
     private readonly FakeFileSystem _fileSystem = new();
 
     [Fact]
@@ -17,10 +19,10 @@ public sealed class MaintenancePathPolicyTests
         var settings = PathSettings();
         var policy = new MaintenancePathPolicy(_fileSystem);
 
-        Assert.Equal(MaintenanceFailureCodes.OutsideManagedRoot, policy.Resolve("one", Path.Combine(_root, "..", "outside"), settings).RejectionCode);
-        Assert.Equal(MaintenanceFailureCodes.OutsideManagedRoot, policy.Resolve("two", Path.Combine(Path.GetTempPath(), "unmanaged"), settings).RejectionCode);
-        Assert.Equal(MaintenanceFailureCodes.ProtectedRoot, policy.Resolve("three", Path.Combine(_root, "protected", "child"), settings).RejectionCode);
-        Assert.Equal(MaintenanceFailureCodes.InstallRoot, policy.Resolve("four", Path.Combine(_root, "install", "child"), settings).RejectionCode);
+        Assert.Equal(MaintenanceFailureCodes.OutsideManagedRoot, policy.Resolve("one", Join(_root, "..", "outside"), settings).RejectionCode);
+        Assert.Equal(MaintenanceFailureCodes.OutsideManagedRoot, policy.Resolve("two", @"C:\ProgramData\RMS_Plus\unmanaged", settings).RejectionCode);
+        Assert.Equal(MaintenanceFailureCodes.ProtectedRoot, policy.Resolve("three", Join(_root, "protected", "child"), settings).RejectionCode);
+        Assert.Equal(MaintenanceFailureCodes.InstallRoot, policy.Resolve("four", Join(_root, "install", "child"), settings).RejectionCode);
         Assert.Equal(MaintenanceFailureCodes.RootTarget, policy.Resolve("five", _root, settings).RejectionCode);
     }
 
@@ -32,25 +34,25 @@ public sealed class MaintenancePathPolicyTests
         var protectedRoot = settings.ProtectedRoots.Single();
         var installRoot = settings.InstallRoots.Single();
         var protectedParentSettings = PathSettings();
-        protectedParentSettings.ProtectedRoots = [Path.Combine(_root, "managed", "protected")];
-        protectedParentSettings.InstallRoots = [Path.Combine(_root, "other-install")];
+        protectedParentSettings.ProtectedRoots = [Join(_root, "managed", "protected")];
+        protectedParentSettings.InstallRoots = [Join(_root, "other-install")];
         var installParentSettings = PathSettings();
-        installParentSettings.ProtectedRoots = [Path.Combine(_root, "other-protected")];
-        installParentSettings.InstallRoots = [Path.Combine(_root, "managed", "install")];
+        installParentSettings.ProtectedRoots = [Join(_root, "other-protected")];
+        installParentSettings.InstallRoots = [Join(_root, "managed", "install")];
 
         Assert.Equal(
             MaintenanceFailureCodes.ProtectedRoot,
-            policy.Resolve("protected-child", Path.Combine(protectedRoot, "child"), settings).RejectionCode);
+            policy.Resolve("protected-child", Join(protectedRoot, "child"), settings).RejectionCode);
         Assert.Equal(
             MaintenanceFailureCodes.ProtectedRoot,
             policy.Resolve("protected-equal", protectedRoot, settings).RejectionCode);
         Assert.Equal(
             MaintenanceFailureCodes.ProtectedRoot,
-            policy.Resolve("protected-parent", Path.Combine(_root, "managed"), protectedParentSettings).RejectionCode);
+            policy.Resolve("protected-parent", Join(_root, "managed"), protectedParentSettings).RejectionCode);
         Assert.Equal(
             MaintenanceFailureCodes.InstallRoot,
-            policy.Resolve("install-parent", Path.Combine(_root, "managed"), installParentSettings).RejectionCode);
-        Assert.True(policy.Resolve("safe-sibling", Path.Combine(_root, "safe-sibling"), settings).Accepted);
+            policy.Resolve("install-parent", Join(_root, "managed"), installParentSettings).RejectionCode);
+        Assert.True(policy.Resolve("safe-sibling", Join(_root, "safe-sibling"), settings).Accepted);
     }
 
     [Theory]
@@ -71,7 +73,7 @@ public sealed class MaintenancePathPolicyTests
 
         var result = new MaintenancePathPolicy(_fileSystem).Resolve(
             "missing-root",
-            Path.Combine(_root, "safe-sibling"),
+            Join(_root, "safe-sibling"),
             settings);
 
         Assert.False(result.Accepted);
@@ -87,7 +89,7 @@ public sealed class MaintenancePathPolicyTests
 
         var result = new MaintenancePathPolicy(_fileSystem).Resolve(
             "invalid-data-root",
-            Path.Combine(_root, "safe-sibling"),
+            Join(_root, "safe-sibling"),
             settings);
 
         Assert.Equal(MaintenanceFailureCodes.InvalidConfiguration, result.RejectionCode);
@@ -112,22 +114,42 @@ public sealed class MaintenancePathPolicyTests
     public void EnvironmentExpansionThatEscapesManagedRootIsRejected()
     {
         var settings = PathSettings();
-        settings.ManagedRoots = ["%TEMP%\\" + Path.GetFileName(_root)];
+        settings.ManagedRoots = ["%POS_TEST_ROOT%\\pos-maintenance-policy-root"];
         var policy = new MaintenancePathPolicy(_fileSystem);
 
-        var result = policy.Resolve("escape", "%TEMP%\\outside", settings);
+        var result = policy.Resolve("escape", "%POS_TEST_ROOT%\\outside", settings);
 
         Assert.Equal(MaintenanceFailureCodes.OutsideManagedRoot, result.RejectionCode);
+    }
+
+    [Fact]
+    public void WindowsPathComparisonIsCaseInsensitiveAndRespectsRootBoundaries()
+    {
+        var settings = PathSettings();
+        var policy = new MaintenancePathPolicy(_fileSystem);
+
+        Assert.True(policy.Resolve(
+            "mixed",
+            @"c:/PROGRAMDATA/RMS_PLUS/TESTDATA/POS-MAINTENANCE-POLICY-ROOT/safe-sibling",
+            settings).Accepted);
+
+        Assert.Equal(
+            MaintenanceFailureCodes.OutsideManagedRoot,
+            policy.Resolve("prefix-collision", _root + "2\\child", settings).RejectionCode);
+
+        Assert.Equal(
+            MaintenanceFailureCodes.ProtectedRoot,
+            policy.Resolve("dot-segment", Join(_root, "safe", "..", "protected", "child"), settings).RejectionCode);
     }
 
     [Fact]
     public void InvalidPolicyRootsFailClosedInsteadOfBeingIgnored()
     {
         var settings = PathSettings();
-        settings.ProtectedRoots = [Path.Combine(_root, "protected"), "C:relative-protected"];
+        settings.ProtectedRoots = [Join(_root, "protected"), "C:relative-protected"];
         var policy = new MaintenancePathPolicy(_fileSystem);
 
-        var result = policy.Resolve("invalid-policy", Path.Combine(_root, "target"), settings);
+        var result = policy.Resolve("invalid-policy", Join(_root, "target"), settings);
 
         Assert.Equal(MaintenanceFailureCodes.InvalidConfiguration, result.RejectionCode);
     }
@@ -136,8 +158,8 @@ public sealed class MaintenancePathPolicyTests
     public void ReparseAndSymlinkEscapesAreRejectedEvenWhenTheLinkNameIsUnderTheManagedRoot()
     {
         var settings = PathSettings();
-        var target = Path.Combine(_root, "link");
-        _fileSystem.SetReparse(target, Path.Combine(Path.GetTempPath(), "outside-link-target"));
+        var target = Join(_root, "link");
+        _fileSystem.SetReparse(target, @"C:\ProgramData\RMS_Plus\outside-link-target");
         _fileSystem.SetAncestors(target, [_fileSystem.Inspect(target)]);
         var policy = new MaintenancePathPolicy(_fileSystem);
 
@@ -155,10 +177,10 @@ public sealed class MaintenancePathPolicyTests
         var settings = PathSettings();
         settings.RejectReparsePoints = false;
         var policy = new MaintenancePathPolicy(_fileSystem);
-        var target = Path.Combine(_root, "reparse-target");
+        var target = Join(_root, "reparse-target");
         var protectedRoot = settings.ProtectedRoots.Single();
 
-        _fileSystem.SetReparse(target, Path.Combine(protectedRoot, "destination"));
+        _fileSystem.SetReparse(target, Join(protectedRoot, "destination"));
         _fileSystem.SetAncestors(target, [_fileSystem.Inspect(target)]);
         Assert.Equal(MaintenanceFailureCodes.ReparseEscape, policy.Resolve("reparse-inside", target, settings).RejectionCode);
 
@@ -171,12 +193,12 @@ public sealed class MaintenancePathPolicyTests
     public async Task CleanupRecomputesTheTargetAndFailsClosedWhenConfigurationChanges()
     {
         var settings = ApplicationSettings();
-        settings.Maintenance.CleanupTargets = [Path.Combine(_root, "first")];
+        settings.Maintenance.CleanupTargets = [Join(_root, "first")];
         _fileSystem.SetEntry(settings.Maintenance.CleanupTargets[0]);
         var service = new MaintenanceService(new FakeDatabase(), new FakeServices(), _fileSystem);
         var preview = await service.BuildCleanupPreviewAsync(settings);
 
-        settings.Maintenance.CleanupTargets = [Path.Combine(_root, "changed")];
+        settings.Maintenance.CleanupTargets = [Join(_root, "changed")];
         _fileSystem.SetEntry(settings.Maintenance.CleanupTargets[0]);
         var execution = await service.ExecuteCleanupAsync(settings, preview.Intent!.Fingerprint);
 
@@ -189,7 +211,7 @@ public sealed class MaintenancePathPolicyTests
     public async Task CleanupRecordsPartialResidueAfterADeleteFailure()
     {
         var settings = ApplicationSettings();
-        settings.Maintenance.CleanupTargets = [Path.Combine(_root, "first"), Path.Combine(_root, "second")];
+        settings.Maintenance.CleanupTargets = [Join(_root, "first"), Join(_root, "second")];
         _fileSystem.SetEntry(settings.Maintenance.CleanupTargets[0]);
         _fileSystem.SetEntry(settings.Maintenance.CleanupTargets[1]);
         _fileSystem.DeleteFailure = new IOException("private path and secret connection string");
@@ -339,8 +361,8 @@ public sealed class MaintenancePathPolicyTests
         {
             ManagedRoots = [_root],
             DataRoots = [_root],
-            ProtectedRoots = [Path.Combine(_root, "protected")],
-            InstallRoots = [Path.Combine(_root, "install")],
+            ProtectedRoots = [Join(_root, "protected")],
+            InstallRoots = [Join(_root, "install")],
         };
     }
 
@@ -359,8 +381,10 @@ public sealed class MaintenancePathPolicyTests
 
         public ConcurrentQueue<string> DeleteCalls { get; } = new();
         public Exception? DeleteFailure { get; set; }
-        public string ExpandEnvironmentVariables(string path) => Environment.ExpandEnvironmentVariables(path);
-        public string GetFullPath(string path) => Path.GetFullPath(path);
+        public string ExpandEnvironmentVariables(string path) =>
+            path.Replace("%POS_TEST_ROOT%", @"C:\ProgramData\RMS_Plus\TestData\pos-maintenance-policy-root", StringComparison.Ordinal);
+
+        public string GetFullPath(string path) => Normalize(path);
         public MaintenancePathInspection Inspect(string path) => _entries.GetValueOrDefault(GetFullPath(path), new(GetFullPath(path), false, false, false, null, null, null));
         public IReadOnlyList<MaintenancePathInspection> InspectAncestors(string path) => _ancestorEntries.GetValueOrDefault(GetFullPath(path), [Inspect(path)]);
         public long? TryGetAvailableFreeSpace(string path) => 1024;
@@ -373,6 +397,19 @@ public sealed class MaintenancePathPolicyTests
         public void SetEntry(string path) => _entries[GetFullPath(path)] = new(GetFullPath(path), true, true, false, null, null, 1);
         public void SetReparse(string path, string target) => _entries[GetFullPath(path)] = new(GetFullPath(path), true, true, true, target, null, 1);
         public void SetAncestors(string path, IReadOnlyList<MaintenancePathInspection> entries) => _ancestorEntries[GetFullPath(path)] = entries;
+
+        private static string Normalize(string path) => path.Replace('/', '\\').TrimEnd('\\');
+    }
+
+    private static string Join(params string[] parts)
+    {
+        var result = parts[0].TrimEnd('\\', '/');
+        foreach (var part in parts.Skip(1))
+        {
+            result += "\\" + part.Trim('\\', '/');
+        }
+
+        return result;
     }
 
     private sealed class FakeServices : IServiceManager

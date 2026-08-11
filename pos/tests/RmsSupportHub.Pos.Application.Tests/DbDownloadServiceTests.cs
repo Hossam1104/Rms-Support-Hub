@@ -8,10 +8,14 @@ namespace RmsSupportHub.Pos.Application.Tests;
 
 public sealed class DbDownloadServiceTests
 {
+    private static readonly DateTimeOffset Start = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public async Task RunAsyncPicksMostRecentlyCreatedFolderNotHighestSerial()
     {
-        var now = DateTimeOffset.UtcNow;
+        var clock = new ManualClock(Start);
+        var delay = new AdvancingDelay(clock);
+        var now = Start;
         var repository = new FakeBackupRepository();
         repository.Directories.Add(new RemoteEntryInfo("99999999", @"D:\DbBackups\99999999", now, 0));
         repository.Directories.Add(new RemoteEntryInfo("111", @"D:\DbBackups\111", now.AddSeconds(2), 0));
@@ -20,7 +24,7 @@ public sealed class DbDownloadServiceTests
             new RemoteEntryInfo("P087_111.zip", @"D:\DbBackups\111\P087_111.zip", now, 1024)
         ];
 
-        var service = new DbDownloadService(new FakeApiClient(), repository);
+        var service = new DbDownloadService(new FakeApiClient(), repository, clock, delay);
         var settings = new DbDownloaderSettings { BackupRootFolder = @"D:\DbBackups", PollIntervalSeconds = 1, TimeoutSeconds = 10 };
 
         var job = await service.RunAsync(settings, ["P087"]);
@@ -32,7 +36,9 @@ public sealed class DbDownloadServiceTests
     [Fact]
     public async Task RunAsyncIgnoresChunkFilesAndOnlyMatchesExactZipName()
     {
-        var now = DateTimeOffset.UtcNow;
+        var clock = new ManualClock(Start);
+        var delay = new AdvancingDelay(clock);
+        var now = Start;
         var repository = new FakeBackupRepository();
         repository.Directories.Add(new RemoteEntryInfo("40760799", @"D:\DbBackups\40760799", now, 0));
         repository.FilesByFolder[@"D:\DbBackups\40760799"] =
@@ -42,7 +48,7 @@ public sealed class DbDownloadServiceTests
             new RemoteEntryInfo("P087_40760799.zip", @"D:\DbBackups\40760799\P087_40760799.zip", now, 2048)
         ];
 
-        var service = new DbDownloadService(new FakeApiClient(), repository);
+        var service = new DbDownloadService(new FakeApiClient(), repository, clock, delay);
         var settings = new DbDownloaderSettings { BackupRootFolder = @"D:\DbBackups", PollIntervalSeconds = 1, TimeoutSeconds = 10 };
 
         var job = await service.RunAsync(settings, ["P087"]);
@@ -56,7 +62,9 @@ public sealed class DbDownloadServiceTests
     [Fact]
     public async Task RunAsyncTracksBranchesIndependentlyWithinABatch()
     {
-        var now = DateTimeOffset.UtcNow;
+        var clock = new ManualClock(Start);
+        var delay = new AdvancingDelay(clock);
+        var now = Start;
         var repository = new FakeBackupRepository();
         repository.Directories.Add(new RemoteEntryInfo("555", @"D:\DbBackups\555", now, 0));
         repository.FilesByFolder[@"D:\DbBackups\555"] =
@@ -64,7 +72,7 @@ public sealed class DbDownloadServiceTests
             new RemoteEntryInfo("P087_555.zip", @"D:\DbBackups\555\P087_555.zip", now, 4096)
         ];
 
-        var service = new DbDownloadService(new FakeApiClient(), repository);
+        var service = new DbDownloadService(new FakeApiClient(), repository, clock, delay);
         var settings = new DbDownloaderSettings { BackupRootFolder = @"D:\DbBackups", PollIntervalSeconds = 1, TimeoutSeconds = 1 };
 
         var job = await service.RunAsync(settings, ["P087", "P091"]);
@@ -79,8 +87,10 @@ public sealed class DbDownloadServiceTests
     [Fact]
     public async Task RunAsyncTimesOutWhenBatchFolderNeverAppears()
     {
+        var clock = new ManualClock(Start);
+        var delay = new AdvancingDelay(clock);
         var repository = new FakeBackupRepository();
-        var service = new DbDownloadService(new FakeApiClient(), repository);
+        var service = new DbDownloadService(new FakeApiClient(), repository, clock, delay);
         var settings = new DbDownloaderSettings { BackupRootFolder = @"D:\DbBackups", PollIntervalSeconds = 1, TimeoutSeconds = 1 };
 
         var job = await service.RunAsync(settings, ["P087"]);
@@ -140,8 +150,16 @@ public sealed class DbDownloadServiceTests
         var service = new DbDownloadService(new FakeApiClient(), repository);
         var settings = new DbDownloaderSettings { RdbServerIp = "10.0.0.1", RdbUsername = "svc", RdbPassword = "pw" };
         var item = new BranchBackupItem("P087") { RemoteZipPath = @"D:\DbBackups\555\P087_555.zip" };
+        var localFolder = Path.Combine(Path.GetTempPath(), $"pos-downloads-{Guid.NewGuid():N}");
 
-        await service.DownloadAsync(settings, item, @"C:\Downloads");
+        try
+        {
+            await service.DownloadAsync(settings, item, localFolder);
+        }
+        finally
+        {
+            if (Directory.Exists(localFolder)) Directory.Delete(localFolder, recursive: true);
+        }
 
         Assert.Equal(BranchBackupStatus.Downloaded, item.Status);
         Assert.Single(repository.Downloaded);
@@ -168,7 +186,7 @@ public sealed class DbDownloadServiceTests
 
         public List<RemoteEntryInfo> Directories { get; } = [];
 
-        public Dictionary<string, List<RemoteEntryInfo>> FilesByFolder { get; } = [];
+        public Dictionary<string, List<RemoteEntryInfo>> FilesByFolder { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public List<(string RemotePath, string LocalPath)> Downloaded { get; } = [];
 
@@ -191,6 +209,25 @@ public sealed class DbDownloadServiceTests
         public Task DownloadFileAsync(RemoteConnectionInfo connection, string remoteFilePath, string localFilePath, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
         {
             Downloaded.Add((remoteFilePath, localFilePath));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ManualClock(DateTimeOffset start) : TimeProvider
+    {
+        public DateTimeOffset Current { get; private set; } = start;
+
+        public override DateTimeOffset GetUtcNow() => Current;
+
+        public void Advance(TimeSpan amount) => Current += amount;
+    }
+
+    private sealed class AdvancingDelay(ManualClock clock) : IDownloaderDelay
+    {
+        public Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            clock.Advance(delay);
             return Task.CompletedTask;
         }
     }
