@@ -46,13 +46,10 @@ Do not copy facts that can be cheaply discovered from the repository.
   `RmsSupportHub.Api`, `Core`, or `Data`; CORS preflight is anonymous exact
   origin; application requests use Windows Negotiate/authorization; token is
   single-use/server-operation-bound; SSE is read-only; artifacts use authenticated fetch.
-- Supplied assets use the typed `app-assets.ts` catalog; public folders mirror
-  the supplied `assets/` drop (`CompanyLogos/`, `ClientsLogo/`, `Payments/`,
-  `CustomMessageBox/`) and `frontend/public/assets/Saudi_Riyal.svg` remains
-  verifier-required. Shared identity marks use `app-brand-mark` with
-  contain-fit sizing, optional wordmark width, and explicit decorative
-  accessibility state; the RMS+ and DBS lockups resolve per theme through
-  `themedAsset`.
+- Supplied assets use the typed `app-assets.ts` catalog and semantic public
+  folders; `frontend/public/assets/Saudi_Riyal.svg` remains verifier-required.
+  Shared identity marks use `app-brand-mark` with contain-fit sizing and
+  explicit decorative accessibility state.
 - Prompt Studio uses typed reactive forms, namespaced drafts, deterministic
   builders, advisory quality analysis, and local history capped at ten records;
   it never stores attachments or sends data to an external provider.
