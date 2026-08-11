@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Implemented (INT-05F OpenAPI Generator Peer-Dependency Isolation; next gate owner authorization)
+**Role:** Implemented (INT-CI01 Portable Application Linux CI Baseline Remediation; next gate owner authorization)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -35,6 +35,15 @@ COMPLETE / ACCEPTED AFTER INT-05F
 
 INT-05F:
 COMPLETE
+
+INT-CI01:
+COMPLETE
+
+PORTABLE UBUNTU POS CI:
+GREEN
+
+PRE-EXISTING 9 APPLICATION TEST FAILURES:
+RESOLVED
 
 OPENAPI GENERATOR:
 ISOLATED TOOLING DEPENDENCY GRAPH
@@ -80,6 +89,12 @@ generated types, and an isolated direct-Agent Angular transport. INT-05F
 isolates the OpenAPI generator's TypeScript 5 peer dependency from the
 Angular TypeScript 6 graph. No feature
 operations or POS UI activation was added.
+
+INT-CI01 corrected host-dependent Windows path handling in the portable POS
+Application maintenance and downloader seams. The destination-owned Windows
+path policy is now deterministic on Ubuntu and Windows, the nine pre-existing
+Application failures are resolved, and no Agent feature route or POS UI was
+activated.
 
 NEXT:
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE

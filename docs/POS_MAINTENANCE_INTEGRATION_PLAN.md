@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-05F and the current INT-06 owner gate.
+INT-05F, INT-CI01, and the current INT-06 owner gate.
 
 ```text
 INT-00: COMPLETE
@@ -53,6 +53,12 @@ COMPLETE / ACCEPTED AFTER INT-05F - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
 INT-05F:
 COMPLETE - OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION
 
+INT-CI01:
+COMPLETE - PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION
+
+PORTABLE UBUNTU POS CI:
+GREEN - ALL FIVE POS CI LANES
+
 NEXT:
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE / OWNER AUTHORIZATION REQUIRED
 ```
@@ -73,6 +79,10 @@ OpenAPI document, deterministic Support Hub generated types, and a dedicated
 direct-Agent Angular transport; INT-05F isolates the generator's TypeScript 5
 peer dependency from Angular's TypeScript 6 graph. Neither gate adds feature
 operations or activates the POS UI.
+
+INT-CI01 then made Windows maintenance and SMB path semantics deterministic in
+portable Application code and resolved the nine pre-existing Ubuntu
+Application failures. No Agent feature route or POS UI was activated.
 
 The POS repository is a read-only provenance source. INT-04 started from the
 Support Hub `main` head and `origin/main` at
@@ -667,9 +677,9 @@ EXCLUDED: 3 packages.lock.json files (destination package graphs are reconciled 
 ```
 
 The destination validation passed: Infrastructure tests 60/60; POS Domain,
-Application, and Agent integration tests 7/7, 75/75, and 69/69; solution Release
+Application, and Agent integration tests 7/7, 76/76, and 69/69; solution Release
 build with zero warnings/errors; and retained WinUI `win-x64` publish with
-`PosAdminTool.WinUI.exe`, 33 `.xbf` resources, and 15 `.pri` resources. The
+`PosAdminTool.WinUI.exe`, 44 `.xbf` resources, and 19 `.pri` resources. The
 frontend suite passed 341/341 across 56 files, production build budgets were
 clear, and OpenAPI/TypeScript generation was deterministic across two runs. No
 application, live service, browser, or Production runtime was launched. INT-06

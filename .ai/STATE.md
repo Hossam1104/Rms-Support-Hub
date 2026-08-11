@@ -1,7 +1,7 @@
 # Current Project State
-- **Updated:** 2026-08-11
+- **Updated:** 2026-08-12
 - **Branch:** `main`
-- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F POS integration work complete within their approved boundaries.
+- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries.
 - **Next gate:** INT-06 Live Transport Security Evidence requires fresh owner authorization; it is not executed in this session.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
@@ -36,6 +36,8 @@ INT-04: AGENT HOST / RUNTIME COMPOSITION COMPLETE
 INT-05: BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER COMPLETE / ACCEPTED AFTER INT-05F
 INT-05F: OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION COMPLETE; ISOLATED TOOLING DEPENDENCY GRAPH
 ANGULAR TYPESCRIPT: 6.x; GENERATOR TYPESCRIPT: 5.x PEER-COMPATIBLE; GLOBAL LEGACY PEER BYPASS: NONE
+INT-CI01: PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION COMPLETE; WINDOWS-DETERMINISTIC MAINTENANCE/SMB PATH SEMANTICS
+PORTABLE UBUNTU POS CI: ALL FIVE POS CI LANES GREEN
 NEXT: INT-06 LIVE TRANSPORT SECURITY EVIDENCE - OWNER AUTHORIZATION REQUIRED
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
@@ -69,9 +71,10 @@ approved foundation routes; feature operations, POS UI activation, standalone
 POS Angular source, raw history, and general backend/frontend integration remain excluded. CI builds
 and tests portable projects on Ubuntu, builds/tests the POS solution and Agent
 on Windows, validates the OpenAPI/generated-client drift lane, and validates a
-WinUI publish artifact. Current POS Release tests pass Domain 7/7, Application
-75/75, Infrastructure 60/60, and Agent 69/69; the frontend suite passes 341/341
-across 56 files.
+WinUI publish artifact. INT-CI01 makes Windows maintenance and SMB path
+semantics deterministic in the portable Application code. Current POS Release
+tests pass Domain 7/7, Application 76/76, Infrastructure 60/60, and Agent
+69/69; the frontend suite passes 341/341 across 56 files.
 ## Compatibility contracts
 These persisted storage keys are byte-exact; no migration exists:
 ```text
@@ -100,6 +103,10 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
 | Frontend tests | 56 files / 341 tests passed, 0 skipped |
 | Backend tests | 192 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; Angular budgets clear |
+| POS portable CI | GitHub Actions run `31540243375`; all five POS CI lanes passed |
+| POS Release tests | Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 69/69; 0 skipped |
+| POS Release build | 0 warnings, 0 errors |
+| Retained WinUI publish | `PosAdminTool.WinUI.exe`, 19 `.pri`, and 44 `.xbf` resources present |
 | Production initial bundle | 456.13 kB raw / 104.22 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.96 kB estimated transfer |
 | Production-offline initial bundle | 442.06 kB raw / 103.59 kB estimated transfer |

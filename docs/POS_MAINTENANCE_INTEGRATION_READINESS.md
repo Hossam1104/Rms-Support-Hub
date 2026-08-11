@@ -21,9 +21,11 @@ source provenance snapshot. Owner-authorized INT-04 composed the destination
 Agent host foundation; INT-05 added the Agent-owned OpenAPI contract and
 Support Hub transport/type foundation. INT-05F subsequently isolated the
 OpenAPI generator toolchain from the Angular dependency graph. No POS Angular
-feature or Support Hub API relay/UI integration was implemented.
+feature or Support Hub API relay/UI integration was implemented. INT-CI01
+restored the portable Ubuntu Application lane and all five destination POS CI
+lanes are green.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -176,7 +178,7 @@ They are not implementation authorization and are not changed by INT-00R.
 | Feature folder | `frontend/src/app/features/pos-maintenance/` | The final Support Hub feature replaces the placeholder here and owns the UI. |
 | Agent contract | `/pos/src/RmsSupportHub.Pos.Contracts`, `/pos/openapi`, and composed `RmsSupportHub.Pos.Agent` | INT-04 supplies the headless host/security foundation; INT-05 owns the versioned authoritative OpenAPI, server-owned token registry seam, generated Support Hub types, and isolated direct transport. Do not place privileged endpoints in `RmsSupportHub.Api`. |
 | DI and configuration | `/pos/src/RmsSupportHub.Pos.Agent/Program.cs` plus deployment configuration | INT-04 composes Windows Service hosting, fixed origin `https://rms-pos-agent.localhost:5001`, Negotiate, authorization, CORS/Origin, mutation-token, and service-owned storage ports. Keep deployment identity, certificate, browser policy, and operation allowlists outside tracked secrets. Do not add POS DI to the general API. |
-| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests`, and `/pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests` | Domain 7/7, Application 75/75, Infrastructure 60/60, and Agent 69/69 passed; frontend 341/341 across 56 files; OpenAPI/client drift and WinUI publish lanes are validated. Live browser/device evidence remains open. |
+| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests`, and `/pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests` | Domain 7/7, Application 76/76, Infrastructure 60/60, and Agent 69/69 passed; frontend 341/341 across 56 files; OpenAPI/client drift and WinUI publish lanes are validated. Live browser/device evidence remains open. |
 
 ## Shared primitives to reuse
 
@@ -249,7 +251,7 @@ These hold before, during, and after future integration:
 7. The direct browser-to-loopback Agent remains per-device local maintenance;
    remote-fleet requirements are out of scope for INT-01.
 
-## INT-01 / INT-02 / INT-03 result and next gate
+## INT-01 / INT-02 / INT-03 / INT-CI01 result and next gate
 
 INT-01 verified the accepted architecture checkpoint and established the
 isolated `/pos` solution, five buildable project boundaries, and destination-
@@ -262,11 +264,16 @@ imported 23 Infrastructure `.cs` files, 7 Infrastructure test `.cs` files, and
 metadata and dependencies. No privileged POS execution was added to
 `RmsSupportHub.Api`, `Core`, or `Data`.
 
-The imported suites pass with Domain 7/0/0, Application 75/0/0,
+INT-CI01 replaced host-dependent path handling in the portable Application
+maintenance and downloader seams with deterministic Windows path semantics.
+The nine pre-existing Ubuntu Application failures are resolved without
+relaxing path-policy rejection or activating any Agent feature route or POS UI.
+
+The imported suites pass with Domain 7/0/0, Application 76/0/0,
 Infrastructure 60/0/0, and Agent 69/0/0 (passed/failed/skipped). The POS
 solution Release build passes with zero warnings/errors. Retained WinUI
 publishes for `win-x64` and contains `PosAdminTool.WinUI.exe` and the expected
-packaged resource set, including 33 `.xbf` and 15 `.pri` resources. INT-05's
+packaged resource set. INT-05's
 OpenAPI and TypeScript generation is deterministic and the frontend suite passes
 341/341 across 56 files. The Agent host was not launched as a live service; no
 feature UI, raw POS history, or live Windows/device runtime was executed.
@@ -281,8 +288,9 @@ operations in their separately authorized gates. INT-05's contract/client
 foundation is accepted after INT-05F; live SQL/SCM/SMB/device behavior remains
 evidence work.
 
-INT-01, INT-02, INT-03, INT-03R, and INT-04 are complete; INT-05 is accepted
-after INT-05F, which is complete. `PROV-1` is closed for the composition gate.
+INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-CI01 are complete; INT-05 is
+accepted after INT-05F, which is complete. `PROV-1` is closed for the
+composition gate.
 INT-06 Live Transport Security Evidence remains owner-authorization required
 and is not executed by this integration.
 
@@ -291,7 +299,7 @@ and is not executed by this integration.
 | Gate | Requirement |
 | --- | --- |
 | Frontend suite | `npm --prefix tools/pos-agent-client-generator ci`; `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 341 tests across 56 files passed |
-| Backend suite | POS Domain 7, Application 75, Infrastructure 60, and Agent 69 tests pass |
+| Backend suite | POS Domain 7, Application 76, Infrastructure 60, and Agent 69 tests pass |
 | Full gate | `./scripts/build.ps1` or the repository's Windows equivalent: backend tests, Release build with 0 warnings, and Angular production build |
 | Bundle budgets | POS stays out of the initial bundle beyond its route chunk; investigate meaningful growth |
 | Offline build | `production-offline` still succeeds |
