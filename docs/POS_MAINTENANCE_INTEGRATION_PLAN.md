@@ -2,13 +2,14 @@
 
 ## Status and authorization
 
-This is the canonical destination-side architecture record for INT-00.
+This is the canonical destination-side architecture record for INT-00 and the
+current INT-01 destination status.
 
 ```text
 INT-00: COMPLETE
 CROSS-PROJECT INTEGRATION PLAN: COMPLETE
 CLAUDE OPUS 5 ARCHITECTURE CHECKPOINT:
-PASS - INT-01 MAY BE OWNER-AUTHORIZED
+PASS - INT-01 AUTHORIZED AND COMPLETE
 
 INT-00R TRANSPORT HARDENING:
 COMPLETE
@@ -21,12 +22,15 @@ AUTHORIZED
 
 POS SOURCE PROVENANCE:
 25922b499d33bd73f241ffc26c212dd000e81433
+
+INT-02:
+OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
 
-INT-00 closes the cross-project architecture decision. It does not import POS
-source, create projects, change application code, create workflows, or change
-the POS repository. The architecture checkpoint below has passed; INT-01
-remains owner-authorization required and has not been executed.
+INT-00 closes the cross-project architecture decision. INT-01 has now created
+only the authorized isolated destination skeleton and its build/CI boundary.
+It did not import POS source, change Support Hub application behavior, or
+change the POS repository.
 
 The POS repository is a read-only provenance source. INT-00R verified the
 Support Hub `main` head and `origin/main` at
@@ -414,8 +418,9 @@ The isolated destination concept is:
 
 Portable POS projects target `net10.0`. Windows Infrastructure and Agent
 projects are Windows-targeted. Existing Support Hub backend projects remain
-portable. These directories and projects are intentionally not created by
-INT-00.
+portable. INT-01 establishes only the five empty project boundaries and does
+not import the Domain, Application, Contracts, Infrastructure, Agent, WinUI,
+test, or Angular source from the provenance repository.
 
 The future source boundary is:
 
@@ -459,8 +464,10 @@ The destination CI plan has separate lanes for:
 6. protected representative-device evidence for LocalSystem/Session 0 SMB,
    SQL, SCM, restore/maintenance, downloader, and live transport behavior.
 
-No workflow is created by INT-00. The R2 CI finding is closed by ownership
-decomposition, not by copying the historical POS workflow into the Hub.
+No workflow was created by INT-00. INT-01 created the destination-owned
+`.github/workflows/pos-ci.yml` with meaningful portable and Windows skeleton
+build lanes. The R2 CI finding is closed by ownership decomposition, not by
+copying the historical POS workflow into the Hub.
 
 ## Deployment decisions and evidence gates
 
@@ -528,19 +535,22 @@ NOT AUTHORIZED
 
 ## Next gate
 
-INT-00R is complete. The root task now stages the destination build gate:
+INT-00R is complete and INT-01 is complete. The root task now stages the next
+portable source-import gate:
 
 ```text
-INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON
+INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
+
+INT-02 - PORTABLE DOMAIN / APPLICATION / CONTRACTS IMPORT
 
 STATUS:
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
 
 The next owner must start from a fresh context after owner/planner verification
-and explicit authorization. INT-01 must create only the authorized isolated
-destination skeleton and its build/CI boundary; it must not be inferred from
-this documentation pass. INT-01 was not executed by INT-00R.
+and explicit authorization. INT-02 may import only the portable source
+boundary; Windows Infrastructure, Agent runtime, WinUI, POS Angular, and
+privileged operations remain out of scope.
 
 ## Reference material
 

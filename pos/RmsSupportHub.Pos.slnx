@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj" />
+    <Project Path="src/RmsSupportHub.Pos.Application/RmsSupportHub.Pos.Application.csproj" />
+    <Project Path="src/RmsSupportHub.Pos.Contracts/RmsSupportHub.Pos.Contracts.csproj" />
+    <Project Path="src/RmsSupportHub.Pos.Domain/RmsSupportHub.Pos.Domain.csproj" />
+    <Project Path="src/RmsSupportHub.Pos.Infrastructure/RmsSupportHub.Pos.Infrastructure.csproj" />
+  </Folder>
+</Solution>

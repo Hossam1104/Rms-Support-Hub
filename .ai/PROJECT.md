@@ -72,11 +72,11 @@ Do not copy facts that can be cheaply discovered from the repository.
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
 - No background workers, queues, repository migrations, E2E framework, or
-  application auth scheme exists. POS INT-00/INT-00R is closed; INT-01 requires
-  owner authorization for the loopback-only Agent, trusted HTTPS/HTTP/1.1,
-  Negotiate, exact-origin CORS/LNA, antiforgery, frozen POS reference, retained
-  WinUI, and no raw history import (see plan and ADR-0015..0018).
-
+  application auth scheme exists. POS INT-00/INT-00R/INT-01 are closed; INT-01 established
+  `pos/RmsSupportHub.Pos.slnx` with portable Domain/Application/Contracts,
+  Windows Infrastructure/Agent, inert Agent, and no POS source. Loopback security,
+  retained WinUI, and raw-history exclusion remain future constraints (see plan
+  and ADR-0015..0018).
 ## Build and Validation Entry Points
 
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
@@ -94,8 +94,8 @@ Do not copy facts that can be cheaply discovered from the repository.
   4200. Agent-run live verification uses Testing only, never Production.
 - Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
   npm ci`.
-- Lint/format/E2E: no configured command.
-- Current counts and bundle sizes live in `.ai/STATE.md`, not here.
+- POS skeleton: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo`.
+- Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 
 ## Integrations
 

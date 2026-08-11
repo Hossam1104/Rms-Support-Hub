@@ -12,16 +12,17 @@ The cross-project architecture is closed in
 This document is its Support Hub readiness companion. The independent POS
 project remains a read-only provenance source for the authorized SHA. INT-00R
 performed only the required read-only provenance spot checks (`BackupApiClient`,
-current Agent hosting/security boundary, and POS ADR-012); it did not import
-source or implement an Agent or Angular feature.
+current Agent hosting/security boundary, and POS ADR-012). INT-01 then
+established the isolated destination solution and inert project boundaries only;
+it did not import POS source or implement an Agent or Angular feature.
 
-**Status: INT-00R COMPLETE / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 COMPLETE / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
 recorded in the canonical plan and ADRs. Live Agent, browser-policy,
 representative-device, and real-operation evidence remains open. INT-01 is
-owner-authorization required and has not been executed.
+complete; INT-02 portable source import remains owner-authorization required.
 
 ## Current RMS+ architecture
 
@@ -217,31 +218,29 @@ These hold before, during, and after future integration:
 7. The direct browser-to-loopback Agent remains per-device local maintenance;
    remote-fleet requirements are out of scope for INT-01.
 
-## INT-01 entry sequence (owner authorization required)
+## INT-01 result and next gate
 
-1. Confirm the passed `CLAUDE OPUS 5 POS INTEGRATION ARCHITECTURE CHECKPOINT`
-   and the INT-00R hardening record covering process isolation,
-   browser-to-loopback HTTP/1.1 transport, the versioned LNA/browser-policy
-   matrix, Negotiate and loopback back-connection behavior,
-   hostname/port/certificate, CORS preflight, antiforgery, identity,
-   audit/resource ownership, destination isolation, and clean source import.
-2. Supply and review the POS source at the authorized provenance SHA, complete
+INT-01 verified the accepted architecture checkpoint and established the
+isolated `/pos` solution, five inert/buildable project boundaries, and
+destination-owned portable and Windows build lanes. No privileged POS
+execution was added to `RmsSupportHub.Api`, `Core`, or `Data`; no POS business,
+Angular, WinUI, test, or raw-history source was imported.
+
+The following remain future owner-gated work:
+
+1. Supply and review the POS source at the authorized provenance SHA, complete
    the `[REQUIRES SOURCE REVIEW]` rows in
    `POS_MAINTENANCE_MIGRATION_INTAKE.md`, and produce a clean tracked snapshot.
    Do not merge raw POS Git history.
-3. Inventory real operations and privileges, then define the Agent-owned typed
+2. Inventory real operations and privileges, then define the Agent-owned typed
    OpenAPI contract and Support Hub generated consumer.
-4. Implement the isolated `/pos` projects and Agent. Do not add privileged POS
-   execution to `RmsSupportHub.Api`, `Core`, or `Data`.
-5. Build the final Support Hub feature against the Agent contract using the
-   existing primitives; replace the placeholder only when operationally proven.
-6. Run destination CI lanes, the browser-policy matrix, cross-process tests,
-   representative-device evidence, and the existing Support Hub regression
-   gate before any merge.
+3. Implement and validate the Windows Infrastructure, Agent runtime, final
+   Support Hub feature, browser transport, cross-process behavior, and
+   representative-device evidence in their authorized gates.
 
-INT-01 is owner-authorization required, not yet executed, and must start from a
-fresh context after owner/planner verification. This document does not
-authorize implementation.
+INT-01 is complete. INT-02 is owner-authorization required and must start from
+a fresh context after owner/planner verification. INT-02 is limited to the
+portable Domain/Application/Contracts source boundary.
 
 ## Required post-integration validation
 
@@ -286,7 +285,7 @@ converted into architecture claims:
 - SQL TLS: `TrustServerCertificate = true` remains an open deployment decision;
   it must be resolved before deployment or a Production claim.
 - WinUI cutover: open by design.
-- Integration implementation: not authorized.
+- Future operational integration implementation: not authorized.
 
 The INT-00R source finding is closed by the verified POS source:
 

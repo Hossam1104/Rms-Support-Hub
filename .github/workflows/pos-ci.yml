@@ -1,0 +1,58 @@
+name: POS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pos/**'
+      - '.github/workflows/pos-ci.yml'
+  pull_request:
+    paths:
+      - 'pos/**'
+      - '.github/workflows/pos-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    name: POS portable projects
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.302'
+
+      - name: Restore portable projects
+        run: |
+          dotnet restore pos/src/RmsSupportHub.Pos.Domain/RmsSupportHub.Pos.Domain.csproj --nologo
+          dotnet restore pos/src/RmsSupportHub.Pos.Application/RmsSupportHub.Pos.Application.csproj --nologo
+          dotnet restore pos/src/RmsSupportHub.Pos.Contracts/RmsSupportHub.Pos.Contracts.csproj --nologo
+
+      - name: Build portable projects
+        run: |
+          dotnet build pos/src/RmsSupportHub.Pos.Domain/RmsSupportHub.Pos.Domain.csproj -c Release --no-restore --nologo --warnaserror
+          dotnet build pos/src/RmsSupportHub.Pos.Application/RmsSupportHub.Pos.Application.csproj -c Release --no-restore --nologo --warnaserror
+          dotnet build pos/src/RmsSupportHub.Pos.Contracts/RmsSupportHub.Pos.Contracts.csproj -c Release --no-restore --nologo --warnaserror
+
+  windows:
+    name: POS Windows skeleton
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.302'
+
+      - name: Restore POS solution
+        run: dotnet restore pos/RmsSupportHub.Pos.slnx --nologo
+
+      - name: Build POS solution
+        run: dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror

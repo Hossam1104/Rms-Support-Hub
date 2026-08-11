@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>RmsSupportHub.Pos.Agent</AssemblyName>
+    <RootNamespace>RmsSupportHub.Pos.Agent</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RmsSupportHub.Pos.Contracts\RmsSupportHub.Pos.Contracts.csproj" />
+    <ProjectReference Include="..\RmsSupportHub.Pos.Domain\RmsSupportHub.Pos.Domain.csproj" />
+    <ProjectReference Include="..\RmsSupportHub.Pos.Application\RmsSupportHub.Pos.Application.csproj" />
+    <ProjectReference Include="..\RmsSupportHub.Pos.Infrastructure\RmsSupportHub.Pos.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

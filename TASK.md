@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Plan (INT-01 destination project/build/CI skeleton; owner gate)
+**Role:** Plan (INT-02 portable Domain/Application/Contracts import; owner gate)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -13,14 +13,25 @@ anonymous exact-origin preflight, mutation-token contract, per-device scope,
 and clean source-import boundary are canonical in the ADRs and integration
 documents.
 
-INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON
+INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
+
+The isolated `/pos` solution, portable project boundaries, Windows skeletons,
+and destination-owned build lanes are established. No POS business or runtime
+source was imported. The existing Support Hub backend and frontend remain
+independent and unchanged.
+
+STATUS:
+INT-01 COMPLETE
+
+INT-02 - PORTABLE DOMAIN / APPLICATION / CONTRACTS IMPORT
 
 STATUS:
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 
-Start INT-01 only after owner/planner verification and explicit authorization,
-using a fresh context. Do not import POS source, create `/pos`, modify
-application code, add projects/packages/workflows, or perform runtime/device
-work in this gate until that authorization is present.
+Start INT-02 only after owner/planner verification and explicit authorization,
+using a fresh context. INT-02 may import only the authorized portable
+Domain/Application/Contracts source boundary. Do not import Windows
+Infrastructure, Agent runtime, WinUI, POS Angular, or privileged operations in
+INT-02.
 
-INT-01 WAS NOT EXECUTED BY INT-00R.
+INT-02 MUST NOT BE EXECUTED IN THIS SESSION.

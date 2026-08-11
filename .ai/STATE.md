@@ -1,12 +1,10 @@
 # Current Project State
 
-- **Updated:** 2026-08-10
+- **Updated:** 2026-08-11
 - **Branch:** `main`
-- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 POS
-  cross-project architecture decision closure and INT-00R transport hardening
-  complete.
-- **Next gate:** INT-01 destination project/build/CI skeleton - owner
-  authorization required / not yet executed.
+- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00, INT-00R,
+  and INT-01 destination skeleton complete.
+- **Next gate:** INT-02 portable Domain/Application/Contracts import - owner authorization required / not yet executed.
 
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 
@@ -55,7 +53,7 @@ DIRECT BROWSER TO LOOPBACK AGENT: PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
 PREFERRED TRANSPORT: SUPPORT HUB BROWSER → LOCAL LOOPBACK POS AGENT
 STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY; WINUI: RETAINED
 REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: NOT AUTHORIZED
-INT-01: OWNER AUTHORIZATION REQUIRED / NOT EXECUTED; MEDIUM-8 CLOSED BY SOURCE
+INT-01: DESTINATION SKELETON COMPLETE; POS SOURCE IMPORT NOT STARTED
 ```
 Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`; trusted machine
 certificate provisioning is mandatory. Kerberos is preferred but `.localhost`
@@ -63,10 +61,12 @@ SPN and NTLM loopback/back-connection behavior remain open; REST is state
 truth, SSE is read-only/no-token progress, and artifacts use authenticated
 fetch with opaque handles.
 
-Future destination: `/pos/src` contains portable Domain/Application/Contracts,
-Windows Infrastructure/Agent, retained WinUI, and `/pos/tests`; it is not
-created by INT-00R. Raw history merge, import, OpenAPI/client, CI, and runtime
-work remain blocked until owner authorization; next owner uses a fresh context.
+INT-01 destination: `/pos/RmsSupportHub.Pos.slnx` contains five buildable
+skeletons: portable Domain/Application/Contracts, Windows-targeted
+Infrastructure, and inert Agent. Graph: Application→Domain; Infrastructure→Application+Domain; Agent→Contracts+Domain+Application+Infrastructure.
+No packages, tests, WinUI, POS Angular, business/runtime source, or raw POS
+history was imported; CI has portable/Windows build lanes. INT-02 remains
+owner-gated.
 
 ## Compatibility contracts
 

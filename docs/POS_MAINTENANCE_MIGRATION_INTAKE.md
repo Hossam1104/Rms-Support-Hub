@@ -295,8 +295,8 @@ is prohibited. The approved destination concept is:
 
 Portable POS projects target `net10.0`. Windows Infrastructure and Agent
 projects remain Windows-targeted. Existing Support Hub backend projects remain
-portable. Do not create these directories or projects until INT-01 is
-authorized.
+portable. INT-01 has established only the empty destination project
+boundaries; actual POS source import remains deferred to its owning gate.
 
 The clean snapshot must exclude generated output, build/runtime directories,
 local environment debris, secrets/certificates, and raw repository/history
@@ -323,5 +323,5 @@ are available:
 
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
-privileges. INT-01 remains owner-authorization required and not executed after
-INT-00R.
+privileges. INT-02 and later implementation gates remain owner-authorization
+required.
