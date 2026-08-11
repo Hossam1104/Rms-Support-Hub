@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Application.Pathing;
 
 namespace RmsSupportHub.Pos.Application.Maintenance;
 
@@ -12,11 +13,7 @@ public sealed class MaintenancePathPolicy
 {
     private readonly IMaintenanceFileSystem _fileSystem;
 
-    private static readonly StringComparer PathComparer =
-        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-
-    private static readonly StringComparison PathComparison =
-        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+    private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
 
     private static readonly Regex UnresolvedEnvironmentVariableRegex = new(
         @"%[^%\r\n]+%",
@@ -44,7 +41,7 @@ public sealed class MaintenancePathPolicy
             return Reject(safeTargetId, MaintenanceFailureCodes.InvalidPath);
         }
 
-        if (IsDriveRelative(rawPath))
+        if (WindowsPathSemantics.IsDriveRelative(rawPath))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.DriveRelativePath);
         }
@@ -64,32 +61,28 @@ public sealed class MaintenancePathPolicy
             return Reject(safeTargetId, MaintenanceFailureCodes.UnresolvedEnvironmentVariable);
         }
 
-        if (IsDriveRelative(expanded))
+        if (WindowsPathSemantics.IsDriveRelative(expanded))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.DriveRelativePath);
         }
 
-        if (IsUnc(expanded) && !settings.AllowUncPaths)
+        if (WindowsPathSemantics.IsUnc(expanded) && !settings.AllowUncPaths)
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.UncNotAllowed);
         }
 
-        if (!Path.IsPathFullyQualified(expanded))
+        if (!WindowsPathSemantics.IsFullyQualified(expanded))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.InvalidPath);
         }
 
         string canonicalTarget;
-        try
-        {
-            canonicalTarget = _fileSystem.GetFullPath(expanded);
-        }
-        catch
+        if (!TryCanonicalize(expanded, settings.AllowUncPaths, out canonicalTarget))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.InvalidPath);
         }
 
-        if (IsRootLevel(canonicalTarget))
+        if (WindowsPathSemantics.IsRoot(canonicalTarget))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.RootTarget);
         }
@@ -120,22 +113,24 @@ public sealed class MaintenancePathPolicy
                 : MaintenanceFailureCodes.InvalidConfiguration);
         }
 
-        var managedRoot = managedRoots.FirstOrDefault(root => IsWithinOrEqual(canonicalTarget, root));
+        var managedRoot = managedRoots.FirstOrDefault(root => WindowsPathSemantics.IsWithinOrEqual(canonicalTarget, root));
 
         // A managed root itself is never a cleanup target.  This also keeps a root-level target
         // from becoming a recursive delete of the entire configured data area.
         if (managedRoot is not null
-            && PathComparer.Equals(TrimSeparator(canonicalTarget), TrimSeparator(managedRoot)))
+            && PathComparer.Equals(
+                WindowsPathSemantics.TrimTrailingSeparators(canonicalTarget),
+                WindowsPathSemantics.TrimTrailingSeparators(managedRoot)))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.RootTarget);
         }
 
-        if (protectedRoots.Any(root => OverlapsByContainment(canonicalTarget, root)))
+        if (protectedRoots.Any(root => WindowsPathSemantics.OverlapsByContainment(canonicalTarget, root)))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.ProtectedRoot);
         }
 
-        if (installRoots.Any(root => OverlapsByContainment(canonicalTarget, root)))
+        if (installRoots.Any(root => WindowsPathSemantics.OverlapsByContainment(canonicalTarget, root)))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.InstallRoot);
         }
@@ -145,7 +140,7 @@ public sealed class MaintenancePathPolicy
             return Reject(safeTargetId, MaintenanceFailureCodes.OutsideManagedRoot);
         }
 
-        if (!dataRoots.Any(root => IsWithinOrEqual(canonicalTarget, root)))
+        if (!dataRoots.Any(root => WindowsPathSemantics.IsWithinOrEqual(canonicalTarget, root)))
         {
             return Reject(safeTargetId, MaintenanceFailureCodes.NotDataRoot);
         }
@@ -169,10 +164,10 @@ public sealed class MaintenancePathPolicy
             }
 
             if (!TryCanonicalize(inspection.ResolvedLinkTarget, settings.AllowUncPaths, out var linkTarget)
-                || !IsWithinOrEqual(linkTarget, managedRoot)
-                || !dataRoots.Any(root => IsWithinOrEqual(linkTarget, root))
-                || protectedRoots.Any(root => OverlapsByContainment(linkTarget, root))
-                || installRoots.Any(root => OverlapsByContainment(linkTarget, root)))
+                || !WindowsPathSemantics.IsWithinOrEqual(linkTarget, managedRoot)
+                || !dataRoots.Any(root => WindowsPathSemantics.IsWithinOrEqual(linkTarget, root))
+                || protectedRoots.Any(root => WindowsPathSemantics.OverlapsByContainment(linkTarget, root))
+                || installRoots.Any(root => WindowsPathSemantics.OverlapsByContainment(linkTarget, root)))
             {
                 return Reject(safeTargetId, MaintenanceFailureCodes.ReparseEscape);
             }
@@ -193,10 +188,10 @@ public sealed class MaintenancePathPolicy
 
             if (string.IsNullOrWhiteSpace(targetInspection.ResolvedLinkTarget)
                 || !TryCanonicalize(targetInspection.ResolvedLinkTarget, settings.AllowUncPaths, out var targetLink)
-                || !IsWithinOrEqual(targetLink, managedRoot)
-                || !dataRoots.Any(root => IsWithinOrEqual(targetLink, root))
-                || protectedRoots.Any(root => OverlapsByContainment(targetLink, root))
-                || installRoots.Any(root => OverlapsByContainment(targetLink, root)))
+                || !WindowsPathSemantics.IsWithinOrEqual(targetLink, managedRoot)
+                || !dataRoots.Any(root => WindowsPathSemantics.IsWithinOrEqual(targetLink, root))
+                || protectedRoots.Any(root => WindowsPathSemantics.OverlapsByContainment(targetLink, root))
+                || installRoots.Any(root => WindowsPathSemantics.OverlapsByContainment(targetLink, root)))
             {
                 return Reject(safeTargetId, MaintenanceFailureCodes.ReparseEscape);
             }
@@ -236,7 +231,7 @@ public sealed class MaintenancePathPolicy
         foreach (var rawRoot in roots ?? [])
         {
             if (TryCanonicalize(rawRoot, allowUnc, out var canonical)
-                && !IsRootLevel(canonical))
+                && !WindowsPathSemantics.IsRoot(canonical))
             {
                 if (!canonicalRoots.Any(existing => PathComparer.Equals(existing, canonical)))
                 {
@@ -265,58 +260,28 @@ public sealed class MaintenancePathPolicy
     {
         canonical = string.Empty;
         if (string.IsNullOrWhiteSpace(rawPath)) return false;
-        if (IsDriveRelative(rawPath)) return false;
+        if (WindowsPathSemantics.IsDriveRelative(rawPath)) return false;
 
         string expanded;
         try
         {
             expanded = _fileSystem.ExpandEnvironmentVariables(rawPath.Trim());
             if (UnresolvedEnvironmentVariableRegex.IsMatch(expanded)
-                || (IsUnc(expanded) && !allowUnc)
-                || !Path.IsPathFullyQualified(expanded))
+                || !WindowsPathSemantics.IsFullyQualified(expanded)
+                || !WindowsPathSemantics.TryCanonicalize(expanded, allowUnc, out var canonicalInput))
             {
                 return false;
             }
 
-            canonical = _fileSystem.GetFullPath(expanded);
-            return true;
+            canonical = _fileSystem.GetFullPath(canonicalInput);
+
+            return WindowsPathSemantics.TryCanonicalize(canonical, allowUnc, out canonical);
         }
         catch
         {
             return false;
         }
     }
-
-    private static bool IsWithinOrEqual(string candidate, string root)
-    {
-        var normalizedCandidate = TrimSeparator(candidate);
-        var normalizedRoot = TrimSeparator(root);
-        return PathComparer.Equals(normalizedCandidate, normalizedRoot)
-            || normalizedCandidate.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, PathComparison)
-            || normalizedCandidate.StartsWith(normalizedRoot + Path.AltDirectorySeparatorChar, PathComparison);
-    }
-
-    private static bool OverlapsByContainment(string candidate, string boundary) =>
-        IsWithinOrEqual(candidate, boundary)
-        || IsWithinOrEqual(boundary, candidate);
-
-    private static string TrimSeparator(string path) =>
-        path.Length > 3 ? path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) : path;
-
-    private static bool IsRootLevel(string path)
-    {
-        var root = Path.GetPathRoot(path);
-        return !string.IsNullOrWhiteSpace(root)
-            && PathComparer.Equals(TrimSeparator(path), TrimSeparator(root));
-    }
-
-    private static bool IsUnc(string path) => path.StartsWith(@"\\", StringComparison.Ordinal);
-
-    private static bool IsDriveRelative(string path) =>
-        path.Length >= 2
-        && char.IsLetter(path[0])
-        && path[1] == ':'
-        && (path.Length == 2 || path[2] is not ('\\' or '/'));
 
     private static MaintenancePathResolutionResult Reject(string targetId, string code) =>
         new(false, code, MaintenanceFailureCodes.PathRejectedMessage, null);

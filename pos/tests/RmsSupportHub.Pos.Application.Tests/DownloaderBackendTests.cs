@@ -76,6 +76,9 @@ public sealed class DownloaderBackendTests
         [
             [
                 new("B010_1.zip", @"D:\DbBackups\batch\B010_1.zip", Start, 10),
+                new("B01.part.zip", @"D:\DbBackups\batch\B01.part.zip", Start, 10),
+                new("B01-old.zip", @"D:\DbBackups\batch\B01-old.zip", Start, 10),
+                new("B01.chunk", @"D:\DbBackups\batch\B01.chunk", Start, 10),
                 new("B01_1.zip", @"D:\DbBackups\batch\B01_1.zip", Start, 10)
             ],
             [new("B01_1.zip", @"D:\DbBackups\batch\B01_1.zip", Start, 10)]

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using RmsSupportHub.Pos.Application.Pathing;
 using RmsSupportHub.Pos.Domain.Exceptions;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
@@ -299,8 +300,11 @@ public sealed partial class DbDownloadService
         DownloaderInputPolicy.ValidateSettings(settings);
         _ = DownloaderInputPolicy.NormalizeBranchCodes([item.BranchCode]);
 
-        if (string.IsNullOrWhiteSpace(item.RemoteZipPath)
-            || !DownloaderInputPolicy.IsSafeArchiveFileName(Path.GetFileName(item.RemoteZipPath)))
+        var remoteZipPath = item.RemoteZipPath;
+        var fileName = WindowsPathSemantics.GetFileName(remoteZipPath);
+        if (remoteZipPath is null
+            || fileName is null
+            || !DownloaderInputPolicy.IsSafeArchiveFileName(fileName))
         {
             item.Status = BranchBackupStatus.Failed;
             item.FailureCode = DownloaderFailureCodes.InvalidConfiguration;
@@ -309,7 +313,6 @@ public sealed partial class DbDownloadService
             throw new InvalidOperationException("The branch archive is not ready for download.");
         }
 
-        var fileName = Path.GetFileName(item.RemoteZipPath);
         Directory.CreateDirectory(localFolder);
         var localPath = Path.Combine(localFolder, fileName);
         var connection = new RemoteConnectionInfo(
@@ -326,7 +329,7 @@ public sealed partial class DbDownloadService
         {
             await _backupRepository.DownloadFileAsync(
                 connection,
-                item.RemoteZipPath,
+                remoteZipPath,
                 localPath,
                 progress,
                 cancellationToken).ConfigureAwait(false);
@@ -413,7 +416,7 @@ public sealed partial class DbDownloadService
             await _delay.DelayAsync(
                 TimeSpan.FromSeconds(settings.StableSizeObservationIntervalSeconds),
                 cancellationToken).ConfigureAwait(false);
-            var parent = Path.GetDirectoryName(file.FullPath) ?? string.Empty;
+            var parent = WindowsPathSemantics.GetDirectoryName(file.FullPath) ?? string.Empty;
             var refreshed = await _backupRepository.ListFilesAsync(connection, parent, cancellationToken).ConfigureAwait(false);
             var current = refreshed.FirstOrDefault(candidate =>
                 string.Equals(candidate.FullPath, file.FullPath, StringComparison.OrdinalIgnoreCase)
