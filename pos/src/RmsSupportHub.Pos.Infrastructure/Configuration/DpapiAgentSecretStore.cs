@@ -10,8 +10,9 @@ namespace RmsSupportHub.Pos.Infrastructure.Configuration;
 /// Service-scoped secret storage for the SQL and RDB passwords (plan section 5.5). Each secret is
 /// encrypted at rest with Windows Data Protection (<see cref="DataProtectionScope.LocalMachine"/>,
 /// so the service identity can decrypt it without a loaded user profile) and the backing file lives
-/// in the same ACL-restricted directory as the non-secret configuration. Defense in depth: even a
-/// principal that can read the file cannot decrypt it without also being an allowed local principal.
+/// in the same ACL-restricted directory as the non-secret configuration. Machine-scope DPAPI and
+/// the constant entropy are domain separation, not a promise that every other process on the
+/// machine is cryptographically excluded; the service-owned filesystem ACL remains load-bearing.
 /// </summary>
 public sealed class DpapiAgentSecretStore(AgentConfigurationStoreOptions options) : IAgentSecretStore
 {

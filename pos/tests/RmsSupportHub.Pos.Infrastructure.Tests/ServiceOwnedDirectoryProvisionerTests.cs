@@ -75,11 +75,42 @@ public sealed class ServiceOwnedDirectoryProvisionerTests : IDisposable
         Assert.True(security.AreAccessRulesProtected);
     }
 
+    [Fact]
+    public void EnsureProvisioned_SecuresEveryCreatedDirectoryInTheChain()
+    {
+        var nestedPath = Path.Combine(_rootDirectory, "nested", "leaf");
+
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(nestedPath);
+
+        foreach (var directory in new[] { _rootDirectory, Path.Combine(_rootDirectory, "nested"), nestedPath })
+        {
+            var security = new DirectoryInfo(directory).GetAccessControl();
+            Assert.True(security.AreAccessRulesProtected);
+
+            var rules = security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
+                .Cast<FileSystemAccessRule>();
+            var everyone = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
+            Assert.DoesNotContain(rules, rule => rule.IdentityReference == everyone && rule.AccessControlType == AccessControlType.Allow);
+        }
+    }
+
+    [Fact]
+    public void EnsureProvisioned_FailsClosedWhenTheTargetIsAFile()
+    {
+        File.WriteAllText(_rootDirectory, "not-a-directory");
+
+        Assert.Throws<UnauthorizedAccessException>(() => ServiceOwnedDirectoryProvisioner.EnsureProvisioned(_rootDirectory));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_rootDirectory))
         {
             Directory.Delete(_rootDirectory, recursive: true);
+        }
+        else if (File.Exists(_rootDirectory))
+        {
+            File.Delete(_rootDirectory);
         }
     }
 }

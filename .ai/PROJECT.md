@@ -71,10 +71,17 @@ Do not copy facts that can be cheaply discovered from the repository.
   has no standalone validation endpoint, so the U6 Validate action is a
   non-sending draft/preview/totals refresh and `send-request` remains the
   server-authoritative validation/send path.
-  - No background workers, queues, repository migrations, E2E framework, or application auth scheme exists; POS INT-00/INT-00R/INT-01/INT-02 are closed. INT-03 populated `pos/RmsSupportHub.Pos.slnx` with the approved portable source, Windows Infrastructure/tests, and retained WinUI. INT-03R corrected the Agent provenance for future work to `010abc52dc110cfde3dc2c53e057890ff6edaf97`; the INT-01/02/03 imports remain historically attributed to `25922b499d33bd73f241ffc26c212dd000e81433`.
-  Infrastructure is Windows-targeted; Agent remains inert; POS is isolated
-  from the general backend/frontend. Loopback, live-device, WinUI-cutover, and
-  raw-history constraints remain governed (see plan and ADR-0015..0018).
+- No background workers, queues, repository migrations, E2E framework, or
+  Support Hub application auth scheme exists. INT-03 imported the isolated POS
+  solution; INT-03R set Agent provenance to `010abc52dc110cfde3dc2c53e057890ff6edaf97`.
+  Historical INT-01/02/03 imports remain attributed to
+  `25922b499d33bd73f241ffc26c212dd000e81433`.
+- INT-04 composes a Windows-targeted, headless ASP.NET Core host capable of
+  Windows Service deployment at `https://rms-pos-agent.localhost:5001`.
+  It owns Negotiate/local-Administrators, exact-origin CORS/Origin,
+  mutation-token, and service-owned storage foundations. Feature operations,
+  OpenAPI, POS Angular, and Support Hub frontend/backend integration remain
+  excluded; live-device and browser evidence remain governed gates.
 ## Build and Validation Entry Points
 
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
@@ -92,7 +99,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   4200. Agent-run live verification uses Testing only, never Production.
 - Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
   npm ci`.
-- POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
+- POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj -c Release --no-build --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 - Manual IIS publish package: `.\scripts\publish-iis.ps1` - Angular production
   build + .NET Release publish combined into `publish/RmsSupportHub-IIS/`
@@ -115,12 +122,11 @@ Do not copy facts that can be cheaply discovered from the repository.
   use environment variables. See `README.md` without copying values.
 - Local draft persistence is owned by `SessionIdMiddleware` and `DraftManager`;
   `var/` is ignored and must not be treated as durable multi-instance storage.
-  - Future POS machine-local ownership belongs to the separate Agent/deployment:
-  LocalSystem, trusted machine certificate/private-key ACL, browser policy,
-  explicit SQL/SMB credentials, allowlisted operations, and privileged audit.
-  Per-device scope is required; remote fleet/LAN scope is a new programme.
-  Loopback, managed-browser/LNA, Negotiate/SPN, certificate lifecycle, and
-  device-operation evidence are gates, not current Hub runtime facts.
+  - POS machine-local ownership belongs to the separate Agent/deployment:
+  LocalSystem, trusted certificate/private-key ACL, browser policy, explicit
+  SQL/SMB credentials, allowlisted operations, and privileged audit. Per-device
+  scope is required; loopback, LNA, Negotiate/SPN, certificate lifecycle, and
+  device-operation evidence remain gates, not current Hub runtime facts.
 
 ## Critical Conventions
 
@@ -135,10 +141,6 @@ Do not copy facts that can be cheaply discovered from the repository.
   production API URLs remain relative.
 - Component styles consume CSS variables. Raw colors are restricted to
   `frontend/src/styles/_tokens.css` and `_gradients.css`.
-- Every card surface consumes the shared `--card-*` contract, and peer cards in
-  one grid get equal height from `grid-auto-rows: 1fr` plus `margin-top: auto`
-  on the action block - never a fixed pixel height. Tool identity is the named
-  accent key, not a color. See ADR-0012 and `docs/design-system.md`.
 - The Hub hero scene is the only WebGL surface. Three.js is dynamically
   imported so it stays in its own lazy chunk, the canvas is decorative and
   aria-hidden, and reduced motion or absent WebGL falls back to the static
@@ -149,14 +151,9 @@ Do not copy facts that can be cheaply discovered from the repository.
   end-exclusive date bounds, and explicit Apply-driven UI state. The tracked
   `docs/sql/order-requests-performance-indexes.sql` is an externally applied,
   guarded support script, not an application migration.
-- U5 primitives are standalone, token-based, and exported through the shared UI
-  barrel; the development-only kitchen sink is their showcase. Every active
-  feature surface consumes them, U6 adds no client-side financial calculation,
-  and U7 removed all `.glass-*` definitions, consumers, and aliases.
-- The token palette and the 6 kB/8 kB component style budgets are fixed. Wide
-  and caption-hidden tables plus the global accessibility utilities are shared,
-  and narrow order-builder screens stay inside the viewport via a compact
-  labelled sidebar rail.
+- The token palette and the 6 kB/8 kB component style budgets are fixed; wide and
+  caption-hidden tables plus global accessibility utilities are shared, and narrow
+  order-builder screens stay inside the viewport via a compact labelled sidebar rail.
 - Order Requests has one canonical route-level detail page, compatibility
   redirects, and a same-number resend contract; the superseded validation
   component tree is gone. State-changing Testing send/cancel/resend evidence

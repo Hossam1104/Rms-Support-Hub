@@ -2,9 +2,8 @@
 - **Updated:** 2026-08-11
 - **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through
-  INT-03 and INT-03R POS integration/provenance work complete within their
-  approved boundaries.
-- **Next gate:** Claude Opus privileged-boundary follow-up required after INT-03R; INT-04 Agent Host / Runtime Composition remains owner authorization required / not yet executed.
+  INT-04 POS integration work complete within their approved boundaries.
+- **Next gate:** INT-05 Browser Transport / OpenAPI / Client Adapter requires fresh owner authorization; no INT-05 feature work is executed.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -35,39 +34,39 @@ Angular over trusted HTTPS on fixed loopback using HTTP/1.1 only;
 ```text
 INT-00 / INT-00R: COMPLETE; CLAUDE ARCHITECTURE CHECKPOINT: PASS
 ORIGINAL IMPORT PROVENANCE (INT-01/02/03): 25922b499d33bd73f241ffc26c212dd000e81433
-CORRECTED AGENT PROVENANCE CANDIDATE (INT-04+): 010abc52dc110cfde3dc2c53e057890ff6edaf97
-CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW: BLOCKED ON PROV-1
-INT-03R: COMPLETE
-NEXT: CLAUDE OPUS PRIVILEGED-BOUNDARY FOLLOW-UP
-PRIVILEGED POS BOUNDARY: SEPARATE WINDOWS POS AGENT
+CORRECTED AGENT PROVENANCE BASELINE (INT-04): 010abc52dc110cfde3dc2c53e057890ff6edaf97
+CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW: PROV-1 CLOSED BY INT-03R / LIVE EVIDENCE OPEN
+INT-04: AGENT HOST / RUNTIME COMPOSITION COMPLETE
+NEXT: INT-05 BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER - OWNER AUTHORIZATION REQUIRED
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
 WINDOWS LOOPBACK AUTH: BACK-CONNECTION / HOSTNAME EVIDENCE OPEN
 CORS: ANONYMOUS EXACT-ORIGIN PREFLIGHT; APP: NEGOTIATE + LOCAL ADMIN
 MACHINE TRUST: MANDATORY; SSE: READ-ONLY / NO MUTATION TOKEN
-ARTIFACTS: AUTHENTICATED FETCH / OPAQUE HANDLE; TOKEN: SINGLE-USE / OPERATION-BOUND
-DIRECT BROWSER TO LOOPBACK AGENT: PER-DEVICE LOCAL MAINTENANCE ARCHITECTURE
-PREFERRED TRANSPORT: SUPPORT HUB BROWSER → LOCAL LOOPBACK POS AGENT
-STANDALONE POS ANGULAR: FROZEN / REFERENCE ONLY; WINUI: RETAINED
-REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-03 WINDOWS INFRASTRUCTURE + RETAINED WINUI IMPORTED; AGENT RUNTIME NOT EXECUTED
-INT-01: DESTINATION SKELETON COMPLETE; INT-02: PORTABLE SOURCE + TESTS IMPORTED / PASSING
-INT-03: WINDOWS INFRASTRUCTURE + TESTS PASSING; RETAINED WINUI PUBLISH VALIDATED
-INT-04: AGENT HOST / RUNTIME COMPOSITION OWNER-GATED / NOT EXECUTED
+REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-04 AGENT HOST COMPOSED; SUPPORT HUB FRONTEND/BACKEND UNCHANGED
+INT-04: AGENT HOST / RUNTIME COMPOSITION COMPLETE; INT-05 OWNER-GATED / NOT EXECUTED
 ```
-Agent origin: `https://rms-pos-agent.localhost:<fixed-port>`; trusted machine
-certificate provisioning is mandatory. Kerberos is preferred; `.localhost` SPN
-and NTLM loopback/back-connection behavior remain open. REST is state truth, SSE
-is read-only/no-token progress, and artifacts use authenticated opaque handles.
-INT-03 destination: `/pos/RmsSupportHub.Pos.slnx` contains six source and three
+Agent origin: `https://rms-pos-agent.localhost:5001`; the host is headless,
+Windows Service-capable, loopback-only, HTTPS-only, and HTTP/1.1-only. It
+registers Negotiate in production, uses exact-origin CORS and local-
+Administrators/SID ownership checks, and exposes only health/live, health/ready,
+and the authenticated session foundation route. Mutation-token, service-owned
+storage, DPAPI, and artifact-catalog ports are composed without public feature
+endpoints. Trusted machine certificate provisioning is mandatory. Kerberos is
+preferred; `.localhost` SPN and NTLM loopback/back-connection behavior remain
+open live evidence. REST/SSE/artifact feature transports remain future scope.
+INT-04 destination: `/pos/RmsSupportHub.Pos.slnx` contains six source and four
 test projects. Graph: Application→Domain; Infrastructure→Application+Domain;
 Agent→Contracts+Domain+Application+Infrastructure; WinUI→Application+Domain+
 Infrastructure; tests→their source projects. Domain/Contracts have no packages;
 Application uses `Microsoft.Extensions.Logging.Abstractions` 10.0.10.
 Infrastructure owns the Windows SQL/SCM/DPAPI package graph; WinUI retains
-Windows App SDK and CommunityToolkit packages. The Agent remains inert, POS
-Angular/raw history/general backend/frontend integration remain excluded. CI
-builds/tests portable on Ubuntu, runs Infrastructure tests and the POS solution
-build on Windows, and validates a WinUI publish artifact. INT-04 is owner-gated.
+Windows App SDK and CommunityToolkit packages. The Agent host has only the
+approved foundation routes; feature operations, OpenAPI, POS Angular, raw
+history, and general backend/frontend integration remain excluded. CI builds
+and tests portable projects on Ubuntu, builds/tests the POS solution and Agent
+on Windows, and validates a WinUI publish artifact. Agent integration tests pass
+57/57 and Infrastructure tests pass 60/60.
 ## Compatibility contracts
 These persisted storage keys are byte-exact; no migration exists:
 ```text
@@ -109,10 +108,10 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
 - Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
   order/request calls return HTTP 500; deferred environment setup.
-- UPC fixture/live acceptance, Production index/deployment, and POS Agent
-  Windows/runtime implementation remain deferred and unauthorized. INT-03's
-  source was only build/test/publish validated; no live service, SQL, SCM, SMB,
-  device, or browser runtime was executed.
+- UPC fixture/live acceptance, Production index/deployment, and POS Agent live
+  service/device validation remain deferred. INT-04's host was build/test
+  validated; no live service, SQL, SCM, SMB, device, or browser runtime was
+  executed.
 - POS evidence gates remain open: LocalSystem/Session 0 SMB, live transport,
   LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS

@@ -1,6 +1,6 @@
 # ADR-0016: POS browser transport and cross-origin security boundary
 
-- Status: Accepted; INT-00R transport hardening complete; live browser and deployment evidence remains open
+- Status: Accepted; INT-00R transport hardening and INT-04 Agent host composition complete; live browser and deployment evidence remains open
 - Affected area: LNA, Windows Negotiate, origin, CORS, antiforgery, CSP, HTTPS certificates
 
 ## Context
@@ -16,17 +16,26 @@ to be compatible with this architecture.
 
 ## Decision
 
-The canonical Agent origin is:
+The canonical Agent origin selected and composed by INT-04 is:
 
 ```text
-https://rms-pos-agent.localhost:<fixed-port>
+https://rms-pos-agent.localhost:5001
 ```
 
-`rms-pos-agent.localhost` is the preferred fixed name. A substitute requires
-deployment evidence that it resolves only to loopback and must use the same
-exact-origin, certificate, Negotiate, and browser-policy controls. The port is
-fixed, reserved, documented, and owned by the Agent installer. The Agent has
-no discovery protocol, LAN hostname, wildcard listener, or `0.0.0.0` binding.
+`rms-pos-agent.localhost:5001` is the fixed loopback-only name and port. A
+substitute requires deployment evidence that it resolves only to loopback and
+must use the same exact-origin, certificate, Negotiate, and browser-policy
+controls. Port 5001 is reserved, documented, and owned by the Agent installer.
+The Agent has no discovery protocol, LAN hostname, wildcard listener, or
+`0.0.0.0` binding.
+
+INT-04 composes a headless ASP.NET Core Windows Service-capable host at this
+origin with HTTPS-only HTTP/1.1 Kestrel, production Windows Negotiate, local
+Administrators/SID authorization, exact-origin CORS and Origin enforcement,
+single-use mutation-token ports, service-owned storage, and only the
+`/health/live`, `/health/ready`, and `/api/v1/session` foundation routes. The
+feature operation contract, OpenAPI/client adapter, Support Hub UI, and live
+browser/device evidence remain later owner-gated work.
 
 The initial browser transport is **HTTP/1.1 only**. The imported destination
 Agent must configure the equivalent of `HttpProtocols.Http1` for this

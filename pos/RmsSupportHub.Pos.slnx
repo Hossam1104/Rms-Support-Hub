@@ -11,5 +11,6 @@
     <Project Path="tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj" />
     <Project Path="tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj" />
     <Project Path="tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj" />
+    <Project Path="tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj" />
   </Folder>
 </Solution>

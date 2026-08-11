@@ -75,18 +75,21 @@ destination is:
     RmsSupportHub.Pos.Domain.Tests
     RmsSupportHub.Pos.Application.Tests
     RmsSupportHub.Pos.Infrastructure.Tests
+    RmsSupportHub.Pos.Agent.IntegrationTests
 ```
 
 Portable POS projects remain `net10.0`; Windows Infrastructure, Agent, and
 retained WinUI projects are Windows-targeted. Domain/Application/Contracts,
 Infrastructure, Infrastructure tests, and WinUI contain the namespace-reconciled
-source from historical import provenance `25922b499d33bd73f241ffc26c212dd000e81433`, and all three
-POS test suites are destination-owned. The corrected Agent provenance candidate
-for future INT-04+ work is `010abc52dc110cfde3dc2c53e057890ff6edaf97`. The Agent remains inert, with no POS
-Angular workspace, runtime host, or privileged execution path imported. Existing
-Support Hub `Core`, `Data`, and `Api` remain portable. The Agent owns privileged
-POS operations and the Support Hub general API is not their proxy or execution
-path.
+source from historical import provenance `25922b499d33bd73f241ffc26c212dd000e81433`, and all four
+POS test projects are destination-owned. The corrected Agent provenance for
+INT-04 is `010abc52dc110cfde3dc2c53e057890ff6edaf97`. The Agent is now a
+destination-owned headless ASP.NET Core host with fixed origin
+`https://rms-pos-agent.localhost:5001`, Windows Service hosting, and only
+health/live, health/ready, and authenticated session foundation routes. It has
+no POS Angular workspace or feature operation/OpenAPI surface. Existing Support
+Hub `Core`, `Data`, and `Api` remain portable; the Agent owns privileged POS
+operations and the Support Hub general API is not their proxy or execution path.
 
 ## Route topology
 

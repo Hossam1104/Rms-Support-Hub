@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-03 and the current INT-04 owner gate.
+INT-04 and the current INT-05 owner gate.
 
 ```text
 INT-00: COMPLETE
@@ -36,12 +36,18 @@ INT-03R:
 COMPLETE - POS AGENT PROVENANCE SNAPSHOT INTEGRITY CORRECTED
 
 INITIAL OPUS PRIVILEGED-BOUNDARY REVIEW:
-BLOCKED - PROV-1
+HISTORICALLY BLOCKED - PROV-1
+
+PROV-1:
+CLOSED BY INT-03R
 
 FOLLOW-UP OPUS REVIEW:
-REQUIRED
+REQUIRED FOR LIVE / PRIVILEGED EVIDENCE
 
 INT-04:
+COMPLETE - AGENT HOST / RUNTIME COMPOSITION
+
+INT-05:
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
 
@@ -49,18 +55,25 @@ INT-00 closes the cross-project architecture decision. INT-01 created the
 isolated destination skeleton and its build/CI boundary. INT-02 imported the
 approved portable Domain/Application/Contracts source and the two portable test
 boundaries. INT-03 then imported only the approved Windows Infrastructure,
-Infrastructure test, and retained WinUI boundaries, with destination-owned
-project metadata and no Agent runtime, POS Angular, or Support Hub application
-behavior change.
+Infrastructure test, and retained WinUI boundaries. INT-04 composed the
+destination-owned headless Agent host from corrected POS provenance
+`010abc52dc110cfde3dc2c53e057890ff6edaf97`: fixed HTTPS origin
+`https://rms-pos-agent.localhost:5001`, HTTP/1.1 loopback binding, Windows
+Service hosting, production Negotiate, local-Administrators/SID authorization,
+exact-origin CORS/Origin enforcement, mutation-token and service-owned storage
+foundations, and only health/live, health/ready, and authenticated session
+routes. No POS Angular, feature operations, OpenAPI, or Support Hub application
+behavior change was added.
 
-The POS repository is a read-only provenance source. INT-00R verified the
+The POS repository is a read-only provenance source. INT-04 started from the
 Support Hub `main` head and `origin/main` at
-`00cb8457598c51b1ff3c096ba03428c16bbe9682` and verified the POS repository at
-`25922b499d33bd73f241ffc26c212dd000e81433`; neither repository had unrelated
-working-tree changes at the verification point. No POS source was imported.
-The old POS SHA above remains historical evidence for the INT-00R and
-INT-01/INT-02/INT-03 import records. The corrected SHA is the candidate
-Agent source baseline for future INT-04+ work.
+`9ecaee934735993a81559427a6800291a7bc43d8` and used the clean POS source
+snapshot `010abc52dc110cfde3dc2c53e057890ff6edaf97`; neither repository was
+modified. INT-04 selectively adapted/copy-imported only the approved Agent
+host/security foundations into destination-owned projects; no POS Angular,
+history, or feature-operation source was imported. The old POS SHA above remains historical evidence for the INT-00R and
+INT-01/INT-02/INT-03 import records. The corrected SHA is the INT-04 Agent
+source baseline; the source repository remained read-only and unchanged.
 
 ## Decision summary
 
@@ -275,15 +288,15 @@ antiforgery failures.
 The preferred origin shape is:
 
 ```text
-https://rms-pos-agent.localhost:<fixed-port>
+https://rms-pos-agent.localhost:5001
 ```
 
-`rms-pos-agent.localhost` is the preferred fixed loopback-only name. A
-deployment may substitute an equivalent fixed name only after proving that it
-resolves exclusively to loopback and receives the same origin, certificate, and
-browser-policy review. The Agent uses one reserved, documented, non-dynamic
-port owned by the installer. It has no LAN hostname, discovery protocol,
-wildcard listener, or `0.0.0.0` binding.
+`rms-pos-agent.localhost:5001` is the fixed loopback-only origin selected by
+INT-04. A deployment may substitute an equivalent fixed name only after proving
+that it resolves exclusively to loopback and receives the same origin,
+certificate, and browser-policy review. Port 5001 is reserved, documented,
+non-dynamic, and owned by the Agent installer. It has no LAN hostname,
+discovery protocol, wildcard listener, or `0.0.0.0` binding.
 
 The initial browser endpoint is **HTTP/1.1 only**. The imported destination
 Agent must configure the equivalent of `HttpProtocols.Http1`; browser HTTP/2
@@ -593,17 +606,26 @@ STATUS:
 COMPLETE
 
 INITIAL OPUS PRIVILEGED-BOUNDARY REVIEW:
-BLOCKED - PROV-1
+HISTORICALLY BLOCKED - PROV-1
+
+PROV-1:
+CLOSED BY INT-03R
 
 FOLLOW-UP OPUS REVIEW:
-REQUIRED
+REQUIRED FOR LIVE / PRIVILEGED EVIDENCE
 
 INT-04 - AGENT HOST / RUNTIME COMPOSITION
 
 STATUS:
-OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
+COMPLETE
 
-INT-04 MUST NOT BE EXECUTED IN THIS SESSION.
+FIXED AGENT ORIGIN:
+https://rms-pos-agent.localhost:5001
+
+NEXT:
+INT-05 - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
+
+OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
 
 INT-02 completion inventory from the approved provenance SHA is:
@@ -628,12 +650,13 @@ EXCLUDED: 3 source .csproj files (destination identity/dependencies owned by INT
 EXCLUDED: 3 packages.lock.json files (destination package graphs are reconciled in .csproj)
 ```
 
-The destination validation passed: Infrastructure tests 58/58; POS Domain and
-Application tests 7/7 and 75/75; solution and backend Release builds with zero
-warnings/errors; and retained WinUI `win-x64` publish with `PosAdminTool.WinUI.exe`,
-7 `.pri`, and 11 `.xbf` resources. No application was launched. INT-04 requires
-fresh owner authorization; Agent runtime, POS Angular, privileged operations,
-and representative-device evidence remain out of scope.
+The destination validation passed: Infrastructure tests 60/60; POS Domain,
+Application, and Agent integration tests 7/7, 75/75, and 57/57; solution Release
+build with zero warnings/errors; and retained WinUI `win-x64` publish with
+`PosAdminTool.WinUI.exe`, 11 `.xbf` resources, and the expected packaged resource
+set. No application or live service was launched. INT-05 browser transport,
+OpenAPI/client adapter, feature operations, Support Hub UI integration, and
+representative-device evidence remain owner-gated/open.
 
 ## Reference material
 

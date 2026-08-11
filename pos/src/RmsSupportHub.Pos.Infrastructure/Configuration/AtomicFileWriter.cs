@@ -13,7 +13,10 @@ public static class AtomicFileWriter
             throw new ArgumentException("Path must include a directory.", nameof(path));
         }
 
-        Directory.CreateDirectory(directory);
+        // The storage owner must be established before the temporary file is created. The caller
+        // normally provisions this directory as well, but keeping the invariant here prevents a
+        // future write path from bypassing the service-owned boundary.
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(directory);
         var tempPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
 
         try

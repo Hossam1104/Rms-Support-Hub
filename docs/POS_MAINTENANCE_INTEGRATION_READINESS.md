@@ -13,22 +13,24 @@ This document is its Support Hub readiness companion. The independent POS
 project remains a read-only provenance source. INT-00R
 performed only the required read-only provenance spot checks (`BackupApiClient`,
 current Agent hosting/security boundary, and POS ADR-012). INT-01 then
-established the isolated destination solution and inert project boundaries;
-INT-02 imported only the approved portable Domain/Application/Contracts source
-and the two portable test suites. INT-03 imported the approved Windows
-Infrastructure, Infrastructure test, and retained WinUI boundaries. No Agent
-runtime or Angular feature was implemented. INT-03R corrected the source
-provenance snapshot without composing or executing the Agent.
+established the isolated destination solution and project boundaries; INT-02
+imported only the approved portable Domain/Application/Contracts source and the
+two portable test suites. INT-03 imported the approved Windows Infrastructure,
+Infrastructure test, and retained WinUI boundaries. INT-03R corrected the
+source provenance snapshot. Owner-authorized INT-04 composed the destination
+Agent host foundation; no POS Angular feature or Support Hub API/frontend
+integration was implemented.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R COMPLETE / INITIAL OPUS REVIEW BLOCKED ON PROV-1 / FOLLOW-UP REQUIRED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-05 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
 recorded in the canonical plan and ADRs. Live Agent, browser-policy,
 representative-device, and real-operation evidence remains open. INT-02
-  portable source import is complete; Windows Infrastructure tests and retained
-  WinUI publish validation are complete. Agent runtime, Support Hub feature
-  work, and live operation evidence remain owner-gated/open.
+  portable source import is complete; Windows Infrastructure and Agent tests and
+  retained WinUI publish validation are complete. Agent host composition is
+  complete, while Support Hub feature work, browser/OpenAPI/client transport,
+  and live operation evidence remain owner-gated/open.
 
 ## INT-03R provenance integrity correction
 
@@ -47,8 +49,9 @@ The corrected Agent provenance candidate for INT-04+ is:
 The initial Claude Opus privileged-boundary review was blocked on `PROV-1`
 because the original snapshot omitted the tracked Agent
 `ArtifactCatalog.cs`. INT-03R narrowed only the root generated-artifact ignore
-rule and tracked the existing source. The follow-up Opus review is required;
-INT-04 remains closed and no other Opus guardrail is implemented here.
+rule and tracked the existing source; `PROV-1` is closed for the destination
+composition gate. Live privileged-boundary evidence and later feature gates
+remain separately required.
 
 ## Current RMS+ architecture
 
@@ -169,9 +172,9 @@ They are not implementation authorization and are not changed by INT-00R.
 | Route metadata | `frontend/src/app/core/models/tool.model.ts` (`TOOL_ROUTE_DATA.posMaintenance`) | Flip availability only after the Agent contract and feature are proven. |
 | Hub tile | `frontend/src/app/features/hub/tool-registry.ts` | Update capability and action text only with the real feature. |
 | Feature folder | `frontend/src/app/features/pos-maintenance/` | The final Support Hub feature replaces the placeholder here and owns the UI. |
-| Agent contract | `/pos/src/RmsSupportHub.Pos.Contracts` (portable source imported by INT-02) and future `RmsSupportHub.Pos.Agent` | Own typed POS operations and authoritative OpenAPI; do not place privileged endpoints in `RmsSupportHub.Api`. |
-| DI and configuration | Future Agent composition root and deployment configuration | Keep Agent identity, certificate, port, browser policy, and operation allowlists outside tracked secrets. Do not add POS DI to the general API during INT-03 or before INT-04 authorization. |
-| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, and `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests` | Domain 7/7, Application 75/75, and Infrastructure 58/58 passed; future work adds Agent security, OpenAPI, cross-process, WinUI cutover, and representative-device lanes in the destination. |
+| Agent contract | `/pos/src/RmsSupportHub.Pos.Contracts` and composed `RmsSupportHub.Pos.Agent` | INT-04 supplies the headless host/security foundation and only health/session routes. INT-05 owns typed POS operations, authoritative OpenAPI, and the generated Support Hub client; do not place privileged endpoints in `RmsSupportHub.Api`. |
+| DI and configuration | `/pos/src/RmsSupportHub.Pos.Agent/Program.cs` plus deployment configuration | INT-04 composes Windows Service hosting, fixed origin `https://rms-pos-agent.localhost:5001`, Negotiate, authorization, CORS/Origin, mutation-token, and service-owned storage ports. Keep deployment identity, certificate, browser policy, and operation allowlists outside tracked secrets. Do not add POS DI to the general API. |
+| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests`, and `/pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests` | Domain 7/7, Application 75/75, Infrastructure 60/60, and Agent 57/57 passed; future work adds OpenAPI, cross-process, WinUI cutover, browser-policy, and representative-device lanes in the destination. |
 
 ## Shared primitives to reuse
 
@@ -257,27 +260,26 @@ imported 23 Infrastructure `.cs` files, 7 Infrastructure test `.cs` files, and
 metadata and dependencies. No privileged POS execution was added to
 `RmsSupportHub.Api`, `Core`, or `Data`.
 
-The imported suites pass with Domain 7/0/0, Application 75/0/0, and
-Infrastructure 58/0/0 (passed/failed/skipped). The POS solution and backend
-Release builds pass with zero warnings/errors. Retained WinUI publishes for
-`win-x64` and contains `PosAdminTool.WinUI.exe`, 7 `.pri`, and 11 `.xbf`
-resources. The Agent remains inert; no Angular source, raw POS history, or live
+The imported suites pass with Domain 7/0/0, Application 75/0/0,
+Infrastructure 60/0/0, and Agent 57/0/0 (passed/failed/skipped). The POS
+solution Release build passes with zero warnings/errors. Retained WinUI
+publishes for `win-x64` and contains `PosAdminTool.WinUI.exe` and the expected
+packaged resource set, including 11 `.xbf` resources. INT-04's Agent host was
+not launched as a live service; no Angular source, raw POS history, or live
 Windows/device runtime was executed.
 
 The following remain future owner-gated work:
 
 1. Inventory real operations and privileges, then define the Agent-owned typed
    OpenAPI contract and Support Hub generated consumer.
-2. Implement and validate the Agent runtime, final Support Hub feature, browser
-   transport, cross-process behavior, and representative-device evidence in
-   their authorized gates. INT-03's source import/build boundary is complete;
+2. Implement and validate the final Support Hub feature, browser transport,
+   OpenAPI/client adapter, cross-process behavior, and representative-device
+   evidence in their authorized gates. INT-04's host foundation is complete;
    live SQL/SCM/SMB/device behavior remains evidence work.
 
-INT-01, INT-02, INT-03, and INT-03R are complete. The initial privileged review
-is blocked on `PROV-1`, and the follow-up Opus review is required. INT-04 Agent
-Host / Runtime Composition remains owner-authorization required, must start
-from a fresh context after owner/planner verification, and is not executed by
-this integration.
+INT-01, INT-02, INT-03, INT-03R, and INT-04 are complete. `PROV-1` is closed
+for the composition gate. INT-05 Browser Transport / OpenAPI / Client Adapter
+remains owner-authorization required and is not executed by this integration.
 
 ## Required post-integration validation
 

@@ -19,17 +19,21 @@ repository remains read-only. The historical import provenance is:
 POS SOURCE: VERIFIED / IMPORTED PORTABLE SNAPSHOT AT 25922b499d33bd73f241ffc26c212dd000e81433
 ```
 
-The corrected Agent provenance candidate for future INT-04+ source intake is:
+The corrected Agent provenance source baseline used by INT-04 is:
 
 ```text
-POS AGENT SOURCE: CORRECTED CANDIDATE AT 010abc52dc110cfde3dc2c53e057890ff6edaf97
+POS AGENT SOURCE: CORRECTED BASELINE AT 010abc52dc110cfde3dc2c53e057890ff6edaf97
 ```
 
 That SHA is provenance, not proof that deployment, device, browser, SQL, SMB,
 SCM, restore, maintenance, downloader, or remote-trigger behavior has been
 validated. INT-03 establishes source/build parity for the imported Windows and
-WinUI boundary only; the remaining operational rows below still require later
-evidence.
+WinUI boundary only. Owner-authorized INT-04 then composed the destination-owned
+headless Agent host from this corrected Agent provenance. Its fixed origin is
+`https://rms-pos-agent.localhost:5001`; it exposes only the health/live,
+health/ready, and authenticated session foundation routes. The remaining
+browser transport, OpenAPI/client, operation, and live-device rows below still
+require later evidence.
 
 The clean portable import inventory is:
 
@@ -93,7 +97,7 @@ evidence.
 | Windows-specific dependencies | Infrastructure: `System.ServiceProcess.ServiceController 10.0.10`, `System.Security.Cryptography.ProtectedData 9.0.11`; WinUI: Windows App SDK `1.8.260710003`. |
 | Libraries and packages | Infrastructure: `Microsoft.Data.SqlClient 6.1.6`, `Microsoft.Extensions.Logging.Abstractions 10.0.10`; tests: `coverlet.collector 6.0.4`, `Microsoft.NET.Test.Sdk 17.14.1`, `xunit 2.9.3`, `xunit.runner.visualstudio 3.1.4`; WinUI: `CommunityToolkit.Mvvm 8.4.2`, `Microsoft.Extensions.DependencyInjection 10.0.10`, `Microsoft.Extensions.Logging 10.0.10`. |
 | External tools or processes invoked | Imported Infrastructure contains the `sc.exe` Windows service-control boundary; `run_app.cmd` was not imported. No service or process was launched by INT-03. |
-| Environment and branch/POS identity configuration | Historical destination import provenance is `25922b499d33bd73f241ffc26c212dd000e81433`; corrected future Agent candidate is `010abc52dc110cfde3dc2c53e057890ff6edaf97`; destination identities are `RmsSupportHub.Pos.*` plus retained `PosAdminTool.WinUI`. No environment credential or endpoint was added. |
+| Environment and branch/POS identity configuration | Historical destination import provenance is `25922b499d33bd73f241ffc26c212dd000e81433`; INT-04 Agent source baseline is `010abc52dc110cfde3dc2c53e057890ff6edaf97`; destination identities are `RmsSupportHub.Pos.*` plus retained `PosAdminTool.WinUI`. No environment credential or endpoint was added. |
 | Database connection and authentication model | `Microsoft.Data.SqlClient`; source preserves SQL connection behavior including `TrustServerCertificate=true`. Real SQL access and TLS deployment validation remain open. |
 | Secret storage and protected configuration | Source uses Windows DPAPI `DataProtectionScope.LocalMachine` and the `PosAdminTool.Agent.Secrets.v1` protected-data identity; no secret value is tracked. |
 | Logging, audit, and error handling | Imported code uses `Microsoft.Extensions.Logging`; Agent host composition, privileged audit, and live error/outcome evidence remain future work. |
@@ -224,7 +228,7 @@ POS Angular workspace is frozen/reference-only. WinUI is retained.
 The future Agent origin uses the fixed shape:
 
 ```text
-https://rms-pos-agent.localhost:<fixed-port>
+https://rms-pos-agent.localhost:5001
 ```
 
 The Agent binds only to loopback, uses trusted HTTPS and **HTTP/1.1 only** for
@@ -352,13 +356,15 @@ are available:
   evidence plan is approved.
 - The owner explicitly authorizes the applicable integration gate.
 
-The corrected Agent provenance candidate must receive the required Claude Opus
-privileged-boundary follow-up before INT-04 is opened. INT-04 remains
-owner-authorization required and is not executed by this intake.
+The corrected Agent provenance candidate received the destination INT-04
+composition gate after owner authorization. `PROV-1` is closed for that gate;
+the required live privileged-boundary, browser, operation, and device evidence
+still belongs to later owner-authorized work.
 
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
 privileges. INT-03 is complete for the approved Windows Infrastructure and
-retained WinUI source/build boundary. INT-04 and later implementation gates
-remain owner-authorization required; Agent runtime, POS Angular, and
-privileged operations remain out of scope until their own authorization.
+retained WinUI source/build boundary, and INT-04 is complete for the Agent host
+composition boundary. INT-05 and later implementation gates remain
+owner-authorization required; POS Angular and privileged operations remain out
+of scope until their own authorization.
