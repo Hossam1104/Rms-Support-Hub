@@ -94,6 +94,12 @@ Do not copy facts that can be cheaply discovered from the repository.
   npm ci`.
 - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
+- Manual IIS publish package: `.\scripts\publish-iis.ps1` - Angular production
+  build + .NET Release publish combined into `publish/RmsSupportHub-IIS/`
+  (API + `wwwroot/` Angular build) and `publish/RmsSupportHub-IIS.zip`
+  (contents at ZIP root, no outer folder). See `docs/MANUAL_IIS_DEPLOYMENT.md`.
+  Temporary manual workflow pending a CI/CD pipeline; script never touches
+  IIS or writes secrets into the package.
 
 ## Integrations
 

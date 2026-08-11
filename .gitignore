@@ -20,6 +20,9 @@ yarn-error.log*
 # Runtime data (drafts, logs) — never committed
 var/
 
+# Generated IIS deployment package (scripts/publish-iis.ps1) — never committed
+publish/
+
 # OS / IDE
 .DS_Store
 Thumbs.db

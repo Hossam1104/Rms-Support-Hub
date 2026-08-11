@@ -20,4 +20,15 @@
     <ProjectReference Include="..\RmsSupportHub.Data\RmsSupportHub.Data.csproj" />
   </ItemGroup>
 
+  <!--
+    var/ is runtime-owned draft storage (see Program.cs), never source-controlled
+    (.gitignore), but the SDK's implicit content glob would otherwise still pick
+    up whatever is on disk locally and copy it into every publish/deployment output.
+  -->
+  <ItemGroup>
+    <Content Remove="var\**" />
+    <Compile Remove="var\**" />
+    <None Remove="var\**" />
+  </ItemGroup>
+
 </Project>

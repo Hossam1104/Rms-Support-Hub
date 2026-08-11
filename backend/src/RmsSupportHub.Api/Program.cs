@@ -97,9 +97,26 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AngularClient");
 app.UseHttpsRedirection();
+
+// Serve the Angular production build from wwwroot; UseDefaultFiles resolves
+// "/" to wwwroot/index.html before UseStaticFiles serves the matched file.
+app.UseDefaultFiles();
 app.UseStaticFiles();
+
 app.UseAuthorization();
 app.MapControllers();
+
+// SPA fallback: any GET that isn't a static file and doesn't match an API
+// controller route (deep links, browser refresh) falls through to
+// index.html so Angular's router takes over client-side. Endpoint routing
+// matches before UseStaticFiles ever runs, so the route pattern needs the
+// same "nonfile" constraint MapFallbackToFile(string) applies by default --
+// without it, an extension-bearing path (main.js, styles.css, ...) matches
+// the fallback and StaticFileMiddleware defers to that already-selected
+// endpoint instead of serving the physical file. The added "not api/..."
+// constraint keeps a mistyped/removed API path a real 404 instead of a
+// silent 200 HTML response.
+app.MapFallbackToFile("{**path:nonfile:regex(^(?!api).*$)}", "index.html");
 
 app.Run();
 
