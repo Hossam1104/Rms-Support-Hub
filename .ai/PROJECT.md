@@ -1,10 +1,7 @@
 # Stable Project Context
-
 Read this file only when the task requires stable, non-obvious project knowledge.
 Do not copy facts that can be cheaply discovered from the repository.
-
 ## Product and Business Boundaries
-
 - RMS+ Support Hub is an internal browser application hosting QA support tools;
   Online Orders compose/validate/send/inspect/cancel/resend pharmacy orders;
   Prompt Studio generates locally; POS Maintenance is informational only.
@@ -24,9 +21,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   authoritative split and runs inside `FlatOrderPayloadBuilder`.
 - Order status controls cancel/resend eligibility through
   `OrderRequestStatus`; controllers re-check these rules server-side.
-
 ## Architecture Invariants
-
 - Backend layering is Core (domain, capabilities, builders, validators) -> Data
   (Dapper repositories) -> API (controllers, middleware, DI); Core has no
   external package dependency.
@@ -78,12 +73,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   `25922b499d33bd73f241ffc26c212dd000e81433`.
 - INT-04 composes a Windows-targeted, headless ASP.NET Core host capable of
   Windows Service deployment at `https://rms-pos-agent.localhost:5001`.
-  It owns Negotiate/local-Administrators, exact-origin CORS/Origin,
-  mutation-token, and service-owned storage foundations. Feature operations,
-  OpenAPI, POS Angular, and Support Hub frontend/backend integration remain
-  excluded; live-device and browser evidence remain governed gates.
+  INT-05 adds the Agent-owned versioned OpenAPI source/generation under
+  `/pos/openapi`, the Support Hub-owned `openapi-typescript@7.13.0` generated
+  contract, and a dedicated `HttpBackend` direct-Agent transport under
+  `frontend/src/app/core/pos-agent`. Production registers no feature operations
+  and does not expose runtime OpenAPI; POS UI activation, feature operations,
+  and live-device/browser evidence remain governed gates.
 ## Build and Validation Entry Points
-
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.
 - Backend tests: `dotnet test backend/RmsSupportHub.slnx -c Release --nologo`.
@@ -99,6 +95,12 @@ Do not copy facts that can be cheaply discovered from the repository.
   4200. Agent-run live verification uses Testing only, never Production.
 - Restore/install: `dotnet restore backend/RmsSupportHub.slnx`; `cd frontend;
   npm ci`.
+- POS Agent contract generation: set the deployment-owned
+  `PosAgentSecurity__SupportHubOrigin` environment value, build
+  `pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj` to generate
+  `pos/openapi/RmsSupportHub.Pos.Agent.json`, then run `cd frontend; npm ci;
+  npm run generate:pos-agent-client`. The generated TypeScript output is under
+  `frontend/src/app/core/pos-agent/generated/` and is not edited manually.
 - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj -c Release --no-build --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 - Manual IIS publish package: `.\scripts\publish-iis.ps1` - Angular production
@@ -107,7 +109,6 @@ Do not copy facts that can be cheaply discovered from the repository.
   (contents at ZIP root, no outer folder). See `docs/MANUAL_IIS_DEPLOYMENT.md`.
   Temporary manual workflow pending a CI/CD pipeline; script never touches
   IIS or writes secrets into the package.
-
 ## Integrations
 
 - SQL Server supports lookups and request history. Ownership `RmsSupportHub.Data`;
@@ -127,7 +128,6 @@ Do not copy facts that can be cheaply discovered from the repository.
   SQL/SMB credentials, allowlisted operations, and privileged audit. Per-device
   scope is required; loopback, LNA, Negotiate/SPN, certificate lifecycle, and
   device-operation evidence remain gates, not current Hub runtime facts.
-
 ## Critical Conventions
 
 - Never invent SQL columns or payload keys. Verify against current repositories,

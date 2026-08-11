@@ -11,7 +11,8 @@ public sealed class CanonicalHostValidationMiddleware(RequestDelegate next)
             await AgentHttpErrors.WriteAsync(
                 context,
                 StatusCodes.Status400BadRequest,
-                "The request host is not accepted.");
+                "The request host is not accepted.",
+                AgentProblemCodes.HostRejected);
             return;
         }
 

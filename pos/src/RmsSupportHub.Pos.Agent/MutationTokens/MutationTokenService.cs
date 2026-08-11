@@ -4,15 +4,16 @@ using RmsSupportHub.Pos.Agent.Security;
 namespace RmsSupportHub.Pos.Agent.MutationTokens;
 
 /// <summary>
-/// Issues a token only for the authenticated Windows SID, exact configured Origin, current HTTP
-/// method, and a server-owned operation identifier. INT-04 intentionally exposes no issuance route.
+/// Issues a token only for the authenticated Windows SID, exact configured Origin, and the target
+/// method resolved from the server-owned operation registry. The issuance request's POST method
+/// is never used as the future mutation target.
 /// </summary>
 public sealed class MutationTokenService(IMutationTokenStore store, AgentSecurityOptions options)
 {
-    public MutationTokenIssue Issue(HttpContext context, string operationId)
+    public MutationTokenIssue Issue(HttpContext context, MutationOperationDescriptor operation)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
+        ArgumentNullException.ThrowIfNull(operation);
 
         if (!AgentPrincipal.TryGetSid(context.User, out var sid))
         {
@@ -25,6 +26,6 @@ public sealed class MutationTokenService(IMutationTokenStore store, AgentSecurit
             throw new InvalidOperationException("The request Origin is not the configured Support Hub origin.");
         }
 
-        return store.Issue(sid, origin, context.Request.Method, operationId);
+        return store.Issue(sid, origin, operation.HttpMethod, operation.OperationId);
     }
 }

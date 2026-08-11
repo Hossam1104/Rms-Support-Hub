@@ -36,6 +36,25 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## POS Agent contract types
+
+The POS Agent owns the authoritative OpenAPI document at
+`../pos/openapi/RmsSupportHub.Pos.Agent.json`. After building the Agent with its
+deployment-owned `PosAgentSecurity:SupportHubOrigin` configuration, install the
+locked frontend dependencies and regenerate the destination-owned TypeScript
+types:
+
+```bash
+npm ci
+npm run generate:pos-agent-client
+```
+
+The generated output is
+`src/app/core/pos-agent/generated/pos-agent-api.generated.ts`; it is derived
+output and must not be edited manually. The dedicated POS Agent transport uses
+`HttpBackend` so the Support Hub API interceptor chain cannot rewrite its
+credentialed direct-Agent requests.
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:

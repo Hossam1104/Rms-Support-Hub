@@ -28,6 +28,7 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
         Assert.Contains("/health/live", endpoints);
         Assert.Contains("/health/ready", endpoints);
         Assert.Contains("/api/v1/session", endpoints);
+        Assert.Contains("/api/v1/security/mutation-token", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));
@@ -46,6 +47,7 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
     [InlineData("/api/v1/configuration")]
     [InlineData("/api/v1/operations")]
     [InlineData("/api/v1/artifacts")]
+    [InlineData("/api/v1/security/other")]
     public async Task LaterFeatureRoutesRemainUnmapped(string path)
     {
         using var client = _factory.CreateAdminClient();

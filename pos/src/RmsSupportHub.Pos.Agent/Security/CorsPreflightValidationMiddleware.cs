@@ -25,7 +25,8 @@ public sealed class CorsPreflightValidationMiddleware(RequestDelegate next, Agen
                 await AgentHttpErrors.WriteAsync(
                     context,
                     StatusCodes.Status403Forbidden,
-                    "The CORS preflight request is not accepted.");
+                    "The CORS preflight request is not accepted.",
+                    AgentProblemCodes.CorsPreflightRejected);
                 return;
             }
         }

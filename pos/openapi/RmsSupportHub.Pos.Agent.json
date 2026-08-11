@@ -1,0 +1,286 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "RMS+ POS Agent API",
+    "description": "Destination-owned foundation contract for the per-device POS Agent. Browser credentials are supplied by Windows Negotiate; mutation tokens are short-lived, one-use, and server-operation-bound.",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "https://rms-pos-agent.localhost:5001",
+      "description": "Fixed HTTPS loopback Agent origin"
+    }
+  ],
+  "paths": {
+    "/health/live": {
+      "get": {
+        "tags": [
+          "RmsSupportHub.Pos.Agent"
+        ],
+        "operationId": "GetHealthLive",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatusDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "RmsSupportHub.Pos.Agent"
+        ],
+        "operationId": "GetHealthReady",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatusDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/session": {
+      "get": {
+        "tags": [
+          "RmsSupportHub.Pos.Agent"
+        ],
+        "operationId": "GetAgentSession",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionInfoDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/security/mutation-token": {
+      "post": {
+        "tags": [
+          "RmsSupportHub.Pos.Agent"
+        ],
+        "operationId": "IssueMutationToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationTokenIssueRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationTokenIssueResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentProblemDetailsDto": {
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correlationId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "HealthStatusDto": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "MutationTokenIssueRequestDto": {
+        "required": [
+          "operationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          }
+        }
+      },
+      "MutationTokenIssueResponseDto": {
+        "required": [
+          "token",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SessionInfoDto": {
+        "required": [
+          "principalName",
+          "isAuthorized",
+          "agentVersion",
+          "apiVersion",
+          "supportedApiVersions"
+        ],
+        "type": "object",
+        "properties": {
+          "principalName": {
+            "type": "string"
+          },
+          "isAuthorized": {
+            "type": "boolean"
+          },
+          "agentVersion": {
+            "type": "string"
+          },
+          "apiVersion": {
+            "type": "string"
+          },
+          "supportedApiVersions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "WindowsNegotiate": {
+        "type": "http",
+        "description": "Windows Integrated Authentication using Negotiate. The browser/OS supplies credentials with a credentialed cross-origin request; clients must rely on the browser's integrated credential flow.",
+        "scheme": "negotiate"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "RmsSupportHub.Pos.Agent"
+    }
+  ]
+}

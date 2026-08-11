@@ -19,7 +19,8 @@ public sealed class ExactOriginMiddleware(RequestDelegate next, AgentSecurityOpt
                 await AgentHttpErrors.WriteAsync(
                     context,
                     StatusCodes.Status403Forbidden,
-                    "The request origin is not accepted.");
+                    "The request origin is not accepted.",
+                    AgentProblemCodes.OriginRejected);
                 return;
             }
         }

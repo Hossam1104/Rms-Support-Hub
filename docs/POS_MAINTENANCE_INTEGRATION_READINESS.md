@@ -18,10 +18,11 @@ imported only the approved portable Domain/Application/Contracts source and the
 two portable test suites. INT-03 imported the approved Windows Infrastructure,
 Infrastructure test, and retained WinUI boundaries. INT-03R corrected the
 source provenance snapshot. Owner-authorized INT-04 composed the destination
-Agent host foundation; no POS Angular feature or Support Hub API/frontend
-integration was implemented.
+Agent host foundation; INT-05 added the Agent-owned OpenAPI contract and
+Support Hub transport/type foundation. No POS Angular feature or Support Hub
+API relay/UI integration was implemented.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-05 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 / INT-05 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -29,7 +30,7 @@ recorded in the canonical plan and ADRs. Live Agent, browser-policy,
 representative-device, and real-operation evidence remains open. INT-02
   portable source import is complete; Windows Infrastructure and Agent tests and
   retained WinUI publish validation are complete. Agent host composition is
-  complete, while Support Hub feature work, browser/OpenAPI/client transport,
+  complete, while Support Hub feature work, live browser transport evidence,
   and live operation evidence remain owner-gated/open.
 
 ## INT-03R provenance integrity correction
@@ -172,9 +173,9 @@ They are not implementation authorization and are not changed by INT-00R.
 | Route metadata | `frontend/src/app/core/models/tool.model.ts` (`TOOL_ROUTE_DATA.posMaintenance`) | Flip availability only after the Agent contract and feature are proven. |
 | Hub tile | `frontend/src/app/features/hub/tool-registry.ts` | Update capability and action text only with the real feature. |
 | Feature folder | `frontend/src/app/features/pos-maintenance/` | The final Support Hub feature replaces the placeholder here and owns the UI. |
-| Agent contract | `/pos/src/RmsSupportHub.Pos.Contracts` and composed `RmsSupportHub.Pos.Agent` | INT-04 supplies the headless host/security foundation and only health/session routes. INT-05 owns typed POS operations, authoritative OpenAPI, and the generated Support Hub client; do not place privileged endpoints in `RmsSupportHub.Api`. |
+| Agent contract | `/pos/src/RmsSupportHub.Pos.Contracts`, `/pos/openapi`, and composed `RmsSupportHub.Pos.Agent` | INT-04 supplies the headless host/security foundation; INT-05 owns the versioned authoritative OpenAPI, server-owned token registry seam, generated Support Hub types, and isolated direct transport. Do not place privileged endpoints in `RmsSupportHub.Api`. |
 | DI and configuration | `/pos/src/RmsSupportHub.Pos.Agent/Program.cs` plus deployment configuration | INT-04 composes Windows Service hosting, fixed origin `https://rms-pos-agent.localhost:5001`, Negotiate, authorization, CORS/Origin, mutation-token, and service-owned storage ports. Keep deployment identity, certificate, browser policy, and operation allowlists outside tracked secrets. Do not add POS DI to the general API. |
-| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests`, and `/pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests` | Domain 7/7, Application 75/75, Infrastructure 60/60, and Agent 57/57 passed; future work adds OpenAPI, cross-process, WinUI cutover, browser-policy, and representative-device lanes in the destination. |
+| Tests | Existing Support Hub tests plus `/pos/tests/RmsSupportHub.Pos.Domain.Tests`, `/pos/tests/RmsSupportHub.Pos.Application.Tests`, `/pos/tests/RmsSupportHub.Pos.Infrastructure.Tests`, and `/pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests` | Domain 7/7, Application 75/75, Infrastructure 60/60, and Agent 69/69 passed; frontend 341/341 across 56 files; OpenAPI/client drift and WinUI publish lanes are validated. Live browser/device evidence remains open. |
 
 ## Shared primitives to reuse
 
@@ -261,32 +262,34 @@ metadata and dependencies. No privileged POS execution was added to
 `RmsSupportHub.Api`, `Core`, or `Data`.
 
 The imported suites pass with Domain 7/0/0, Application 75/0/0,
-Infrastructure 60/0/0, and Agent 57/0/0 (passed/failed/skipped). The POS
+Infrastructure 60/0/0, and Agent 69/0/0 (passed/failed/skipped). The POS
 solution Release build passes with zero warnings/errors. Retained WinUI
 publishes for `win-x64` and contains `PosAdminTool.WinUI.exe` and the expected
-packaged resource set, including 11 `.xbf` resources. INT-04's Agent host was
-not launched as a live service; no Angular source, raw POS history, or live
-Windows/device runtime was executed.
+packaged resource set, including 33 `.xbf` and 15 `.pri` resources. INT-05's
+OpenAPI and TypeScript generation is deterministic and the frontend suite passes
+341/341 across 56 files. The Agent host was not launched as a live service; no
+feature UI, raw POS history, or live Windows/device runtime was executed.
 
 The following remain future owner-gated work:
 
-1. Inventory real operations and privileges, then define the Agent-owned typed
-   OpenAPI contract and Support Hub generated consumer.
-2. Implement and validate the final Support Hub feature, browser transport,
-   OpenAPI/client adapter, cross-process behavior, and representative-device
-   evidence in their authorized gates. INT-04's host foundation is complete;
-   live SQL/SCM/SMB/device behavior remains evidence work.
+1. Validate the live browser transport: certificate trust/lifecycle, LNA,
+   Negotiate/SPN, browser policy, loopback back-connection, and representative
+   device behavior in the authorized evidence gate.
+2. Implement and validate the final Support Hub feature and later privileged
+   operations in their separately authorized gates. INT-05's contract/client
+   foundation is complete; live SQL/SCM/SMB/device behavior remains evidence
+   work.
 
-INT-01, INT-02, INT-03, INT-03R, and INT-04 are complete. `PROV-1` is closed
-for the composition gate. INT-05 Browser Transport / OpenAPI / Client Adapter
+INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-05 are complete. `PROV-1` is
+closed for the composition gate. INT-06 Live Transport Security Evidence
 remains owner-authorization required and is not executed by this integration.
 
 ## Required post-integration validation
 
 | Gate | Requirement |
 | --- | --- |
-| Frontend suite | `npm --prefix frontend test -- --watch=false`; no regression against the recorded 325-test baseline, plus new POS tests |
-| Backend suite | 188 existing tests still pass, plus new Agent/POS tests |
+| Frontend suite | `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 341 tests across 56 files passed |
+| Backend suite | POS Domain 7, Application 75, Infrastructure 60, and Agent 69 tests pass |
 | Full gate | `./scripts/build.ps1` or the repository's Windows equivalent: backend tests, Release build with 0 warnings, and Angular production build |
 | Bundle budgets | POS stays out of the initial bundle beyond its route chunk; investigate meaningful growth |
 | Offline build | `production-offline` still succeeds |

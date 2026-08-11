@@ -8,7 +8,9 @@ Domain/Application/Contracts boundary and its existing portable tests; INT-03
 has now imported the approved Windows Infrastructure, Infrastructure tests, and
 retained WinUI boundary. The POS Maintenance Tool is developed independently;
 RMS+ Support Hub does not implement, connect to, or infer privileged POS
-operations today.
+operations today. INT-05 now supplies only the destination-owned Agent
+contract/type/transport foundation; it does not activate POS UI or feature
+operations.
 
 INT-00 closed the destination-side architecture only. INT-00R kept the POS
 repository read-only and performed only the required provenance spot checks.
@@ -31,9 +33,10 @@ validated. INT-03 establishes source/build parity for the imported Windows and
 WinUI boundary only. Owner-authorized INT-04 then composed the destination-owned
 headless Agent host from this corrected Agent provenance. Its fixed origin is
 `https://rms-pos-agent.localhost:5001`; it exposes only the health/live,
-health/ready, and authenticated session foundation routes. The remaining
-browser transport, OpenAPI/client, operation, and live-device rows below still
-require later evidence.
+health/ready, authenticated session, and mutation-token foundation routes. INT-05
+adds the versioned Agent OpenAPI document and Support Hub-owned generated client
+types/direct transport. Live browser/device evidence and feature operations
+still require later authorization.
 
 The clean portable import inventory is:
 
@@ -102,7 +105,7 @@ evidence.
 | Secret storage and protected configuration | Source uses Windows DPAPI `DataProtectionScope.LocalMachine` and the `PosAdminTool.Agent.Secrets.v1` protected-data identity; no secret value is tracked. |
 | Logging, audit, and error handling | Imported code uses `Microsoft.Extensions.Logging`; Agent host composition, privileged audit, and live error/outcome evidence remain future work. |
 | Deployment, certificate, browser policy, and rollback requirements | Source/build facts are reviewed; trusted machine certificate, browser/LNA policy, service deployment, rollback, and representative-device evidence remain open. |
-| OpenAPI surface and generated-client inputs | Not implemented by INT-03; owned by the future Agent/runtime gate. |
+| OpenAPI surface and generated-client inputs | INT-05 complete: the Agent owns the versioned build-time document under `/pos/openapi`; Support Hub owns `openapi-typescript@7.13.0`, the lockfile, and generated types under `frontend/src/app/core/pos-agent/generated/`. |
 
 ## Dependency review checklist
 
@@ -221,9 +224,10 @@ RmsSupportHub.Pos.Agent
 
 The general `RmsSupportHub.Api` is not in the initial privileged path. The
 portable Support Hub `Core` and `Data` projects do not reference Windows POS
-Infrastructure. The Agent owns the authoritative OpenAPI contract and the
-Support Hub owns the final generated/typed Angular consumer. The standalone
-POS Angular workspace is frozen/reference-only. WinUI is retained.
+Infrastructure. The Agent owns the authoritative versioned OpenAPI contract and
+the Support Hub owns the final generated/typed Angular consumer plus its
+isolated direct transport. The standalone POS Angular workspace is
+frozen/reference-only. WinUI is retained.
 
 The future Agent origin uses the fixed shape:
 
@@ -364,7 +368,8 @@ still belongs to later owner-authorized work.
 If any item is missing, the future assessment must report that exact missing
 intake item rather than inventing source facts, operations, dependencies, or
 privileges. INT-03 is complete for the approved Windows Infrastructure and
-retained WinUI source/build boundary, and INT-04 is complete for the Agent host
-composition boundary. INT-05 and later implementation gates remain
-owner-authorization required; POS Angular and privileged operations remain out
-of scope until their own authorization.
+retained WinUI source/build boundary, INT-04 is complete for the Agent host
+composition boundary, and INT-05 is complete for the contract/client foundation.
+INT-06 and later implementation gates remain owner-authorization required; POS
+Angular feature activation and privileged operations remain out of scope until
+their own authorization.

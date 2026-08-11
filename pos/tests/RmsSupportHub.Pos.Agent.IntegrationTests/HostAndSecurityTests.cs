@@ -55,7 +55,7 @@ public sealed class HostAndSecurityTests : IClassFixture<AgentWebApplicationFact
     }
 
     [Fact]
-    public async Task ErrorResponseCarriesCorrelationAndApiSecurityHeaders()
+    public async Task HostGateRejectsBeforeCallerCorrelationProcessing()
     {
         using var client = _factory.CreateSecureClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health/live");
@@ -64,7 +64,23 @@ public sealed class HostAndSecurityTests : IClassFixture<AgentWebApplicationFact
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal("host-rejection-test", response.Headers.GetValues("X-Correlation-Id").Single());
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.DoesNotContain("X-Correlation-Id", response.Headers.Select(header => header.Key));
+        Assert.DoesNotContain("X-Frame-Options", response.Headers.Select(header => header.Key));
+    }
+
+    [Fact]
+    public async Task PostCorrelationErrorCarriesCorrelationAndApiSecurityHeaders()
+    {
+        using var client = _factory.CreateAdminClient();
+        client.DefaultRequestHeaders.Remove("Origin");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/session");
+        request.Headers.Add("X-Correlation-Id", "origin-rejection-test");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("origin-rejection-test", response.Headers.GetValues("X-Correlation-Id").Single());
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());

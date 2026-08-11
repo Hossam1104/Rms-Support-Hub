@@ -36,9 +36,11 @@ public sealed class MutationTokenEndpointFilter : IEndpointFilter
         var origin = request.Headers.Origin.ToString();
         if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(origin))
         {
-            return new ValueTask<object?>(Results.Problem(
-                statusCode: StatusCodes.Status403Forbidden,
-                title: "The mutation request token is required."));
+            return new ValueTask<object?>(AgentProblemDetails.CreateResult(
+                context.HttpContext,
+                StatusCodes.Status403Forbidden,
+                "The mutation request token is required.",
+                AgentProblemCodes.MutationTokenInvalid));
         }
 
         var store = context.HttpContext.RequestServices.GetRequiredService<IMutationTokenStore>();
@@ -51,9 +53,11 @@ public sealed class MutationTokenEndpointFilter : IEndpointFilter
 
         if (!result.Succeeded)
         {
-            return new ValueTask<object?>(Results.Problem(
-                statusCode: StatusCodes.Status403Forbidden,
-                title: "The mutation request token is invalid."));
+            return new ValueTask<object?>(AgentProblemDetails.CreateResult(
+                context.HttpContext,
+                StatusCodes.Status403Forbidden,
+                "The mutation request token is invalid.",
+                AgentProblemCodes.MutationTokenInvalid));
         }
 
         return next(context);

@@ -45,10 +45,13 @@ public sealed class ArchitectureBoundaryTests
 
         Assert.Contains("Sdk=\"Microsoft.NET.Sdk.Web\"", project, StringComparison.Ordinal);
         Assert.Contains("Microsoft.AspNetCore.Authentication.Negotiate\" Version=\"10.0.10\"", project, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.AspNetCore.OpenApi\" Version=\"10.0.10\"", project, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.Extensions.ApiDescription.Server\" Version=\"10.0.10\"", project, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.OpenApi\" Version=\"2.7.5\"", project, StringComparison.Ordinal);
         Assert.Contains("Microsoft.Extensions.Hosting.WindowsServices\" Version=\"10.0.10\"", project, StringComparison.Ordinal);
         Assert.DoesNotContain("Angular", project, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("npm", project, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("OpenApi", project, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("wwwroot", project, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

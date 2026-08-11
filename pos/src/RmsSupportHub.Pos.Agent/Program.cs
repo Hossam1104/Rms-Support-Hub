@@ -2,12 +2,15 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.OpenApi;
 using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
+using RmsSupportHub.Pos.Contracts.V1.Common;
+using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Infrastructure.Backups;
@@ -85,6 +88,14 @@ builder.Services.AddSingleton<InMemoryMutationTokenStore>();
 builder.Services.AddSingleton<IMutationTokenStore>(services =>
     services.GetRequiredService<InMemoryMutationTokenStore>());
 builder.Services.AddSingleton<MutationTokenService>();
+// INT-05 deliberately composes an empty production registry. Feature sessions add their own
+// typed descriptors; no fake privileged operation is registered merely to make issuance succeed.
+builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry());
+
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.AddDocumentTransformer<AgentOpenApiDocumentTransformer>();
+});
 
 // INT-04 composes only the safe storage ports. It deliberately does not register legacy WinUI
 // configuration importers, configuration mutation services, operation workers, or feature endpoints.
@@ -100,10 +111,10 @@ builder.Services.AddSingleton<ArtifactCatalog>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<CanonicalHostValidationMiddleware>();
 app.UseMiddleware<HttpsOnlyMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseRouting();
 
 // CORS must run before authentication so a valid exact-origin OPTIONS request remains anonymous.
@@ -113,20 +124,24 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<ExactOriginMiddleware>();
 
-app.MapGet("/health/live", () => Results.Ok(new { status = "live" }))
+app.MapGet("/health/live", () => Results.Ok(new HealthStatusDto("live")))
     .AllowAnonymous()
-    .WithName("GetHealthLive");
-app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }))
+    .WithName("GetHealthLive")
+    .Produces<HealthStatusDto>(StatusCodes.Status200OK);
+app.MapGet("/health/ready", () => Results.Ok(new HealthStatusDto("ready")))
     .AllowAnonymous()
-    .WithName("GetHealthReady");
+    .WithName("GetHealthReady")
+    .Produces<HealthStatusDto>(StatusCodes.Status200OK);
 
 app.MapGet("/api/v1/session", (HttpContext context, IAdministratorGroupChecker administratorGroupChecker) =>
     {
         if (!AgentPrincipal.TryGetSid(context.User, out _))
         {
-            return Results.Problem(
-                statusCode: StatusCodes.Status403Forbidden,
-                title: "The authenticated Windows SID could not be resolved.");
+            return AgentProblemDetails.CreateResult(
+                context,
+                StatusCodes.Status403Forbidden,
+                "The authenticated Windows SID could not be resolved.",
+                AgentProblemCodes.WindowsSidUnavailable);
         }
 
         var principalName = context.User.Identity?.Name ?? "authenticated Windows user";
@@ -140,7 +155,63 @@ app.MapGet("/api/v1/session", (HttpContext context, IAdministratorGroupChecker a
         return Results.Ok(response);
     })
     .RequireAuthorization()
-    .WithName("GetAgentSession");
+    .WithName("GetAgentSession")
+    .Produces<SessionInfoDto>(StatusCodes.Status200OK)
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
+
+app.MapPost(
+        "/api/v1/security/mutation-token",
+        (HttpContext context,
+            MutationTokenIssueRequestDto request,
+            IMutationOperationRegistry operationRegistry,
+            MutationTokenService mutationTokenService) =>
+        {
+            if (!AgentPrincipal.TryGetSid(context.User, out _))
+            {
+                return AgentProblemDetails.CreateResult(
+                    context,
+                    StatusCodes.Status403Forbidden,
+                    "The authenticated Windows SID could not be resolved.",
+                    AgentProblemCodes.WindowsSidUnavailable);
+            }
+
+            if (!operationRegistry.TryGet(request.OperationId, out var operation))
+            {
+                return AgentProblemDetails.CreateResult(
+                    context,
+                    StatusCodes.Status400BadRequest,
+                    "The requested mutation operation is not supported.",
+                    AgentProblemCodes.OperationNotSupported);
+            }
+
+            try
+            {
+                var issued = mutationTokenService.Issue(context, operation);
+                return Results.Ok(new MutationTokenIssueResponseDto(issued.Token, issued.ExpiresAtUtc));
+            }
+            catch (MutationTokenCapacityException)
+            {
+                return AgentProblemDetails.CreateResult(
+                    context,
+                    StatusCodes.Status429TooManyRequests,
+                    "The mutation-token retention limit has been reached.",
+                    AgentProblemCodes.MutationTokenCapacity);
+            }
+        })
+    .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
+    .WithName("IssueMutationToken")
+    .Accepts<MutationTokenIssueRequestDto>("application/json")
+    .Produces<MutationTokenIssueResponseDto>(StatusCodes.Status200OK)
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status401Unauthorized, "application/problem+json")
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status429TooManyRequests, "application/problem+json");
+
+if (app.Environment.IsDevelopment()
+    || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))
+{
+    app.MapOpenApi("/openapi/{documentName}.json");
+}
 
 app.Run();
 

@@ -11,7 +11,8 @@ public sealed class HttpsOnlyMiddleware(RequestDelegate next)
             await AgentHttpErrors.WriteAsync(
                 context,
                 StatusCodes.Status400BadRequest,
-                "The Agent accepts HTTPS requests only.");
+                "The Agent accepts HTTPS requests only.",
+                AgentProblemCodes.HttpsRequired);
             return;
         }
 

@@ -7,10 +7,19 @@
     <Nullable>enable</Nullable>
     <AssemblyName>RmsSupportHub.Pos.Agent</AssemblyName>
     <RootNamespace>RmsSupportHub.Pos.Agent</RootNamespace>
+    <OpenApiGenerateDocumentsOnBuild>true</OpenApiGenerateDocumentsOnBuild>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)\..\..\openapi\</OpenApiDocumentsDirectory>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- Keep the patched OpenAPI model version required by the security review. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
   </ItemGroup>
 

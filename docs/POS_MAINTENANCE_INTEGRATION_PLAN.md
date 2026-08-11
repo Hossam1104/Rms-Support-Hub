@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-04 and the current INT-05 owner gate.
+INT-05 and the current INT-06 owner gate.
 
 ```text
 INT-00: COMPLETE
@@ -48,7 +48,10 @@ INT-04:
 COMPLETE - AGENT HOST / RUNTIME COMPOSITION
 
 INT-05:
-OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
+COMPLETE - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
+
+NEXT:
+INT-06 - LIVE TRANSPORT SECURITY EVIDENCE / OWNER AUTHORIZATION REQUIRED
 ```
 
 INT-00 closes the cross-project architecture decision. INT-01 created the
@@ -61,9 +64,11 @@ destination-owned headless Agent host from corrected POS provenance
 `https://rms-pos-agent.localhost:5001`, HTTP/1.1 loopback binding, Windows
 Service hosting, production Negotiate, local-Administrators/SID authorization,
 exact-origin CORS/Origin enforcement, mutation-token and service-owned storage
-foundations, and only health/live, health/ready, and authenticated session
-routes. No POS Angular, feature operations, OpenAPI, or Support Hub application
-behavior change was added.
+foundations, and only health/live, health/ready, authenticated session, and
+mutation-token foundation routes. INT-05 adds the destination-owned versioned
+OpenAPI document, deterministic Support Hub generated types, and a dedicated
+direct-Agent Angular transport; it does not add feature operations or activate
+the POS UI.
 
 The POS repository is a read-only provenance source. INT-04 started from the
 Support Hub `main` head and `origin/main` at
@@ -458,8 +463,10 @@ retained WinUI projects are Windows-targeted. Existing Support Hub backend
 projects remain portable. INT-02 populated the Domain, Application, and
 Contracts destination projects plus the Domain/Application test projects; INT-03
 imported the Windows Infrastructure, Infrastructure test, and retained WinUI
-source from the approved tracked snapshot. Agent runtime, POS Angular, and
-privileged execution source remain unimported.
+source from the approved tracked snapshot. INT-04/INT-05 compose the
+destination-owned Agent runtime and Support Hub contract/transport foundation;
+the standalone POS Angular workspace and privileged feature execution source
+remain unimported.
 
 The future source boundary is:
 
@@ -478,10 +485,11 @@ source `.csproj` and `packages.lock.json` files remain excluded.
 
 ## Contract, frontend, and CI ownership
 
-- The Agent owns the authoritative POS OpenAPI contract and operation
-  semantics.
-- Support Hub owns the final generated/typed Angular consumer. Generated code
-  is derived output and is not imported as POS application source.
+- The Agent owns the authoritative versioned OpenAPI contract and server-owned
+  operation semantics at `/pos/openapi`.
+- Support Hub owns the exact `openapi-typescript@7.13.0` dependency, lockfile,
+  deterministic generated Angular types, and dedicated `HttpBackend` transport.
+  Generated code is derived output and is not imported as POS application source.
 - The standalone POS Angular workspace remains frozen/reference-only.
 - Support Hub owns `package.json`, the lockfile, routes, UI primitives, design
   tokens, and the final POS feature implementation.
@@ -508,9 +516,10 @@ The destination CI plan has separate lanes for:
 No workflow was created by INT-00. INT-01 created the destination-owned
 `.github/workflows/pos-ci.yml`; INT-02 extended its portable lane with real
 test-project restore/build/test steps; INT-03 added the Windows Infrastructure
-test lane and retained WinUI publish validation. The R2 CI finding is closed by
-ownership decomposition, not by copying the historical POS workflow into the
-Hub.
+test lane and retained WinUI publish validation; INT-05 added the pinned
+OpenAPI/generated-client drift lane and frontend path triggers. The R2 CI finding
+is closed by ownership decomposition, not by copying the historical POS workflow
+into the Hub.
 
 ## Deployment decisions and evidence gates
 
@@ -623,7 +632,7 @@ FIXED AGENT ORIGIN:
 https://rms-pos-agent.localhost:5001
 
 NEXT:
-INT-05 - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
+INT-06 - LIVE TRANSPORT SECURITY EVIDENCE
 
 OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 ```
@@ -651,12 +660,14 @@ EXCLUDED: 3 packages.lock.json files (destination package graphs are reconciled 
 ```
 
 The destination validation passed: Infrastructure tests 60/60; POS Domain,
-Application, and Agent integration tests 7/7, 75/75, and 57/57; solution Release
+Application, and Agent integration tests 7/7, 75/75, and 69/69; solution Release
 build with zero warnings/errors; and retained WinUI `win-x64` publish with
-`PosAdminTool.WinUI.exe`, 11 `.xbf` resources, and the expected packaged resource
-set. No application or live service was launched. INT-05 browser transport,
-OpenAPI/client adapter, feature operations, Support Hub UI integration, and
-representative-device evidence remain owner-gated/open.
+`PosAdminTool.WinUI.exe`, 33 `.xbf` resources, and 15 `.pri` resources. The
+frontend suite passed 341/341 across 56 files, production build budgets were
+clear, and OpenAPI/TypeScript generation was deterministic across two runs. No
+application, live service, browser, or Production runtime was launched. INT-06
+certificate/LNA/Negotiate/device evidence and later feature operations remain
+owner-gated/open.
 
 ## Reference material
 

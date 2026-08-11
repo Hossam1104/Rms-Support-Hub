@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
@@ -52,6 +53,12 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IAdministratorGroupChecker>();
             services.AddSingleton<IAdministratorGroupChecker, ClaimBasedAdministratorGroupChecker>();
+
+            services.RemoveAll<IMutationOperationRegistry>();
+            services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(
+            [
+                new MutationOperationDescriptor("integration.test-mutation", "PUT")
+            ]));
         });
     }
 

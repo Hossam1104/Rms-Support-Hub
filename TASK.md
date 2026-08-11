@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Implemented (INT-04 Agent Host / Runtime Composition; next gate owner authorization)
+**Role:** Implemented (INT-05 Browser Transport / OpenAPI / Client Adapter; next gate owner authorization)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -30,7 +30,7 @@ owner-authorized INT-03R correction produced the Agent source provenance
 `010abc52dc110cfde3dc2c53e057890ff6edaf97` for INT-04+.
 
 STATUS:
-INT-04 COMPLETE
+INT-05 COMPLETE
 
 INT-03:
 COMPLETE
@@ -39,7 +39,7 @@ INT-03F:
 COMPLETE
 
 NEXT:
-INT-05 - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER - OWNER AUTHORIZATION REQUIRED
+INT-06 - LIVE TRANSPORT SECURITY EVIDENCE - OWNER AUTHORIZATION REQUIRED
 
 CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW:
 PROV-1 CLOSED BY INT-03R / LIVE EVIDENCE OPEN
@@ -57,15 +57,16 @@ COMPLETE
 The destination-owned Agent is a headless ASP.NET Core Windows Service-capable
 host with fixed HTTPS origin `https://rms-pos-agent.localhost:5001`, HTTP/1.1
 loopback binding, Negotiate/local-Administrators policy, exact-origin CORS and
-Origin enforcement, mutation-token foundation, safe service-owned storage
-ports, and only the `/health/live`, `/health/ready`, and `/api/v1/session`
-foundation routes. No feature operations, OpenAPI, Angular, or Support Hub
-frontend/backend integration was added.
+Origin enforcement, server-owned mutation-token issuance, safe service-owned
+storage ports, and only the health/session/token foundation routes. INT-05 adds
+the authoritative versioned OpenAPI document, deterministic Support Hub
+generated types, and an isolated direct-Agent Angular transport. No feature
+operations or POS UI activation was added.
 
 NEXT:
-INT-05 - BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER
+INT-06 - LIVE TRANSPORT SECURITY EVIDENCE
 
 OWNER AUTHORIZATION REQUIRED
 NOT YET EXECUTED
 
-INT-05 MUST NOT BE EXECUTED IN THIS SESSION.
+INT-06 MUST NOT BE EXECUTED IN THIS SESSION.

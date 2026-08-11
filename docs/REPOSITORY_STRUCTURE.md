@@ -59,7 +59,9 @@ Rms-Support-Hub/
 ```
 
 INT-03 established the isolated POS build boundary with the approved portable,
-Windows Infrastructure, and retained WinUI source snapshot. Its current
+Windows Infrastructure, and retained WinUI source snapshot. INT-05 adds the
+generated Agent contract under `pos/openapi` and the isolated Support Hub
+transport under `frontend/src/app/core/pos-agent`. Its current
 destination is:
 
 ```text
@@ -86,8 +88,11 @@ POS test projects are destination-owned. The corrected Agent provenance for
 INT-04 is `010abc52dc110cfde3dc2c53e057890ff6edaf97`. The Agent is now a
 destination-owned headless ASP.NET Core host with fixed origin
 `https://rms-pos-agent.localhost:5001`, Windows Service hosting, and only
-health/live, health/ready, and authenticated session foundation routes. It has
-no POS Angular workspace or feature operation/OpenAPI surface. Existing Support
+health/live, health/ready, authenticated session, and mutation-token foundation
+routes. Its versioned OpenAPI document is generated into `/pos/openapi`; runtime
+OpenAPI is non-Production only. Support Hub owns the generated TypeScript types
+and isolated `HttpBackend` transport under `frontend/src/app/core/pos-agent/`.
+The standalone POS Angular workspace remains reference-only. Existing Support
 Hub `Core`, `Data`, and `Api` remain portable; the Agent owns privileged POS
 operations and the Support Hub general API is not their proxy or execution path.
 
