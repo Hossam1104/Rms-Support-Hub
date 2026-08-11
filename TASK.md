@@ -1,7 +1,7 @@
 # RMS+ Support Hub - Maintenance
 
 **Role:** Plan (INT-03 Windows Infrastructure + retained WinUI import; owner gate)
-**Branch:** `int-02-pos-portable-import`
+**Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
 ## Current phase

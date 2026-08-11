@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Updated:** 2026-08-11
-- **Branch:** `int-02-pos-portable-import`
+- **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00, INT-00R,
   INT-01, and INT-02 portable POS source import complete.
 - **Next gate:** INT-03 Windows Infrastructure + retained WinUI import - owner authorization required / not yet executed.
