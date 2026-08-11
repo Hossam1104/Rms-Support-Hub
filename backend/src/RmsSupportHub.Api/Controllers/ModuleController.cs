@@ -12,11 +12,13 @@ public class ModuleController : ControllerBase
 {
     private readonly IModuleRegistry _moduleRegistry;
     private readonly IDraftManager _draftManager;
+    private readonly IModuleHealthService _healthService;
 
-    public ModuleController(IModuleRegistry moduleRegistry, IDraftManager draftManager)
+    public ModuleController(IModuleRegistry moduleRegistry, IDraftManager draftManager, IModuleHealthService healthService)
     {
         _moduleRegistry = moduleRegistry;
         _draftManager = draftManager;
+        _healthService = healthService;
     }
 
     [HttpGet]
@@ -59,6 +61,18 @@ public class ModuleController : ControllerBase
         HasDeliveryFields: c.HasDeliveryFields,
         BranchLookup: c.BranchLookup
     );
+
+    /// <summary>Reachability of every environment's send endpoint, probed from
+    /// the API host. Kept off GET /api/modules so the catalog stays instant and
+    /// cacheable while the dashboard fills the dots in afterwards. The literal
+    /// "health" segment outranks the "{key}" route below, so this never
+    /// resolves as a module lookup.</summary>
+    [HttpGet("health")]
+    public async Task<ActionResult<IEnumerable<EnvironmentHealthDto>>> GetHealth(CancellationToken cancellationToken)
+    {
+        var health = await _healthService.GetHealthAsync(cancellationToken);
+        return Ok(health.Select(h => new EnvironmentHealthDto(h.ModuleKey, h.EnvironmentKey, h.Status, h.CheckedAt)));
+    }
 
     [HttpGet("{key}")]
     public async Task<ActionResult<object>> GetModule(string key)

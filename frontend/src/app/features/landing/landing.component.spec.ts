@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { EnvironmentDto, ModuleDto } from '../../core/models';
+import { EnvironmentDto, EnvironmentHealthMap, ModuleDto, environmentHealthKey } from '../../core/models';
 import { ModuleService } from '../../core/services/module.service';
 import { EmptyStateComponent } from '../../shared/ui';
 import { LandingComponent } from './landing.component';
@@ -37,6 +37,8 @@ class StubPageHeaderComponent {
 })
 class StubModuleCardComponent {
     @Input() module!: ModuleDto;
+    @Input() health: EnvironmentHealthMap = new Map();
+    @Input() healthPending = false;
     @Output() selectEnv = new EventEmitter<EnvironmentDto>();
 }
 
@@ -46,6 +48,11 @@ class StubModuleService {
         { key: 'upc_ecommerce', label: 'UPC E-commerce', available: true, environments: [{}, {}] } as unknown as ModuleDto,
         { key: 'ghc_ecommerce', label: 'GHC E-commerce', available: true, environments: [{}] } as unknown as ModuleDto
     ]);
+    health = signal<EnvironmentHealthMap>(new Map());
+    healthPending = signal(false);
+    loadHealthCalls = 0;
+    // Mirrors the real service: pending flips synchronously, before the await.
+    loadHealth = async () => { this.loadHealthCalls++; this.healthPending.set(true); };
 }
 
 describe('LandingComponent', () => {
@@ -90,7 +97,30 @@ describe('LandingComponent', () => {
         expect(cards.map(card => card.textContent?.trim())).toEqual(['UPC E-commerce', 'GHC E-commerce', 'OMS']);
 
         const stats = Array.from(main.querySelectorAll('.landing-stat strong')) as HTMLElement[];
-        expect(stats.map(stat => stat.textContent?.trim())).toEqual(['2 of 3', '3 routes']);
+        expect(stats.map(stat => stat.textContent?.trim())).toEqual(['2 of 3', '3 routes', 'Checking…']);
+    });
+
+    // The probe sweep waits on internal hosts, so it must never gate the grid.
+    it('starts the reachability sweep and rolls the result up in the hero', () => {
+        const fixture = TestBed.createComponent(LandingComponent);
+        fixture.detectChanges();
+
+        expect(moduleService.loadHealthCalls).toBe(1);
+        expect(fixture.nativeElement.querySelectorAll('app-module-card')).toHaveLength(3);
+
+        const health: EnvironmentHealthMap = new Map([
+            [environmentHealthKey('upc_ecommerce', 'UPC Production'), 'reachable'],
+            [environmentHealthKey('upc_ecommerce', 'UPC Testing'), 'unreachable'],
+            [environmentHealthKey('ghc_ecommerce', 'GHC Production'), 'reachable'],
+            [environmentHealthKey('oms', 'OMS Testing'), 'unconfigured']
+        ]);
+        moduleService.health.set(health);
+        moduleService.healthPending.set(false);
+        fixture.detectChanges();
+
+        const stats = Array.from(fixture.nativeElement.querySelectorAll('.landing-stat strong')) as HTMLElement[];
+        // Unconfigured lanes are excluded: nothing could be probed there.
+        expect(stats[2].textContent?.trim()).toBe('2 of 3');
     });
 
     // ModuleService.initialize() sets an empty list for both an empty response

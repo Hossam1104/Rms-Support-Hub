@@ -1,5 +1,5 @@
 import { ModuleCardComponent } from './module-card.component';
-import { EnvironmentDto, ModuleDto } from '../../core/models';
+import { EnvironmentDto, ModuleDto, environmentHealthKey } from '../../core/models';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { APP_ASSETS } from '../../core/config/app-assets';
@@ -97,5 +97,44 @@ describe('ModuleCardComponent', () => {
     expect(action.getAttribute('href')).toBe('/tools/online-orders/modules/upc_ecommerce/order');
     expect(action.textContent).toContain('Open Module');
     expect(fixture.nativeElement.querySelector('.module-card__availability')).toBeNull();
+  });
+
+  // The lane badge is config and the reachability chip is observation. They are
+  // rendered side by side and must never be collapsed into one another: a
+  // Production lane stays labelled "Live" while its host is unreachable.
+  it('shows reachability beside the lane badge without changing it', () => {
+    const component = new ModuleCardComponent();
+    component.module = { ...module, key: 'upc_ecommerce' } as ModuleDto;
+    const production = { key: 'UPC Production', statusLabel: 'Live' } as EnvironmentDto;
+    const testing = { key: 'UPC Testing', statusLabel: 'Test' } as EnvironmentDto;
+    const soon = { key: 'GHC Uni-Commerce Testing', statusLabel: 'Soon' } as EnvironmentDto;
+
+    component.healthPending = true;
+    expect(component.healthOf(production)).toBe('unknown');
+    expect(component.healthLabel(production)).toBe('Checking');
+
+    component.healthPending = false;
+    component.health = new Map([
+      [environmentHealthKey('upc_ecommerce', 'UPC Production'), 'unreachable'],
+      [environmentHealthKey('upc_ecommerce', 'UPC Testing'), 'reachable'],
+      [environmentHealthKey('upc_ecommerce', 'GHC Uni-Commerce Testing'), 'unconfigured']
+    ]);
+
+    expect(component.healthLabel(production)).toBe('Unreachable');
+    expect(component.healthLabel(testing)).toBe('Reachable');
+    expect(component.healthLabel(soon)).toBe('No endpoint');
+    // The lane label is untouched by the probe result.
+    expect(production.statusLabel).toBe('Live');
+  });
+
+  it('reports unknown rather than unreachable when the sweep never returned', () => {
+    const component = new ModuleCardComponent();
+    component.module = module;
+    component.healthPending = false;
+    component.health = new Map();
+
+    const env = { key: 'UPC Testing', statusLabel: 'Test' } as EnvironmentDto;
+    expect(component.healthOf(env)).toBe('unknown');
+    expect(component.healthLabel(env)).toBe('Unknown');
   });
 });

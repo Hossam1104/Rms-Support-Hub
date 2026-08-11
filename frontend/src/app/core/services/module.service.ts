@@ -1,7 +1,14 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
-import { ModuleDto, EnvironmentDto, OrderDraft } from '../models';
+import {
+  ModuleDto,
+  EnvironmentDto,
+  EnvironmentHealthDto,
+  EnvironmentHealthMap,
+  OrderDraft,
+  environmentHealthKey
+} from '../models';
 
 /** GET /api/modules/{key} response body. */
 export interface ModuleDetailResponse {
@@ -47,6 +54,12 @@ export class ModuleService {
   activeModule = signal<ModuleDto | null>(null);
   activeEnvironment = signal<EnvironmentDto | null>(null);
 
+  /** Endpoint reachability, keyed by `environmentHealthKey`. Empty until the
+   * probe sweep returns; an environment missing from the map is `unknown`,
+   * never `unreachable`. */
+  health = signal<EnvironmentHealthMap>(new Map());
+  healthPending = signal(false);
+
   async initialize(): Promise<void> {
     try {
       const modules = await firstValueFrom(this.api.get<ModuleDto[]>('modules'));
@@ -54,6 +67,28 @@ export class ModuleService {
     } catch (err) {
       console.error('Failed to load /api/modules at startup.', err);
       this.modules.set([]);
+    }
+  }
+
+  /**
+   * Deliberately not part of `initialize()`: the probe sweep waits on internal
+   * hosts, and blocking the app initializer on it would hold the whole SPA
+   * behind a connect timeout. The dashboard renders first and calls this.
+   *
+   * A failure here leaves the map empty rather than marking everything
+   * unreachable — losing our own API says nothing about the module endpoints.
+   */
+  async loadHealth(): Promise<void> {
+    this.healthPending.set(true);
+    try {
+      const entries = await firstValueFrom(this.api.get<EnvironmentHealthDto[]>('modules/health'));
+      this.health.set(new Map(
+        (entries ?? []).map(entry => [environmentHealthKey(entry.moduleKey, entry.environmentKey), entry.status])));
+    } catch (err) {
+      console.error('Failed to load /api/modules/health.', err);
+      this.health.set(new Map());
+    } finally {
+      this.healthPending.set(false);
     }
   }
 

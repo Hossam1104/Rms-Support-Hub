@@ -40,6 +40,13 @@ import { EmptyStateComponent, PageHeaderComponent } from '../../shared/ui';
               <strong>{{ environmentCount() }} routes</strong>
             </span>
           </div>
+          <div class="landing-stat">
+            <i class="bi" [class]="moduleService.healthPending() ? 'bi-arrow-repeat' : 'bi-broadcast-pin'" aria-hidden="true"></i>
+            <span class="landing-stat__copy">
+              <span class="landing-stat__label">Reachable now</span>
+              <strong>{{ reachableSummary() }}</strong>
+            </span>
+          </div>
         </div>
       </app-page-header>
 
@@ -55,7 +62,11 @@ import { EmptyStateComponent, PageHeaderComponent } from '../../shared/ui';
         @if (orderedModules().length > 0) {
           <div class="modules-grid slide-up">
             @for (module of orderedModules(); track module.key) {
-              <app-module-card [module]="module" (selectEnv)="onEnvironmentSelected(module.key, $event)"></app-module-card>
+              <app-module-card
+                [module]="module"
+                [health]="moduleService.health()"
+                [healthPending]="moduleService.healthPending()"
+                (selectEnv)="onEnvironmentSelected(module.key, $event)"></app-module-card>
             }
           </div>
         } @else {
@@ -128,6 +139,28 @@ export class LandingComponent {
 
   readonly environmentCount = computed(() =>
     this.moduleService.modules().reduce((total, module) => total + this.environmentsOf(module).length, 0));
+
+  /** Only environments that actually have an endpoint are counted, so the
+   * roll-up is never "2 of 5" against three lanes nothing could probe. */
+  readonly probedCount = computed(() =>
+    [...this.moduleService.health().values()].filter(status => status !== 'unconfigured').length);
+
+  readonly reachableCount = computed(() =>
+    [...this.moduleService.health().values()].filter(status => status === 'reachable').length);
+
+  /** An empty map after the sweep settled means the sweep itself failed, which
+   * is not the same claim as "nothing is reachable". */
+  readonly reachableSummary = computed(() => {
+    if (this.moduleService.healthPending()) return 'Checking…';
+    if (this.moduleService.health().size === 0) return 'Unavailable';
+    return `${this.reachableCount()} of ${this.probedCount()}`;
+  });
+
+  constructor() {
+    // Fire and forget: the grid renders from the already-loaded catalog while
+    // the probe sweep fills the dots in.
+    void this.moduleService.loadHealth();
+  }
 
   onEnvironmentSelected(moduleKey: string, env: EnvironmentDto) {
     const module = this.moduleService.modules().find(item => item.key === moduleKey);

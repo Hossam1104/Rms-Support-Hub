@@ -1,7 +1,13 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ModuleDto, EnvironmentDto } from '../../core/models';
+import {
+  ModuleDto,
+  EnvironmentDto,
+  EnvironmentHealthMap,
+  EnvironmentHealthState,
+  environmentHealthKey
+} from '../../core/models';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { BrandMarkComponent, UiButtonComponent, UiCardComponent } from '../../shared/ui';
 import { APP_ASSETS } from '../../core/config/app-assets';
@@ -54,7 +60,15 @@ import { APP_ASSETS } from '../../core/config/app-assets';
                   <span class="env-key">{{ env.key }}</span>
                   <span class="env-desc">{{ env.description }}</span>
                 </span>
-                <app-status-badge [label]="env.statusLabel" [variant]="env.environment === 'Production' ? 'success' : 'info'" role="status"></app-status-badge>
+                <span class="env-status">
+                  <!-- Lane first, reachability second. The lane badge is config
+                       and never changes with the probe result. -->
+                  <app-status-badge [label]="env.statusLabel" [variant]="env.environment === 'Production' ? 'success' : 'info'" role="status"></app-status-badge>
+                  <span class="env-health" [class]="'env-health--' + healthOf(env)" role="status">
+                    <i class="bi" [class]="healthIcon(env)" aria-hidden="true"></i>
+                    <span>{{ healthLabel(env) }}</span>
+                  </span>
+                </span>
               </span>
             </ui-button>
           }
@@ -125,6 +139,13 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     .env-key { color: var(--text-primary); font-size: var(--text-sm); font-weight: var(--weight-bold); overflow-wrap: anywhere; }
     .env-desc { color: var(--text-secondary); font-size: var(--text-xs); overflow-wrap: anywhere; }
 
+    /* Two independent facts stacked, never merged into one pill. */
+    .env-status { display: flex; flex: 0 0 auto; align-items: flex-end; flex-direction: column; gap: 4px; }
+    .env-health { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: .68rem; font-weight: var(--weight-semibold); white-space: nowrap; }
+    .env-health i { font-size: .7rem; }
+    .env-health--reachable { color: var(--state-success-fg); }
+    .env-health--unreachable { color: var(--state-danger-fg); }
+
     .module-card__footer { margin-top: auto; }
     .module-card__availability { margin: 0; padding-top: var(--card-gap); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
     .module-card__action { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--card-gap); padding-top: var(--card-gap); border-top: 1px solid var(--divider); color: var(--text-accent); font-size: var(--text-sm); font-weight: var(--weight-bold); text-decoration: none; }
@@ -143,7 +164,35 @@ import { APP_ASSETS } from '../../core/config/app-assets';
 export class ModuleCardComponent {
   readonly assets = APP_ASSETS;
   @Input() module!: ModuleDto;
+  /** Endpoint reachability keyed by `environmentHealthKey`; absent entries are
+   * unknown, which is not the same claim as unreachable. */
+  @Input() health: EnvironmentHealthMap = new Map();
+  /** True while the probe sweep is still in flight, so an absent entry reads
+   * as "Checking" rather than "Unknown". */
+  @Input() healthPending = false;
   @Output() selectEnv = new EventEmitter<EnvironmentDto>();
+
+  healthOf(env: EnvironmentDto): EnvironmentHealthState {
+    return this.health.get(environmentHealthKey(this.module.key, env.key)) ?? 'unknown';
+  }
+
+  healthLabel(env: EnvironmentDto): string {
+    switch (this.healthOf(env)) {
+      case 'reachable': return 'Reachable';
+      case 'unreachable': return 'Unreachable';
+      case 'unconfigured': return 'No endpoint';
+      default: return this.healthPending ? 'Checking' : 'Unknown';
+    }
+  }
+
+  healthIcon(env: EnvironmentDto): string {
+    switch (this.healthOf(env)) {
+      case 'reachable': return 'bi-broadcast-pin';
+      case 'unreachable': return 'bi-plug';
+      case 'unconfigured': return 'bi-dash-circle';
+      default: return this.healthPending ? 'bi-arrow-repeat' : 'bi-question-circle';
+    }
+  }
 
   /** Display-only summary of the live capability flags already on ModuleDto;
    * routing and guarding still read the flags themselves. */

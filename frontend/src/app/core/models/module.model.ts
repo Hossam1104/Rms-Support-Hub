@@ -43,3 +43,34 @@ export interface ModuleDto {
   environments: EnvironmentDto[];
   capabilities: ModuleCapabilities;
 }
+
+/**
+ * Mirrors RmsSupportHub.Core.DTOs.EnvironmentHealthDto: whether the API host
+ * could open a TCP connection to this environment's send endpoint.
+ *
+ * This is not the same fact as `EnvironmentDto.statusLabel`. That label says
+ * which lane an environment is (Live/Test/Soon) and stays constant while a
+ * host is down -- otherwise a failing probe would make a Production lane stop
+ * announcing itself as Live and read as safe to send against.
+ *
+ * `unconfigured` means the environment has no endpoint to probe. `unknown` is
+ * client-side only: the sweep has not returned, or the Support Hub's own API
+ * could not be reached -- neither of which is evidence the module is down.
+ */
+export type EnvironmentHealthStatus = 'reachable' | 'unreachable' | 'unconfigured';
+export type EnvironmentHealthState = EnvironmentHealthStatus | 'unknown';
+
+export interface EnvironmentHealthDto {
+  moduleKey: string;
+  environmentKey: string;
+  status: EnvironmentHealthStatus;
+  checkedAt: string;
+}
+
+/** Key for the flattened health lookup; one module owns many environment keys
+ * and environment keys are only unique within a module. */
+export function environmentHealthKey(moduleKey: string, environmentKey: string): string {
+  return `${moduleKey}::${environmentKey}`;
+}
+
+export type EnvironmentHealthMap = ReadonlyMap<string, EnvironmentHealthStatus>;

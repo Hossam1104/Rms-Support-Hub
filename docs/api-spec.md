@@ -26,6 +26,23 @@ environment key, not an API host or database catalog.
 The capability object also includes `branchLookup`; it gates the branch route
 described in section 4 alongside item and consumer lookup capabilities.
 
+### Environment Reachability
+- **`GET /api/modules/health`**
+- **Response `200 OK`**: `EnvironmentHealthDto[]` — `{ moduleKey, environmentKey, status, checkedAt }`, one entry per environment of every module.
+- `status` is `reachable` | `unreachable` | `unconfigured` (no `ApiUrl` to probe).
+- The probe is a **TCP connect only**, ~3s timeout, run in parallel and cached
+  process-wide for 30s. It sends no HTTP request and no payload, because the
+  upstream URLs are POST-only order operations with no health route. A
+  `reachable` result therefore proves a listener accepted the connection, not
+  that the API is healthy.
+- Reachability is **not** `EnvironmentDto.statusLabel`. That label states the
+  lane (`Live`/`Test`/`Soon`) and must stay constant while a host is down; see
+  ADR-0019.
+- The response never carries the probed host, port, or URL, so the module
+  catalog keeps endpoint topology private (B16).
+- The literal `health` segment outranks `{key}`, so this never resolves as a
+  module lookup.
+
 ### Get Module Details + Current Draft
 - **`GET /api/modules/{key}`**
 - **Response `200 OK`**: `{ module: ModuleDto, state: OrderDraft }`

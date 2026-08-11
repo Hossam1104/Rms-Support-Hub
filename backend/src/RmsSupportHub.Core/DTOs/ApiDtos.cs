@@ -46,6 +46,17 @@ public record ModuleDto(
     ModuleCapabilitiesDto Capabilities
 );
 
+/// <summary>Per-environment reachability for the dashboard. Carries the module
+/// and environment keys the browser already knows plus a status name -- never
+/// the probed host, port, or URL, so the module catalog keeps the endpoint
+/// topology private (remediation_plan.md B16).</summary>
+public record EnvironmentHealthDto(
+    string ModuleKey,
+    string EnvironmentKey,
+    string Status,
+    DateTimeOffset CheckedAt
+);
+
 /// <summary>U2 (UI_Rework_Plan.md D1): applies every field in Fields inside
 /// one synchronised DraftManager.PatchOrderDataAsync load-modify-write
 /// instead of one HTTP round trip per field.</summary>

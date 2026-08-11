@@ -72,6 +72,11 @@ builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
         : (sender, cert, chain, sslPolicyErrors) => true
 });
 
+// The probe sweep is cached process-wide (singleton) while the service itself
+// stays transient alongside the typed IApiClient it probes with.
+builder.Services.AddSingleton<ModuleHealthCache>();
+builder.Services.AddTransient<IModuleHealthService, ModuleHealthService>();
+
 var app = builder.Build();
 
 if (!verifyTls)
