@@ -82,28 +82,29 @@ qa-support-hub.prompt-studio.test-case-draft
 order-tool.sidebar-collapsed
 ```
 External/business identifiers remain unchanged: API `/api`, JSON/payload contracts,
-fixtures, database/table/SQL names, module keys, payment values, statuses, wording, and asset filenames. Behavior is capability-gated; UPC methods are Visa/Tamara/Tabby (ADR-0014).
-
+fixtures, database/table/SQL names, module keys, payment values, statuses, and wording. Behavior is capability-gated; UPC methods are Visa/Tamara/Tabby (ADR-0014).
+Asset filenames/folders are owner-supplied, not a contract: `frontend/public/assets/` mirrors the supplied `assets/` drop (`CompanyLogos/`, `ClientsLogo/`, `Payments/`, `CustomMessageBox/`, root `Saudi_Riyal.svg`, `loader.svg`, and `offer_logo.png`); `app-assets.ts` is the only path source, and RMS+/DBS use `themedAsset` colourway pairs.
 ## Design system
 
 Semantic tokens, density, surfaces, typography, cards, tables, forms,
 `ThemeService`, and `MotionService` are UI touch points; raw colors stay in token files. The decorative lazy Hub Three.js scene degrades safely; details: `docs/design-system.md`.
+The Hub is a two-band single-viewport layout: a hero carrying the paired RMS+ and DBS lockups in one plate at a shared height, and an elastic tool grid. There is no footer band. Above 1024x720 the page is locked to `100dvh`, while smaller viewports scroll normally.
+The Online Order landing mirrors that reading order: hero with a module summary, a directory heading, then a 3/2/1-column grid. `app-module-card` follows the tool-card structure and accent names; its grid uses `grid-auto-rows: auto` so Coming Soon rows stay compact.
 
 ## Validation baseline
 
-Recorded 2026-08-10; see `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
+Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
 
 | Gate | Result |
 |---|---|
-| Frontend tests | 55 files / 325 tests passed, 0 skipped |
+| Frontend tests | 55 files / 333 tests passed, 0 skipped |
 | Backend tests | 188 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; Angular budgets clear |
-| Production initial bundle | 456.42 kB raw / 104.28 kB estimated transfer |
-| Lazy `three-module` chunk | 734.66 kB raw / 153.90 kB estimated transfer |
-| Production-offline initial bundle | 442.11 kB raw / 103.63 kB estimated transfer |
+| Production initial bundle | 455.68 kB raw / 104.14 kB estimated transfer |
+| Lazy `three-module` chunk | 734.66 kB raw / 153.96 kB estimated transfer |
+| Production-offline initial bundle | 442.06 kB raw / 103.59 kB estimated transfer |
 | Riyal asset verifier | Passed; SHA-1 verified, 924 bytes |
 | Rendered browser pass | Not run; browser automation unavailable in this environment |
-
 ## Boundaries and deferred scope
 
 - Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.

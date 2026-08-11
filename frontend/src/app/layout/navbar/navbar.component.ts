@@ -6,7 +6,7 @@ import { MotionPreference, MotionService } from '../../core/services/motion.serv
 import { ModuleService } from '../../core/services/module.service';
 import { BrandMarkComponent, EnvBadgeComponent, UiButtonComponent, UiIconButtonComponent } from '../../shared/ui';
 import { EnvironmentDto } from '../../core/models';
-import { APP_ASSETS } from '../../core/config/app-assets';
+import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
 
 @Component({
   selector: 'app-navbar',
@@ -15,7 +15,7 @@ import { APP_ASSETS } from '../../core/config/app-assets';
   template: `
     <header class="navbar">
       <a routerLink="/" class="navbar-brand" aria-label="Return to RMS+ Support Hub">
-        <app-brand-mark class="navbar-logo" [src]="assets.brand.rms" size="3.75rem" [decorative]="true"></app-brand-mark>
+        <app-brand-mark class="navbar-logo" [src]="rmsMark()" size="2.1rem" width="7.85rem" [decorative]="true"></app-brand-mark>
         <span class="brand-copy">
           <span class="brand-title">RMS+ Support Hub</span>
           <span class="brand-subtitle">Unified QA & Support Workspace</span>
@@ -110,6 +110,9 @@ export class NavbarComponent {
   };
 
   motionToggleLabel = computed(() => this.motionLabels[this.motionService.preference()]);
+
+  /** The supplied RMS+ wordmark ships per colourway; follow the active theme. */
+  readonly rmsMark = computed(() => themedAsset(this.assets.brand.rms, this.themeService.theme()));
 
   onSelectEnvironment(env: EnvironmentDto) {
     this.moduleService.selectEnvironment(env);

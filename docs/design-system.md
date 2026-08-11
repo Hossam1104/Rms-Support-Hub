@@ -124,15 +124,27 @@ as if they were peers:
 
 | Level | Identity | Where it appears |
 |---|---|---|
-| 1 — Product | RMS+ Support Hub (`RMS_Logo.svg`) | Navbar and Hub hero identity |
-| 2 — Company attribution | DBS (`DBS_Logo.svg`) | A small Hub attribution only |
+| 1 — Product | RMS+ Support Hub (`Rms_Plus_{Light,Dark}.svg`) | Navbar and Hub hero identity |
+| 2 — Company attribution | Digital Business Systems (`DBS_logo_{light,dark}.svg`) | Hub hero only, paired with level 1 |
 | 3 — Module/client | UPC, GHC / Whites | Online Order module cards and the module sidebar |
+
+Both level-1 and level-2 lockups are supplied as a colourway pair. The variant
+name states the theme it is drawn for: `*_dark` is the light-ink artwork for
+dark surfaces and `*_light` is the dark-ink artwork for light surfaces.
+`themedAsset(pair, theme)` resolves the pair against `ThemeService`, so neither
+mark needs a forced white plate behind it.
+
+Levels 1 and 2 sit together in the Hub hero as peers — one bordered plate, one
+shared `size` (box height), a divider between them, and widths differing only
+by each source's aspect ratio. The company name is carried by the artwork, so
+no "Built by" caption repeats it; the mark's `alt` is the attribution.
 
 `frontend/src/app/core/config/app-assets.ts` is the single typed catalog for
 every supplied asset. Feature templates reference `APP_ASSETS`, never a raw
-string path, so an asset move is one edit. Files live in semantic public
-folders — `brand/`, `modules/`, `payments/`, `commerce/`, `system/` — with two
-deliberate exceptions to that rule, both documented at their definition site:
+string path, so an asset move is one edit. Public folders mirror the supplied
+`assets/` drop exactly — `CompanyLogos/`, `ClientsLogo/`, `Payments/`,
+`CustomMessageBox/` — so a re-supplied asset copies across without a rename
+step, with two deliberate exceptions documented at their definition site:
 
 - `/assets/Saudi_Riyal.svg` stays at the public root because `app-riyal` and
   `scripts/verify-riyal-asset.ps1` both depend on that exact path.
@@ -184,10 +196,19 @@ extra capability chips grow the row instead of clipping. At the mobile
 breakpoint the grids return to `grid-auto-rows: auto`, because stretching
 single-column cards to a shared height only adds dead space.
 
+`grid-auto-rows: 1fr` equalizes *every* row, so it belongs to grids whose cards
+carry comparable content. The Online Order module grid uses `auto` instead: an
+unavailable module has no environments to list, and a trailing row of Coming
+Soon cards must not inherit the height of a row full of environment buttons.
+`align-items: stretch` still equalizes cards within each row.
+
 ### Structure and interaction
 
 Order is fixed: header (icon container + status pill), title, description,
-capability chips, then the footer action. Hover and keyboard focus receive the
+capability chips, then the footer action. `app-module-card` follows the same
+order — module mark and status pill, title, client, capability chips, the
+environment list, then the pinned action — so a module reads identically on
+either dashboard. Hover and keyboard focus receive the
 same treatment — `translateY(var(--card-lift))`, a `--card-border-hover` edge,
 `--card-shadow-hover`, a brighter top edge light, and a small icon nudge. There
 is no tilt and no scale. Under reduced motion every transform is dropped and
@@ -197,6 +218,8 @@ Tool identity is a named accent, never a literal: `app-tool-card` takes
 `accent="brand" | "info" | "amber" | "teal"`, which maps to
 `--tool-<accent>-from/to`. Prompt Studio is violet-blue, Online Orders is
 cyan-blue, and POS is a muted amber because it is not operational.
+`app-module-card` resolves the same four names from the module key, so both
+grids light their top edge from one gradient pair.
 
 ## Hub scene
 

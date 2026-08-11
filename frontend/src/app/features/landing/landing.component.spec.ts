@@ -23,7 +23,7 @@ class StubBreadcrumbComponent { }
 @Component({
     standalone: true,
     selector: 'app-page-header',
-    template: '<header><h1>{{ title }}</h1><p>{{ subtitle }}</p></header>'
+    template: '<header><h1>{{ title }}</h1><p>{{ subtitle }}</p><ng-content></ng-content></header>'
 })
 class StubPageHeaderComponent {
     @Input() title = '';
@@ -42,8 +42,9 @@ class StubModuleCardComponent {
 
 class StubModuleService {
     modules = signal<ModuleDto[]>([
-        { key: 'upc_ecommerce', label: 'UPC E-commerce' } as unknown as ModuleDto,
-        { key: 'ghc_ecommerce', label: 'GHC E-commerce' } as unknown as ModuleDto
+        { key: 'oms', label: 'OMS', available: false, environments: [] } as unknown as ModuleDto,
+        { key: 'upc_ecommerce', label: 'UPC E-commerce', available: true, environments: [{}, {}] } as unknown as ModuleDto,
+        { key: 'ghc_ecommerce', label: 'GHC E-commerce', available: true, environments: [{}] } as unknown as ModuleDto
     ]);
 }
 
@@ -71,8 +72,25 @@ describe('LandingComponent', () => {
         expect(main.querySelector('app-breadcrumb')).toBeTruthy();
         expect(main.querySelector('h1')?.textContent?.trim()).toBe('Online Order Tool');
         expect(main.querySelector('[aria-label="Online Order modules"]')).toBeTruthy();
-        expect(main.querySelectorAll('app-module-card')).toHaveLength(2);
+        expect(main.querySelectorAll('app-module-card')).toHaveLength(3);
         expect(main.querySelector('app-empty-state')).toBeNull();
+        // The grid is introduced the same way the Hub introduces its tools.
+        expect(main.querySelector('.landing-eyebrow')?.textContent).toContain('Module directory');
+        expect(main.querySelector('.landing-heading__title')?.textContent?.trim()).toBe('Choose a module');
+    });
+
+    // The Coming Soon module carries no environments, so it must not lead a
+    // grid whose first row is otherwise full of selectable routes.
+    it('leads with available modules and summarizes the workspace in the hero', () => {
+        const fixture = TestBed.createComponent(LandingComponent);
+        fixture.detectChanges();
+
+        const main = fixture.nativeElement.querySelector('main') as HTMLElement;
+        const cards = Array.from(main.querySelectorAll('app-module-card')) as HTMLElement[];
+        expect(cards.map(card => card.textContent?.trim())).toEqual(['UPC E-commerce', 'GHC E-commerce', 'OMS']);
+
+        const stats = Array.from(main.querySelectorAll('.landing-stat strong')) as HTMLElement[];
+        expect(stats.map(stat => stat.textContent?.trim())).toEqual(['2 of 3', '3 routes']);
     });
 
     // ModuleService.initialize() sets an empty list for both an empty response

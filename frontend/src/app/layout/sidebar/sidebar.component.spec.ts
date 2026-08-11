@@ -23,7 +23,7 @@ describe('SidebarComponent', () => {
 
         const element = fixture.nativeElement as HTMLElement;
         const moduleLogo = element.querySelector('app-brand-mark img') as HTMLImageElement;
-        expect(moduleLogo.getAttribute('src')).toContain('/assets/modules/UPC_Logo.svg');
+        expect(moduleLogo.getAttribute('src')).toContain('/assets/ClientsLogo/UPC_Logo.svg');
         expect(moduleLogo.getAttribute('alt')).toBe('UPC');
         expect(element.querySelector('nav')?.getAttribute('aria-label')).toBe('Online Order module navigation');
         expect(Array.from(element.querySelectorAll('.nav-label')).map(label => label.textContent?.trim())).toEqual([

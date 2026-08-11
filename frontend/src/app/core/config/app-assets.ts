@@ -1,9 +1,22 @@
+import { Theme } from '../services/theme.service';
+
 export type AssetPath = `/assets/${string}`;
+
+/**
+ * A brand mark supplied as two colourways. The variant name matches the theme
+ * it is drawn for: `dark` is the light-ink artwork used on dark surfaces and
+ * `light` is the dark-ink artwork used on light surfaces.
+ */
+export interface ThemedAssetPair {
+  readonly light: AssetPath;
+  readonly dark: AssetPath;
+}
 
 export interface AppAssetCatalog {
   readonly brand: {
-    readonly rms: AssetPath;
-    readonly dbs: AssetPath;
+    readonly rms: ThemedAssetPair;
+    readonly dbs: ThemedAssetPair;
+    readonly favicon: AssetPath;
   };
   readonly modules: {
     readonly upc: AssetPath;
@@ -31,6 +44,8 @@ export interface AppAssetCatalog {
   };
   readonly system: {
     readonly loader: AssetPath;
+    readonly statusSuccess: AssetPath;
+    readonly statusError: AssetPath;
     readonly customMessage: {
       readonly error: AssetPath;
       readonly information: AssetPath;
@@ -42,22 +57,31 @@ export interface AppAssetCatalog {
   };
 }
 
-const rms = '/assets/brand/RMS_Logo.svg' as AssetPath;
-const dbs = '/assets/brand/DBS_Logo.svg' as AssetPath;
-const upc = '/assets/modules/UPC_Logo.svg' as AssetPath;
-const ghc = '/assets/modules/GHC_Logo.svg' as AssetPath;
+const rms: ThemedAssetPair = {
+  light: '/assets/CompanyLogos/Rms_Plus_Light.svg',
+  dark: '/assets/CompanyLogos/Rms_Plus_Dark.svg'
+};
+const dbs: ThemedAssetPair = {
+  light: '/assets/CompanyLogos/DBS_logo_light.svg',
+  dark: '/assets/CompanyLogos/DBS_logo_dark.svg'
+};
+const upc = '/assets/ClientsLogo/UPC_Logo.svg' as AssetPath;
+const ghc = '/assets/ClientsLogo/GHC_Logo.svg' as AssetPath;
 
 /**
  * Canonical semantic references for supplied visual assets.
  *
- * The root Riyal path is a deliberate compatibility location: the existing
- * currency component and repository verifier both depend on it. Other assets
- * use their semantic public folders and are not duplicated at the root.
+ * Folder names mirror the supplied `assets/` drop exactly (`CompanyLogos`,
+ * `ClientsLogo`, `Payments`, `CustomMessageBox`) so a re-supplied asset can be
+ * copied across without a rename step. The root Riyal path is a deliberate
+ * compatibility location: the existing currency component and repository
+ * verifier both depend on it.
  */
 export const APP_ASSETS: AppAssetCatalog = {
   brand: {
     rms,
-    dbs
+    dbs,
+    favicon: '/assets/CompanyLogos/Rms_Plus.ico'
   },
   modules: {
     upc,
@@ -77,31 +101,38 @@ export const APP_ASSETS: AppAssetCatalog = {
     riyal: '/assets/Saudi_Riyal.svg'
   },
   payments: {
-    visa: '/assets/payments/Visa.png',
-    mastercard: '/assets/payments/MasterCard.png',
-    mada: '/assets/payments/MADA.png',
-    tabby: '/assets/payments/tabby.png',
-    tamara: '/assets/payments/tamara.png',
-    stcPay: '/assets/payments/STC_PAY.png',
-    emkan: '/assets/payments/emkan.png',
-    misPay: '/assets/payments/mispay.png',
-    ogMoney: '/assets/payments/ogmoney.png',
-    youGotaGift: '/assets/payments/yougotagift.png'
+    visa: '/assets/Payments/Visa.png',
+    mastercard: '/assets/Payments/MasterCard.png',
+    mada: '/assets/Payments/MADA.png',
+    tabby: '/assets/Payments/tabby.png',
+    tamara: '/assets/Payments/tamara.png',
+    stcPay: '/assets/Payments/STC_PAY.png',
+    emkan: '/assets/Payments/Emkan.png',
+    misPay: '/assets/Payments/mispay.png',
+    ogMoney: '/assets/Payments/ogmoney.png',
+    youGotaGift: '/assets/Payments/yougotagift.png'
   },
   commerce: {
-    offer: '/assets/commerce/offer_logo.png'
+    offer: '/assets/offer_logo.png'
   },
   system: {
-    loader: '/assets/system/loader.svg',
+    loader: '/assets/loader.svg',
+    statusSuccess: '/assets/CompanyLogos/StatusSuccess.png',
+    statusError: '/assets/CompanyLogos/StatusError.png',
     customMessage: {
-      error: '/assets/system/custom-message/error.svg',
-      information: '/assets/system/custom-message/information.svg',
-      question: '/assets/system/custom-message/question.svg',
-      success: '/assets/system/custom-message/success.svg',
-      warning: '/assets/system/custom-message/warrning.svg'
+      error: '/assets/CustomMessageBox/error.svg',
+      information: '/assets/CustomMessageBox/information.svg',
+      question: '/assets/CustomMessageBox/question.svg',
+      success: '/assets/CustomMessageBox/success.svg',
+      warning: '/assets/CustomMessageBox/warrning.svg'
     }
   }
 };
+
+/** Pick the supplied colourway that matches the active theme. */
+export function themedAsset(pair: ThemedAssetPair, theme: Theme): AssetPath {
+  return theme === 'dark' ? pair.dark : pair.light;
+}
 
 /**
  * Resolve only payment methods with an unambiguous supplied brand asset.

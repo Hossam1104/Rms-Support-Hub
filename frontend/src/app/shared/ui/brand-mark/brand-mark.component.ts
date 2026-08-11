@@ -4,6 +4,10 @@ import { Component, Input } from '@angular/core';
  * Small, presentation-only image primitive for product, company, and module
  * marks. The fixed box and contain fit keep assets with different source
  * geometry from changing layout or being distorted.
+ *
+ * `size` is the box height and `width` is optional: square module marks omit
+ * it, while wide wordmarks (RMS+, DBS) pass their own width so the artwork
+ * fills the box instead of being letterboxed inside a square.
  */
 @Component({
   selector: 'app-brand-mark',
@@ -12,7 +16,8 @@ import { Component, Input } from '@angular/core';
     <span
       class="brand-mark"
       [class.brand-mark--framed]="framed"
-      [style.--brand-mark-size]="size">
+      [style.--brand-mark-size]="size"
+      [style.--brand-mark-width]="width || size">
       <img
         [src]="src"
         [alt]="decorative ? '' : alt"
@@ -23,11 +28,11 @@ import { Component, Input } from '@angular/core';
     :host { display: inline-flex; vertical-align: middle; }
     .brand-mark {
       display: inline-flex;
-      width: var(--brand-mark-size);
+      width: var(--brand-mark-width, var(--brand-mark-size));
       height: var(--brand-mark-size);
       align-items: center;
       justify-content: center;
-      flex: 0 0 var(--brand-mark-size);
+      flex: 0 0 var(--brand-mark-width, var(--brand-mark-size));
       overflow: hidden;
       box-sizing: border-box;
     }
@@ -51,5 +56,7 @@ export class BrandMarkComponent {
   @Input() alt = '';
   @Input() decorative = false;
   @Input() size = '2.5rem';
+  /** Optional box width; defaults to `size`, keeping module marks square. */
+  @Input() width = '';
   @Input() framed = false;
 }

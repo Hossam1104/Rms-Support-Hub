@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BrandMarkComponent, EmptyStateComponent, ToolCardComponent } from '../../shared/ui';
+import { THEME_STORAGE_KEY, ThemeService } from '../../core/services/theme.service';
 import { HubComponent } from './hub.component';
 import { QA_TOOL_REGISTRY } from './tool-registry';
 
@@ -33,6 +34,11 @@ describe('HubComponent', () => {
         }).compileComponents();
     });
 
+    afterEach(() => {
+        // The colourway test makes an explicit theme choice; do not leak it.
+        localStorage.removeItem(THEME_STORAGE_KEY);
+    });
+
     it('renders exactly the three registry tools with authoritative status and routes', () => {
         const fixture = TestBed.createComponent(HubComponent);
         fixture.detectChanges();
@@ -56,16 +62,32 @@ describe('HubComponent', () => {
         ]);
     });
 
-    it('renders the larger RMS hero mark and DBS footer lockup', () => {
+    it('pairs the RMS and DBS lockups in the hero at one shared size', () => {
         const fixture = TestBed.createComponent(HubComponent);
+        const theme = TestBed.inject(ThemeService);
+
+        theme.setTheme('dark');
         fixture.detectChanges();
 
-        const marks = Array.from(fixture.nativeElement.querySelectorAll('app-brand-mark img')) as HTMLImageElement[];
-        expect(marks.map(mark => mark.getAttribute('alt'))).toEqual(['RMS+', 'DBS']);
-        expect(marks[0].getAttribute('src')).toContain('/assets/brand/RMS_Logo.svg');
-        expect(marks[1].getAttribute('src')).toContain('/assets/brand/DBS_Logo.svg');
-        expect(fixture.nativeElement.querySelector('.hub-footer')).toBeTruthy();
-        expect(fixture.nativeElement.querySelector('.hub-footer__name')?.textContent?.trim()).toBe('DBS');
+        const lockups = fixture.nativeElement.querySelector('.hub-hero__lockups') as HTMLElement;
+        const marks = Array.from(lockups.querySelectorAll('app-brand-mark img')) as HTMLImageElement[];
+        expect(marks.map(mark => mark.getAttribute('alt'))).toEqual(['RMS+', 'Digital Business Systems']);
+        expect(marks[0].getAttribute('src')).toBe('/assets/CompanyLogos/Rms_Plus_Dark.svg');
+        expect(marks[1].getAttribute('src')).toBe('/assets/CompanyLogos/DBS_logo_dark.svg');
+
+        // Same box height for both; widths differ only by source aspect ratio.
+        const boxes = Array.from(lockups.querySelectorAll('.brand-mark')) as HTMLElement[];
+        expect(boxes.map(box => box.style.getPropertyValue('--brand-mark-size'))).toEqual(['2.75rem', '2.75rem']);
+
+        theme.setTheme('light');
+        fixture.detectChanges();
+
+        expect(marks[0].getAttribute('src')).toBe('/assets/CompanyLogos/Rms_Plus_Light.svg');
+        expect(marks[1].getAttribute('src')).toBe('/assets/CompanyLogos/DBS_logo_light.svg');
+
+        // The lockup carries the attribution, so no footer band remains.
+        expect(fixture.nativeElement.querySelector('.hub-footer')).toBeNull();
+        expect(fixture.nativeElement.querySelectorAll('app-brand-mark')).toHaveLength(2);
     });
 
     it('uses native links for keyboard-reachable card navigation', () => {
