@@ -25,7 +25,7 @@ feature or Support Hub API relay/UI integration was implemented. INT-CI01
 restored the portable Ubuntu Application lane and all five destination POS CI
 lanes are green.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06 OWNER-GATED / ARCHITECTURE CLOSED / EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06G BLOCKED AFTER PRE-ELEVATED CONTINUATION / ARCHITECTURE CLOSED / BROWSER EVIDENCE OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -291,8 +291,12 @@ evidence work.
 INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-CI01 are complete; INT-05 is
 accepted after INT-05F, which is complete. `PROV-1` is closed for the
 composition gate.
-INT-06 Live Transport Security Evidence remains owner-authorization required
-and is not executed by this integration.
+INT-06 and INT-06F remain historical blocked attempts. The owner-authorized
+INT-06G pre-elevated continuation collected and cleaned the dedicated live
+Agent machine transport, certificate, CORS, Origin, and Negotiate evidence.
+Chrome/Edge LNA, secure Support Hub context, browser authentication, and direct
+browser-to-Agent evidence remain blocked because no connected browser-control
+session was available. Runtime remediation and INT-07 were not executed.
 
 ## Required post-integration validation
 

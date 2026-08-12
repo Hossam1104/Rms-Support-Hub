@@ -198,3 +198,177 @@ Git diff is limited to this sanitized evidence document, the durable blocked
 state, and the active handoff. INT-07 was not staged as executable.
 
 **INT-07 WAS NOT EXECUTED.**
+
+## INT-06G - PRE-ELEVATED CONTINUATION
+
+**Result:** `BLOCKED / FAILED - browser evidence unavailable`
+
+**Execution date:** 2026-08-12
+
+This section extends the preserved INT-06 and INT-06F blocked history. INT-06G
+started from the expected Support Hub `main` SHA `190741fbee459b14b5124c26395c7c1bf64670b1`,
+which matched `origin/main`. The executor's first machine check returned
+`Elevated=True`. No UAC or privilege-escalation attempt was made.
+
+### Scope and source integrity
+
+| Item | Result |
+|---|---|
+| Runtime Agent source changes | `NONE` |
+| Support Hub backend/frontend changes | `NONE` |
+| POS provenance repository | Read-only; not modified |
+| Temporary evidence service | Unique `RmsSupportHub.Pos.Agent.INT06G`; no existing Agent service overwritten |
+| Business infrastructure | Not executed: no SQL, SCM, SMB, backup, restore, maintenance, downloader, artifact, or POS feature operation |
+| Backend relay | `ABSENT` - no Agent reference found under `backend/**` |
+| Agent runtime prohibited patterns | `ABSENT` in `pos/src/RmsSupportHub.Pos.Agent/**` |
+
+### Certificate, trust, and LocalSystem transport
+
+The dedicated evidence certificates were short-lived, machine-store
+certificates with SHA-256 signatures, private keys, Server Authentication EKU,
+and the exact DNS SAN `rms-pos-agent.localhost`. Thumbprints, private keys, and
+raw service/auth material were kept only in the temporary evidence workspace
+and were not written to the repository.
+
+| Evidence | Result | Direct observation |
+|---|---|---|
+| Pre-elevated executor | `PASS` | First machine check returned `Elevated=True` |
+| Certificate A in `LocalMachine\\My` | `PASS` | Dedicated cert; exact SAN, private key, SHA-256, and Server Authentication EKU |
+| Machine trust for A | `PASS` | Public certificate trusted in `LocalMachine\\Root`; default Schannel/SslStream validation succeeded |
+| Invalid certificate startup | `PASS - FAILED CLOSED` | Deliberately nonexistent thumbprint left the service stopped and port 5001 closed |
+| Certificate B provisioning | `PASS` | Same exact SAN and security properties; separately trusted |
+| A-to-B rollover | `PASS` | Service restart served B; default TLS client received HTTP 200; A was then removed without breaking B |
+| Trust-negative test | `PASS` | Removing B trust caused TLS validation failure; restoring trust returned HTTP 200 |
+| Temporary service | `PASS` | Service ran as `LocalSystem`; mapped listener process owner resolved to `NT AUTHORITY\\SYSTEM` |
+| IPv4 loopback | `PASS` | Live listener on `127.0.0.1:5001`; health returned HTTP 200 |
+| IPv6 loopback | `PASS` | Live listener on `[::1]:5001`; health returned HTTP 200 |
+| LAN listener | `ABSENT` | Live listener inspection showed only loopback; 3 IPv4 and 3 IPv6 non-loopback probes were closed |
+| HTTPS | `PASS` | Canonical HTTPS health request succeeded without a certificate bypass |
+| HTTP fallback/redirect | `ABSENT` | Plain HTTP received no response; no redirect listener exists |
+| Negotiated protocol | `PASS` | Live curl/SChannel evidence reported HTTP/1.1 |
+| Canonical Host | `PASS` | `rms-pos-agent.localhost:5001` accepted over valid TLS |
+| Wrong Host | `PASS - REJECTED` | Valid TLS targeting with an incorrect HTTP Host returned `400 host_rejected` |
+
+### CORS, Origin, Negotiate, and identity
+
+| Evidence | Result | Direct observation |
+|---|---|---|
+| Exact configured Support Hub origin | `PASS` | `https://support-hub.integration.test:4443` only |
+| Anonymous valid preflight | `PASS` | OPTIONS returned 204 without a Windows-auth challenge |
+| Preflight grant | `PASS` | Exact allow-origin, credentials, `GET,POST`, approved headers, and `Vary: Origin`; no wildcard |
+| Wrong-origin preflight | `PASS - REJECTED` | Wrong Origin returned 403 `cors_preflight_rejected` with no grant |
+| Authenticated wrong Origin | `PASS - REJECTED` | Actual Negotiate request returned 403 `origin_rejected` |
+| Negotiate | `PASS` | Actual Windows Negotiate succeeded after the exact hostname loopback exception was tested |
+| Windows SID | `RESOLVED - VALUE REDACTED` | `/api/v1/session` returned 200; that route returns 403 when server-side SID resolution fails |
+| SID exposed to browser DTO | `NO` | Session response property set contained no `sid` property |
+| Local Administrator status | `INFERRED / NEGATIVE AUTHORIZATION` | Elevated local OS check was Administrator; the live Agent session reported `isAdministrator=false` |
+| Mutation authorization | `BLOCKED` | The real curl Negotiate client did not replay the POST body after the handshake; the token request ended as an empty-body 400, so no token or feature operation was issued |
+| Unknown operation | `NOT PROVEN` | The production operation registry is empty; no feature operation was enabled or executed |
+| SPN query | `QUERY UNAVAILABLE` | Read-only `HTTP/rms-pos-agent.localhost` query could not reach LDAP; no SPN was registered or changed |
+| Kerberos/NTLM classification | `NEGOTIATE PROVEN / UNDERLYING MECHANISM UNPROVEN` | No canonical HTTP ticket was present in `klist`; the mechanism was not guessed |
+| BackConnectionHostNames | `REQUIRED - EXACT HOSTNAME PROVEN` | Authentication failed before the exact `rms-pos-agent.localhost` entry; succeeded after it; the entry was removed during cleanup |
+| DisableLoopbackCheck | `NOT USED` | Value was absent before and after; the broad bypass was never set |
+
+### Production route surface
+
+While the temporary service ran with `DOTNET_ENVIRONMENT=Production`, the
+approved foundation surface was checked without executing a POS operation:
+
+| Route | Live result |
+|---|---|
+| `GET /health/live` | 200 |
+| `GET /health/ready` | 200 |
+| `GET /api/v1/session` without credentials | 401 |
+| `POST /api/v1/security/mutation-token` | Foundation route present; no token issued and no operation registered |
+| `/openapi/v1.json` | 404; runtime OpenAPI absent in Production |
+| Feature paths (`backup`, `restore`, `maintenance`, `downloader`, `service`, `configuration`, `artifacts`) | 404 with the valid test Origin; feature routes remain unmapped |
+
+### Browser evidence gate
+
+Installed stable browser binaries were present and recorded as:
+
+```text
+Chrome: 151.0.7922.77
+Edge: 151.0.4129.78
+```
+
+Current first-party policy names and version support were checked against the
+official vendor documentation before the live attempt:
+
+- [Chrome LocalNetworkAccessAllowedForUrls](https://chromeenterprise.google/policies/local-network-access-allowed-for-urls/)
+- [Chrome LocalNetworkAllowedForUrls](https://chromeenterprise.google/policies/local-network-allowed-for-urls/)
+- [Chrome LoopbackNetworkAllowedForUrls](https://chromeenterprise.google/policies/loopback-network-allowed-for-urls/)
+- [Chrome AuthServerAllowlist](https://chromeenterprise.google/policies/auth-server-allowlist/)
+- [Edge LocalNetworkAccessAllowedForUrls](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/localnetworkaccessallowedforurls)
+- [Edge LocalNetworkAllowedForUrls](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/localnetworkallowedforurls)
+- [Edge LoopbackNetworkAllowedForUrls](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/loopbacknetworkallowedforurls)
+- [Edge AuthServerAllowlist](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/authserverallowlist)
+
+The browser-control runtime had no connected in-app Browser, Chrome, or Edge
+session (`browsers.list()` was empty). Therefore the following evidence is
+`BLOCKED`, not `PASS` or `INFERRED`:
+
+| Evidence | Result |
+|---|---|
+| Secure Support Hub page at the exact test origin | `BLOCKED - no browser session` |
+| Chrome LNA default/allow/block matrix | `BLOCKED - not tested` |
+| Edge LNA default/allow/block matrix | `BLOCKED - not tested` |
+| Chrome authenticated browser session | `BLOCKED - not tested` |
+| Edge authenticated browser session | `BLOCKED - not tested` |
+| Direct browser -> Agent network evidence | `BLOCKED - not tested` |
+| Browser conservative failure classification | `NOT APPLICABLE - no browser request was run` |
+| Browser policy changes | `NONE`; pre-existing policy roots were absent and no temporary policy was installed |
+
+No hosts entry for either test origin or Agent hostname was added, no browser
+profile was created, and no LNA wildcard or global opt-out was used. The lack
+of a connected browser surface is the sole remaining INT-06G evidence gate;
+it prevents claiming Chrome/Edge LNA, browser authentication, or direct
+browser-to-Agent proof.
+
+### Cleanup
+
+Cleanup completed and was verified after the temporary workspace was removed:
+
+```text
+temporary service: deleted
+port 5001: no listener
+machine environment: restored
+evidence certificates/trust: removed
+hosts file: unchanged/restored
+browser policies: unchanged
+BackConnectionHostNames: restored
+DisableLoopbackCheck: absent
+temporary browser profiles/auth traces/PFX: none retained
+temporary evidence workspace: removed
+```
+
+### Regression validation
+
+| Check | Result |
+|---|---|
+| `dotnet restore pos/RmsSupportHub.Pos.slnx --nologo` | Passed |
+| POS Release build with `--warnaserror` | Passed; 0 warnings, 0 errors |
+| Domain tests | Passed; 7/7, 0 skipped |
+| Application tests | Passed; 76/76, 0 skipped |
+| Infrastructure tests | Passed; 60/60, 0 skipped |
+| Agent integration tests | Passed; 69/69, 0 skipped |
+| Repository runtime source diff | None |
+
+### INT-06G governance result
+
+```text
+INT-06: BLOCKED
+INT-06F: BLOCKED HISTORICAL ATTEMPT
+INT-06G: BLOCKED
+
+BLOCKER:
+Connected Chrome/Edge browser control was unavailable; LNA, secure test-page,
+browser-authenticated session, and direct browser -> Agent evidence remain
+unproven.
+
+RUNTIME REMEDIATION: NOT EXECUTED
+NEXT: PLANNER REVIEW / RERUN ONLY THE BROWSER EVIDENCE ON A CONNECTED DEVICE
+INT-07: NOT AUTHORIZED / NOT EXECUTED
+```
+
+**INT-07 WAS NOT EXECUTED.**

@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-05F, INT-CI01, and the current INT-06 owner gate.
+INT-05F, INT-CI01, and the current INT-06/INT-06G evidence gate.
 
 ```text
 INT-00: COMPLETE
@@ -60,7 +60,7 @@ PORTABLE UBUNTU POS CI:
 GREEN - ALL FIVE POS CI LANES
 
 NEXT:
-INT-06 - LIVE TRANSPORT SECURITY EVIDENCE / OWNER AUTHORIZATION REQUIRED
+INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE / BLOCKED
 ```
 
 INT-00 closes the cross-project architecture decision. INT-01 created the
@@ -649,9 +649,13 @@ FIXED AGENT ORIGIN:
 https://rms-pos-agent.localhost:5001
 
 NEXT:
-INT-06 - LIVE TRANSPORT SECURITY EVIDENCE
+INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE
 
-OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
+BLOCKED - CONNECTED CHROME/EDGE BROWSER CONTROL UNAVAILABLE
+
+MACHINE TRANSPORT EVIDENCE: COLLECTED AND CLEANED
+RUNTIME REMEDIATION: NOT EXECUTED
+NEXT: PLANNER REVIEW
 ```
 
 INT-02 completion inventory from the approved provenance SHA is:
@@ -682,9 +686,10 @@ build with zero warnings/errors; and retained WinUI `win-x64` publish with
 `PosAdminTool.WinUI.exe`, 44 `.xbf` resources, and 19 `.pri` resources. The
 frontend suite passed 341/341 across 56 files, production build budgets were
 clear, and OpenAPI/TypeScript generation was deterministic across two runs. No
-application, live service, browser, or Production runtime was launched. INT-06
-certificate/LNA/Negotiate/device evidence and later feature operations remain
-owner-gated/open.
+Support Hub application, browser, or Production feature runtime was launched. INT-06G
+collected and cleaned the temporary live Agent machine transport evidence;
+Chrome/Edge LNA, browser authentication, direct browser-to-Agent evidence, and
+later feature operations remain blocked/open.
 
 ## Reference material
 

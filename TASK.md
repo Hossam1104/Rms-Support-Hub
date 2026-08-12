@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Test (INT-06F Live Transport Security Evidence; blocked at machine prerequisites)
+**Role:** Test (INT-06G Pre-Elevated Live Transport Security Evidence; blocked at browser evidence)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -99,13 +99,15 @@ activated.
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE:
 BLOCKED / FAILED
 
-INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE:
-BLOCKED / FAILED
+INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
 
-BLOCKER:
-The single controlled UAC elevation attempt returned no elevated child/result.
-The mandatory LocalMachine certificate, machine trust, LocalSystem service,
-and live browser/Agent flow remain unproven.
+INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
+Machine/certificate/LocalSystem/loopback/Negotiate/CORS/Origin/route evidence
+was collected and cleaned; browser control had no Chrome/Edge session, so the
+secure Support Hub page, LNA, browser authentication, and direct browser-to-
+Agent evidence remain unproven.
+
+RUNTIME SOURCE CHANGES: NONE
 
 RUNTIME REMEDIATION:
 NOT EXECUTED
@@ -113,8 +115,6 @@ NOT EXECUTED
 NEXT:
 PLANNER REVIEW
 
-INT-07:
-OWNER AUTHORIZATION REQUIRED
-NOT YET EXECUTED
+INT-07: OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 
 INT-07 MUST NOT BE EXECUTED IN THIS SESSION.

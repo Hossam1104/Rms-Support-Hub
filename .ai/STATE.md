@@ -2,7 +2,7 @@
 - **Updated:** 2026-08-12
 - **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries.
-- **Next gate:** INT-06F Live Transport Security Evidence remains blocked because the single controlled UAC elevation attempt returned no elevated child/result; runtime remediation was not executed and INT-07 remains unauthorized.
+- **Next gate:** INT-06G Pre-Elevated Live Transport Security Evidence is blocked by unavailable connected Chrome/Edge browser control; machine transport evidence was collected and cleaned, runtime remediation was not executed, and INT-07 remains unauthorized.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -36,7 +36,8 @@ INT-CI01: PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION COMPLETE; WINDOWS-D
 PORTABLE UBUNTU POS CI: ALL FIVE POS CI LANES GREEN
 INT-06: LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
 INT-06F: ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
-BLOCKER: SINGLE CONTROLLED UAC ATTEMPT RETURNED NO ELEVATED CHILD/RESULT; LOCALMACHINE CERTIFICATE, TRUST, LOCALSYSTEM SERVICE, AND LIVE BROWSER FLOW REMAIN UNPROVEN
+INT-06G: PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
+BLOCKER: CONNECTED CHROME/EDGE BROWSER CONTROL WAS UNAVAILABLE; LNA, SECURE SUPPORT HUB TEST PAGE, BROWSER AUTHENTICATION, AND DIRECT BROWSER FLOW REMAIN UNPROVEN
 RUNTIME REMEDIATION: NOT EXECUTED
 NEXT: PLANNER REVIEW
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
@@ -107,14 +108,13 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
 - Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
   order/request calls return HTTP 500; deferred environment setup.
-- UPC fixture/live acceptance, Production index/deployment, and POS Agent live
-  service/device validation remain deferred. INT-05's Agent contract and
-  transport were build/test validated; no live service, SQL, SCM, SMB, device,
-  or browser runtime was executed.
+- UPC fixture/live acceptance, Production index/deployment, and POS Agent
+  business-operation/device validation remain deferred. INT-05 transport was
+  build/test validated; INT-06G proved temporary machine transport/Negotiate,
+  but browser LNA/session/direct-browser evidence and POS operations remain open.
 - POS evidence gates remain open: LocalSystem/Session 0 SMB, live transport,
   LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS
-  (`TrustServerCertificate = true`), and WinUI cutover by design; architecture
-  decisions are not evidence. INT-06 and the authorized INT-06F continuation were attempted under owner authorization
-  but stopped before machine changes because the controlled UAC attempt returned no
-  elevated child/result.
+  (`TrustServerCertificate = true`), and WinUI cutover; architecture decisions
+  are not evidence. INT-06/INT-06F remain historical blocks; INT-06G stopped
+  at browser evidence and restored all temporary machine state.
