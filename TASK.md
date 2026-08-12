@@ -1,7 +1,7 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Test (INT-06H Real Browser Runtime Evidence; blocked at browser admin authorization)
-**Branch:** `int-06h-browser-evidence`
+**Role:** Implement (INT-06I UAC-safe Administrator Authorization + Scalar/OpenAPI; browser retest blocked)
+**Branch:** `int-06i-admin-auth-scalar`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
 ## Current phase
@@ -12,6 +12,13 @@ trusted HTTPS, HTTP/1.1 transport, LNA/browser-policy matrix, Negotiate,
 anonymous exact-origin preflight, mutation-token contract, per-device scope,
 and clean source-import boundary are canonical in the ADRs and integration
 documents.
+
+INT-06I is the single bounded active implementation session. It remediates the
+INT-06H UAC-filtered browser authorization finding by resolving local
+Administrator membership from the authenticated Windows account rather than
+the current browser token, and it adds the permanent non-production
+Scalar/OpenAPI documentation gate. No feature operation, POS UI activation,
+Support Hub backend relay, or INT-07 work is authorized in this session.
 
 INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
 
@@ -97,31 +104,52 @@ Application failures are resolved, and no Agent feature route or POS UI was
 activated.
 
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE:
-BLOCKED / FAILED
+BLOCKED / FAILED (historical)
 
-INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
+INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED (historical)
 
 INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
 Machine/certificate/LocalSystem/loopback/Negotiate/CORS/Origin/route evidence
 was collected and cleaned.
 
-INT-06H - REAL BROWSER RUNTIME EVIDENCE: BLOCKED / FAILED
+INT-06H - REAL BROWSER RUNTIME EVIDENCE: COMPLETE AS DEFECT EVIDENCE
 Actual installed Chrome 151.0.7922.77 and Edge 151.0.4129.78 proved the exact
 public-source secure page, direct browser-to-Agent health/session path, and
 exact LNA allow/block behavior. Browser Negotiate/session passed with no SID
 exposure, but the normal browser session was not authorized as a local
 Administrator: mutation-token returned 403 while an equivalent elevated
-Windows request returned safe `operation_not_supported`. This is a potential
-browser Administrator/UAC filtered-token defect for planner review.
+Windows request returned safe `operation_not_supported`, exposing the
+UAC-filtered-token authorization defect.
 
-RUNTIME SOURCE CHANGES: NONE
-CLEANUP: PASS
+INT-06I - UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION:
+IMPLEMENTED / INDEPENDENT SECURITY REVIEW REQUIRED
+Production now resolves local Administrator membership from the authenticated
+Windows account through `NetUserGetLocalGroups` with `LG_INCLUDE_INDIRECT`,
+compares group SIDs to the well-known Built-in Administrators SID, and fails
+closed on lookup failure. Session and mutation-token authorization use the
+same server-derived boundary; synthetic claims are IntegrationTest-only.
+Scalar.AspNetCore `2.16.18` is pinned, docs are Development/IntegrationTest
+only, AI Agent/default fonts are disabled, all current operations/responses/
+DTO properties are documented, and generated OpenAPI/client drift is checked.
 
-RUNTIME REMEDIATION:
-NOT EXECUTED
+POST-REMEDIATION LIVE BROWSER EVIDENCE: NOT CLAIMED
+No connected Chrome/Edge session or current live harness was available in this
+execution context. No browser workaround, policy bypass, or elevation was
+attempted; the earlier INT-06H finding remains the baseline until an authorized
+post-remediation rerun.
+
+PR STATE: OPEN / NOT MERGED / INDEPENDENT SECURITY REVIEW REQUIRED
+
+VALIDATION:
+POS Release build 0 warnings/errors; Domain 7/7, Application 76/76,
+Infrastructure 60/60, Agent 85/85; frontend 341/341; deterministic
+OpenAPI/client generation; no vulnerable Agent packages reported; and WinUI
+publish produced the executable plus packaged resources. The repository-wide
+`scripts/build.ps1` still has two unrelated pre-existing backend route-status
+test failures.
 
 NEXT:
-PLANNER REVIEW
+INDEPENDENT SECURITY REVIEW, THEN CONTROLLED POST-REMEDIATION BROWSER RETEST
 
 INT-07: OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 

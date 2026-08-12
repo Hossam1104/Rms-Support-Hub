@@ -22,3 +22,21 @@ npm run generate:pos-agent-client --prefix frontend
 
 The generator is build-only tooling and is not part of the Angular
 application dependency graph.
+
+## Scalar documentation boundary
+
+The Agent uses the exact stable `Scalar.AspNetCore` package version `2.16.18`.
+The package choice is pinned in the Agent project and is validated through the
+normal restore/build vulnerability check. Scalar and runtime OpenAPI are
+mapped only when the host environment is `Development` or the dedicated
+`IntegrationTest` environment:
+
+- `/openapi/{documentName}.json` serves the generated contract;
+- `/scalar` redirects to `/scalar/`, which serves the local API reference;
+- Scalar's AI Agent is disabled; and
+- Scalar's default external font loading is disabled.
+
+Production must not register either route. The OpenAPI document and generated
+Support Hub client are derived artifacts; when endpoint metadata or schemas
+change, regenerate both and run the drift check rather than editing either
+file manually.

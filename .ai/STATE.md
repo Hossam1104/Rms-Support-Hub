@@ -1,8 +1,8 @@
 # Current Project State
 - **Updated:** 2026-08-12
-- **Branch:** `int-06h-browser-evidence`
-- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries.
-- **Next gate:** INT-06H Real Browser Runtime Evidence is blocked after actual Chrome/Edge browser runs exposed a potential UAC-filtered local-Administrator authorization defect; machine/browser state was collected and cleaned, runtime remediation was not executed, and INT-07 remains unauthorized.
+- **Branch:** `int-06i-admin-auth-scalar`
+- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries; INT-06I implementation is complete at its bounded source/documentation scope.
+- **Next gate:** Independent security review of INT-06I. The UAC-safe local-Administrator resolver, shared session/mutation authorization seam, and non-production Scalar/OpenAPI documentation are implemented and locally validated; the focused PR is not merged, live Chrome/Edge post-remediation evidence is not claimed, and INT-07 remains unauthorized.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -39,8 +39,11 @@ INT-06F: ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
 INT-06G: PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
 INT-06H: REAL BROWSER RUNTIME EVIDENCE - BLOCKED / FAILED
 BLOCKER: NORMAL CHROME/EDGE BROWSER NEGOTIATE SESSION AUTHENTICATED BUT LOCAL-ADMINISTRATOR AUTHORIZATION WAS FALSE; ELEVATED CONTROL WAS AUTHORIZED AND REACHED OPERATION_NOT_SUPPORTED, INDICATING A POTENTIAL UAC-FILTERED-TOKEN DEFECT
-RUNTIME REMEDIATION: NOT EXECUTED
-NEXT: PLANNER REVIEW
+INT-06I: UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION - IMPLEMENTED; INDEPENDENT SECURITY REVIEW OPEN
+AUTHORIZATION: WINDOWS ACCOUNT LOCAL-GROUP MEMBERSHIP VIA NETUSERGETLOCALGROUPS / LG_INCLUDE_INDIRECT; WELL-KNOWN BUILTIN-ADMINISTRATORS SID; FAIL CLOSED
+DOCUMENTATION: SCALAR.ASPNETCORE 2.16.18; DEVELOPMENT/INTEGRATIONTEST ONLY; AI AGENT AND DEFAULT FONTS DISABLED; OPENAPI/CLIENT DRIFT CHECKED
+LIVE POST-REMEDIATION BROWSER EVIDENCE: NOT CLAIMED / CONNECTED CHROME-EDGE SESSION NOT AVAILABLE IN THIS EXECUTION CONTEXT
+NEXT: INDEPENDENT SECURITY REVIEW; PR NOT MERGED
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / INT-06H PROVEN ON TESTED DEVICE
 WINDOWS LOOPBACK AUTH: EXACT BACK-CONNECTION / HOSTNAME PROVEN; REPRESENTATIVE-DEVICE EVIDENCE OPEN
@@ -52,8 +55,10 @@ Agent origin: `https://rms-pos-agent.localhost:5001`; the host is headless,
 Windows Service-capable, loopback-only, HTTPS-only, HTTP/1.1-only, and uses
 production Negotiate, exact-origin CORS, SID/local-Administrators checks, and
 only foundation routes. INT-05 owns `/pos/openapi`, the generated client, and
-direct `HttpBackend` transport; production has no feature registry or runtime
-OpenAPI. Trusted machine certificate provisioning and `.localhost` SPN/NTLM
+direct `HttpBackend` transport; INT-06I owns shared UAC-safe authorization and
+non-production Scalar/OpenAPI reachability; Production still has no feature
+registry or runtime OpenAPI. Trusted machine certificate provisioning and
+`.localhost` SPN/NTLM
 loopback behavior remain live evidence; feature transports and POS UI activation
 remain future scope.
 INT-04 destination: `/pos/RmsSupportHub.Pos.slnx` contains six source and four
@@ -67,7 +72,7 @@ operations, POS UI activation, standalone POS Angular source, raw history, and
 general backend/frontend integration remain excluded. CI validates portable
 POS projects, Windows Agent/Infrastructure, OpenAPI/client drift, and WinUI
 publish. POS Release tests pass Domain 7/7, Application 76/76,
-Infrastructure 60/60, and Agent 69/69; frontend passes 341/341.
+Infrastructure 60/60, and Agent 85/85; frontend passes 341/341.
 ## Compatibility contracts
 These persisted storage keys are byte-exact; no migration exists:
 ```text
@@ -97,9 +102,9 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
 | Backend tests | 192 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; Angular budgets clear |
 | POS portable CI | GitHub Actions run `31540243375`; all five POS CI lanes passed |
-| POS Release tests | Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 69/69; 0 skipped |
+| POS Release tests | Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 85/85; 0 skipped |
 | POS Release build | 0 warnings, 0 errors |
-| Retained WinUI publish | `PosAdminTool.WinUI.exe`, 19 `.pri`, and 44 `.xbf` resources present |
+| Retained WinUI publish | `PosAdminTool.WinUI.exe`, 23 `.pri`, and 55 `.xbf` resources present |
 | Production initial bundle | 456.13 kB raw / 104.22 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.96 kB estimated transfer |
 | Production-offline initial bundle | 442.06 kB raw / 103.59 kB estimated transfer |
@@ -120,4 +125,5 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
   (`TrustServerCertificate = true`), and WinUI cutover; architecture decisions
   are not evidence. INT-06/INT-06F remain historical blocks; INT-06G and
   INT-06H restored all temporary machine/browser state, with the browser admin
-  authorization finding awaiting planner review.
+  authorization finding remediated in source but post-remediation browser
+  evidence and independent security review still open.

@@ -20,9 +20,11 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         document.Info.Title = "RMS+ POS Agent API";
         document.Info.Version = AgentHostConstants.ApiVersion;
         document.Info.Description =
-            "Destination-owned foundation contract for the per-device POS Agent. " +
-            "Browser credentials are supplied by Windows Negotiate; mutation tokens are " +
-            "short-lived, one-use, and server-operation-bound.";
+            "Destination-owned foundation contract for the per-device Windows POS Agent. " +
+            "The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser " +
+            "access. Windows Negotiate supplies the authenticated identity, local Built-in " +
+            "Administrators membership authorizes mutations, and no Support Hub backend relay " +
+            "is involved. Mutation tokens are short-lived, one-use, and server-operation-bound.";
         document.Servers = [new OpenApiServer
         {
             Url = AgentHostConstants.CanonicalOrigin,

@@ -199,6 +199,98 @@ state, and the active handoff. INT-07 was not staged as executable.
 
 **INT-07 WAS NOT EXECUTED.**
 
+## INT-06I - UAC-SAFE ADMINISTRATOR AUTHORIZATION REMEDIATION + SCALAR DOCUMENTATION
+
+### Scope and cause
+
+INT-06H isolated an authorization mismatch rather than a transport failure:
+the normal Chrome/Edge Negotiate session authenticated, but the session
+reported `isAuthorized=false` and mutation-token issuance returned 403, while
+the equivalent elevated Windows request reached the safe
+`operation_not_supported` result. The prior implementation used the Windows
+access token's `IsInRole` elevation-sensitive view as the Administrator
+membership check.
+
+INT-06I was limited to that Agent authorization seam and the permanent
+documentation gate. No POS feature operation, POS UI activation, Support Hub
+backend relay, persistence/schema change, deployment, or INT-07 work was
+performed.
+
+### Authorization implementation
+
+The production Agent now:
+
+- starts from the authenticated `WindowsIdentity.User` SID;
+- resolves the account name through the operating system;
+- calls `NetUserGetLocalGroups` with `LG_INCLUDE_INDIRECT` so direct and
+  indirect local-group membership are considered;
+- resolves returned localized group names back to SIDs and compares them with
+  `WellKnownSidType.BuiltinAdministratorsSid`; and
+- fails closed for account, local-group, SID, native-API, or unexpected
+  resolver failures, logging only a categorical message with the request
+  correlation identifier and no raw identity/group data.
+
+Session `isAuthorized` and the `LocalAdministratorsOnly` mutation-token policy
+share this server-derived membership decision. Windows SID ownership for
+mutation tokens is also identity-only in production; synthetic SID claims are
+accepted only by the dedicated `IntegrationTest` authentication substitute.
+
+### Scalar/OpenAPI implementation
+
+`Scalar.AspNetCore` is pinned to exact stable version `2.16.18`. Runtime
+OpenAPI and Scalar are mapped only in `Development` and `IntegrationTest`:
+`/openapi/{documentName}.json` is the source used by Scalar and `/scalar`
+redirects to the local `/scalar/` reference. Scalar's AI Agent and default
+external font loading are disabled. The four current operations have stable
+operation IDs, tags, summaries, descriptions, security metadata, semantic
+responses, and problem-details media. All reachable contract schemas and
+properties have descriptions, and the generated OpenAPI JSON and Support Hub
+TypeScript client were regenerated.
+
+### Automated validation
+
+| Check | Result |
+|---|---|
+| POS Release build (`--warnaserror`) | PASS; 0 warnings, 0 errors |
+| POS tests | PASS; Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 85/85; 0 skipped |
+| UAC-safe resolver tests | PASS; direct, indirect, non-Administrator, identity/SID, lookup/API failure, native smoke, and shared-checker coverage included in Agent 85/85 |
+| OpenAPI/Scalar contract tests | PASS; operation/schema completeness, IntegrationTest Scalar reachability, and Production route inventory |
+| OpenAPI/client generation | PASS; two-pass file hashes stable |
+| Frontend tests | PASS; 56 files / 341 tests |
+| Agent package audit | PASS; no vulnerable packages reported by the configured NuGet sources |
+| Retained WinUI publish | PASS; executable plus 23 `.pri` and 55 `.xbf` resources |
+
+The repository-wide `scripts/build.ps1` was also attempted. Its unrelated
+Support Hub backend test lane remains red on two pre-existing route-status
+assertions (`NotFound` expected, `MethodNotAllowed` returned); no backend files
+were changed by INT-06I. The POS validation above is independent and green.
+
+### Post-remediation browser gate
+
+The browser-control runtime reported no connected browser backends:
+`browsers.list()` returned an empty list, and the requested Chrome and Edge
+bindings were unavailable. Consequently no post-remediation interactive
+Chrome/Edge session, LNA result, session response, unknown-operation request,
+or browser-visible Scalar page is claimed here. The installed-browser versions
+and successful pre-remediation transport evidence remain the INT-06H baseline;
+the required post-remediation normal-browser check is still open for an
+authorized connected harness. No browser policy, host entry, certificate,
+profile, elevation, or bypass workaround was created during this blocked
+attempt.
+
+The automated Production endpoint inventory contains neither `/scalar` nor
+`/openapi/`; because TestServer cannot execute the production Negotiate
+handler, this record does not claim a Production Kestrel HTTP 404 probe. That
+live route check remains part of the authorized post-remediation evidence.
+
+### Governance result
+
+Every future POS Agent HTTP operation must carry complete OpenAPI metadata and
+be fully described in Scalar before its integration gate closes. The focused
+INT-06I PR is not merged and requires independent security review.
+
+**INT-07 WAS NOT EXECUTED.**
+
 ## INT-06H - REAL BROWSER RUNTIME EVIDENCE
 
 **Result:** `BLOCKED / FAILED - browser Administrator authorization mismatch`

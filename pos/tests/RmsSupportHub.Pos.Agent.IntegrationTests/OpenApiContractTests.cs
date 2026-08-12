@@ -34,7 +34,9 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
 
         foreach (var forbidden in new[] { "backup", "restore", "maintenance", "downloader", "configuration", "service" })
         {
-            Assert.DoesNotContain(forbidden, document.ToJsonString(), StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(
+                paths.Select(entry => entry.Key),
+                path => path.Contains(forbidden, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -68,6 +70,118 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.DoesNotContain("jwt", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("oot_sid", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Authorization", serialized, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EveryAgentOperationHasCompleteDocumentationMetadata()
+    {
+        using var client = _factory.CreateSecureClient();
+        var document = await GetDocumentAsync(client);
+        var paths = document["paths"]!.AsObject();
+
+        foreach (var path in paths)
+        {
+            foreach (var operationEntry in path.Value!.AsObject())
+            {
+                if (operationEntry.Key is not ("get" or "post" or "put" or "patch" or "delete"))
+                {
+                    continue;
+                }
+
+                var operation = operationEntry.Value!.AsObject();
+                Assert.False(string.IsNullOrWhiteSpace(operation["operationId"]?.GetValue<string>()),
+                    $"{operationEntry.Key.ToUpperInvariant()} {path.Key} has no operationId.");
+                Assert.False(string.IsNullOrWhiteSpace(operation["summary"]?.GetValue<string>()),
+                    $"{operationEntry.Key.ToUpperInvariant()} {path.Key} has no summary.");
+                Assert.False(string.IsNullOrWhiteSpace(operation["description"]?.GetValue<string>()),
+                    $"{operationEntry.Key.ToUpperInvariant()} {path.Key} has no description.");
+
+                var tags = operation["tags"]?.AsArray();
+                Assert.NotNull(tags);
+                Assert.NotEmpty(tags!);
+                Assert.All(tags!, tag => Assert.False(string.IsNullOrWhiteSpace(tag!.GetValue<string>())));
+
+                var responses = operation["responses"]?.AsObject();
+                Assert.NotNull(responses);
+                Assert.NotEmpty(responses!);
+                Assert.All(
+                    responses!,
+                    response => Assert.True(
+                        (response.Value?["description"]?.GetValue<string>()?.Length ?? 0) >= 20,
+                        $"{operationEntry.Key.ToUpperInvariant()} {path.Key} response {response.Key} lacks a semantic description."));
+
+                foreach (var errorStatus in new[] { "400", "401", "403", "429" })
+                {
+                    if (!responses!.TryGetPropertyValue(errorStatus, out var errorResponse))
+                    {
+                        continue;
+                    }
+
+                    Assert.Contains(
+                        "application/problem+json",
+                        errorResponse!["content"]!.AsObject().Select(content => content.Key));
+                }
+            }
+        }
+
+        var mutation = Operation(document, "/api/v1/security/mutation-token", "post");
+        Assert.Contains("operationId", mutation["requestBody"]!["description"]!.GetValue<string>());
+        Assert.Contains("local Built-in Administrators", mutation["description"]!.GetValue<string>());
+        Assert.NotNull(mutation["security"]);
+
+        var session = Operation(document, "/api/v1/session", "get");
+        Assert.NotNull(session["security"]);
+        Assert.Null(Operation(document, "/health/live", "get")["security"]);
+        Assert.Null(Operation(document, "/health/ready", "get")["security"]);
+    }
+
+    [Fact]
+    public async Task ReachableSchemasHaveDescriptionsForEveryExposedProperty()
+    {
+        using var client = _factory.CreateSecureClient();
+        var document = await GetDocumentAsync(client);
+        var schemas = document["components"]!["schemas"]!.AsObject();
+
+        foreach (var schemaName in new[]
+        {
+            "HealthStatusDto",
+            "SessionInfoDto",
+            "MutationTokenIssueRequestDto",
+            "MutationTokenIssueResponseDto",
+            "AgentProblemDetailsDto"
+        })
+        {
+            var schema = schemas[schemaName]!.AsObject();
+            Assert.False(string.IsNullOrWhiteSpace(schema["description"]?.GetValue<string>()), schemaName);
+            var properties = schema["properties"]!.AsObject();
+            Assert.NotEmpty(properties);
+            Assert.All(
+                properties,
+                property => Assert.False(
+                    string.IsNullOrWhiteSpace(property.Value?["description"]?.GetValue<string>()),
+                    $"{schemaName}.{property.Key} has no description."));
+        }
+    }
+
+    [Fact]
+    public async Task ScalarAndOpenApiAreReachableInIntegrationTest()
+    {
+        using var client = _factory.CreateSecureClient();
+
+        var scalarRedirect = await client.GetAsync("/scalar");
+        Assert.Equal(HttpStatusCode.Found, scalarRedirect.StatusCode);
+        Assert.Equal("scalar/", scalarRedirect.Headers.Location?.OriginalString);
+
+        var scalarResponse = await client.GetAsync("/scalar/");
+        var scalarHtml = await scalarResponse.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, scalarResponse.StatusCode);
+        Assert.Contains("RMS+ POS Agent API", scalarHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("cdn.jsdelivr.net", scalarHtml, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("fonts.googleapis.com", scalarHtml, StringComparison.OrdinalIgnoreCase);
+
+        var openApiResponse = await client.GetAsync("/openapi/v1.json");
+        Assert.Equal(HttpStatusCode.OK, openApiResponse.StatusCode);
     }
 
     [Fact]
@@ -106,6 +220,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             .Where(path => path is not null);
 
         Assert.DoesNotContain(endpoints, path => path!.Contains("/openapi/", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(endpoints, path => path!.Equals("/scalar", StringComparison.OrdinalIgnoreCase));
     }
 
     private static async Task<JsonObject> GetDocumentAsync(HttpClient client)

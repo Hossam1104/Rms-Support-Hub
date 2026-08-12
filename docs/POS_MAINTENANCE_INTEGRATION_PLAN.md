@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-05F, INT-CI01, and the current INT-06/INT-06G/INT-06H evidence gate.
+INT-05F, INT-CI01, and the INT-06/INT-06G/INT-06H/INT-06I security gate.
 
 ```text
 INT-00: COMPLETE
@@ -59,8 +59,15 @@ COMPLETE - PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION
 PORTABLE UBUNTU POS CI:
 GREEN - ALL FIVE POS CI LANES
 
-NEXT:
-INT-06H - REAL BROWSER RUNTIME EVIDENCE / BLOCKED - PLANNER REVIEW
+INT-06H:
+COMPLETE AS DEFECT EVIDENCE - NORMAL-BROWSER ADMINISTRATOR AUTHORIZATION MISMATCH
+
+INT-06I:
+IMPLEMENTED - UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION
+INDEPENDENT SECURITY REVIEW REQUIRED; PR NOT MERGED
+
+INT-07:
+OWNER AUTHORIZATION REQUIRED / NOT EXECUTED
 ```
 
 INT-00 closes the cross-project architecture decision. INT-01 created the
@@ -83,6 +90,25 @@ operations or activates the POS UI.
 INT-CI01 then made Windows maintenance and SMB path semantics deterministic in
 portable Application code and resolved the nine pre-existing Ubuntu
 Application failures. No Agent feature route or POS UI was activated.
+
+INT-06I remediates the bounded INT-06H authorization defect in the Agent
+foundation. Production authorization now resolves the authenticated
+`WindowsIdentity.User` account's local-group membership through
+`NetUserGetLocalGroups` with indirect membership included, compares returned
+group SIDs to `WellKnownSidType.BuiltinAdministratorsSid`, and fails closed on
+any resolution or native-API failure. The browser's filtered/elevated token,
+role claims, usernames, JWTs, and client-provided SID values are not
+authorization sources. The same server-derived membership semantics are used
+by session diagnostics and mutation-token authorization; IntegrationTest's
+synthetic identity remains explicitly test-only.
+
+INT-06I also pins `Scalar.AspNetCore` `2.16.18`, exposes Scalar and runtime
+OpenAPI only in Development/IntegrationTest, disables Scalar AI Agent and
+default external fonts, and makes every current Agent operation, response,
+security requirement, DTO, and exposed property semantically documented. The
+generated OpenAPI JSON and Support Hub client are regenerated from the Agent
+composition. No feature operation, POS UI activation, backend relay, or
+production `/scalar`/runtime `/openapi` route is added.
 
 The POS repository is a read-only provenance source. INT-04 started from the
 Support Hub `main` head and `origin/main` at
@@ -683,9 +709,9 @@ EXCLUDED: 3 packages.lock.json files (destination package graphs are reconciled 
 ```
 
 The destination validation passed: Infrastructure tests 60/60; POS Domain,
-Application, and Agent integration tests 7/7, 76/76, and 69/69; solution Release
+Application, and Agent integration tests 7/7, 76/76, and 85/85; solution Release
 build with zero warnings/errors; and retained WinUI `win-x64` publish with
-`PosAdminTool.WinUI.exe`, 44 `.xbf` resources, and 19 `.pri` resources. The
+`PosAdminTool.WinUI.exe`, 55 `.xbf` resources, and 23 `.pri` resources. The
 frontend suite passed 341/341 across 56 files, production build budgets were
 clear, and OpenAPI/TypeScript generation was deterministic across two runs. No
 Support Hub feature runtime or Production runtime was launched. INT-06G
@@ -693,7 +719,25 @@ collected and cleaned the temporary live Agent machine transport evidence;
 INT-06H collected and cleaned actual Chrome/Edge LNA, Negotiate, session, and
 direct browser-to-Agent evidence. The normal-browser local-Administrator
 mutation authorization mismatch remains blocked for planner review; later
-feature operations remain out of scope.
+feature operations remain out of scope. INT-06I is the bounded runtime-source
+remediation and documentation continuation: source/tests changed only under
+`pos/src/RmsSupportHub.Pos.Agent/**`, Agent contracts, Agent integration tests,
+the generated OpenAPI/client artifacts, and the related evidence/state records.
+The focused PR remains unmerged pending independent security review. INT-07
+was not executed.
+
+## INT-06I implementation gate
+
+| Gate | Result |
+| --- | --- |
+| UAC-safe local Administrator authorization | Implemented with Windows account local-group resolution, indirect membership, well-known Administrators SID comparison, fail-closed behavior, and safe categorical correlation logging. |
+| Shared authorization semantics | Session `isAuthorized` and mutation-token policy use the same server-derived Windows identity boundary; production never trusts browser role/SID/name/JWT claims. |
+| Scalar/OpenAPI package | Exact stable `Scalar.AspNetCore` `2.16.18`; AI Agent and default external fonts disabled. |
+| Documentation routes | `/openapi/{documentName}.json` and `/scalar` are available only in Development/IntegrationTest; the Production endpoint inventory contains neither route. Interactive/Kestrel HTTP 404 evidence remains part of the blocked post-remediation live gate. |
+| Documentation completeness | All four current Agent operations have tags, summaries, semantic descriptions, response meanings, security metadata where required, and problem response media; reachable DTOs and properties are described. |
+| Future operation governance | Every new POS Agent HTTP operation must carry complete OpenAPI metadata and be fully described in Scalar before its integration gate closes. |
+| Scope | No feature operation, POS UI activation, backend relay, persistence, schema, migration, or INT-07 work. |
+| Review state | Implementation validation is green; focused PR is not merged and requires independent security review. |
 
 ## Reference material
 
