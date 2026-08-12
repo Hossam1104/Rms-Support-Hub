@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Implemented (INT-CI01 Portable Application Linux CI Baseline Remediation; next gate owner authorization)
+**Role:** Test (INT-06 Live Transport Security Evidence; blocked at machine prerequisites)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -64,7 +64,7 @@ INT-03F:
 COMPLETE
 
 NEXT:
-INT-06 - LIVE TRANSPORT SECURITY EVIDENCE - OWNER AUTHORIZATION REQUIRED
+INT-06 - LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
 
 CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW:
 PROV-1 CLOSED BY INT-03R / LIVE EVIDENCE OPEN
@@ -96,10 +96,21 @@ path policy is now deterministic on Ubuntu and Windows, the nine pre-existing
 Application failures are resolved, and no Agent feature route or POS UI was
 activated.
 
-NEXT:
-INT-06 - LIVE TRANSPORT SECURITY EVIDENCE
+INT-06 - LIVE TRANSPORT SECURITY EVIDENCE:
+BLOCKED / FAILED
 
+BLOCKER:
+The executor could not obtain elevation for the mandatory LocalMachine
+certificate, machine trust, LocalSystem service, and live browser/Agent flow.
+
+RUNTIME REMEDIATION:
+NOT EXECUTED
+
+NEXT:
+PLANNER REVIEW / INT-06F IF AUTHORIZED
+
+INT-07:
 OWNER AUTHORIZATION REQUIRED
 NOT YET EXECUTED
 
-INT-06 MUST NOT BE EXECUTED IN THIS SESSION.
+INT-07 MUST NOT BE EXECUTED IN THIS SESSION.

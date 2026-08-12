@@ -2,7 +2,7 @@
 - **Updated:** 2026-08-12
 - **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries.
-- **Next gate:** INT-06 Live Transport Security Evidence requires fresh owner authorization; it is not executed in this session.
+- **Next gate:** INT-06 Live Transport Security Evidence is blocked before machine setup because the executor could not obtain elevation; runtime remediation was not executed and INT-07 remains unauthorized.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -17,16 +17,12 @@ This file records durable facts only; milestone history lives in `.ai/HISTORY.md
 ## Application
 - One Angular 22 SPA and one .NET 10 Web API. QA Prompt Studio and Online Order Tool are available; POS Maintenance is Coming Soon and non-operational.
 - Routes are lazy/typed through `ToolRouteData`; topology is in `docs/REPOSITORY_STRUCTURE.md`.
-- Prompt Studio is frozen: deterministic builders, Bug 11/Story 7/Test Case 9,
-  advisory quality, drafts, ten-entry history, copy/exports, shortcuts; no external AI execution.
+- Prompt Studio is frozen: deterministic builders, Bug 11/Story 7/Test Case 9, advisory quality, drafts, ten-entry history, copy/exports, shortcuts; no external AI execution.
 - Online Order is frozen/server-authoritative: API/DTO/payload contracts, validation, totals, filters, paging, statuses, capability guarding, send/cancel/resend.
 - UPC Testing/Production retain existing architecture; no browser connection detail or local Production validation.
 - No POS operation/generic execution surface exists. Order Requests use month-to-date, tokenized filters, a ten-newest base-only path, and paging for header-derived filters.
 ## POS integration architecture checkpoint
-INT-00 and INT-00R are documentation/governance complete. The canonical target
-is a separate Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub
-Angular over trusted HTTPS on fixed loopback using HTTP/1.1 only; `RmsSupportHub.Api`,
-`Core`, and `Data` are not its path.
+INT-00 and INT-00R are documentation/governance complete. The canonical target is a separate Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub Angular over trusted HTTPS on fixed loopback using HTTP/1.1 only; `RmsSupportHub.Api`, `Core`, and `Data` are not its path.
 ```text
 INT-00 / INT-00R: COMPLETE; CLAUDE ARCHITECTURE CHECKPOINT: PASS
 ORIGINAL IMPORT PROVENANCE (INT-01/02/03): 25922b499d33bd73f241ffc26c212dd000e81433
@@ -38,7 +34,10 @@ INT-05F: OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION COMPLETE; ISOLATED TOOLING 
 ANGULAR TYPESCRIPT: 6.x; GENERATOR TYPESCRIPT: 5.x PEER-COMPATIBLE; GLOBAL LEGACY PEER BYPASS: NONE
 INT-CI01: PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION COMPLETE; WINDOWS-DETERMINISTIC MAINTENANCE/SMB PATH SEMANTICS
 PORTABLE UBUNTU POS CI: ALL FIVE POS CI LANES GREEN
-NEXT: INT-06 LIVE TRANSPORT SECURITY EVIDENCE - OWNER AUTHORIZATION REQUIRED
+INT-06: LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED BEFORE MACHINE SETUP
+BLOCKER: EXECUTOR ELEVATION UNAVAILABLE FOR LOCALMACHINE CERTIFICATE, TRUST, LOCALSYSTEM SERVICE, AND LIVE BROWSER FLOW
+RUNTIME REMEDIATION: NOT EXECUTED
+NEXT: PLANNER REVIEW / INT-06F IF AUTHORIZED
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
 WINDOWS LOOPBACK AUTH: BACK-CONNECTION / HOSTNAME EVIDENCE OPEN
@@ -46,35 +45,26 @@ CORS: ANONYMOUS EXACT-ORIGIN PREFLIGHT; APP: NEGOTIATE + LOCAL ADMIN
 MACHINE TRUST: MANDATORY; SSE: READ-ONLY / NO MUTATION TOKEN
 REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-05 Agent contract/client foundation composed; no Support Hub backend relay or POS UI activation
 ```
-Agent origin: `https://rms-pos-agent.localhost:5001`; the host is headless, Windows
-Service-capable, loopback-only, HTTPS-only, and HTTP/1.1-only. It
-registers Negotiate in production, uses exact-origin CORS and local-Administrators/
-SID ownership checks, and exposes only health/live, health/ready,
-authenticated session, and mutation-token foundation routes. INT-05 adds the
-versioned `/pos/openapi` document and exact `openapi-typescript@7.13.0` output
-from isolated `tools/pos-agent-client-generator` under
-`frontend/src/app/core/pos-agent/generated/`, plus dedicated `HttpBackend` transport
-with credentialed session/token requests and conservative error classification.
-Production registers no feature mutation descriptors and does
-not expose runtime OpenAPI. Trusted machine certificate provisioning is
-mandatory. Kerberos is preferred; `.localhost` SPN and NTLM loopback/back-
-connection behavior remain open live evidence. REST/SSE/artifact feature
-transports and POS UI activation remain future scope.
+Agent origin: `https://rms-pos-agent.localhost:5001`; the host is headless,
+Windows Service-capable, loopback-only, HTTPS-only, HTTP/1.1-only, and uses
+production Negotiate, exact-origin CORS, SID/local-Administrators checks, and
+only foundation routes. INT-05 owns `/pos/openapi`, the generated client, and
+direct `HttpBackend` transport; production has no feature registry or runtime
+OpenAPI. Trusted machine certificate provisioning and `.localhost` SPN/NTLM
+loopback behavior remain live evidence; feature transports and POS UI activation
+remain future scope.
 INT-04 destination: `/pos/RmsSupportHub.Pos.slnx` contains six source and four
 test projects. Graph: Application→Domain; Infrastructure→Application+Domain;
 Agent→Contracts+Domain+Application+Infrastructure; WinUI→Application+Domain+
 Infrastructure; tests→their source projects. Domain/Contracts have no packages;
-Application uses `Microsoft.Extensions.Logging.Abstractions` 10.0.10.
-Infrastructure owns the Windows SQL/SCM/DPAPI package graph; WinUI retains
-Windows App SDK and CommunityToolkit packages. The Agent host has only the
-approved foundation routes; feature operations, POS UI activation, standalone
-POS Angular source, raw history, and general backend/frontend integration remain excluded. CI builds
-and tests portable projects on Ubuntu, builds/tests the POS solution and Agent
-on Windows, validates the OpenAPI/generated-client drift lane, and validates a
-WinUI publish artifact. INT-CI01 makes Windows maintenance and SMB path
-semantics deterministic in the portable Application code. Current POS Release
-tests pass Domain 7/7, Application 76/76, Infrastructure 60/60, and Agent
-69/69; the frontend suite passes 341/341 across 56 files.
+Application uses `Microsoft.Extensions.Logging.Abstractions` 10.0.10;
+Infrastructure owns the Windows SQL/SCM/DPAPI graph and WinUI retains its
+Windows App SDK packages. The Agent host has only foundation routes; feature
+operations, POS UI activation, standalone POS Angular source, raw history, and
+general backend/frontend integration remain excluded. CI validates portable
+POS projects, Windows Agent/Infrastructure, OpenAPI/client drift, and WinUI
+publish. POS Release tests pass Domain 7/7, Application 76/76,
+Infrastructure 60/60, and Agent 69/69; frontend passes 341/341.
 ## Compatibility contracts
 These persisted storage keys are byte-exact; no migration exists:
 ```text
@@ -124,4 +114,5 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
   LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS
   (`TrustServerCertificate = true`), and WinUI cutover by design; architecture
-  decisions are not evidence.
+  decisions are not evidence. INT-06 was attempted under owner authorization
+  but stopped before machine changes because elevation was unavailable.
