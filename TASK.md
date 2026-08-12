@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Test (INT-06 Live Transport Security Evidence; blocked at machine prerequisites)
+**Role:** Test (INT-06F Live Transport Security Evidence; blocked at machine prerequisites)
 **Branch:** `main`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -99,15 +99,19 @@ activated.
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE:
 BLOCKED / FAILED
 
+INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE:
+BLOCKED / FAILED
+
 BLOCKER:
-The executor could not obtain elevation for the mandatory LocalMachine
-certificate, machine trust, LocalSystem service, and live browser/Agent flow.
+The single controlled UAC elevation attempt returned no elevated child/result.
+The mandatory LocalMachine certificate, machine trust, LocalSystem service,
+and live browser/Agent flow remain unproven.
 
 RUNTIME REMEDIATION:
 NOT EXECUTED
 
 NEXT:
-PLANNER REVIEW / INT-06F IF AUTHORIZED
+PLANNER REVIEW
 
 INT-07:
 OWNER AUTHORIZATION REQUIRED

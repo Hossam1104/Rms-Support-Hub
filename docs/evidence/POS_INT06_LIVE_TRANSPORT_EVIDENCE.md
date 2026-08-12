@@ -1,10 +1,10 @@
 # POS INT-06 Live Transport Security Evidence
 
-**Result:** `BLOCKED / FAILED — machine prerequisites unavailable`
+**Result:** `BLOCKED / FAILED — INT-06F elevation unavailable`
 
 **Execution date:** 2026-08-12
 
-**Scope:** INT-06 only. No POS feature operation, POS Maintenance UI
+**Scope:** INT-06 and the authorized INT-06F continuation. No POS feature operation, POS Maintenance UI
 activation, Support Hub API relay, runtime Agent remediation, SQL, SCM, SMB,
 backup, restore, maintenance, downloader, or artifact request was executed.
 
@@ -17,15 +17,32 @@ machine trust, LocalSystem service, temporary hosts mapping, and live browser
 transport chain were therefore not available for evidence collection.
 
 This is a truthful evidence block, not simulated evidence. Runtime
-remediation was not executed. The next action is planner review and a separate
-INT-06F only if authorized. INT-07 remains unauthorized and was not executed.
+remediation was not executed. The prior blocked session identified planner review and an authorized INT-06F
+continuation as the next action. INT-06F was attempted here and remains blocked.
+INT-07 remains unauthorized and was not executed.
+
+## INT-06F continuation
+
+INT-06:
+BLOCKED - NO ELEVATION
+
+INT-06F:
+ELEVATED CONTINUATION - BLOCKED
+
+The one controlled UAC attempt authorized by INT-06F returned exit code 1 and
+produced no elevated child/result. The current shell remained non-elevated.
+No certificate, trust entry, service, hosts mapping, browser policy, browser
+profile, or other machine-security change was made.
+
+No live transport or browser evidence was collected. Runtime source remained
+unchanged. INT-07 was not executed.
 
 ## Repository
 
 | Item | Evidence |
 |---|---|
-| Starting Support Hub SHA | `a4ac68233898100a91b50e02d94df4721b2f8745` |
-| Final Support Hub SHA | Same as starting SHA; no commit was created because INT-06 did not pass |
+| Starting Support Hub SHA | `f04f88d8e41ce54f89e7f7a820eaeedf58636129` |
+| Final Support Hub SHA | Same as starting SHA; no commit was created because INT-06F did not pass |
 | PR | `N/A` — no commit or push was authorized after the blocked run |
 | POS provenance | Corrected Agent baseline `010abc52dc110cfde3dc2c53e057890ff6edaf97` |
 | POS source repository | Not modified; no source repository operation was performed |
@@ -37,7 +54,7 @@ INT-06F only if authorized. INT-07 remains unauthorized and was not executed.
 | Item | Result | Notes |
 |---|---|---|
 | Windows version | `Windows 11 Pro 10.0.26200`, build `26200`, x64 | Read-only OS query |
-| Executor elevation | `BLOCKED` | Current process was not elevated; one controlled elevation attempt remained pending and was terminated |
+| Executor elevation | `BLOCKED` | Current process was not elevated; the single controlled UAC attempt returned no elevated child/result (exit code 1) |
 | Existing Agent service | `ABSENT` | The canonical service name was absent before and after the attempt |
 | Existing port 5001 listener | `ABSENT` | No process was listening before or after the attempt |
 | Existing INT-06 certificates | `ABSENT` | No matching evidence certificate was present before or after the attempt |
@@ -149,15 +166,19 @@ browser policy, certificate, service, or hosts entry was changed.
 INT-06:
 BLOCKED / FAILED
 
+INT-06F:
+BLOCKED / FAILED
+
 BLOCKER:
-Executor could not obtain elevation for the mandatory LocalMachine certificate,
-machine trust, LocalSystem service, and live browser/Agent evidence.
+Single controlled UAC attempt returned no elevated child/result; mandatory
+LocalMachine certificate, machine trust, LocalSystem service, and live
+browser/Agent evidence remain unproven.
 
 RUNTIME REMEDIATION:
 NOT EXECUTED
 
 BACKCONNECTIONHOSTNAMES:
-BLOCKED — could not safely determine
+BLOCKED - could not safely determine
 
 KERBEROS / NTLM:
 NEGOTIATE NOT EXECUTED
@@ -169,7 +190,7 @@ INT-13:
 REPRESENTATIVE-DEVICE VALIDATION STILL OPEN
 
 NEXT:
-PLANNER REVIEW / INT-06F IF AUTHORIZED
+PLANNER REVIEW
 ```
 
 `TASK.md` and `.ai/STATE.md` record the blocked gate. The exact task-related

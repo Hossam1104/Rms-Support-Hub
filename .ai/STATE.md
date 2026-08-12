@@ -2,7 +2,7 @@
 - **Updated:** 2026-08-12
 - **Branch:** `main`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries.
-- **Next gate:** INT-06 Live Transport Security Evidence is blocked before machine setup because the executor could not obtain elevation; runtime remediation was not executed and INT-07 remains unauthorized.
+- **Next gate:** INT-06F Live Transport Security Evidence remains blocked because the single controlled UAC elevation attempt returned no elevated child/result; runtime remediation was not executed and INT-07 remains unauthorized.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -34,10 +34,11 @@ INT-05F: OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION COMPLETE; ISOLATED TOOLING 
 ANGULAR TYPESCRIPT: 6.x; GENERATOR TYPESCRIPT: 5.x PEER-COMPATIBLE; GLOBAL LEGACY PEER BYPASS: NONE
 INT-CI01: PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION COMPLETE; WINDOWS-DETERMINISTIC MAINTENANCE/SMB PATH SEMANTICS
 PORTABLE UBUNTU POS CI: ALL FIVE POS CI LANES GREEN
-INT-06: LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED BEFORE MACHINE SETUP
-BLOCKER: EXECUTOR ELEVATION UNAVAILABLE FOR LOCALMACHINE CERTIFICATE, TRUST, LOCALSYSTEM SERVICE, AND LIVE BROWSER FLOW
+INT-06: LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
+INT-06F: ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
+BLOCKER: SINGLE CONTROLLED UAC ATTEMPT RETURNED NO ELEVATED CHILD/RESULT; LOCALMACHINE CERTIFICATE, TRUST, LOCALSYSTEM SERVICE, AND LIVE BROWSER FLOW REMAIN UNPROVEN
 RUNTIME REMEDIATION: NOT EXECUTED
-NEXT: PLANNER REVIEW / INT-06F IF AUTHORIZED
+NEXT: PLANNER REVIEW
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
 WINDOWS LOOPBACK AUTH: BACK-CONNECTION / HOSTNAME EVIDENCE OPEN
@@ -114,5 +115,6 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
   LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS
   (`TrustServerCertificate = true`), and WinUI cutover by design; architecture
-  decisions are not evidence. INT-06 was attempted under owner authorization
-  but stopped before machine changes because elevation was unavailable.
+  decisions are not evidence. INT-06 and the authorized INT-06F continuation were attempted under owner authorization
+  but stopped before machine changes because the controlled UAC attempt returned no
+  elevated child/result.
