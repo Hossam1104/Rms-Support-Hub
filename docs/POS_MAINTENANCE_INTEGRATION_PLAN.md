@@ -3,7 +3,7 @@
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through
-INT-05F, INT-CI01, and the current INT-06/INT-06G evidence gate.
+INT-05F, INT-CI01, and the current INT-06/INT-06G/INT-06H evidence gate.
 
 ```text
 INT-00: COMPLETE
@@ -60,7 +60,7 @@ PORTABLE UBUNTU POS CI:
 GREEN - ALL FIVE POS CI LANES
 
 NEXT:
-INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE / BLOCKED
+INT-06H - REAL BROWSER RUNTIME EVIDENCE / BLOCKED - PLANNER REVIEW
 ```
 
 INT-00 closes the cross-project architecture decision. INT-01 created the
@@ -649,11 +649,13 @@ FIXED AGENT ORIGIN:
 https://rms-pos-agent.localhost:5001
 
 NEXT:
-INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE
+INT-06H - REAL BROWSER RUNTIME EVIDENCE
 
-BLOCKED - CONNECTED CHROME/EDGE BROWSER CONTROL UNAVAILABLE
+BLOCKED - BROWSER ADMINISTRATOR AUTHORIZATION / UAC FILTERED-TOKEN FINDING
 
 MACHINE TRANSPORT EVIDENCE: COLLECTED AND CLEANED
+REAL CHROME/EDGE LNA, NEGOTIATE, SESSION, AND DIRECT-AGENT EVIDENCE:
+COLLECTED; NORMAL-BROWSER MUTATION AUTHORIZATION FAILED
 RUNTIME REMEDIATION: NOT EXECUTED
 NEXT: PLANNER REVIEW
 ```
@@ -686,10 +688,12 @@ build with zero warnings/errors; and retained WinUI `win-x64` publish with
 `PosAdminTool.WinUI.exe`, 44 `.xbf` resources, and 19 `.pri` resources. The
 frontend suite passed 341/341 across 56 files, production build budgets were
 clear, and OpenAPI/TypeScript generation was deterministic across two runs. No
-Support Hub application, browser, or Production feature runtime was launched. INT-06G
+Support Hub feature runtime or Production runtime was launched. INT-06G
 collected and cleaned the temporary live Agent machine transport evidence;
-Chrome/Edge LNA, browser authentication, direct browser-to-Agent evidence, and
-later feature operations remain blocked/open.
+INT-06H collected and cleaned actual Chrome/Edge LNA, Negotiate, session, and
+direct browser-to-Agent evidence. The normal-browser local-Administrator
+mutation authorization mismatch remains blocked for planner review; later
+feature operations remain out of scope.
 
 ## Reference material
 

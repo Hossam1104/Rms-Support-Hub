@@ -1,7 +1,7 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Test (INT-06G Pre-Elevated Live Transport Security Evidence; blocked at browser evidence)
-**Branch:** `main`
+**Role:** Test (INT-06H Real Browser Runtime Evidence; blocked at browser admin authorization)
+**Branch:** `int-06h-browser-evidence`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
 ## Current phase
@@ -103,11 +103,19 @@ INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
 
 INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
 Machine/certificate/LocalSystem/loopback/Negotiate/CORS/Origin/route evidence
-was collected and cleaned; browser control had no Chrome/Edge session, so the
-secure Support Hub page, LNA, browser authentication, and direct browser-to-
-Agent evidence remain unproven.
+was collected and cleaned.
+
+INT-06H - REAL BROWSER RUNTIME EVIDENCE: BLOCKED / FAILED
+Actual installed Chrome 151.0.7922.77 and Edge 151.0.4129.78 proved the exact
+public-source secure page, direct browser-to-Agent health/session path, and
+exact LNA allow/block behavior. Browser Negotiate/session passed with no SID
+exposure, but the normal browser session was not authorized as a local
+Administrator: mutation-token returned 403 while an equivalent elevated
+Windows request returned safe `operation_not_supported`. This is a potential
+browser Administrator/UAC filtered-token defect for planner review.
 
 RUNTIME SOURCE CHANGES: NONE
+CLEANUP: PASS
 
 RUNTIME REMEDIATION:
 NOT EXECUTED

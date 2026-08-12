@@ -199,6 +199,171 @@ state, and the active handoff. INT-07 was not staged as executable.
 
 **INT-07 WAS NOT EXECUTED.**
 
+## INT-06H - REAL BROWSER RUNTIME EVIDENCE
+
+**Result:** `BLOCKED / FAILED - browser Administrator authorization mismatch`
+
+**Execution date:** 2026-08-12
+
+INT-06H completed the browser-only continuation authorized by the owner. It did
+not repeat the INT-06G machine matrix, did not alter Agent or Support Hub
+runtime source, and did not register or execute a POS operation. The existing
+six-file INT-06G checkpoint was preserved before testing.
+
+### Browser and evidence source
+
+| Item | Result |
+|---|---|
+| Actual stable Google Chrome | `151.0.7922.77` |
+| Actual stable Microsoft Edge | `151.0.4129.78` |
+| Browser profiles | Fresh disposable profiles; owner profiles were not used |
+| Browser execution identity | Normal interactive Windows user with a limited browser token |
+| Evidence page | `https://support-hub.integration.test:4443` |
+| Public-source classification | Temporary HTTPS page response included CSP `treat-as-public-address` |
+| Direct Agent target | `https://rms-pos-agent.localhost:5001` |
+| Backend relay | `ABSENT`; browser network targets were the Agent origin directly |
+| Operation registry | Empty; no fake or real feature operation was added |
+
+The evidence page self-recorded sanitized status, error, and response-shape
+results for `/health/live`, `/health/ready`, `/api/v1/session`, and
+`/api/v1/security/mutation-token`. It did not retain principal names, SIDs,
+cookies, credentials, authorization headers, or Negotiate material. The
+public-source mechanism was selected from the first-party Local Network Access
+guidance and the page was served over HTTPS from the exact requested origin.
+
+The installed browser versions support the exact policy families used here.
+The current vendor references checked at execution time were [Chrome
+LoopbackNetworkAllowedForUrls](https://chromeenterprise.google/policies/loopback-network-allowed-for-urls/),
+[Chrome LoopbackNetworkBlockedForUrls](https://chromeenterprise.google/policies/loopback-network-blocked-for-urls/),
+[Chrome AuthServerAllowlist](https://chromeenterprise.google/policies/auth-server-allowlist/),
+[Edge LoopbackNetworkAllowedForUrls](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/LoopbackNetworkAllowedForUrls),
+[Edge LoopbackNetworkBlockedForUrls](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/LoopbackNetworkBlockedForUrls),
+and [Edge AuthServerAllowlist](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/AuthServerAllowlist).
+
+### LNA allow/block matrix
+
+The only requesting origin used in the matrix was
+`https://support-hub.integration.test:4443`. The Agent itself was never
+classified as public. No wildcard, global LNA opt-out, all-localhost rule, or
+all-HTTPS-origin rule was used.
+
+| Browser | Exact allow result | Exact block result |
+|---|---|---|
+| Chrome 151.0.7922.77 | `PROVEN`: direct `/health/live` and `/health/ready` returned 200; direct session/mutation requests reached the Agent after the exact auth prerequisite | `PROVEN`: direct requests failed; the mutation preflight recorded `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS` and no Agent response was reached |
+| Edge 151.0.4129.78 | `PROVEN`: direct `/health/live` and `/health/ready` returned 200; direct session/mutation requests reached the Agent after the exact auth prerequisite | `PROVEN`: direct requests failed; the mutation preflight recorded `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS` and no Agent response was reached |
+
+The allow runs first tested browser authentication without
+`AuthServerAllowlist`. Chrome and Edge did not complete the browser session
+request in that state. The exact value `rms-pos-agent.localhost` was then
+configured temporarily for each browser, with no wildcard, and both browsers
+completed the Negotiate session. This exact policy is therefore a tested
+deployment prerequisite on this device; it was removed during cleanup.
+
+### Browser Negotiate and session
+
+| Browser | Authenticated session | Sanitized session result |
+|---|---|---|
+| Chrome | `PASS` after exact `AuthServerAllowlist` and exact loopback back-connection prerequisite | HTTP 200; `isAuthorized=false`; no `sid` property; API version metadata present |
+| Edge | `PASS` after exact `AuthServerAllowlist` and exact loopback back-connection prerequisite | HTTP 200; `isAuthorized=false`; no `sid` property; API version metadata present |
+
+Both browser runs reached the canonical Agent origin directly. The response
+DTO did not expose a Windows SID. The exact temporary `BackConnectionHostNames`
+entry required by the prior INT-06G evidence was recreated only for the
+canonical Agent hostname and was removed afterward; `DisableLoopbackCheck` was
+never set.
+
+### Mutation authorization stop condition
+
+The normal browser called:
+
+```json
+{"operationId":"int06h.unknown"}
+```
+
+| Validation client | Session | Mutation-token result |
+|---|---:|---|
+| Chrome normal interactive browser | 200, `isAuthorized=false` | 403 authorization failure; no token; no operation executed |
+| Edge normal interactive browser | 200, `isAuthorized=false` | 403 authorization failure; no token; no operation executed |
+| Equivalent elevated Windows validation | 200, `isAuthorized=true` | 400 `operation_not_supported`; no token; no operation executed |
+
+This satisfies the required stop condition for a potential **browser
+Administrator authorization / UAC filtered-token defect**: normal browser
+Negotiate succeeds, but the browser's server-side Windows identity is not
+recognized as a local Administrator, while the equivalent elevated validation
+is authorized and reaches the safe empty-registry response. No runtime fix was
+attempted. Planner/security review is required before any mutation feature is
+implemented or enabled.
+
+### INT-06H pass-gate reconciliation
+
+| Gate | Result |
+|---|---|
+| Chrome LNA secure allow path | `PROVEN` |
+| Chrome LNA secure block path | `PROVEN` |
+| Edge LNA secure allow path | `PROVEN` |
+| Edge LNA secure block path | `PROVEN` |
+| Chrome browser Negotiate/session | `PASS` with exact auth prerequisite |
+| Edge browser Negotiate/session | `PASS` with exact auth prerequisite |
+| Direct browser -> Agent | `PROVEN` |
+| Browser SID exposure | `NONE` |
+| Browser mutation authorization | `BLOCKED / 403` |
+| Unknown-operation response | `PROVEN` only through equivalent elevated validation |
+| No browser elevation requirement | `FAILED / NOT PROVEN`; stop condition triggered |
+| No backend relay | `PROVEN` |
+| No TLS/LNA/auth bypass | `PASS`; only exact temporary prerequisites were used |
+| Cleanup | `PASS` |
+
+### Cleanup
+
+Cleanup completed and was verified after the temporary workspace was removed:
+
+```text
+temporary Agent process/service: stopped/absent
+port 5001: no listener
+temporary certificates and LocalMachine trust: removed
+Chrome policies: restored/absent
+Edge policies: restored/absent
+BackConnectionHostNames: restored/absent
+DisableLoopbackCheck: absent
+hosts mappings: restored/absent
+temporary browser profiles: removed
+PFX, certificate exports, auth traces, cookies, and browser profiles: none retained
+temporary evidence workspace and repository harness: removed
+```
+
+### Regression validation
+
+| Check | Result |
+|---|---|
+| Domain tests | Passed; 7/7, 0 skipped |
+| Application tests | Passed; 76/76, 0 skipped |
+| Infrastructure tests | Passed; 60/60, 0 skipped |
+| Agent integration tests | Passed; 69/69, 0 skipped |
+| `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --warnaserror` | Passed; 0 warnings, 0 errors |
+| Runtime source diff | `NONE` |
+
+### INT-06H governance result
+
+```text
+INT-06: BLOCKED
+INT-06F: BLOCKED HISTORICAL ATTEMPT
+INT-06G: MACHINE-SIDE EVIDENCE COMPLETE
+INT-06H: BLOCKED / FAILED AT BROWSER ADMINISTRATOR AUTHORIZATION
+
+BLOCKER:
+Normal Chrome/Edge browser Negotiate sessions authenticate but are not
+authorized as local Administrators; equivalent elevated validation is
+authorized and reaches operation_not_supported. Potential UAC filtered-token
+defect requires planner/security review.
+
+RUNTIME SOURCE CHANGES: NONE
+RUNTIME REMEDIATION: NOT EXECUTED
+NEXT: PLANNER REVIEW
+INT-07: NOT AUTHORIZED / NOT EXECUTED
+```
+
+**INT-07 WAS NOT EXECUTED.**
+
 ## INT-06G - PRE-ELEVATED CONTINUATION
 
 **Result:** `BLOCKED / FAILED - browser evidence unavailable`

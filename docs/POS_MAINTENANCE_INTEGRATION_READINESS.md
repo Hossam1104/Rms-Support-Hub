@@ -25,11 +25,11 @@ feature or Support Hub API relay/UI integration was implemented. INT-CI01
 restored the portable Ubuntu Application lane and all five destination POS CI
 lanes are green.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06G BLOCKED AFTER PRE-ELEVATED CONTINUATION / ARCHITECTURE CLOSED / BROWSER EVIDENCE OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / PROV-1 CLOSED FOR COMPOSITION / INT-06H BLOCKED AFTER REAL BROWSER EVIDENCE / ARCHITECTURE CLOSED / PLANNER REVIEW OPEN.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
-recorded in the canonical plan and ADRs. Live Agent, browser-policy,
+recorded in the canonical plan and ADRs. Browser Administrator authorization,
 representative-device, and real-operation evidence remains open. INT-02
   portable source import is complete; Windows Infrastructure and Agent tests and
   retained WinUI publish validation are complete. Agent host composition is
@@ -291,12 +291,16 @@ evidence work.
 INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-CI01 are complete; INT-05 is
 accepted after INT-05F, which is complete. `PROV-1` is closed for the
 composition gate.
-INT-06 and INT-06F remain historical blocked attempts. The owner-authorized
-INT-06G pre-elevated continuation collected and cleaned the dedicated live
-Agent machine transport, certificate, CORS, Origin, and Negotiate evidence.
-Chrome/Edge LNA, secure Support Hub context, browser authentication, and direct
-browser-to-Agent evidence remain blocked because no connected browser-control
-session was available. Runtime remediation and INT-07 were not executed.
+INT-06 and INT-06F remain historical blocked attempts. INT-06G collected and
+cleaned the dedicated live Agent machine transport, certificate, CORS, Origin,
+and Negotiate evidence. The owner-authorized INT-06H run used actual installed
+Chrome 151.0.7922.77 and Edge 151.0.4129.78 to prove the exact secure public-
+source page, LNA allow/block behavior, browser Negotiate/session, no SID
+exposure, and direct browser-to-Agent path. Normal-browser mutation
+authorization returned 403 while equivalent elevated validation reached the
+safe `operation_not_supported` response, so a potential browser Administrator/
+UAC filtered-token defect is blocked for planner review. Runtime remediation,
+POS feature operations, and INT-07 were not executed.
 
 ## Required post-integration validation
 

@@ -1,8 +1,8 @@
 # Current Project State
 - **Updated:** 2026-08-12
-- **Branch:** `main`
+- **Branch:** `int-06h-browser-evidence`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries.
-- **Next gate:** INT-06G Pre-Elevated Live Transport Security Evidence is blocked by unavailable connected Chrome/Edge browser control; machine transport evidence was collected and cleaned, runtime remediation was not executed, and INT-07 remains unauthorized.
+- **Next gate:** INT-06H Real Browser Runtime Evidence is blocked after actual Chrome/Edge browser runs exposed a potential UAC-filtered local-Administrator authorization defect; machine/browser state was collected and cleaned, runtime remediation was not executed, and INT-07 remains unauthorized.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -37,12 +37,13 @@ PORTABLE UBUNTU POS CI: ALL FIVE POS CI LANES GREEN
 INT-06: LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
 INT-06F: ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
 INT-06G: PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
-BLOCKER: CONNECTED CHROME/EDGE BROWSER CONTROL WAS UNAVAILABLE; LNA, SECURE SUPPORT HUB TEST PAGE, BROWSER AUTHENTICATION, AND DIRECT BROWSER FLOW REMAIN UNPROVEN
+INT-06H: REAL BROWSER RUNTIME EVIDENCE - BLOCKED / FAILED
+BLOCKER: NORMAL CHROME/EDGE BROWSER NEGOTIATE SESSION AUTHENTICATED BUT LOCAL-ADMINISTRATOR AUTHORIZATION WAS FALSE; ELEVATED CONTROL WAS AUTHORIZED AND REACHED OPERATION_NOT_SUPPORTED, INDICATING A POTENTIAL UAC-FILTERED-TOKEN DEFECT
 RUNTIME REMEDIATION: NOT EXECUTED
 NEXT: PLANNER REVIEW
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
-LNA: VERSIONED CHROME/EDGE MATRIX / LIVE EVIDENCE OPEN
-WINDOWS LOOPBACK AUTH: BACK-CONNECTION / HOSTNAME EVIDENCE OPEN
+LNA: VERSIONED CHROME/EDGE MATRIX / INT-06H PROVEN ON TESTED DEVICE
+WINDOWS LOOPBACK AUTH: EXACT BACK-CONNECTION / HOSTNAME PROVEN; REPRESENTATIVE-DEVICE EVIDENCE OPEN
 CORS: ANONYMOUS EXACT-ORIGIN PREFLIGHT; APP: NEGOTIATE + LOCAL ADMIN
 MACHINE TRUST: MANDATORY; SSE: READ-ONLY / NO MUTATION TOKEN
 REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-05 Agent contract/client foundation composed; no Support Hub backend relay or POS UI activation
@@ -111,10 +112,12 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
 - UPC fixture/live acceptance, Production index/deployment, and POS Agent
   business-operation/device validation remain deferred. INT-05 transport was
   build/test validated; INT-06G proved temporary machine transport/Negotiate,
-  but browser LNA/session/direct-browser evidence and POS operations remain open.
-- POS evidence gates remain open: LocalSystem/Session 0 SMB, live transport,
-  LNA/managed-browser, Negotiate/SPN, real SQL/SCM/restore/maintenance/
+  and INT-06H proved actual-browser LNA/direct health/session transport, but
+  browser mutation authorization and POS operations remain open.
+- POS evidence gates remain open: LocalSystem/Session 0 SMB, representative-
+  device/live transport, managed-browser deployment, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS
   (`TrustServerCertificate = true`), and WinUI cutover; architecture decisions
-  are not evidence. INT-06/INT-06F remain historical blocks; INT-06G stopped
-  at browser evidence and restored all temporary machine state.
+  are not evidence. INT-06/INT-06F remain historical blocks; INT-06G and
+  INT-06H restored all temporary machine/browser state, with the browser admin
+  authorization finding awaiting planner review.
