@@ -60,6 +60,7 @@ public sealed class FakeAuthenticationHandler(
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.StatusCode = StatusCodes.Status401Unauthorized;
+        Response.Headers["WWW-Authenticate"] = "Negotiate";
         return Task.CompletedTask;
     }
 }

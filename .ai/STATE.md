@@ -1,8 +1,8 @@
 # Current Project State
-- **Updated:** 2026-08-12
+- **Updated:** 2026-08-13
 - **Branch:** `int-06i-admin-auth-scalar`
 - **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries; INT-06I implementation is complete at its bounded source/documentation scope.
-- **Next gate:** Independent security review of INT-06I. The UAC-safe local-Administrator resolver, shared session/mutation authorization seam, and non-production Scalar/OpenAPI documentation are implemented and locally validated; the focused PR is not merged, live Chrome/Edge post-remediation evidence is not claimed, and INT-07 remains unauthorized.
+- **Next gate:** Independent security review of INT-06I. The UAC-safe local-Administrator resolver, shared session/mutation authorization seam, corrected non-production Scalar/OpenAPI contracts, and live Chrome/Edge post-remediation evidence are complete; the focused PR is not merged and INT-07 remains unauthorized.
 This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
 ## Identity
 | Facet | Value |
@@ -42,7 +42,8 @@ BLOCKER: NORMAL CHROME/EDGE BROWSER NEGOTIATE SESSION AUTHENTICATED BUT LOCAL-AD
 INT-06I: UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION - IMPLEMENTED; INDEPENDENT SECURITY REVIEW OPEN
 AUTHORIZATION: WINDOWS ACCOUNT LOCAL-GROUP MEMBERSHIP VIA NETUSERGETLOCALGROUPS / LG_INCLUDE_INDIRECT; WELL-KNOWN BUILTIN-ADMINISTRATORS SID; FAIL CLOSED
 DOCUMENTATION: SCALAR.ASPNETCORE 2.16.18; DEVELOPMENT/INTEGRATIONTEST ONLY; AI AGENT AND DEFAULT FONTS DISABLED; OPENAPI/CLIENT DRIFT CHECKED
-LIVE POST-REMEDIATION BROWSER EVIDENCE: NOT CLAIMED / CONNECTED CHROME-EDGE SESSION NOT AVAILABLE IN THIS EXECUTION CONTEXT
+INT-06I-F1: SCALAR CONTRACT ACCURACY + LIVE BROWSER CLOSURE - PASS; runtime response shapes, route/OpenAPI parity, local Scalar CSP, Production Kestrel document-route isolation, normal Chrome/Edge authorization, and cleanup verified
+LIVE POST-REMEDIATION BROWSER EVIDENCE: PASS / Chrome 151.0.7922.109 and Edge 151.0.4129.78; normal medium-integrity browser sessions returned isAuthorized=true and unknown mutation operation_not_supported without SID/token exposure
 NEXT: INDEPENDENT SECURITY REVIEW; PR NOT MERGED
 TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
 LNA: VERSIONED CHROME/EDGE MATRIX / INT-06H PROVEN ON TESTED DEVICE
@@ -72,7 +73,7 @@ operations, POS UI activation, standalone POS Angular source, raw history, and
 general backend/frontend integration remain excluded. CI validates portable
 POS projects, Windows Agent/Infrastructure, OpenAPI/client drift, and WinUI
 publish. POS Release tests pass Domain 7/7, Application 76/76,
-Infrastructure 60/60, and Agent 85/85; frontend passes 341/341.
+Infrastructure 60/60, and Agent 95/95; frontend passes 341/341.
 ## Compatibility contracts
 These persisted storage keys are byte-exact; no migration exists:
 ```text
@@ -102,14 +103,14 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
 | Backend tests | 192 passed, 0 failed, 0 skipped |
 | Release build | 0 warnings, 0 errors; Angular budgets clear |
 | POS portable CI | GitHub Actions run `31540243375`; all five POS CI lanes passed |
-| POS Release tests | Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 85/85; 0 skipped |
+| POS Release tests | Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 95/95; 0 skipped |
 | POS Release build | 0 warnings, 0 errors |
-| Retained WinUI publish | `PosAdminTool.WinUI.exe`, 23 `.pri`, and 55 `.xbf` resources present |
+| Retained WinUI publish | `PosAdminTool.WinUI.exe`, 27 `.pri`, and 66 `.xbf` resources present |
 | Production initial bundle | 456.13 kB raw / 104.22 kB estimated transfer |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.96 kB estimated transfer |
 | Production-offline initial bundle | 442.06 kB raw / 103.59 kB estimated transfer |
 | Riyal asset verifier | Passed; SHA-1 verified, 924 bytes |
-| Rendered browser pass | Not run; browser automation unavailable in this environment |
+| Rendered browser pass | Chrome/Edge post-remediation Scalar and direct-Agent evidence passed 2026-08-13 |
 ## Boundaries and deferred scope
 - Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
@@ -118,12 +119,13 @@ Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `d
   business-operation/device validation remain deferred. INT-05 transport was
   build/test validated; INT-06G proved temporary machine transport/Negotiate,
   and INT-06H proved actual-browser LNA/direct health/session transport, but
-  browser mutation authorization and POS operations remain open.
+  browser mutation authorization is remediated and post-remediation browser
+  evidence is complete; POS operations remain open.
 - POS evidence gates remain open: LocalSystem/Session 0 SMB, representative-
   device/live transport, managed-browser deployment, Negotiate/SPN, real SQL/SCM/restore/maintenance/
   downloader, remote-trigger reconciliation/idempotency, SQL TLS
   (`TrustServerCertificate = true`), and WinUI cutover; architecture decisions
   are not evidence. INT-06/INT-06F remain historical blocks; INT-06G and
   INT-06H restored all temporary machine/browser state, with the browser admin
-  authorization finding remediated in source but post-remediation browser
-  evidence and independent security review still open.
+  authorization finding remediated in source and closed by post-remediation
+  browser evidence; independent security review remains open.

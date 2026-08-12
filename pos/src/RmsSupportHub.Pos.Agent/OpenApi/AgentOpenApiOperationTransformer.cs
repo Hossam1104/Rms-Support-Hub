@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -48,6 +49,10 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "SMB connectivity, backup readiness, restore readiness, browser authentication, or " +
             "mutation authorization.");
         SetResponseDescription(operation, "200", "The Agent process is alive and returned a HealthStatusDto.");
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["status"] = "live"
+        });
     }
 
     private static void DocumentHealthReady(OpenApiOperation operation)
@@ -60,6 +65,10 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "same implementation behavior as liveness and does not probe POS SQL, SCM, SMB, backup, " +
             "restore, or feature dependencies.");
         SetResponseDescription(operation, "200", "The Agent returned its current HealthStatusDto readiness state.");
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["status"] = "ready"
+        });
     }
 
     private static void DocumentSession(OpenApiOperation operation)
@@ -77,11 +86,27 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(
             operation,
             "401",
-            "Windows Negotiate did not authenticate the request.");
+            "The Windows authentication middleware issued a Negotiate challenge. This framework " +
+            "response is not guaranteed to contain an AgentProblemDetailsDto body; clients should " +
+            "inspect the WWW-Authenticate header.");
         SetResponseDescription(
             operation,
             "403",
-            "The authenticated identity does not expose a resolvable Windows SID.");
+            "The authenticated identity reached the endpoint, but its Windows SID could not be " +
+            "resolved. The Agent returns application/problem+json with code windows_sid_unavailable.");
+        DocumentNegotiateChallenge(operation);
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["principalName"] = "EXAMPLE\\support-user",
+            ["isAuthorized"] = true,
+            ["agentVersion"] = "0.0.0",
+            ["apiVersion"] = "1.0",
+            ["supportedApiVersions"] = new JsonArray("1.0")
+        });
+        SetResponseExample(operation, "403", "application/problem+json", CreateProblemExample(
+            403,
+            "The authenticated Windows SID could not be resolved.",
+            "windows_sid_unavailable"));
     }
 
     private static void DocumentMutationToken(OpenApiOperation operation)
@@ -104,26 +129,47 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             operation.RequestBody.Description =
                 "The browser supplies only the server-known logical operationId. It does not supply " +
                 "a target path or HTTP method; the Agent's operation registry owns those semantics.";
+            SetRequestExample(operation);
         }
 
         SetResponseDescription(operation, "200", "The Agent issued a short-lived one-use token for the registered operation.");
         SetResponseDescription(
             operation,
             "400",
-            "The logical operationId is not registered by the Agent; no mutation token is issued.");
+            "The Agent rejected an unregistered operationId with application/problem+json code " +
+            "operation_not_supported; no mutation token is issued.");
         SetResponseDescription(
             operation,
             "401",
-            "Windows Negotiate did not authenticate the request.");
+            "The Windows authentication middleware issued a Negotiate challenge. This framework " +
+            "response is not guaranteed to contain an AgentProblemDetailsDto body; clients should " +
+            "inspect the WWW-Authenticate header.");
         SetResponseDescription(
             operation,
             "403",
-            "The authenticated Windows identity is not a member of the local Built-in Administrators " +
-            "group, or its Windows SID cannot be resolved.");
+            "AuthorizationMiddleware may reject a non-Administrator before the endpoint executes; " +
+            "that policy-forbid response is bodyless and is not guaranteed to be AgentProblemDetails. " +
+            "If the endpoint executes and cannot resolve the authenticated Windows SID, it returns " +
+            "application/problem+json with code windows_sid_unavailable.");
         SetResponseDescription(
             operation,
             "429",
-            "The bounded in-memory mutation-token retention limit has been reached; no token was issued.");
+            "The bounded in-memory mutation-token retention limit has been reached; the Agent returns " +
+            "application/problem+json with code mutation_token_capacity and issues no token.");
+        DocumentNegotiateChallenge(operation);
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["token"] = "opaque-placeholder-not-a-real-token",
+            ["expiresAtUtc"] = "2030-01-01T00:00:00Z"
+        });
+        SetResponseExample(operation, "400", "application/problem+json", CreateProblemExample(
+            400,
+            "The requested mutation operation is not supported.",
+            "operation_not_supported"));
+        SetResponseExample(operation, "429", "application/problem+json", CreateProblemExample(
+            429,
+            "The mutation-token retention limit has been reached.",
+            "mutation_token_capacity"));
     }
 
     private static void SetOperation(
@@ -146,4 +192,64 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             response.Description = description;
         }
     }
+
+    private static void SetRequestExample(OpenApiOperation operation)
+    {
+        if (operation.RequestBody?.Content is not null
+            && operation.RequestBody.Content.TryGetValue("application/json", out var content)
+            && content is not null)
+        {
+            content.Example = new JsonObject
+            {
+                ["operationId"] = "example.registered-operation"
+            };
+        }
+    }
+
+    private static void DocumentNegotiateChallenge(OpenApiOperation operation)
+    {
+        if (operation.Responses is null
+            || !operation.Responses.TryGetValue("401", out var response)
+            || response is not OpenApiResponse openApiResponse)
+        {
+            return;
+        }
+
+        openApiResponse.Content?.Clear();
+        openApiResponse.Headers ??= new Dictionary<string, IOpenApiHeader>(StringComparer.OrdinalIgnoreCase);
+        openApiResponse.Headers["WWW-Authenticate"] = new OpenApiHeader
+        {
+            Description = "Negotiate challenge emitted by the Windows authentication middleware.",
+            Schema = new OpenApiSchema
+            {
+                Type = JsonSchemaType.String,
+                Example = JsonValue.Create("Negotiate")
+            }
+        };
+    }
+
+    private static void SetResponseExample(
+        OpenApiOperation operation,
+        string statusCode,
+        string mediaType,
+        JsonNode example)
+    {
+        if (operation.Responses is not null
+            && operation.Responses.TryGetValue(statusCode, out var response)
+            && response?.Content is not null
+            && response.Content.TryGetValue(mediaType, out var content)
+            && content is not null)
+        {
+            content.Example = example;
+        }
+    }
+
+    private static JsonObject CreateProblemExample(int status, string title, string code) => new()
+    {
+        ["type"] = "about:blank",
+        ["title"] = title,
+        ["status"] = status,
+        ["code"] = code,
+        ["correlationId"] = "example-correlation-id"
+    };
 }

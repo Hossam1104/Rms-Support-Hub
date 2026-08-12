@@ -161,6 +161,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "status": "live"
+                     *     }
+                     */
                     "application/json": components["schemas"]["HealthStatusDto"];
                 };
             };
@@ -181,6 +186,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "status": "ready"
+                     *     }
+                     */
                     "application/json": components["schemas"]["HealthStatusDto"];
                 };
             };
@@ -201,24 +211,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "principalName": "EXAMPLE\\support-user",
+                     *       "isAuthorized": true,
+                     *       "agentVersion": "0.0.0",
+                     *       "apiVersion": "1.0",
+                     *       "supportedApiVersions": [
+                     *         "1.0"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["SessionInfoDto"];
                 };
             };
-            /** @description Windows Negotiate did not authenticate the request. */
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header. */
             401: {
                 headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
-                };
+                content?: never;
             };
-            /** @description The authenticated identity does not expose a resolvable Windows SID. */
+            /** @description The authenticated identity reached the endpoint, but its Windows SID could not be resolved. The Agent returns application/problem+json with code windows_sid_unavailable. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The authenticated Windows SID could not be resolved.",
+                     *       "status": 403,
+                     *       "code": "windows_sid_unavailable",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };
@@ -234,6 +264,11 @@ export interface operations {
         /** @description The browser supplies only the server-known logical operationId. It does not supply a target path or HTTP method; the Agent's operation registry owns those semantics. */
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "operationId": "example.registered-operation"
+                 *     }
+                 */
                 "application/json": components["schemas"]["MutationTokenIssueRequestDto"];
             };
         };
@@ -244,42 +279,64 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "token": "opaque-placeholder-not-a-real-token",
+                     *       "expiresAtUtc": "2030-01-01T00:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["MutationTokenIssueResponseDto"];
                 };
             };
-            /** @description The logical operationId is not registered by the Agent; no mutation token is issued. */
+            /** @description The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported; no mutation token is issued. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The requested mutation operation is not supported.",
+                     *       "status": 400,
+                     *       "code": "operation_not_supported",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };
-            /** @description Windows Negotiate did not authenticate the request. */
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header. */
             401: {
                 headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
-                };
+                content?: never;
             };
-            /** @description The authenticated Windows identity is not a member of the local Built-in Administrators group, or its Windows SID cannot be resolved. */
+            /** @description AuthorizationMiddleware may reject a non-Administrator before the endpoint executes; that policy-forbid response is bodyless and is not guaranteed to be AgentProblemDetails. If the endpoint executes and cannot resolve the authenticated Windows SID, it returns application/problem+json with code windows_sid_unavailable. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
-                };
+                content?: never;
             };
-            /** @description The bounded in-memory mutation-token retention limit has been reached; no token was issued. */
+            /** @description The bounded in-memory mutation-token retention limit has been reached; the Agent returns application/problem+json with code mutation_token_capacity and issues no token. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The mutation-token retention limit has been reached.",
+                     *       "status": 429,
+                     *       "code": "mutation_token_capacity",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };

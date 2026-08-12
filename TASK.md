@@ -1,6 +1,6 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Implement (INT-06I UAC-safe Administrator Authorization + Scalar/OpenAPI; browser retest blocked)
+**Role:** Implement (INT-06I-F1 Scalar/OpenAPI contract accuracy + live browser closure)
 **Branch:** `int-06i-admin-auth-scalar`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
@@ -132,24 +132,32 @@ Scalar.AspNetCore `2.16.18` is pinned, docs are Development/IntegrationTest
 only, AI Agent/default fonts are disabled, all current operations/responses/
 DTO properties are documented, and generated OpenAPI/client drift is checked.
 
-POST-REMEDIATION LIVE BROWSER EVIDENCE: NOT CLAIMED
-No connected Chrome/Edge session or current live harness was available in this
-execution context. No browser workaround, policy bypass, or elevation was
-attempted; the earlier INT-06H finding remains the baseline until an authorized
-post-remediation rerun.
+INT-06I-F1 corrected framework-versus-endpoint response representations,
+added runtime response-shape and route/OpenAPI parity guards, and added a
+docs-only local Scalar CSP so the non-production page renders its local assets
+without external fonts or CDN bundles.
+
+POST-REMEDIATION LIVE BROWSER EVIDENCE: PASS
+Real installed Chrome 151.0.7922.109 and Edge 151.0.4129.78 ran as normal
+medium-integrity limited-token processes. Both direct Agent sessions returned
+200 with `isAuthorized=true`; unknown mutation requests returned safe 400
+`operation_not_supported`, with no SID exposure, no token, and no POS
+operation executed. Production Kestrel returned 404 for `/scalar`, `/scalar/`,
+and `/openapi/v1.json`; Development Scalar rendered all four foundation
+operations with local assets only.
 
 PR STATE: OPEN / NOT MERGED / INDEPENDENT SECURITY REVIEW REQUIRED
 
 VALIDATION:
 POS Release build 0 warnings/errors; Domain 7/7, Application 76/76,
-Infrastructure 60/60, Agent 85/85; frontend 341/341; deterministic
-OpenAPI/client generation; no vulnerable Agent packages reported; and WinUI
-publish produced the executable plus packaged resources. The repository-wide
-`scripts/build.ps1` still has two unrelated pre-existing backend route-status
-test failures.
+Infrastructure 60/60, Agent 95/95; frontend 341/341 and production build;
+deterministic OpenAPI/client generation; Agent and frontend audits report no
+vulnerabilities; and retained WinUI publish produced the executable plus 27
+`.pri` and 66 `.xbf` resources. The repository-wide `scripts/build.ps1` still
+has two unrelated pre-existing backend route-status test failures.
 
 NEXT:
-INDEPENDENT SECURITY REVIEW, THEN CONTROLLED POST-REMEDIATION BROWSER RETEST
+INDEPENDENT SECURITY REVIEW
 
 INT-07: OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 

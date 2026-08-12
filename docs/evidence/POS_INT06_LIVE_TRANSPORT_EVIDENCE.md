@@ -199,6 +199,134 @@ state, and the active handoff. INT-07 was not staged as executable.
 
 **INT-07 WAS NOT EXECUTED.**
 
+## INT-06I-F1 - API CONTRACT ACCURACY + POST-REMEDIATION BROWSER EVIDENCE
+
+**Result:** `PASS - Scalar contract accuracy and live browser closure`
+
+**Execution date:** 2026-08-13
+
+This continuation completed the owner-authorized INT-06I-F1 scope on the same
+branch and preserved the earlier INT-06H browser failure as historical
+evidence. It corrected the OpenAPI/Scalar response declarations and closed the
+real-browser gate without changing the UAC-safe authorization seam or adding a
+POS feature operation. INT-07 was not executed.
+
+The UAC-safe authorization baseline was the owner-authorized commit
+`08b91a977b1f08ad8668a4edc40c6ab563b84629`; this continuation adds only the
+contract, Scalar-rendering, test, evidence, and validation closure described
+below on the same branch.
+
+### Contract correction
+
+The Agent contract now distinguishes framework-generated and endpoint-generated
+responses:
+
+- Negotiate challenge responses for unauthenticated session and mutation-token
+  requests are documented as bodyless `401` responses with a `WWW-Authenticate:
+  Negotiate` header; they are not claimed to be `AgentProblemDetails`.
+- Authorization-policy `403` responses are documented as potentially bodyless;
+  the endpoint-generated SID-resolution failure remains a typed
+  `application/problem+json` response with `windows_sid_unavailable`.
+- Endpoint-generated `400` and `429` responses retain typed
+  `application/problem+json` contracts with `operation_not_supported` and
+  `mutation_token_capacity` examples.
+- Synthetic examples contain no real identity, SID, credential, or token. The
+  mutation success example explicitly identifies its token as an opaque
+  placeholder rather than a usable token.
+- Runtime response-shape tests cover framework 401s, policy 403, endpoint 403,
+  unknown operation 400, and capacity 429. OpenAPI tests also enforce
+  endpoint-to-document route/method parity and endpoint-specific response
+  representations.
+- The docs-only Scalar page uses a route-scoped CSP that permits only local
+  Scalar scripts/styles/assets and same-origin OpenAPI fetches. The strict API
+  CSP remains unchanged for non-Scalar responses; external fonts and CDN
+  bundles remain disallowed.
+
+### Live Kestrel evidence
+
+The real Agent ran from the Release output under `NT AUTHORITY\\SYSTEM` on the
+canonical direct origin `https://rms-pos-agent.localhost:5001`. The temporary
+Support Hub evidence page was served over HTTPS from
+`https://support-hub.integration.test:4443`, and browser requests were
+recorded against the Agent origin directly; no Support Hub backend relay was
+involved.
+
+| Route | Production result |
+|---|---:|
+| `GET /health/live` | `200` |
+| `GET /health/ready` | `200` |
+| `GET /scalar` | `404` |
+| `GET /scalar/` | `404` |
+| `GET /openapi/v1.json` | `404` |
+
+Development documentation checks returned `200` for `/scalar/` and
+`/openapi/v1.json`. The rendered Scalar page loaded the local assets and
+OpenAPI document, then semantically exposed all four operations and their
+summaries: `GetHealthLive`, `GetHealthReady`, `GetAgentSession`, and
+`IssueMutationToken`. Problem-details and Negotiate documentation text was
+present; Scalar AI Agent text was absent; external default-font and CDN bundle
+references were absent.
+
+### Post-remediation normal-browser results
+
+The actual installed stable browser applications were launched with disposable
+profiles. Both were proven to run as the normal interactive user with a limited,
+medium-integrity token; neither browser was elevated.
+
+| Browser | Version | Session | Unknown mutation request | SID exposed | Token issued |
+|---|---|---:|---:|---:|---:|
+| Chrome | `151.0.7922.109` | `200`, `isAuthorized=true` | `400`, `operation_not_supported` | `NO` | `NO` |
+| Edge | `151.0.4129.78` | `200`, `isAuthorized=true` | `400`, `operation_not_supported` | `NO` | `NO` |
+
+The browser evidence page called only the direct Agent origin. No POS
+operation was registered or executed. The previous INT-06H normal-browser
+`403` result remains preserved in the historical section below; this run proves
+the UAC-safe server-side authorization remediation closes that gate for both
+normal browsers.
+
+### Automated validation
+
+| Check | Result |
+|---|---|
+| Agent integration tests | PASS; `95/95`, 0 skipped |
+| OpenAPI/client generation | PASS; deterministic two-pass file hashes |
+| OpenAPI runtime route/shape assertions | PASS; included in Agent `95/95` |
+| POS Release tests | PASS; Domain `7/7`, Application `76/76`, Infrastructure `60/60`, Agent `95/95` |
+| POS Release build | PASS; 0 warnings, 0 errors |
+| Frontend tests/build | PASS; 56 files / 341 tests and production build |
+| Package audits | PASS; Agent NuGet and frontend npm audits report no vulnerabilities |
+| Retained WinUI publish | PASS; `PosAdminTool.WinUI.exe`, 27 `.pri`, and 66 `.xbf` resources |
+| Production route isolation | PASS; real Kestrel `200/200/404/404/404` |
+| Chrome post-remediation direct path | PASS; normal medium-integrity browser |
+| Edge post-remediation direct path | PASS; normal medium-integrity browser |
+| Scalar Development live rendering | PASS; four operations, local assets only |
+
+### Cleanup verification
+
+The successful run stopped the temporary LocalSystem Agent and evidence origin,
+closed ports `5001` and `4443`, removed scheduled tasks and disposable browser
+profiles, removed temporary certificates/trust/PFX material, restored the
+hosts file and `BackConnectionHostNames`, removed temporary Chrome/Edge policy
+roots, and left `DisableLoopbackCheck` absent. No private key, credential,
+cookie, SID, auth trace, or usable token was retained in the repository.
+
+### INT-06I-F1 governance result
+
+```text
+INT-06I-F1: PASS
+SCALAR CONTRACT ACCURACY: PASS
+CHROME NORMAL-BROWSER AUTHORIZATION: PASS
+EDGE NORMAL-BROWSER AUTHORIZATION: PASS
+PRODUCTION DOCUMENT-ROUTE ISOLATION: PASS
+NON-PRODUCTION SCALAR LIVE CHECK: PASS
+CLEANUP: PASS
+INT-07: NOT AUTHORIZED / NOT EXECUTED
+PR #3: OPEN / DRAFT / UNMERGED
+NEXT: INDEPENDENT SECURITY REVIEW
+```
+
+**INT-07 WAS NOT EXECUTED.**
+
 ## INT-06I - UAC-SAFE ADMINISTRATOR AUTHORIZATION REMEDIATION + SCALAR DOCUMENTATION
 
 ### Scope and cause

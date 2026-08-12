@@ -188,7 +188,7 @@ app.MapGet(
         "Windows independently of UAC browser-token elevation; the raw Windows SID is never returned. " +
         "The endpoint has no side effects.")
     .Produces<SessionInfoDto>(StatusCodes.Status200OK)
-    .Produces<AgentProblemDetailsDto>(StatusCodes.Status401Unauthorized, "application/problem+json")
+    .Produces(StatusCodes.Status401Unauthorized)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
 app.MapPost(
@@ -247,8 +247,8 @@ app.MapPost(
     .Accepts<MutationTokenIssueRequestDto>("application/json")
     .Produces<MutationTokenIssueResponseDto>(StatusCodes.Status200OK)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
-    .Produces<AgentProblemDetailsDto>(StatusCodes.Status401Unauthorized, "application/problem+json")
-    .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+    .Produces(StatusCodes.Status401Unauthorized)
+    .Produces(StatusCodes.Status403Forbidden)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status429TooManyRequests, "application/problem+json");
 
 if (app.Environment.IsDevelopment()
