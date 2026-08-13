@@ -66,20 +66,6 @@ degrades; all current UI feature styles consume design tokens.
 |---|---|
 | POS Release build | Passed, 0 warnings/errors with Testing origin set |
 | POS tests | Domain 7, Application 76, Infrastructure 60, Agent 114 passed |
-| Frontend tests | 56 files / 345 tests passed |
-| Frontend production build | Passed; 454.73 kB initial, 26.70 kB POS lazy; no budget warnings |
-| Frontend offline build | Passed; 440.41 kB initial, 26.69 kB POS lazy |
-| Generated client | `openapi-typescript` 7.13.0 generation passed |
-| Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
-| Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
-| POS Agent live | Unavailable: canonical DNS/certificate prerequisites absent in this environment |
-| Broad `scripts/build.ps1` | Blocked by the existing local `RmsSupportHub.Api` Debug process locking referenced DLLs; the safe no-build backend regression run had 190 passed and 2 known unchanged 404-vs-405 route-status failures, and the backend Release build passed separately |
-
-## Deferred boundaries
-
-- Testing is default; no Production calls, SQL changes, deployment, or live
-  service actions were performed for INT-08. Fakes covered service dispatch.
-- UPC live/fixture acceptance, deployment/Production acceptance, and
   representative-device Agent evidence remain deferred under INT-13.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls
   are environment setup, not an INT-07 defect.
