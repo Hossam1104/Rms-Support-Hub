@@ -71,9 +71,9 @@ describe('RMS+ Support Hub route skeleton', () => {
     expect(routeAt('tools/pos-maintenance')?.loadComponent).toBeTruthy();
   });
 
-  it('marks POS Maintenance read-only while migrated tools remain available', () => {
+  it('marks POS Maintenance available for its bounded INT-08 surface', () => {
     expect(toolData('tools/pos-maintenance')).toEqual({ ...TOOL_ROUTE_DATA.posMaintenance });
-    expect(toolData('tools/pos-maintenance').status).toBe('read-only');
+    expect(toolData('tools/pos-maintenance').status).toBe('available');
     expect(toolData('tools/prompt-studio')).toEqual({ ...TOOL_ROUTE_DATA.promptStudio });
     expect(toolData('tools/prompt-studio').status).toBe('available');
     expect(toolData('tools/online-orders').status).toBe('available');

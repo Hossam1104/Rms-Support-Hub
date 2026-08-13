@@ -25,11 +25,11 @@ export const QA_TOOL_REGISTRY = [
     {
         id: 'pos-maintenance',
         ...TOOL_ROUTE_DATA.posMaintenance,
-        description: 'Read-only POS diagnostics, redacted configuration visibility, connectivity evidence, and service status.',
+        description: 'POS diagnostics, redacted configuration visibility, connectivity evidence, and guarded allow-listed service controls.',
         route: '/tools/pos-maintenance',
         icon: 'bi-pc-display',
-        actionLabel: 'View Status',
-        capabilities: ['Diagnostics', 'Backup', 'Services'],
-        availabilityMessage: 'Read-only first release; state-changing maintenance workflows are coming later.'
+        actionLabel: 'Open Maintenance',
+        capabilities: ['Diagnostics', 'Connectivity', 'Services'],
+        availabilityMessage: 'Available for authorized, allow-listed Windows service actions and safe POS evidence.'
     }
 ] as const satisfies readonly QaToolDefinition[];

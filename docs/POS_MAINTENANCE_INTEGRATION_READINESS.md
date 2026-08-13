@@ -29,7 +29,7 @@ documentation gate; INT-07 then added the first destination-owned read-only
 Agent feature routes and replaced the Support Hub POS placeholder with a
 direct operational workspace. No Support Hub backend relay was added.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / INT-06H DEFECT CONFIRMED / INT-06I COMPLETE AND ACCEPTED / INT-07 COMPLETE AND ACCEPTED / PROV-1 CLOSED FOR COMPOSITION / ARCHITECTURE CLOSED / INDEPENDENT SECURITY REVIEW PASS / PR #3 MERGED / PR #4 MERGED.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / INT-06H DEFECT CONFIRMED / INT-06I COMPLETE AND ACCEPTED / INT-07 COMPLETE AND ACCEPTED / INT-08 COMPLETE AND VALIDATED / PROV-1 CLOSED FOR COMPOSITION / ARCHITECTURE CLOSED / INDEPENDENT SECURITY REVIEW PASS / PR #3 MERGED / PR #4 MERGED.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -40,7 +40,8 @@ SID, failing closed on lookup failure. Session and mutation-token authorization
 share that server-derived boundary; synthetic claims remain test-only.
 Scalar/OpenAPI documentation is local and non-production, with generated
 artifacts drift-checked. Representative-device and real-operation evidence
-remains open under INT-13; INT-08 is staged but not executed. INT-02
+remains open under INT-13; INT-08 now owns the first bounded service-control
+mutation runtime. INT-02
   portable source import is complete; Windows Infrastructure and Agent tests and
   retained WinUI publish validation are complete. Agent host composition is
   complete, while Support Hub feature work, live browser transport evidence,
@@ -90,18 +91,48 @@ One Angular 22 SPA and one .NET 10 Web API.
 | Route | `/tools/pos-maintenance`, lazy, typed `TOOL_ROUTE_DATA.posMaintenance` |
 | Component | `frontend/src/app/features/pos-maintenance/pos-maintenance.component.ts` |
 | Model | `frontend/src/app/core/models/pos-capability.model.ts` |
-| Hub entry | `pos-maintenance` in `frontend/src/app/features/hub/tool-registry.ts`, accent `amber`, status `read-only` |
-| Agent routes | `/api/v1/device/identity`, `/api/v1/device/connectivity`, `/api/v1/device/capabilities`, `/api/v1/configuration`, `/api/v1/services` |
+| Hub entry | `pos-maintenance` in `frontend/src/app/features/hub/tool-registry.ts`, accent `amber`, status `available` for the bounded INT-08 surface |
+| Agent routes | `/api/v1/device/identity`, `/api/v1/device/connectivity`, `/api/v1/device/capabilities`, `/api/v1/configuration`, `/api/v1/services`, `/api/v1/services/{serviceId}/actions` |
 | Backend ownership | Destination-owned `RmsSupportHub.Pos.Agent`; no `RmsSupportHub.Api` relay |
 
-The page performs direct, credentialed read-only Agent calls for liveness,
-session diagnostics, device identity/connectivity/capabilities, redacted
-configuration, and allow-listed Windows service status. It shows safe loading,
-partial-failure, authorization, and unavailable states. It exposes no password,
-SID, unrestricted host path, browse operation, service control, configuration
-mutation, SQL, or generic command control. INT-08 owns the next bounded
-mutation-operation work; INT-13 owns representative-device/live operational
-evidence.
+The page performs direct, credentialed Agent calls for liveness, session
+diagnostics, device identity/connectivity/capabilities, redacted configuration,
+allow-listed Windows service status, and the bounded Start/Stop/Restart control
+operation. It shows safe loading, partial-failure, authorization, and
+unavailable states. It exposes no password, SID, unrestricted host path, browse
+operation, configuration mutation, SQL, or generic command control. INT-08
+requires confirmation, a target/method/path-bound one-use token, bounded
+idempotency, per-service concurrency protection, and explicit safe outcome
+truth; INT-13 owns representative-device/live operational evidence.
+
+## Current INT-08 result and next gate
+
+INT-08 is complete and validated within the existing direct browser-to-Agent
+boundary. The Agent registers only `services.control` for
+`POST /api/v1/services/{serviceId}/actions`; the browser supplies an opaque
+allow-list ID and typed `ServiceActionRequestDto` action/key fields. The Agent
+resolves the actual configured service name, validates current-state action
+semantics, authorizes through the server-derived Windows account/local
+Administrators boundary, validates exact Origin and the one-use token binding,
+and consumes the token immediately before `IServiceManager.ControlAsync`.
+
+The process-local idempotency store is bounded and scoped only to
+`(serviceId, idempotencyKey)`, while a non-blocking per-service gate prevents
+overlapping dispatches. Responses carry only safe correlation/detail data and
+explicit `NotAttempted`, `Accepted`, `Failed`, or `OutcomeUnknown` truth. The
+frontend uses the existing Support Hub dialog, button, status, and toast
+primitives; it keeps tokens in local memory, prevents duplicate submissions,
+refreshes service evidence after completion, and never retries an unknown
+outcome automatically. Generated OpenAPI and Angular artifacts are regenerated
+from the Agent source; runtime/OpenAPI parity and production documentation
+absence remain covered by tests.
+
+Validation evidence for this gate is POS Domain 7, Application 76,
+Infrastructure 60, Agent integration 114, and frontend 345 tests passed, with
+the Agent OpenAPI/client generation and frontend production build passing. No
+live or Production service was controlled; disposable test fakes were used.
+INT-13 remains open for representative-device certificate, browser transport,
+SCM, and other live operational evidence.
 
 ## Canonical architecture seam
 
@@ -298,9 +329,9 @@ The following remain future owner-gated work:
 1. Validate representative-device/live operational behavior: certificate
    trust/lifecycle, LNA, Negotiate/SPN, browser policy, loopback back-connection,
    and real Agent reads on the tested device under INT-13.
-2. Implement and validate bounded service-control mutation operations under
-   INT-08. The first-release read-only Agent surface is complete; live
-   SQL/SCM/SMB/device behavior remains evidence work.
+2. INT-08 implemented and validated the bounded service-control mutation
+   operation. Live SQL/SCM/SMB/device behavior remains evidence work under
+   INT-13.
 
 INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-CI01 are complete; INT-05 is
 accepted after INT-05F, which is complete. `PROV-1` is closed for the
@@ -324,18 +355,19 @@ Development/IntegrationTest-only, AI Agent and default external fonts are
 disabled, and generated contract/client drift is checked. The focused PR was
 reviewed and merged as PR #3. INT-07 then added the destination-owned
 read-only Agent routes, generated client updates, direct Support Hub workspace,
-and focused tests; there is no general API relay and no POS mutation operation.
+and focused tests. INT-08 then added the target-bound typed service-control
+operation without a general API relay or generic command surface.
 Every future POS Agent HTTP operation must carry complete OpenAPI metadata and
 be fully described in Scalar before its integration gate closes. INT-13 remains
-open and INT-08 is staged but not executed.
+open.
 
 ## Required post-integration validation
 
 | Gate | Requirement |
 | --- | --- |
-| Frontend suite | `npm --prefix tools/pos-agent-client-generator ci`; `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 342 tests across 56 files passed |
-| Backend suite | POS Domain 7, Application 76, Infrastructure 60, and Agent 100 tests pass |
-| Full gate | `./scripts/build.ps1` or the repository's Windows equivalent: backend tests, Release build with 0 warnings, and Angular production build |
+| Frontend suite | Generator `npm ci`, client generation, Angular tests, and builds passed; the requested frontend `npm ci` was blocked by Windows `EPERM` on an esbuild binary held by an existing local `ng serve`, then dependency reconciliation with `npm install` restored the tree; 345 tests across 56 files passed |
+| Backend suite | POS Domain 7, Application 76, Infrastructure 60, and Agent 114 tests pass |
+| Full gate | `./scripts/build.ps1` was attempted but its Debug backend test phase was blocked by an existing local `RmsSupportHub.Api` process locking referenced DLLs; the safe no-build regression run had 190 passed and the 2 known unchanged 404-vs-405 assertions, while the backend Release build and Angular production build passed separately |
 | Bundle budgets | POS stays out of the initial bundle beyond its route chunk; investigate meaningful growth |
 | Offline build | `production-offline` still succeeds |
 | Riyal verifier | `scripts/verify-riyal-asset.ps1` passes |

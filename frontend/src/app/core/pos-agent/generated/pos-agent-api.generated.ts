@@ -75,7 +75,7 @@ export interface paths {
         put?: never;
         /**
          * Issue a one-use mutation authorization token
-         * @description Issues a short-lived, one-use token for one server-registered mutation operation. Windows Negotiate authentication and local Built-in Administrators membership are required; normal browser elevation is not. The request supplies only a logical operationId. The server registry resolves the target operation and HTTP method. The result is bound to the authenticated Windows SID, exact Support Hub Origin, target operation, and server-resolved method, with replay and expiry enforcement. The token is header-only, memory-only, and does not itself perform the POS mutation. Production registers no feature mutation during this foundation gate, so unknown operations return operation_not_supported without issuing a token.
+         * @description Issues a short-lived, one-use token for one server-registered mutation operation. Windows Negotiate authentication and local Built-in Administrators membership are required; normal browser elevation is not. The request supplies only a logical operationId and, for a target-bound operation, an opaque targetId. The server registry resolves the target operation, allow-list entry, method, and canonical path. The result is bound to the authenticated Windows SID, exact Support Hub Origin, target operation, target path, and server-resolved method, with replay and expiry enforcement. The token is header-only, memory-only, and does not itself perform the POS mutation. Unknown or unavailable targets return a safe problem response without issuing a token.
          */
         post: operations["IssueMutationToken"];
         delete?: never;
@@ -113,11 +113,31 @@ export interface paths {
         };
         /**
          * Read allow-listed Windows service visibility
-         * @description Returns current status evidence for the server-owned, allow-listed Windows services configured on the local Agent. Service identifiers are opaque and the response contains visibility/status only. No start, stop, restart, delete, command, or process control is registered in this first release; allowedActions is always empty.
+         * @description Returns current status evidence for the server-owned, allow-listed Windows services configured on the local Agent. Service identifiers are opaque and the response contains visibility/status plus only the typed actions valid for the observed state. No raw service name is accepted from the browser and the GET has no side effects.
          */
         get: operations["GetServices"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{serviceId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start, stop, or restart one allow-listed Windows service
+         * @description Controls one server-owned, allow-listed Windows service through the typed Start, Stop, or Restart contract. The browser supplies only an opaque serviceId path value and a bounded idempotency key; raw service names, paths, commands, SQL, scripts, and arbitrary SCM input are rejected. Windows Negotiate, server-derived local Built-in Administrators membership, the exact Support Hub Origin, and a short-lived one-use mutation token bound to this exact POST path are required. The token is consumed immediately before the typed SCM dispatch. NotAttempted means no SCM call was made, Accepted means the Agent acknowledged dispatch, Failed means an authoritative rejection was classified, and OutcomeUnknown means dispatch or cancellation was ambiguous. Unknown outcomes are never retried automatically. The response contains only a safe code, detail, and correlation identifier.
+         */
+        post: operations["ControlService"];
         delete?: never;
         options?: never;
         head?: never;
@@ -173,7 +193,7 @@ export interface paths {
         };
         /**
          * Read safe Agent capabilities
-         * @description Returns non-secret capability metadata for the installed Agent, including its contract version and operating-system label. Browse-root entries contain display metadata only; host paths remain server-owned. This first release publishes no file-browse or mutation capability.
+         * @description Returns non-secret capability metadata for the installed Agent, including its contract version and operating-system label. Browse-root entries contain display metadata only; host paths remain server-owned. This operation publishes no file-browse or unrelated mutation capability.
          */
         get: operations["GetDeviceCapabilities"];
         put?: never;
@@ -260,14 +280,16 @@ export interface components {
             /** @description Identifies which anonymous foundation health check produced the response (live or ready). */
             status: string;
         };
-        /** @description Browser request for a token for one logical operation known to the server. The browser cannot supply the target HTTP method or path. */
+        /** @description Browser request for a token for one logical operation known to the server. For a target-bound operation, targetId is an opaque server-issued identifier; the browser cannot supply the target HTTP method or path. */
         MutationTokenIssueRequestDto: {
             /** @description Stable logical identifier for a server-registered operation. The browser supplies this identifier only; it cannot choose the target path or HTTP method. */
             operationId: string;
+            /** @description Optional opaque server-issued target identifier. The Agent resolves it through the registered operation's allow-list and never treats it as a raw service name or path. */
+            targetId?: null | string;
         };
         /** @description Opaque, short-lived mutation-token response produced by the Agent. The token is intended for browser memory only. */
         MutationTokenIssueResponseDto: {
-            /** @description Opaque short-lived, one-use token produced by the Agent. It is bound to the authenticated Windows SID, exact Origin, operation, and server-resolved method and should remain in browser memory. */
+            /** @description Opaque short-lived, one-use token produced by the Agent. It is bound to the authenticated Windows SID, exact Origin, operation, target path, and server-resolved method and should remain in browser memory. */
             token: string;
             /**
              * Format: date-time
@@ -331,11 +353,34 @@ export interface components {
         /** @enum {unknown} */
         ServiceActionKind: "start" | "stop" | "restart";
         /**
+         * @description Typed outcome truth: NotAttempted, Failed, Accepted, or OutcomeUnknown.
+         * @enum {unknown}
+         */
+        ServiceActionOutcome: "notAttempted" | "failed" | "accepted" | "outcomeUnknown";
+        /** @description Typed Start, Stop, or Restart request for one opaque allow-listed service. It contains no raw service name, host path, command, SQL, script, or executable input. */
+        ServiceActionRequestDto: {
+            /** @description One of the explicit Start, Stop, or Restart operations supported by the Agent. */
+            action: components["schemas"]["ServiceActionKind"];
+            /** @description Bounded caller-generated key scoped to the opaque service identifier; repeating the same key and action returns the original typed response without a second dispatch. */
+            idempotencyKey: string;
+        };
+        /** @description Safe result for one service action. Outcome truth is separate from HTTP status and contains no exception, SID, credential, path, command, or raw service target. */
+        ServiceActionResponseDto: {
+            /** @description Typed service-action outcome truth, independent of the HTTP status. */
+            outcome: components["schemas"]["ServiceActionOutcome"];
+            /** @description Stable safe service-action code for operator guidance; it never carries raw exception or machine detail. */
+            code: string;
+            /** @description Safe operator-facing detail without exception, identity, credential, path, command, or raw target disclosure. */
+            detail: string;
+            /** @description Safe Agent/request correlation identifier for diagnostics. */
+            correlationId: string;
+        };
+        /**
          * @description Current Windows service runtime state observed by the Agent.
          * @enum {unknown}
          */
         ServiceRuntimeState: "unknown" | "running" | "stopped" | "transitioning" | "notFound";
-        /** @description Allow-listed Windows service visibility and status evidence. This first release exposes no service control actions. */
+        /** @description Allow-listed Windows service visibility, current status evidence, and the typed service actions valid for the observed state. */
         ServiceSummaryDto: {
             /** @description Opaque server-issued service identifier; the raw Windows service name is not accepted from a browser. */
             serviceId: string;
@@ -345,9 +390,9 @@ export interface components {
             state: components["schemas"]["ServiceRuntimeState"];
             /** @description Freshness and check-time evidence for the service state. */
             lastChecked: components["schemas"]["EvidenceDto"];
-            /** @description Mutation actions exposed by this Agent. INT-07 always returns an empty array. */
+            /** @description Typed service actions currently valid for the observed state; the server owns this list. */
             allowedActions: components["schemas"]["ServiceActionKind"][];
-            /** @description Safe prior-operation outcome, when present; INT-07 performs no service operation. */
+            /** @description Safe prior-operation outcome, when present; it never contains exception text or target details. */
             lastOutcome: null | string;
         };
         /** @description Security and API-version diagnostics produced by the Agent for the authenticated Windows account. The raw Windows SID is intentionally omitted. */
@@ -541,12 +586,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The browser supplies only the server-known logical operationId. It does not supply a target path or HTTP method; the Agent's operation registry owns those semantics. */
+        /** @description The browser supplies only a server-known logical operationId and, when required, an opaque targetId. It never supplies a target path or HTTP method; the Agent's registry and allow-list own those semantics. */
         requestBody: {
             content: {
                 /**
                  * @example {
-                 *       "operationId": "example.registered-operation"
+                 *       "operationId": "example.registered-operation",
+                 *       "targetId": null
                  *     }
                  */
                 "application/json": components["schemas"]["MutationTokenIssueRequestDto"];
@@ -568,7 +614,7 @@ export interface operations {
                     "application/json": components["schemas"]["MutationTokenIssueResponseDto"];
                 };
             };
-            /** @description The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported; no mutation token is issued. The host and HTTPS middleware may also return host_rejected or https_required in this transport response. */
+            /** @description The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported or mutation_target_invalid; no mutation token is issued. The host and HTTPS middleware may also return host_rejected or https_required in this transport response. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -724,7 +770,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The Agent returned allow-listed service status summaries with no mutation actions. */
+            /** @description The Agent returned allow-listed service status summaries and state-valid action metadata. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -741,7 +787,10 @@ export interface operations {
                      *           "lastCheckedUtc": "2030-01-01T00:00:00Z",
                      *           "detail": "Windows service is running."
                      *         },
-                     *         "allowedActions": [],
+                     *         "allowedActions": [
+                     *           "stop",
+                     *           "restart"
+                     *         ],
                      *         "lastOutcome": null
                      *       }
                      *     ]
@@ -784,6 +833,83 @@ export interface operations {
                 content?: never;
             };
             /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ControlService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        /** @description Typed Start, Stop, or Restart request with a bounded non-empty idempotency key. The request contains no service name, path, command, SQL, or executable input. */
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "action": "restart",
+                 *       "idempotencyKey": "support-action-20260813-001"
+                 *     }
+                 */
+                "application/json": null | components["schemas"]["ServiceActionRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The authenticated Agent returned ServiceActionResponseDto outcome truth. The response may be NotAttempted, Accepted, Failed, or OutcomeUnknown; its detail is safe and never contains exception text, credentials, SIDs, paths, commands, or raw service names. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "outcome": "accepted",
+                     *       "code": "service_action_accepted",
+                     *       "detail": "The Agent acknowledged the service action.",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ServiceActionResponseDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host, non-HTTPS request, or malformed transport contract with safe application/problem+json details; a parsed service-action business rejection is represented as a 200 NotAttempted response. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator before the endpoint executes. If the endpoint executes, unresolved Windows identity or a missing, expired, replayed, principal-mismatched, origin-mismatched, operation-mismatched, method-mismatched, or path-mismatched token returns safe application/problem+json code windows_sid_unavailable or mutation_token_invalid. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception or machine detail. */
             500: {
                 headers: {
                     [name: string]: unknown;

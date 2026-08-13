@@ -98,9 +98,10 @@ builder.Services.AddSingleton<InMemoryMutationTokenStore>();
 builder.Services.AddSingleton<IMutationTokenStore>(services =>
     services.GetRequiredService<InMemoryMutationTokenStore>());
 builder.Services.AddSingleton<MutationTokenService>();
-// INT-05 deliberately composes an empty production registry. Feature sessions add their own
-// typed descriptors; no fake privileged operation is registered merely to make issuance succeed.
-builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry());
+builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(
+[
+    ServiceActionOperation.Descriptor
+]));
 
 builder.Services.AddOpenApi("v1", options =>
 {
@@ -109,16 +110,22 @@ builder.Services.AddOpenApi("v1", options =>
     options.AddDocumentTransformer<AgentOpenApiDocumentTransformer>();
 });
 
-// INT-07 composes only the safe storage ports and read-only diagnostics. It deliberately does not
-// register legacy WinUI configuration importers, configuration mutation services, operation
-// workers, or state-changing feature endpoints.
+// INT-08 composes only the safe storage ports, diagnostics, and the typed allow-listed service
+// control runtime. It deliberately does not register legacy WinUI configuration importers,
+// configuration mutation services, operation workers, or unrelated state-changing features.
 builder.Services.AddSingleton(new AgentConfigurationStoreOptions());
 builder.Services.AddSingleton<IAgentConfigurationStore, JsonAgentConfigurationStore>();
 builder.Services.AddSingleton<IAgentSecretStore, DpapiAgentSecretStore>();
 builder.Services.AddSingleton<AgentConfigurationUseCase>();
 builder.Services.AddSingleton<DeviceDiagnosticsService>();
 builder.Services.AddSingleton<IServiceManager, WindowsServiceManager>();
+builder.Services.AddSingleton<ServiceAllowList>();
 builder.Services.AddSingleton<ReadOnlyServiceStatusService>();
+builder.Services.AddSingleton(new ServiceActionOptions());
+builder.Services.AddSingleton<ServiceActionIdempotencyStore>();
+builder.Services.AddSingleton<ServiceActionConcurrencyGate>();
+builder.Services.AddSingleton<IMutationOperationTargetResolver, MutationOperationTargetResolver>();
+builder.Services.AddSingleton<ServiceActionRuntime>();
 
 // ArtifactCatalog is retained as a process-local foundation, but no HTTP artifact endpoint is
 // mapped in this session. Its file capability remains behind the existing Infrastructure port.
@@ -206,11 +213,12 @@ app.MapGet(
 
 app.MapPost(
         "/api/v1/security/mutation-token",
-        (HttpContext context,
+        async (HttpContext context,
             MutationTokenIssueRequestDto request,
             IMutationOperationRegistry operationRegistry,
             MutationTokenService mutationTokenService,
-            IAgentPrincipalSidResolver principalSidResolver) =>
+            IAgentPrincipalSidResolver principalSidResolver,
+            CancellationToken cancellationToken) =>
         {
             if (!principalSidResolver.TryGetSid(context.User, out _))
             {
@@ -232,8 +240,20 @@ app.MapPost(
 
             try
             {
-                var issued = mutationTokenService.Issue(context, operation);
+                var issued = await mutationTokenService.IssueAsync(
+                    context,
+                    operation,
+                    request.TargetId,
+                    cancellationToken).ConfigureAwait(false);
                 return Results.Ok(new MutationTokenIssueResponseDto(issued.Token, issued.ExpiresAtUtc));
+            }
+            catch (MutationTargetRejectedException)
+            {
+                return AgentProblemDetails.CreateResult(
+                    context,
+                    StatusCodes.Status400BadRequest,
+                    "The requested mutation target is not available.",
+                    AgentProblemCodes.MutationTargetInvalid);
             }
             catch (MutationTokenCapacityException)
             {
@@ -252,14 +272,14 @@ app.MapPost(
         "Issues a short-lived, one-use token for one server-registered mutation operation. Windows " +
         "Negotiate authentication and local Built-in Administrators membership are required; normal " +
         "browser elevation is not. The browser supplies only a logical operationId, while the server " +
-        "registry resolves the target method. The token is bound to the authenticated Windows SID, " +
-        "exact Support Hub Origin, operation, and server-resolved method, and is replay protected in " +
-        "memory. Production registers no feature mutation during this foundation gate, so an unknown " +
-        "operation returns operation_not_supported without issuing a token. Issuance changes only " +
-        "short-lived in-memory token state; it does not perform the POS mutation.")
+        "registry resolves the target allow-list entry, method, and path. The token is bound to the " +
+        "authenticated Windows SID, exact Support Hub Origin, operation, target path, and " +
+        "server-resolved method, and is replay protected in memory. Unknown or unavailable " +
+        "operations/targets return safe problem details without issuing a token. Issuance changes " +
+        "only short-lived in-memory token state; it does not perform the POS mutation.")
     .Accepts<MutationTokenIssueRequestDto>("application/json")
     .Produces<MutationTokenIssueResponseDto>(StatusCodes.Status200OK)
-    .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
+        .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
     .Produces(StatusCodes.Status401Unauthorized)
     .Produces(StatusCodes.Status403Forbidden)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status429TooManyRequests, "application/problem+json");

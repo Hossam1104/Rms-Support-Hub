@@ -8,6 +8,7 @@ using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
+using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Domain.Interfaces;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
@@ -65,6 +66,7 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IMutationOperationRegistry>();
             services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(
             [
+                ServiceActionOperation.Descriptor,
                 new MutationOperationDescriptor("integration.test-mutation", "PUT")
             ]));
         });

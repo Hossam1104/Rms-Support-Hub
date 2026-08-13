@@ -9,4 +9,10 @@ public sealed record MutationTokenIssueRequestDto(
     /// Stable logical identifier for an operation registered by the Agent. The browser cannot
     /// supply the target path or HTTP method.
     /// </summary>
-    string OperationId);
+    string OperationId,
+    /// <summary>
+    /// Optional opaque server-issued target identifier. When the registered operation is target
+    /// bound, the Agent resolves this identifier through its own allow-list and binds the token to
+    /// the resulting canonical request path. A raw service name is never accepted.
+    /// </summary>
+    string? TargetId = null);

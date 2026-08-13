@@ -1,5 +1,6 @@
 using System.ServiceProcess;
 using System.Diagnostics;
+using RmsSupportHub.Pos.Domain.Exceptions;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
 
@@ -60,24 +61,35 @@ public sealed class WindowsServiceManager : IServiceManager
                 throw new PlatformNotSupportedException("Windows service control is only available on Windows.");
             }
 
-            using var controller = new ServiceController(serviceName);
-            switch (action)
+            try
             {
-                case ServiceControlAction.Start:
-                    Start(controller, cancellationToken);
-                    break;
-                case ServiceControlAction.Stop:
-                    Stop(controller, cancellationToken);
-                    break;
-                case ServiceControlAction.Restart:
-                    Stop(controller, cancellationToken);
-                    Start(controller, cancellationToken);
-                    break;
-                case ServiceControlAction.Delete:
-                    Delete(serviceName);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported service action.");
+                using var controller = new ServiceController(serviceName);
+                switch (action)
+                {
+                    case ServiceControlAction.Start:
+                        Start(controller, cancellationToken);
+                        break;
+                    case ServiceControlAction.Stop:
+                        Stop(controller, cancellationToken);
+                        break;
+                    case ServiceControlAction.Restart:
+                        Stop(controller, cancellationToken);
+                        Start(controller, cancellationToken);
+                        break;
+                    case ServiceControlAction.Delete:
+                        Delete(serviceName);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported service action.");
+                }
+            }
+            catch (InvalidOperationException exception)
+            {
+                throw new ServiceControlRejectedException("service_control_rejected", exception);
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                throw new ServiceControlRejectedException("service_control_forbidden", exception);
             }
         }, cancellationToken);
     }
@@ -105,7 +117,7 @@ public sealed class WindowsServiceManager : IServiceManager
 
         if (!controller.CanStop)
         {
-            throw new InvalidOperationException($"Service {controller.ServiceName} cannot be stopped.");
+            throw new ServiceControlRejectedException("service_not_stoppable");
         }
 
         controller.Stop();

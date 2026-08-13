@@ -4,8 +4,17 @@ import { firstValueFrom, Observable } from 'rxjs';
 import { components } from '../../core/pos-agent/generated/pos-agent-api.generated';
 import { PosAgentTransportError, classifyPosAgentError } from '../../core/pos-agent/pos-agent-error';
 import { PosAgentTransportService } from '../../core/pos-agent/pos-agent-transport.service';
+import { POS_AGENT_OPERATION_IDS } from '../../core/pos-agent/pos-agent.constants';
+import { ToastService } from '../../core/services/toast.service';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
-import { EmptyStateComponent, PageHeaderComponent, SkeletonComponent, UiButtonComponent, UiCardComponent } from '../../shared/ui';
+import {
+  ConfirmDialogComponent,
+  EmptyStateComponent,
+  PageHeaderComponent,
+  SkeletonComponent,
+  UiButtonComponent,
+  UiCardComponent
+} from '../../shared/ui';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 type HealthStatus = components['schemas']['HealthStatusDto'];
@@ -15,10 +24,14 @@ type DeviceConnectivity = components['schemas']['DeviceConnectivityDto'];
 type DeviceCapabilities = components['schemas']['DeviceCapabilitiesDto'];
 type RedactedConfiguration = components['schemas']['RedactedConfigurationDto'];
 type ServiceSummary = components['schemas']['ServiceSummaryDto'];
+type ServiceActionKind = components['schemas']['ServiceActionKind'];
+type ServiceActionOutcome = components['schemas']['ServiceActionOutcome'];
+type ServiceActionResponse = components['schemas']['ServiceActionResponseDto'];
 type Evidence = components['schemas']['EvidenceDto'];
 type AgentState = 'loading' | 'reachable' | 'unreachable';
 type AuthState = 'loading' | 'authenticated' | 'authentication-required' | 'unavailable';
 type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: PosAgentTransportError };
+type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceActionKind }>;
 
 @Component({
   selector: 'app-pos-maintenance',
@@ -31,15 +44,16 @@ type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: fals
     UiButtonComponent,
     UiCardComponent,
     EmptyStateComponent,
-    SkeletonComponent
+    SkeletonComponent,
+    ConfirmDialogComponent
   ],
   template: `
     <app-navbar></app-navbar>
 
-    <main class="pos-page" aria-label="POS Maintenance read-only first release">
+    <main class="pos-page" aria-label="POS Maintenance service control and evidence">
       <app-page-header
-        title="POS Maintenance — Read-only first release"
-        subtitle="Direct, credentialed reads from the local Windows POS Agent. State-changing maintenance workflows are intentionally not available yet.">
+        title="POS Maintenance - service control and evidence"
+        subtitle="Direct, credentialed reads from the local Windows POS Agent, with narrowly scoped controls for authorized allow-listed Windows services.">
         <ui-button
           variant="secondary"
           size="sm"
@@ -118,7 +132,7 @@ type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: fals
         </ui-card>
       </section>
 
-      <section class="workspace-grid" aria-label="POS Agent read-only workspace">
+      <section class="workspace-grid" aria-label="POS Agent evidence and service-control workspace">
         <ui-card variant="raised" class="workspace-card identity-card">
           <div uiCardHeader class="card-heading card-heading--split">
             <div class="card-heading__copy">
@@ -220,7 +234,7 @@ type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: fals
           <div uiCardHeader class="card-heading card-heading--split">
             <div class="card-heading__copy">
               <p class="eyebrow">Windows services</p>
-              <h2>Status visibility</h2>
+              <h2>Status and controls</h2>
             </div>
             <i class="bi bi-gear-wide-connected card-heading__mark" aria-hidden="true"></i>
           </div>
@@ -232,29 +246,63 @@ type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: fals
                 @for (service of values; track service.serviceId) {
                   <div class="service-row" role="listitem">
                     <div class="service-row__copy"><strong>{{ service.displayName }}</strong><small>{{ service.lastChecked.detail }}</small></div>
-                    <app-status-badge [label]="serviceStateLabel(service.state)" [variant]="serviceStateVariant(service.state)" role="status"></app-status-badge>
+                    <div class="service-row__actions">
+                      <app-status-badge [label]="serviceStateLabel(service.state)" [variant]="serviceStateVariant(service.state)" role="status"></app-status-badge>
+                      @if (canControlServices() && service.allowedActions.length) {
+                        <div class="service-action-group" role="group" [attr.aria-label]="'Actions for ' + service.displayName">
+                          @for (action of service.allowedActions; track action) {
+                            <ui-button
+                              variant="secondary"
+                              size="sm"
+                              [loading]="isActionSubmitting(service.serviceId, action)"
+                              [disabled]="submittingAction() !== null && !isActionSubmitting(service.serviceId, action)"
+                              [ariaLabel]="actionLabel(action) + ' ' + service.displayName"
+                              (pressed)="requestServiceAction(service, action)">
+                              {{ actionLabel(action) }}
+                            </ui-button>
+                          }
+                        </div>
+                      }
+                    </div>
+                    @if (actionOutcome(service); as outcome) {
+                      <p class="service-row__outcome" [class.service-row__outcome--warning]="outcome.outcome === 'outcomeUnknown' || outcome.outcome === 'notAttempted'" [class.service-row__outcome--danger]="outcome.outcome === 'failed'" role="status">
+                        {{ actionOutcomeLabel(outcome.outcome) }}: {{ outcome.detail }}
+                      </p>
+                    }
                   </div>
                 }
               </div>
             } @else {
               <app-empty-state icon="bi-gear-wide-connected" title="No services are configured" description="The Agent returned an empty allow-list."></app-empty-state>
             }
-            <p class="boundary-copy"><i class="bi bi-eye" aria-hidden="true"></i> Read-only status is available; start, stop, and restart actions are not exposed.</p>
+            <p class="boundary-copy"><i class="bi bi-shield-check" aria-hidden="true"></i> Controls appear only for an authorized local Administrator and only for the state-valid actions returned by the Agent.</p>
           } @else {
             <app-empty-state icon="bi-gear-wide-connected" title="Service status is unavailable" [description]="readError('services')"></app-empty-state>
           }
         </ui-card>
       </section>
 
-      <section class="boundary-banner" aria-label="Read-only boundary">
-        <div class="boundary-banner__icon" aria-hidden="true"><i class="bi bi-eye"></i></div>
+      <section class="boundary-banner" aria-label="POS Agent mutation boundary">
+        <div class="boundary-banner__icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></div>
         <div>
-          <p class="eyebrow">First-release boundary</p>
-          <h2>Read-only support evidence only</h2>
-          <p>This workspace reads safe Agent diagnostics directly from the local POS. Configuration writes, service controls, backup/restore, file browsing, SQL execution, and generic command execution are not registered or shown.</p>
+          <p class="eyebrow">INT-08 boundary</p>
+          <h2>Typed service controls with safe outcome truth</h2>
+          <p>Start, stop, and restart use an explicit confirmation, a short-lived one-use Agent token, and a bounded idempotency key. Configuration writes, backup/restore, file browsing, SQL execution, and generic command execution remain outside this surface. An unknown action outcome is never retried automatically.</p>
         </div>
       </section>
     </main>
+
+    @if (pendingAction(); as pending) {
+      <app-confirm-dialog
+        variant="danger"
+        [title]="'Confirm ' + actionLabel(pending.action).toLowerCase() + ' service'"
+        [message]="confirmationMessage(pending)"
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        (cancel)="cancelPendingAction()"
+        (confirm)="executePendingAction()">
+      </app-confirm-dialog>
+    }
   `,
   styles: [`
     :host { display: block; min-height: 100vh; background: var(--scene-backdrop), var(--surface-page); }
@@ -288,9 +336,14 @@ type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: fals
     .boundary-copy { display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-4) 0 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-normal); }
     .boundary-copy i { flex: 0 0 auto; color: var(--text-accent); }
     .service-list { display: grid; gap: var(--space-2); }
-    .service-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--surface-raised); }
+    .service-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--surface-raised); }
     .service-row__copy { display: grid; min-width: 0; gap: var(--space-1); }
     .service-row strong { color: var(--text-primary); font-size: var(--text-sm); overflow-wrap: anywhere; }
+    .service-row__actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); }
+    .service-action-group { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+    .service-row__outcome { grid-column: 1 / -1; margin: 0; color: var(--state-success-fg); font-size: var(--text-xs); line-height: var(--leading-normal); }
+    .service-row__outcome--warning { color: var(--state-warning-fg); }
+    .service-row__outcome--danger { color: var(--state-danger-fg); }
     .notice, .boundary-banner { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--panel-padding); border: 1px solid var(--state-danger-border); border-radius: var(--radius-lg); background: var(--state-danger-bg); color: var(--state-danger-fg); margin-bottom: var(--section-gap); }
     .notice > i { flex: 0 0 auto; margin-top: 2px; }
     .notice strong { color: var(--text-primary); }
@@ -300,11 +353,12 @@ type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: fals
     .boundary-banner h2 { margin-bottom: var(--space-2); }
     .boundary-banner p:last-child { max-width: 78ch; margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-normal); }
     @media (max-width: 1000px) { .status-grid { grid-template-columns: 1fr; } .workspace-grid { grid-template-columns: 1fr; } }
-    @media (max-width: 680px) { .pos-page { padding-inline: var(--space-4); } .evidence-grid { grid-template-columns: 1fr; } .service-row { align-items: flex-start; flex-direction: column; } }
+    @media (max-width: 680px) { .pos-page { padding-inline: var(--space-4); } .evidence-grid { grid-template-columns: 1fr; } .service-row { grid-template-columns: 1fr; align-items: flex-start; } .service-row__actions { justify-content: flex-start; } }
   `]
 })
 export class PosMaintenanceComponent {
   private readonly transport = inject(PosAgentTransportService);
+  private readonly toast = inject(ToastService);
 
   readonly loading = signal(true);
   readonly refreshing = signal(false);
@@ -317,8 +371,11 @@ export class PosMaintenanceComponent {
   readonly configuration = signal<RedactedConfiguration | null>(null);
   readonly services = signal<ServiceSummary[] | null>(null);
   readonly globalError = signal<string | null>(null);
+  readonly pendingAction = signal<PendingServiceAction | null>(null);
+  readonly submittingAction = signal<string | null>(null);
 
   private readonly errors = signal<Record<string, string>>({});
+  private readonly actionOutcomes = signal<Record<string, ServiceActionResponse>>({});
 
   constructor() {
     void this.load();
@@ -327,6 +384,89 @@ export class PosMaintenanceComponent {
   async refresh(): Promise<void> {
     if (this.refreshing()) return;
     await this.load();
+  }
+
+  canControlServices(): boolean {
+    return this.session()?.isAuthorized === true;
+  }
+
+  requestServiceAction(service: ServiceSummary, action: ServiceActionKind): void {
+    if (!this.canControlServices()
+      || !service.allowedActions.includes(action)
+      || this.submittingAction() !== null) {
+      return;
+    }
+
+    this.pendingAction.set({ service, action });
+  }
+
+  cancelPendingAction(): void {
+    this.pendingAction.set(null);
+  }
+
+  actionLabel(action: ServiceActionKind): string {
+    switch (action) {
+      case 'start': return 'Start';
+      case 'stop': return 'Stop';
+      case 'restart': return 'Restart';
+    }
+  }
+
+  confirmationMessage(pending: PendingServiceAction): string {
+    return `${this.actionLabel(pending.action)} ${pending.service.displayName}? The Agent will check the current service state before dispatching this typed action.`;
+  }
+
+  isActionSubmitting(serviceId: string, action: ServiceActionKind): boolean {
+    return this.submittingAction() === this.actionKey(serviceId, action);
+  }
+
+  actionOutcome(service: ServiceSummary): ServiceActionResponse | null {
+    return this.actionOutcomes()[service.serviceId] ?? null;
+  }
+
+  actionOutcomeLabel(outcome: ServiceActionOutcome): string {
+    switch (outcome) {
+      case 'accepted': return 'Accepted';
+      case 'failed': return 'Failed';
+      case 'outcomeUnknown': return 'Outcome unknown';
+      default: return 'Not attempted';
+    }
+  }
+
+  async executePendingAction(): Promise<void> {
+    const pending = this.pendingAction();
+    if (!pending || !this.canControlServices() || !pending.service.allowedActions.includes(pending.action)) {
+      this.pendingAction.set(null);
+      return;
+    }
+
+    this.pendingAction.set(null);
+    const operationKey = this.actionKey(pending.service.serviceId, pending.action);
+    this.submittingAction.set(operationKey);
+    const idempotencyKey = this.createIdempotencyKey();
+
+    try {
+      const issued = await firstValueFrom(
+        this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.serviceControl, pending.service.serviceId)
+      );
+      const response = await firstValueFrom(
+        this.transport.controlService(
+          pending.service.serviceId,
+          pending.action,
+          idempotencyKey,
+          issued.token
+        )
+      );
+      this.actionOutcomes.update(outcomes => ({ ...outcomes, [pending.service.serviceId]: response }));
+      this.notifyActionOutcome(response);
+      await this.load();
+    } catch (error) {
+      this.toast.showError(this.actionErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      if (this.submittingAction() === operationKey) {
+        this.submittingAction.set(null);
+      }
+    }
   }
 
   agentStatusLabel(): string {
@@ -513,6 +653,43 @@ export class PosMaintenanceComponent {
       case 'contractMismatch': return error.code === 'host_rejected' ? 'The Agent rejected the request host.' : error.code === 'https_required' ? 'The Agent requires HTTPS for this read.' : 'The Agent contract rejected this read.';
       case 'agentServerError': return 'The POS Agent reported a server error without exposing implementation details.';
       default: return 'The POS Agent did not complete this read.';
+    }
+  }
+
+  private actionKey(serviceId: string, action: ServiceActionKind): string {
+    return `${serviceId}:${action}`;
+  }
+
+  private createIdempotencyKey(): string {
+    const randomId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `support-${randomId}`.slice(0, 128);
+  }
+
+  private notifyActionOutcome(response: ServiceActionResponse): void {
+    switch (response.outcome) {
+      case 'accepted':
+        this.toast.showSuccess('The POS Agent acknowledged the service action.');
+        return;
+      case 'failed':
+        this.toast.showError('The Windows service rejected the action.');
+        return;
+      case 'outcomeUnknown':
+        this.toast.showWarning('The service action outcome is unknown. Check the service state before deciding whether to retry.');
+        return;
+      default:
+        this.toast.showInfo('The service action was not attempted.');
+    }
+  }
+
+  private actionErrorMessage(error: PosAgentTransportError): string {
+    switch (error.kind) {
+      case 'authenticationRequired': return 'Windows authentication is required to control a service.';
+      case 'originRejected': return 'The Support Hub origin is not accepted by the POS Agent.';
+      case 'notAuthorized': return 'The signed-in Windows account is not authorized to control services.';
+      case 'transportUnavailableOrBlocked': return 'The fixed POS Agent endpoint could not be reached or the browser blocked the action.';
+      case 'agentServerError': return 'The POS Agent reported a server error without exposing implementation details.';
+      case 'contractMismatch': return 'The POS Agent rejected the service-control contract.';
+      default: return 'The POS Agent did not complete the service action.';
     }
   }
 }

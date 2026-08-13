@@ -55,8 +55,8 @@ public static class DeviceEndpoints
             .WithDescription(
                 "Returns non-secret capability metadata for the installed Agent, including its " +
                 "contract version and operating-system label. Browse-root entries, when present, " +
-                "contain display metadata only; host paths remain server-owned. This first release " +
-                "publishes no file-browse or mutation capability. The endpoint has no side effects.")
+                "contain display metadata only; host paths remain server-owned. This endpoint " +
+                "publishes no file-browse or unrelated mutation capability and has no side effects.")
             .Produces<DeviceCapabilitiesDto>(StatusCodes.Status200OK, "application/json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)

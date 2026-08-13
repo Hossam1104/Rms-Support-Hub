@@ -33,7 +33,7 @@ public sealed class ProductionCompositionTests
     }
 
     [Fact]
-    public void ProductionMapsReadOnlyFirstReleaseRoutesWithoutMutationFeatureRoutes()
+    public void ProductionMapsInt08ServiceControlWithoutLaterFeatureRoutes()
     {
         using var factory = new AgentWebApplicationFactory("Production");
         using var scope = factory.Services.CreateScope();
@@ -50,7 +50,7 @@ public sealed class ProductionCompositionTests
         Assert.Contains("/api/v1/device/capabilities", endpoints);
         Assert.Contains("/api/v1/configuration", endpoints);
         Assert.Contains("/api/v1/services", endpoints);
-        Assert.DoesNotContain(endpoints, path => path!.Contains("/actions", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("/api/v1/services/{serviceId}/actions", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));

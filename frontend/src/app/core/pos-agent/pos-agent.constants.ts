@@ -12,4 +12,8 @@ export const POS_AGENT_PATHS = {
   services: '/api/v1/services'
 } as const;
 
+export const POS_AGENT_OPERATION_IDS = {
+  serviceControl: 'services.control'
+} as const;
+
 export const POS_AGENT_MUTATION_TOKEN_HEADER = 'X-RMS-Mutation-Token' as const;

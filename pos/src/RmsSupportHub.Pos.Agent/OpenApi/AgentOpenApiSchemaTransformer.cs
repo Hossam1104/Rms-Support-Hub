@@ -33,8 +33,9 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Security and API-version diagnostics produced by the Agent for the authenticated " +
                 "Windows account. The raw Windows SID is intentionally omitted.",
             (var value, null) when value == typeof(MutationTokenIssueRequestDto) =>
-                "Browser request for a token for one logical operation known to the server. The " +
-                "browser cannot supply the target HTTP method or path.",
+                "Browser request for a token for one logical operation known to the server. For a " +
+                "target-bound operation, targetId is an opaque server-issued identifier; the browser " +
+                "cannot supply the target HTTP method or path.",
             (var value, null) when value == typeof(MutationTokenIssueResponseDto) =>
                 "Opaque, short-lived mutation-token response produced by the Agent. The token is " +
                 "intended for browser memory only.",
@@ -60,8 +61,16 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Non-secret DB Downloader settings with an RDB password-presence flag. Passwords and " +
                 "SMB/UNC paths are never returned.",
             (var value, null) when value == typeof(ServiceSummaryDto) =>
-                "Allow-listed Windows service visibility and status evidence. This first release exposes " +
-                "no service control actions.",
+                "Allow-listed Windows service visibility, current status evidence, and the typed " +
+                "service actions valid for the observed state.",
+            (var value, null) when value == typeof(ServiceActionRequestDto) =>
+                "Typed Start, Stop, or Restart request for one opaque allow-listed service. It " +
+                "contains no raw service name, host path, command, SQL, script, or executable input.",
+            (var value, null) when value == typeof(ServiceActionResponseDto) =>
+                "Safe result for one service action. Outcome truth is separate from HTTP status and " +
+                "contains no exception, SID, credential, path, command, or raw service target.",
+            (var value, null) when value == typeof(ServiceActionOutcome) =>
+                "Typed service-action outcome: NotAttempted, Failed, Accepted, or OutcomeUnknown.",
             (var value, null) when value == typeof(EvidenceDto) =>
                 "A bounded status observation with explicit freshness and UTC check time.",
             _ => schema.Description
@@ -98,10 +107,13 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
             (var value, "operationId") when value == typeof(MutationTokenIssueRequestDto) =>
                 "Stable logical identifier for a server-registered operation. The browser supplies this " +
                 "identifier only; it cannot choose the target path or HTTP method.",
+            (var value, "targetId") when value == typeof(MutationTokenIssueRequestDto) =>
+                "Optional opaque server-issued target identifier. The Agent resolves it through the " +
+                "registered operation's allow-list and never treats it as a raw service name or path.",
             (var value, "token") when value == typeof(MutationTokenIssueResponseDto) =>
                 "Opaque short-lived, one-use token produced by the Agent. It is bound to the authenticated " +
-                "Windows SID, exact Origin, operation, and server-resolved method and should remain in " +
-                "browser memory.",
+                "Windows SID, exact Origin, operation, target path, and server-resolved method and should " +
+                "remain in browser memory.",
             (var value, "expiresAtUtc") when value == typeof(MutationTokenIssueResponseDto) =>
                 "UTC expiry instant enforced by the Agent for the one-use mutation token.",
             (var value, "type") when value == typeof(AgentProblemDetailsDto) =>
@@ -190,9 +202,26 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
             (var value, "lastChecked") when value == typeof(ServiceSummaryDto) =>
                 "Freshness and check-time evidence for the service state.",
             (var value, "allowedActions") when value == typeof(ServiceSummaryDto) =>
-                "Mutation actions exposed by this Agent. INT-07 always returns an empty array.",
+                "Typed service actions currently valid for the observed state. The list is server-owned " +
+                "and may be empty when the state is unknown or no action is valid.",
             (var value, "lastOutcome") when value == typeof(ServiceSummaryDto) =>
-                "Safe prior-operation outcome, when present; INT-07 performs no service operation.",
+                "Safe prior-operation outcome, when present; it never contains exception text or target " +
+                "details.",
+            (var value, "action") when value == typeof(ServiceActionRequestDto) =>
+                "One of the explicit Start, Stop, or Restart operations supported by the Agent.",
+            (var value, "idempotencyKey") when value == typeof(ServiceActionRequestDto) =>
+                "Bounded caller-generated key scoped to the opaque service identifier; repeating the same " +
+                "key and action returns the original typed response without a second dispatch.",
+            (var value, "outcome") when value == typeof(ServiceActionResponseDto) =>
+                "Typed outcome truth: NotAttempted, Failed, Accepted, or OutcomeUnknown.",
+            (var value, "code") when value == typeof(ServiceActionResponseDto) =>
+                "Stable safe service-action code for operator guidance; it never carries raw exception or " +
+                "machine detail.",
+            (var value, "detail") when value == typeof(ServiceActionResponseDto) =>
+                "Safe operator-facing detail without credentials, Windows SIDs, paths, commands, raw " +
+                "service names, or exception text.",
+            (var value, "correlationId") when value == typeof(ServiceActionResponseDto) =>
+                "Safe Agent/request correlation identifier for diagnostics.",
             _ => null
         };
 }

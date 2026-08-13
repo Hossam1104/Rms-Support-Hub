@@ -9,7 +9,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { POS_AGENT_ORIGIN, POS_AGENT_PATHS } from './pos-agent.constants';
+import { POS_AGENT_MUTATION_TOKEN_HEADER, POS_AGENT_OPERATION_IDS, POS_AGENT_ORIGIN, POS_AGENT_PATHS } from './pos-agent.constants';
 import { PosAgentTransportService } from './pos-agent-transport.service';
 
 describe('PosAgentTransportService', () => {
@@ -109,6 +109,32 @@ describe('PosAgentTransportService', () => {
       token: 'opaque-test-token',
       expiresAtUtc: '2026-08-11T12:05:00Z'
     });
+  });
+
+  it('binds the service action request to the opaque target, exact Agent URL, and one-use token header', async () => {
+    const result = firstValueFrom(
+      service.controlService('svc-0123456789abcdef', 'restart', 'support-test-key', 'opaque-test-token')
+    );
+    const request = httpTesting.expectOne(
+      `${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.services}/svc-0123456789abcdef/actions`
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.headers.get('Accept')).toBe('application/json');
+    expect(request.request.headers.get('Content-Type')).toContain('application/json');
+    expect(request.request.headers.get(POS_AGENT_MUTATION_TOKEN_HEADER)).toBe('opaque-test-token');
+    expect(request.request.body).toEqual({ action: 'restart', idempotencyKey: 'support-test-key' });
+    request.flush({
+      outcome: 'accepted',
+      code: 'service_action_accepted',
+      detail: 'The Agent acknowledged the service action.',
+      correlationId: 'test-correlation'
+    });
+
+    await expect(result).resolves.toMatchObject({ outcome: 'accepted' });
+    expect(POS_AGENT_OPERATION_IDS.serviceControl).toBe('services.control');
+    expect(interceptorCalls).toBe(0);
   });
 
   it('classifies status zero conservatively without inferring a transport cause', async () => {

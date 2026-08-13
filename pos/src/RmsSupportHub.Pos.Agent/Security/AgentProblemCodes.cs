@@ -8,6 +8,7 @@ public static class AgentProblemCodes
     public const string CorsPreflightRejected = "cors_preflight_rejected";
     public const string WindowsSidUnavailable = "windows_sid_unavailable";
     public const string OperationNotSupported = "operation_not_supported";
+    public const string MutationTargetInvalid = "mutation_target_invalid";
     public const string MutationTokenCapacity = "mutation_token_capacity";
     public const string MutationTokenInvalid = "mutation_token_invalid";
 }

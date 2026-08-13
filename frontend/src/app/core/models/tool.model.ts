@@ -46,7 +46,7 @@ export const TOOL_ROUTE_DATA = {
   posMaintenance: {
     title: 'POS Maintenance Tool',
     breadcrumb: 'POS Maintenance',
-    status: 'read-only',
+    status: 'available',
     accent: 'amber'
   }
 } as const satisfies Record<string, ToolRouteData>;

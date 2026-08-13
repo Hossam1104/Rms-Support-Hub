@@ -28,11 +28,12 @@ the linked planning/evidence documents.
 | INT-06I / F1 | Branch `int-06i-admin-auth-scalar`; PR #3 | Replaced UAC-token membership coupling with server-side local-group resolution, completed Scalar/OpenAPI contract and browser evidence, and passed independent security review. |
 | INT-06I acceptance | PR #3 merge `c8706745a9ee8b423b4813badf0ca863b37a5d0e` | Reviewed security remediation landed normally; no Critical/High findings. |
 | INT-07 read-only first release | PR #4 merge `3a3d58b2406b8e80954fac0174bbdc3b623962f2` | Added protected device/connectivity/configuration/service reads, generated artifacts, direct operational Support Hub workspace, and no mutation/API relay. Agent 100/100; frontend 342/342; all five POS CI lanes green. |
+| INT-08 service-control mutation runtime | Branch `int-08-pos-service-control`; PR pending | Added the typed opaque-target Start/Stop/Restart Agent route, target/method/path-bound one-use tokens, bounded idempotency/concurrency, explicit outcome truth, direct Angular controls, OpenAPI/client regeneration, and 114 Agent / 345 frontend test coverage. No live or Production service was controlled. |
 
 ## Current programme status
 
-INT-00 through INT-07 are complete within their approved boundaries. INT-13
-representative-device/live operational evidence remains open. INT-08 service
-control/mutation runtime is staged but not executed. The repository-wide build
-still has two known baseline route-status assertions (404 expected vs 405
-actual); they are not INT-07 changes.
+INT-00 through INT-08 are complete within their approved boundaries. INT-13
+representative-device/live operational evidence remains open. The broad build
+was environment-blocked by a running local API process; its safe no-build
+regression run still has the two known unchanged route-status assertions (404
+expected vs 405 actual), unrelated to INT-08.

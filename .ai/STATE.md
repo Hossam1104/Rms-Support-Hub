@@ -1,16 +1,16 @@
 # Current Project State
 
 - **Updated:** 2026-08-13
-- **Branch:** `main` (synchronized with `origin/main` after PR #4 merge)
+- **Branch:** `int-08-pos-service-control` (INT-08 implementation and delivery branch)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
-- **Programme:** INT-00 through INT-06I complete/accepted; INT-07 read-only POS integration complete/accepted; INT-13 open; INT-08 staged, not executed.
-- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`. No general API relay or POS mutation route exists.
+- **Programme:** INT-00 through INT-07 complete/accepted; INT-08 complete/validated on this branch; INT-13 remains open.
+- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`. INT-08 adds only the typed target-bound service-control route; no general API relay or generic POS mutation surface exists.
 
 ## Application
 
 - Angular 22 SPA and .NET 10 Web API. Prompt Studio and Online Orders are
-  available; `/tools/pos-maintenance` is a direct operational read-only POS
-  workspace.
+  available; `/tools/pos-maintenance` is a direct operational POS evidence and
+  service-control workspace.
 - Routes are lazy and typed through `ToolRouteData`. Business/API, payload,
   SQL, module-key, and persisted-storage contracts remain unchanged.
 - POS feature ownership is the separate `RmsSupportHub.Pos.Agent`; the Hub
@@ -29,9 +29,10 @@
   `HttpBackend` transport. INT-06I owns UAC-safe authorization and non-
   production Scalar/OpenAPI. INT-07 owns device, connectivity, redacted
   configuration, service-status reads, and the direct Angular workspace.
-- Production runtime OpenAPI remains hidden. INT-13 still owns certificate/
-  hostname/representative-device/live operational evidence. INT-08 owns future
-  typed service mutation and is not executed.
+- INT-08 owns only typed `services.control`: opaque allow-listed service IDs,
+  target/method/path-bound one-use tokens, bounded idempotency/concurrency, and
+  truthful typed outcomes. Production runtime OpenAPI remains hidden. INT-13
+  owns certificate/hostname/representative-device/live operational evidence.
 
 ## Security and review record
 
@@ -64,20 +65,20 @@ degrades; all current UI feature styles consume design tokens.
 | Gate | Result |
 |---|---|
 | POS Release build | Passed, 0 warnings/errors with Testing origin set |
-| POS tests | Domain 7, Application 76, Infrastructure 60, Agent 100 passed |
-| Frontend tests | 56 files / 342 tests passed |
+| POS tests | Domain 7, Application 76, Infrastructure 60, Agent 114 passed |
+| Frontend tests | 56 files / 345 tests passed |
 | Frontend production build | Passed; 454.73 kB initial, 26.70 kB POS lazy; no budget warnings |
 | Frontend offline build | Passed; 440.41 kB initial, 26.69 kB POS lazy |
 | Generated client | `openapi-typescript` 7.13.0 generation passed |
 | Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
 | Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
 | POS Agent live | Unavailable: canonical DNS/certificate prerequisites absent in this environment |
-| Broad `scripts/build.ps1` | 190 backend tests passed; 2 known baseline route-status tests fail (expected 404, current 405); backend Release build passes separately |
+| Broad `scripts/build.ps1` | Blocked by the existing local `RmsSupportHub.Api` Debug process locking referenced DLLs; the safe no-build backend regression run had 190 passed and 2 known unchanged 404-vs-405 route-status failures, and the backend Release build passed separately |
 
 ## Deferred boundaries
 
-- Testing is default; no Production calls, SQL changes, deployment, or
-  state-changing POS actions are authorized by this state.
+- Testing is default; no Production calls, SQL changes, deployment, or live
+  service actions were performed for INT-08. Fakes covered service dispatch.
 - UPC live/fixture acceptance, deployment/Production acceptance, and
   representative-device Agent evidence remain deferred under INT-13.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls

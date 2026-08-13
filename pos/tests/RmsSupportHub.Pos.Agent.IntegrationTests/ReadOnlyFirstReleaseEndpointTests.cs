@@ -108,7 +108,7 @@ public sealed class ReadOnlyFirstReleaseEndpointTests : IClassFixture<AgentWebAp
     }
 
     [Fact]
-    public async Task ServicesExposeStatusOnlyAndNoControlRoute()
+    public async Task ServicesExposeOnlyAllowListedTargetsAndStateValidActions()
     {
         using var client = _factory.CreateAdminClient();
 
@@ -118,15 +118,19 @@ public sealed class ReadOnlyFirstReleaseEndpointTests : IClassFixture<AgentWebAp
         Assert.Equal(2, services.Length);
         Assert.Equal("RMS.BranchService", services[0].GetProperty("displayName").GetString());
         Assert.Equal("running", services[0].GetProperty("state").GetString());
-        Assert.Empty(services[0].GetProperty("allowedActions").EnumerateArray());
+        Assert.Equal(
+            ["stop", "restart"],
+            services[0].GetProperty("allowedActions").EnumerateArray().Select(value => value.GetString()!).ToArray());
         Assert.Equal("stopped", services[1].GetProperty("state").GetString());
-        Assert.Empty(services[1].GetProperty("allowedActions").EnumerateArray());
+        Assert.Equal(
+            ["start", "restart"],
+            services[1].GetProperty("allowedActions").EnumerateArray().Select(value => value.GetString()!).ToArray());
+        Assert.All(services, service =>
+        {
+            var serviceId = service.GetProperty("serviceId").GetString();
+            Assert.Matches("^svc-[0-9a-f]{16}$", serviceId!);
+        });
         Assert.DoesNotContain(FakeAuthenticationHandler.DefaultSid, document.RootElement.GetRawText(), StringComparison.Ordinal);
-
-        using var mutationResponse = await client.PostAsync(
-            "/api/v1/services/svc-example-opaque/actions",
-            content: null);
-        Assert.Equal(HttpStatusCode.NotFound, mutationResponse.StatusCode);
     }
 
     private static async Task<JsonDocument> GetDocumentAsync(HttpClient client, string path)
