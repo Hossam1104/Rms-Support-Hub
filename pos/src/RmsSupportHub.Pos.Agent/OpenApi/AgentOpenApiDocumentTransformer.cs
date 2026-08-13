@@ -23,10 +23,11 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "Destination-owned foundation contract for the per-device Windows POS Agent. " +
             "The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser " +
             "access. Windows Negotiate supplies the authenticated identity, local Built-in " +
-            "Administrators membership authorizes protected reads and future mutations, and no " +
-            "Support Hub backend relay is involved. INT-07 exposes only read-only device, redacted " +
-            "configuration, and Windows service visibility endpoints. Mutation tokens are short-lived, " +
-            "one-use, and server-operation-bound for future state-changing operations.";
+            "Administrators membership authorizes protected reads and the typed Windows-service " +
+            "control operation, and no Support Hub backend relay is involved. INT-08 exposes read-only " +
+            "device/configuration/service visibility plus one allow-listed Start/Stop/Restart service " +
+            "mutation. Mutation tokens are short-lived, one-use, and bound to the authenticated " +
+            "principal, exact Origin, registered operation, target, method, and path.";
         document.Servers = [new OpenApiServer
         {
             Url = AgentHostConstants.CanonicalOrigin,
@@ -53,6 +54,7 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         AddWindowsSecurityRequirement(document, "/api/v1/device/capabilities", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/configuration", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/services", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/services/{serviceId}/actions", HttpMethod.Post);
         AddReferencePropertyDescriptions(document);
 
         return Task.CompletedTask;
@@ -90,6 +92,31 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "ServiceSummaryDto",
             "lastChecked",
             "Freshness and check-time evidence for the service state.");
+        SetPropertyDescription(
+            document,
+            "ServiceSummaryDto",
+            "allowedActions",
+            "Typed service actions currently valid for the observed state; the server owns this list.");
+        SetPropertyDescription(
+            document,
+            "ServiceActionResponseDto",
+            "outcome",
+            "Typed service-action outcome truth, independent of the HTTP status.");
+        SetPropertyDescription(
+            document,
+            "ServiceActionRequestDto",
+            "action",
+            "One of the explicit Start, Stop, or Restart operations supported by the Agent.");
+        SetPropertyDescription(
+            document,
+            "ServiceActionRequestDto",
+            "idempotencyKey",
+            "Bounded caller-generated key scoped to the opaque service identifier; repeating the same key and action returns the original typed response without a second dispatch.");
+        SetPropertyDescription(
+            document,
+            "ServiceActionResponseDto",
+            "detail",
+            "Safe operator-facing detail without exception, identity, credential, path, command, or raw target disclosure.");
     }
 
     private static void SetPropertyDescription(

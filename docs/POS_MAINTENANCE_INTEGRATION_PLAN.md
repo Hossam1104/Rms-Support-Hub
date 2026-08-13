@@ -75,7 +75,7 @@ INT-13:
 OPEN - REPRESENTATIVE-DEVICE / LIVE OPERATIONAL EVIDENCE
 
 INT-08:
-STAGED BUT NOT EXECUTED - POS SERVICE CONTROL + MUTATION OPERATION RUNTIME INTEGRATION
+COMPLETE / VALIDATED - POS SERVICE CONTROL + MUTATION OPERATION RUNTIME INTEGRATION
 ```
 
 INT-06I is closed by the owner-supplied independent security review
@@ -84,8 +84,8 @@ post-remediation Chrome/Edge authorization evidence. INT-07 is the first
 destination-owned read-only feature slice: the Agent now owns protected device
 diagnostics, redacted configuration, and Windows service visibility reads,
 while Support Hub Angular consumes them directly over the existing fixed
-loopback origin. No general Support Hub API relay or POS mutation operation is
-part of INT-07. The older INT-06/INT-06I gate narratives below remain
+loopback origin. INT-08 now adds the first bounded service mutation without a
+general Support Hub API relay. The older INT-06/INT-06I gate narratives below remain
 historical evidence and are not current authorization state.
 
 INT-00 closes the cross-project architecture decision. INT-01 created the
@@ -104,8 +104,9 @@ OpenAPI document, deterministic Support Hub generated types, and a dedicated
 direct-Agent Angular transport; INT-05F isolates the generator's TypeScript 5
 peer dependency from Angular's TypeScript 6 graph. INT-07 composes the first
 read-only Agent feature surface and replaces the Support Hub POS placeholder
-with a direct operational workspace. No Support Hub API relay is involved and
-no state-changing POS operation is registered.
+with a direct operational workspace. INT-08 adds only the typed allow-listed
+service-control operation; no Support Hub API relay or generic state-changing
+POS operation is involved.
 
 INT-CI01 then made Windows maintenance and SMB path semantics deterministic in
 portable Application code and resolved the nine pre-existing Ubuntu
@@ -656,20 +657,24 @@ AGENT HOST / RUNTIME COMPOSITION:
 NOT AUTHORIZED
 ```
 
-## Current INT-07 result and next gate
+## Current INT-08 result and next gate
 
-INT-07 implemented the first operational Support Hub POS workspace and the
-destination-owned read-only Agent surface:
+INT-07 established the direct Support Hub workspace and destination-owned
+read surface. INT-08 adds one controlled service operation while keeping the
+same direct browser-to-Agent trust boundary:
 
 | Surface | Result |
 | --- | --- |
 | Device identity, connectivity, capabilities | Implemented as protected, bounded reads; no SID, credential, or unrestricted path exposure |
 | Redacted configuration | Implemented through `AgentConfigurationUseCase`; password presence only, no mutation endpoints |
-| Windows service visibility | Implemented through the existing `IServiceManager` seam; status only and `allowedActions: []` |
-| Direct browser transport | Generated-client-backed `HttpBackend` GETs to the fixed Agent origin; no general API relay |
-| Support Hub workspace | Operational read-only overview with safe partial-failure UX, loading states, responsive tokenized UI, and no mutation controls |
-| OpenAPI / client | Nine-route document regenerated; runtime/OpenAPI parity, metadata, security, redaction, and production-hidden documentation tests pass |
-| Next bounded direction | INT-08 service control + mutation operation runtime integration, staged but not executed |
+| Windows service visibility and controls | Opaque allow-listed service IDs, state-valid Start/Stop/Restart actions, and typed `IServiceManager` dispatch; raw names and arbitrary SCM input are rejected |
+| Mutation runtime | `POST /api/v1/services/{serviceId}/actions`; server-derived Administrator authorization, exact Origin, target/method/path-bound one-use token, bounded idempotency, and non-blocking per-service concurrency gate |
+| Outcome truth | `NotAttempted`, `Accepted`, `Failed`, and `OutcomeUnknown` are explicit safe response outcomes; ambiguous outcomes are never retried automatically |
+| Direct browser transport | Generated-client-backed `HttpBackend` reads and typed POSTs to the fixed Agent origin; no general API relay |
+| Support Hub workspace | Direct evidence workspace with authorized state-valid controls, existing confirmation dialog/toasts, local token handling, duplicate prevention, safe typed outcome guidance, responsive tokenized UI, and no generic mutation controls |
+| OpenAPI / client | Ten-route document regenerated; runtime/OpenAPI parity, metadata, security, target binding, response semantics, redaction, and production-hidden documentation tests pass |
+| Validation | POS Domain 7, Application 76, Infrastructure 60, Agent 114, and frontend 345 tests pass; generated client and production build pass |
+| Next bounded direction | INT-13 representative-device/live operational evidence remains open; no live SCM control was attempted |
 
 INT-13 representative-device/live operational validation remains open. The
 following block is the historical pre-INT-06I gate snapshot retained for audit

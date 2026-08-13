@@ -48,6 +48,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/services"):
                 DocumentServices(operation);
                 break;
+            case ("POST", "/api/v1/services/{serviceId}/actions"):
+                DocumentServiceAction(operation);
+                break;
         }
 
         return Task.CompletedTask;
@@ -136,18 +139,19 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "Issues a short-lived, one-use token for one server-registered mutation operation. " +
             "Windows Negotiate authentication and local Built-in Administrators membership are " +
             "required; normal browser elevation is not. The request supplies only a logical " +
-            "operationId. The server registry resolves the target operation and HTTP method. The " +
-            "result is bound to the authenticated Windows SID, exact Support Hub Origin, target " +
-            "operation, and server-resolved method, with replay and expiry enforcement. The token is " +
-            "header-only, memory-only, and does not itself perform the POS mutation. Production " +
-            "registers no feature mutation during this foundation gate, so unknown operations return " +
-            "operation_not_supported without issuing a token.");
+            "operationId and, for a target-bound operation, an opaque targetId. The server registry " +
+            "resolves the target operation, allow-list entry, method, and canonical path. The result " +
+            "is bound to the authenticated Windows SID, exact Support Hub Origin, target operation, " +
+            "target path, and server-resolved method, with replay and expiry enforcement. The token " +
+            "is header-only, memory-only, and does not itself perform the POS mutation. Unknown or " +
+            "unavailable targets return a safe problem response without issuing a token.");
 
         if (operation.RequestBody is not null)
         {
             operation.RequestBody.Description =
-                "The browser supplies only the server-known logical operationId. It does not supply " +
-                "a target path or HTTP method; the Agent's operation registry owns those semantics.";
+                "The browser supplies only a server-known logical operationId and, when required, an " +
+                "opaque targetId. It never supplies a target path or HTTP method; the Agent's registry " +
+                "and allow-list own those semantics.";
             SetRequestExample(operation);
         }
 
@@ -156,8 +160,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             operation,
             "400",
             "The Agent rejected an unregistered operationId with application/problem+json code " +
-            "operation_not_supported; no mutation token is issued. The host and HTTPS middleware " +
-            "may also return host_rejected or https_required in this transport response.");
+            "operation_not_supported or mutation_target_invalid; no mutation token is issued. The " +
+            "host and HTTPS middleware may also return host_rejected or https_required in this " +
+            "transport response.");
         SetResponseDescription(
             operation,
             "401",
@@ -234,8 +239,8 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "Read safe Agent capabilities",
             "Returns non-secret capability metadata for the installed Agent, including its " +
             "contract version and operating-system label. Browse-root entries contain display " +
-            "metadata only; host paths remain server-owned. This first release publishes no " +
-            "file-browse or mutation capability.",
+            "metadata only; host paths remain server-owned. This operation publishes no file-browse " +
+            "or unrelated mutation capability.",
             "The Agent returned safe DeviceCapabilitiesDto metadata.",
             new JsonObject
             {
@@ -288,9 +293,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "Read allow-listed Windows service visibility",
             "Returns current status evidence for the server-owned, allow-listed Windows services " +
             "configured on the local Agent. Service identifiers are opaque and the response contains " +
-            "visibility/status only. No start, stop, restart, delete, command, or process control is " +
-            "registered in this first release; allowedActions is always empty.",
-            "The Agent returned allow-listed service status summaries with no mutation actions.",
+            "visibility/status plus only the typed actions valid for the observed state. No raw " +
+            "service name is accepted from the browser and the GET has no side effects.",
+            "The Agent returned allow-listed service status summaries and state-valid action metadata.",
             new JsonArray
             {
                 new JsonObject
@@ -299,10 +304,83 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
                     ["displayName"] = "RMS.BranchService",
                     ["state"] = "running",
                     ["lastChecked"] = EvidenceExample("Windows service is running."),
-                    ["allowedActions"] = new JsonArray(),
+                    ["allowedActions"] = new JsonArray("stop", "restart"),
                     ["lastOutcome"] = null
                 }
             });
+    }
+
+    private static void DocumentServiceAction(OpenApiOperation operation)
+    {
+        SetOperation(
+            operation,
+            "Start, stop, or restart one allow-listed Windows service",
+            "Controls one server-owned, allow-listed Windows service through the typed Start, Stop, " +
+            "or Restart contract. The browser supplies only an opaque serviceId path value and a " +
+            "bounded idempotency key; raw service names, paths, commands, SQL, scripts, and arbitrary " +
+            "SCM input are rejected. Windows Negotiate, server-derived local Built-in Administrators " +
+            "membership, the exact Support Hub Origin, and a short-lived one-use mutation token bound " +
+            "to this exact POST path are required. The token is consumed immediately before the typed " +
+            "SCM dispatch. NotAttempted means no SCM call was made, Accepted means the Agent " +
+            "acknowledged dispatch, Failed means an authoritative rejection was classified, and " +
+            "OutcomeUnknown means dispatch or cancellation was ambiguous. Unknown outcomes are never " +
+            "retried automatically. The response contains only a safe code, detail, and correlation " +
+            "identifier.");
+
+        if (operation.RequestBody is not null)
+        {
+            operation.RequestBody.Description =
+                "Typed Start, Stop, or Restart request with a bounded non-empty idempotency key. " +
+                "The request contains no service name, path, command, SQL, or executable input.";
+            if (operation.RequestBody.Content?.TryGetValue("application/json", out var content) == true
+                && content is not null)
+            {
+                content.Example = new JsonObject
+                {
+                    ["action"] = "restart",
+                    ["idempotencyKey"] = "support-action-20260813-001"
+                };
+            }
+        }
+
+        SetResponseDescription(
+            operation,
+            "200",
+            "The authenticated Agent returned ServiceActionResponseDto outcome truth. The response " +
+            "may be NotAttempted, Accepted, Failed, or OutcomeUnknown; its detail is safe and never " +
+            "contains exception text, credentials, SIDs, paths, commands, or raw service names.");
+        SetResponseDescription(
+            operation,
+            "400",
+            "The Agent rejected a non-canonical host, non-HTTPS request, or malformed transport " +
+            "contract with safe application/problem+json details; a parsed service-action business " +
+            "rejection is represented as a 200 NotAttempted response.");
+        SetResponseDescription(
+            operation,
+            "401",
+            "The Windows authentication middleware issued a Negotiate challenge. This framework " +
+            "response is bodyless and is not guaranteed to contain Agent problem details.");
+        SetResponseDescription(
+            operation,
+            "403",
+            "AuthorizationMiddleware may reject a non-Administrator before the endpoint executes. " +
+            "If the endpoint executes, unresolved Windows identity or a missing, expired, replayed, " +
+            "principal-mismatched, origin-mismatched, operation-mismatched, method-mismatched, or " +
+            "path-mismatched token returns safe application/problem+json code windows_sid_unavailable " +
+            "or mutation_token_invalid.");
+        SetResponseDescription(
+            operation,
+            "500",
+            "The Agent returned a safe generic server-error response without exception or machine " +
+            "detail.");
+        DocumentNegotiateChallenge(operation);
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["outcome"] = "accepted",
+            ["code"] = "service_action_accepted",
+            ["detail"] = "The Agent acknowledged the service action.",
+            ["correlationId"] = "example-correlation-id"
+        });
     }
 
     private static void DocumentProtectedRead(
@@ -392,7 +470,8 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         {
             content.Example = new JsonObject
             {
-                ["operationId"] = "example.registered-operation"
+                ["operationId"] = "example.registered-operation",
+                ["targetId"] = null
             };
         }
     }

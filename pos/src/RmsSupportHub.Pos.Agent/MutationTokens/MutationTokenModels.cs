@@ -7,7 +7,8 @@ public sealed record MutationTokenValidationRequest(
     string PrincipalSid,
     string Origin,
     string Method,
-    string OperationId);
+    string OperationId,
+    string? HttpPath = null);
 
 public enum MutationTokenFailure
 {
@@ -26,7 +27,12 @@ public readonly record struct MutationTokenConsumeResult(bool Succeeded, Mutatio
 
 public interface IMutationTokenStore
 {
-    MutationTokenIssue Issue(string principalSid, string origin, string method, string operationId);
+    MutationTokenIssue Issue(
+        string principalSid,
+        string origin,
+        string method,
+        string operationId,
+        string? httpPath = null);
 
     MutationTokenConsumeResult TryConsume(MutationTokenValidationRequest request);
 }

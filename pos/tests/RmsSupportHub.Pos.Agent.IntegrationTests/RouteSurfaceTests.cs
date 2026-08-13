@@ -14,7 +14,7 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
     }
 
     [Fact]
-    public void CurrentReadOnlyFirstReleaseRouteCategoriesAreMapped()
+    public void CurrentInt08RouteCategoriesAreMapped()
     {
         using var scope = _factory.Services.CreateScope();
         var endpoints = scope.ServiceProvider
@@ -34,6 +34,7 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
         Assert.Contains("/api/v1/device/capabilities", endpoints);
         Assert.Contains("/api/v1/configuration", endpoints);
         Assert.Contains("/api/v1/services", endpoints);
+        Assert.Contains("/api/v1/services/{serviceId}/actions", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));

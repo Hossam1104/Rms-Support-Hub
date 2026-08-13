@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Services;
 using RmsSupportHub.Pos.Domain.Enums;
@@ -8,38 +6,37 @@ using RmsSupportHub.Pos.Domain.Interfaces;
 namespace RmsSupportHub.Pos.Agent.Services;
 
 /// <summary>
-/// Reads the service allow-list owned by the Agent and projects current Windows service state.
-/// The first release deliberately returns no allowed actions, so a read-only response cannot be
-/// mistaken for authorization to start, stop, or restart a service.
+/// Reads the service allow-list owned by the Agent and projects current Windows service state
+/// plus only the typed actions valid for the observed state. Authorization remains enforced by the
+/// protected action endpoint and server-side runtime gates.
 /// </summary>
 public sealed class ReadOnlyServiceStatusService(
-    IAgentConfigurationStore configurations,
+    ServiceAllowList allowList,
     IServiceManager manager,
     TimeProvider clock)
 {
     public async Task<IReadOnlyList<ServiceSummaryDto>> GetAsync(CancellationToken cancellationToken = default)
     {
-        var configuration = await configurations.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var serviceNames = configuration.Services
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var services = await allowList.GetAsync(cancellationToken).ConfigureAwait(false);
+        var serviceNames = services.Select(service => service.ServiceName).ToArray();
 
         var statuses = await manager.GetStatusesAsync(serviceNames, cancellationToken).ConfigureAwait(false);
         var checkedAt = clock.GetUtcNow();
 
-        return serviceNames
-            .Select(name => ToDto(name, statuses.GetValueOrDefault(name, ServiceStatus.Unknown), checkedAt))
+        return services
+            .Select(service => ToDto(
+                service,
+                statuses.GetValueOrDefault(service.ServiceName, ServiceStatus.Unknown),
+                checkedAt))
             .ToArray();
     }
 
-    internal static string ToServiceId(string serviceName) =>
-        "svc-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(serviceName.Trim())))
-            .ToLowerInvariant()[..16];
+    internal static string ToServiceId(string serviceName) => ServiceAllowList.ToServiceId(serviceName);
 
-    private static ServiceSummaryDto ToDto(string serviceName, ServiceStatus status, DateTimeOffset checkedAt)
+    private static ServiceSummaryDto ToDto(
+        AllowListedService service,
+        ServiceStatus status,
+        DateTimeOffset checkedAt)
     {
         var (state, detail, freshness) = status switch
         {
@@ -50,11 +47,19 @@ public sealed class ReadOnlyServiceStatusService(
         };
 
         return new(
-            ToServiceId(serviceName),
-            serviceName,
+            service.ServiceId,
+            service.ServiceName,
             state,
             new EvidenceDto(freshness, checkedAt, detail),
-            [],
+            AllowedActionsFor(status),
             null);
     }
+
+    internal static IReadOnlyList<ServiceActionKind> AllowedActionsFor(ServiceStatus status) =>
+        status switch
+        {
+            ServiceStatus.Running => [ServiceActionKind.Stop, ServiceActionKind.Restart],
+            ServiceStatus.Stopped => [ServiceActionKind.Start, ServiceActionKind.Restart],
+            _ => []
+        };
 }

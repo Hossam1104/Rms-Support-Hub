@@ -26,7 +26,12 @@ public sealed class InMemoryMutationTokenStore : IMutationTokenStore
         _options.Validate();
     }
 
-    public MutationTokenIssue Issue(string principalSid, string origin, string method, string operationId)
+    public MutationTokenIssue Issue(
+        string principalSid,
+        string origin,
+        string method,
+        string operationId,
+        string? httpPath = null)
     {
         if (!AgentPrincipal.TryCanonicalizeSid(principalSid, out var canonicalSid))
         {
@@ -40,6 +45,7 @@ public sealed class InMemoryMutationTokenStore : IMutationTokenStore
 
         var canonicalMethod = NormalizeMethod(method);
         var canonicalOperationId = NormalizeOperationId(operationId);
+        var canonicalPath = NormalizePath(httpPath);
         var now = _timeProvider.GetUtcNow();
         var expiresAtUtc = now.Add(_options.Lifetime);
 
@@ -58,7 +64,7 @@ public sealed class InMemoryMutationTokenStore : IMutationTokenStore
             }
             while (_entries.ContainsKey(token));
 
-            _entries.Add(token, new Entry(canonicalSid, canonicalOrigin, canonicalMethod, canonicalOperationId, expiresAtUtc));
+            _entries.Add(token, new Entry(canonicalSid, canonicalOrigin, canonicalMethod, canonicalOperationId, canonicalPath, expiresAtUtc));
             return new MutationTokenIssue(token, expiresAtUtc);
         }
     }
@@ -80,10 +86,12 @@ public sealed class InMemoryMutationTokenStore : IMutationTokenStore
 
         string canonicalMethod;
         string canonicalOperationId;
+        string? canonicalPath;
         try
         {
             canonicalMethod = NormalizeMethod(request.Method);
             canonicalOperationId = NormalizeOperationId(request.OperationId);
+            canonicalPath = NormalizePath(request.HttpPath);
         }
         catch (ArgumentException)
         {
@@ -105,7 +113,8 @@ public sealed class InMemoryMutationTokenStore : IMutationTokenStore
             if (!string.Equals(entry.PrincipalSid, canonicalSid, StringComparison.Ordinal)
                 || !string.Equals(entry.Origin, canonicalOrigin, StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(entry.Method, canonicalMethod, StringComparison.Ordinal)
-                || !string.Equals(entry.OperationId, canonicalOperationId, StringComparison.Ordinal))
+                || !string.Equals(entry.OperationId, canonicalOperationId, StringComparison.Ordinal)
+                || !string.Equals(entry.HttpPath, canonicalPath, StringComparison.Ordinal))
             {
                 // A mismatch consumes the token too. This prevents an attacker who observes an
                 // opaque value from probing its binding and then replaying it correctly.
@@ -159,11 +168,31 @@ public sealed class InMemoryMutationTokenStore : IMutationTokenStore
         return operationId;
     }
 
+    private static string? NormalizePath(string? httpPath)
+    {
+        if (string.IsNullOrEmpty(httpPath))
+        {
+            return null;
+        }
+
+        if (httpPath.Length > 2048
+            || !httpPath.StartsWith("/", StringComparison.Ordinal)
+            || httpPath.Contains("?", StringComparison.Ordinal)
+            || httpPath.Contains("#", StringComparison.Ordinal)
+            || httpPath.Any(character => char.IsControl(character) || char.IsWhiteSpace(character)))
+        {
+            throw new ArgumentException("A canonical HTTP path is required.", nameof(httpPath));
+        }
+
+        return httpPath;
+    }
+
     private sealed record Entry(
         string PrincipalSid,
         string Origin,
         string Method,
         string OperationId,
+        string? HttpPath,
         DateTimeOffset ExpiresAtUtc);
 }
 

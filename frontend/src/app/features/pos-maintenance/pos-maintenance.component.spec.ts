@@ -4,8 +4,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { routes } from '../../app.routes';
+import { ToastService } from '../../core/services/toast.service';
 import { PosAgentTransportService } from '../../core/pos-agent/pos-agent-transport.service';
-import { EmptyStateComponent, PageHeaderComponent, SkeletonComponent, UiButtonComponent, UiCardComponent } from '../../shared/ui';
+import { ConfirmDialogComponent, EmptyStateComponent, PageHeaderComponent, SkeletonComponent, UiButtonComponent, UiCardComponent } from '../../shared/ui';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { PosMaintenanceComponent } from './pos-maintenance.component';
 
@@ -18,6 +19,7 @@ class StubNavbarComponent { }
 
 describe('PosMaintenanceComponent', () => {
   let transport: Record<string, ReturnType<typeof vi.fn>>;
+  let toast: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
     transport = {
@@ -68,21 +70,35 @@ describe('PosMaintenanceComponent', () => {
       })),
       getServices: vi.fn(() => of([
         {
-          serviceId: 'svc-example',
+          serviceId: 'svc-0123456789abcdef',
           displayName: 'RMS.BranchService',
           state: 'running',
           lastChecked: { freshness: 'fresh', lastCheckedUtc: '2026-08-13T10:00:00Z', detail: 'Windows service is running.' },
-          allowedActions: [],
+          allowedActions: ['stop', 'restart'],
           lastOutcome: null
         }
-      ]))
+      ])),
+      issueMutationToken: vi.fn(() => of({ token: 'opaque-token', expiresAtUtc: '2026-08-13T10:05:00Z' })),
+      controlService: vi.fn(() => of({
+        outcome: 'accepted',
+        code: 'service_action_accepted',
+        detail: 'The Agent acknowledged the service action.',
+        correlationId: 'test-correlation'
+      }))
+    };
+    toast = {
+      showSuccess: vi.fn(),
+      showError: vi.fn(),
+      showWarning: vi.fn(),
+      showInfo: vi.fn()
     };
 
     await TestBed.configureTestingModule({
       imports: [PosMaintenanceComponent],
       providers: [
         provideRouter([]),
-        { provide: PosAgentTransportService, useValue: transport }
+        { provide: PosAgentTransportService, useValue: transport },
+        { provide: ToastService, useValue: toast }
       ]
     }).overrideComponent(PosMaintenanceComponent, {
       set: {
@@ -93,20 +109,21 @@ describe('PosMaintenanceComponent', () => {
           UiButtonComponent,
           UiCardComponent,
           EmptyStateComponent,
-          SkeletonComponent
+          SkeletonComponent,
+          ConfirmDialogComponent
         ]
       }
     }).compileComponents();
   });
 
-  it('renders direct Agent data with access status and no mutation controls', async () => {
+  it('renders direct Agent data with authorized state-valid service controls', async () => {
     const fixture = TestBed.createComponent(PosMaintenanceComponent);
     await fixture.whenStable();
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
     expect(page.querySelectorAll('h1')).toHaveLength(1);
-    expect(page.querySelector('h1')?.textContent).toContain('Read-only first release');
+    expect(page.querySelector('h1')?.textContent).toContain('service control and evidence');
     expect(page.textContent).toContain('Reachable');
     expect(page.textContent).toContain('Windows authenticated');
     expect(page.textContent).toContain('Local Administrator authorized');
@@ -114,11 +131,60 @@ describe('PosMaintenanceComponent', () => {
     expect(page.textContent).toContain('POS-01');
     expect(page.textContent).toContain('Present (value hidden)');
     expect(page.textContent).toContain('RMS.BranchService');
-    expect(page.textContent).toContain('Read-only support evidence only');
+    expect(page.textContent).toContain('Typed service controls with safe outcome truth');
+    expect(page.textContent).toContain('Stop');
+    expect(page.textContent).toContain('Restart');
+    expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Start')).toBe(false);
+    expect(page.querySelectorAll('button')).toHaveLength(3);
+  });
+
+  it('requires confirmation before issuing a one-use token and submitting a service action', async () => {
+    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    const stopButton = Array.from(page.querySelectorAll('button')).find(button => button.textContent?.includes('Stop'));
+    expect(stopButton).toBeTruthy();
+    stopButton?.click();
+    fixture.detectChanges();
+
+    expect(page.querySelector('[role="alertdialog"]')).toBeTruthy();
+    expect(transport['issueMutationToken']).not.toHaveBeenCalled();
+    expect(transport['controlService']).not.toHaveBeenCalled();
+
+    page.querySelector<HTMLButtonElement>('.btn-confirm')?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(transport['issueMutationToken']).toHaveBeenCalledWith('services.control', 'svc-0123456789abcdef');
+    expect(transport['controlService']).toHaveBeenCalledWith(
+      'svc-0123456789abcdef',
+      'stop',
+      expect.stringMatching(/^support-/),
+      'opaque-token'
+    );
+    expect(page.textContent).toContain('Accepted');
+    expect(toast['showSuccess']).toHaveBeenCalled();
+  });
+
+  it('hides service controls when the Agent says the session is not authorized', async () => {
+    transport['getSession'].mockReturnValue(of({
+      principalName: 'TESTDOMAIN\\standard-user',
+      isAuthorized: false,
+      agentVersion: '1.0.0',
+      apiVersion: '1.0',
+      supportedApiVersions: ['1.0']
+    }));
+
+    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
     expect(page.querySelectorAll('button')).toHaveLength(1);
-    expect(page.textContent).not.toContain('Start service');
-    expect(page.textContent).not.toContain('Stop service');
-    expect(page.textContent).not.toContain('Restart service');
+    expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Stop')).toBe(false);
+    expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Restart')).toBe(false);
   });
 
   it('keeps partial transport failures safe and explains the read boundary', async () => {
@@ -143,11 +209,11 @@ describe('PosMaintenanceComponent', () => {
     expect(page.textContent).not.toContain('stack');
   });
 
-  it('routes the POS workspace lazily with a read-only registry status', () => {
+  it('routes the POS workspace lazily with a service-control registry status', () => {
     const route = routes.find(candidate => candidate.path === 'tools/pos-maintenance');
 
     expect(route?.loadComponent).toBeTruthy();
-    expect(route?.data?.['status']).toBe('read-only');
+    expect(route?.data?.['status']).toBe('available');
   });
 
   it('keeps one labelled main landmark and a visible refresh action', async () => {
@@ -156,7 +222,7 @@ describe('PosMaintenanceComponent', () => {
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
-    expect(page.querySelector('main[aria-label="POS Maintenance read-only first release"]')).toBeTruthy();
+    expect(page.querySelector('main[aria-label="POS Maintenance service control and evidence"]')).toBeTruthy();
     expect(page.querySelector('main h1')).toBeTruthy();
     expect(page.querySelector('button')?.textContent).toContain('Refresh reads');
   });

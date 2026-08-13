@@ -18,7 +18,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
     }
 
     [Fact]
-    public async Task IntegrationDocumentContainsTheReadOnlyFirstReleaseSurface()
+    public async Task IntegrationDocumentContainsTheInt08ServiceControlSurface()
     {
         using var client = _factory.CreateSecureClient();
         var document = await GetDocumentAsync(client);
@@ -32,6 +32,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/device/identity",
                 "/api/v1/security/mutation-token",
                 "/api/v1/services",
+                "/api/v1/services/{serviceId}/actions",
                 "/api/v1/session",
                 "/health/live",
                 "/health/ready"
@@ -61,6 +62,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetDeviceCapabilities", Operation(document, "/api/v1/device/capabilities", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetConfiguration", Operation(document, "/api/v1/configuration", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetServices", Operation(document, "/api/v1/services", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("ControlService", Operation(document, "/api/v1/services/{serviceId}/actions", "post")["operationId"]!.GetValue<string>());
 
         var servers = document["servers"]!.AsArray();
         Assert.Single(servers);
@@ -80,6 +82,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.True(Operation(document, "/api/v1/device/capabilities", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/configuration", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/services", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/services/{serviceId}/actions", "post").ContainsKey("security"));
 
         var serialized = document.ToJsonString();
         Assert.DoesNotContain("bearer", serialized, StringComparison.OrdinalIgnoreCase);
@@ -132,7 +135,13 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         var mutation = Operation(document, "/api/v1/security/mutation-token", "post");
         Assert.Contains("operationId", mutation["requestBody"]!["description"]!.GetValue<string>());
         Assert.Contains("local Built-in Administrators", mutation["description"]!.GetValue<string>());
+        Assert.Contains("targetId", mutation["requestBody"]!["description"]!.GetValue<string>());
         Assert.NotNull(mutation["security"]);
+
+        var serviceAction = Operation(document, "/api/v1/services/{serviceId}/actions", "post");
+        Assert.Contains("OutcomeUnknown", serviceAction["description"]!.GetValue<string>());
+        Assert.Contains("never retried", serviceAction["description"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(serviceAction["security"]);
 
         var session = Operation(document, "/api/v1/session", "get");
         Assert.NotNull(session["security"]);
@@ -218,8 +227,23 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
 
         var services = Operation(document, "/api/v1/services", "get");
         AssertArrayResponseSchema(services, "200", "application/json", "ServiceSummaryDto");
-        Assert.Empty(ResponseArrayExample(services, "200", "application/json")[0]!["allowedActions"]!.AsArray());
+        Assert.Equal(
+            ["stop", "restart"],
+            ResponseArrayExample(services, "200", "application/json")[0]!["allowedActions"]!.AsArray()
+                .Select(value => value!.GetValue<string>()).ToArray());
         AssertProtectedReadResponses(services);
+
+        var serviceAction = Operation(document, "/api/v1/services/{serviceId}/actions", "post");
+        AssertResponseSchema(serviceAction, "200", "application/json", "ServiceActionResponseDto");
+        var actionRequestExample = serviceAction["requestBody"]!["content"]!["application/json"]!["example"]!.AsObject();
+        Assert.Equal("restart", actionRequestExample["action"]!.GetValue<string>());
+        Assert.False(string.IsNullOrWhiteSpace(actionRequestExample["idempotencyKey"]!.GetValue<string>()));
+        var actionResponseExample = ResponseExample(serviceAction, "200", "application/json");
+        Assert.Equal("accepted", actionResponseExample["outcome"]!.GetValue<string>());
+        Assert.Equal("service_action_accepted", actionResponseExample["code"]!.GetValue<string>());
+        AssertResponseSchema(serviceAction, "403", "application/problem+json", "AgentProblemDetailsDto");
+        Assert.Contains("mutation_token_invalid", serviceAction["responses"]!["403"]!["description"]!.GetValue<string>(), StringComparison.Ordinal);
+        AssertResponseSchema(serviceAction, "500", "application/problem+json", "AgentProblemDetailsDto");
     }
 
     [Fact]
@@ -280,7 +304,9 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "EvidenceDto",
             "RedactedConfigurationDto",
             "RedactedDownloaderConfigurationDto",
-            "ServiceSummaryDto"
+            "ServiceSummaryDto",
+            "ServiceActionRequestDto",
+            "ServiceActionResponseDto"
         })
         {
             var schema = schemas[schemaName]!.AsObject();
@@ -324,7 +350,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         var schemas = document["components"]!["schemas"]!.AsObject();
 
         var requestSchema = schemas["MutationTokenIssueRequestDto"]!.AsObject();
-        Assert.Equal(["operationId"], PropertyNames(requestSchema));
+        Assert.Equal(["operationId", "targetId"], PropertyNames(requestSchema));
         Assert.Equal(["operationId"], RequiredNames(requestSchema));
 
         var responseSchema = schemas["MutationTokenIssueResponseDto"]!.AsObject();

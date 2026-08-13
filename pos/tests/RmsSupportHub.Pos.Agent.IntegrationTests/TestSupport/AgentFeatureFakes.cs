@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
@@ -88,6 +89,10 @@ internal sealed class InMemoryServiceManager : IServiceManager
             ["RMS.Downloader"] = ServiceStatus.Stopped
         };
 
+    public ConcurrentQueue<(string ServiceName, ServiceControlAction Action)> ControlCalls { get; } = new();
+
+    public Func<string, ServiceControlAction, CancellationToken, Task>? ControlBehavior { get; set; }
+
     public Task<ServiceStatus> GetStatusAsync(string serviceName, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -109,6 +114,10 @@ internal sealed class InMemoryServiceManager : IServiceManager
     public Task ControlAsync(
         string serviceName,
         ServiceControlAction action,
-        CancellationToken cancellationToken = default) =>
-        throw new InvalidOperationException("INT-07 service tests must never invoke a control action.");
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ControlCalls.Enqueue((serviceName, action));
+        return ControlBehavior?.Invoke(serviceName, action, cancellationToken) ?? Task.CompletedTask;
+    }
 }
