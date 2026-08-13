@@ -27,7 +27,7 @@ the linked planning/evidence documents.
 | INT-06H | `docs/evidence/POS_INT06_LIVE_TRANSPORT_EVIDENCE.md` | Collected real Chrome/Edge LNA/direct-Agent evidence; the initial admin-token mismatch was recorded as blocked. |
 | INT-06I / F1 | Branch `int-06i-admin-auth-scalar`; PR #3 | Replaced UAC-token membership coupling with server-side local-group resolution, completed Scalar/OpenAPI contract and browser evidence, and passed independent security review. |
 | INT-06I acceptance | PR #3 merge `c8706745a9ee8b423b4813badf0ca863b37a5d0e` | Reviewed security remediation landed normally; no Critical/High findings. |
-| INT-07 read-only first release | Delivery branch validation | Added protected device/connectivity/configuration/service reads, generated artifacts, direct operational Support Hub workspace, and no mutation/API relay. Agent 100/100; frontend 342/342. |
+| INT-07 read-only first release | PR #4 merge `3a3d58b2406b8e80954fac0174bbdc3b623962f2` | Added protected device/connectivity/configuration/service reads, generated artifacts, direct operational Support Hub workspace, and no mutation/API relay. Agent 100/100; frontend 342/342; all five POS CI lanes green. |
 
 ## Current programme status
 

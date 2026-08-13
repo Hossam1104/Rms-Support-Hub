@@ -29,7 +29,7 @@ documentation gate; INT-07 then added the first destination-owned read-only
 Agent feature routes and replaced the Support Hub POS placeholder with a
 direct operational workspace. No Support Hub backend relay was added.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / INT-06H DEFECT CONFIRMED / INT-06I COMPLETE AND ACCEPTED / INT-07 COMPLETE AND ACCEPTED / PROV-1 CLOSED FOR COMPOSITION / ARCHITECTURE CLOSED / INDEPENDENT SECURITY REVIEW PASS / PR #3 MERGED.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / INT-06H DEFECT CONFIRMED / INT-06I COMPLETE AND ACCEPTED / INT-07 COMPLETE AND ACCEPTED / PROV-1 CLOSED FOR COMPOSITION / ARCHITECTURE CLOSED / INDEPENDENT SECURITY REVIEW PASS / PR #3 MERGED / PR #4 MERGED.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are

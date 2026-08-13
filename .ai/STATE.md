@@ -1,10 +1,10 @@
 # Current Project State
 
 - **Updated:** 2026-08-13
-- **Branch:** `int-07-pos-readonly-first-release` (delivery branch; reconcile to `main` after merge)
+- **Branch:** `main` (synchronized with `origin/main` after PR #4 merge)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
 - **Programme:** INT-00 through INT-06I complete/accepted; INT-07 read-only POS integration complete/accepted; INT-13 open; INT-08 staged, not executed.
-- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`. No general API relay or POS mutation route exists.
+- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`. No general API relay or POS mutation route exists.
 
 ## Application
 

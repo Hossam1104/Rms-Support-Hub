@@ -1,6 +1,6 @@
 # POS INT-06 Live Transport Security Evidence
 
-**Current result (2026-08-13):** `INT-06I COMPLETE / ACCEPTED; PR #3 MERGED; INT-07 COMPLETE / ACCEPTED`
+**Current result (2026-08-13):** `INT-06I COMPLETE / ACCEPTED; PR #3 MERGED; INT-07 COMPLETE / ACCEPTED; PR #4 MERGED (3a3d58b2406b8e80954fac0174bbdc3b623962f2)`
 
 **Current security review:** `PASS - no Critical/High findings`
 
