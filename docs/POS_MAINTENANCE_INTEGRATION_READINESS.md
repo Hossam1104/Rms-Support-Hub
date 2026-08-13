@@ -121,6 +121,26 @@ The process-local idempotency store is bounded and scoped only to
 overlapping dispatches. Responses carry only safe correlation/detail data and
 explicit `NotAttempted`, `Accepted`, `Failed`, or `OutcomeUnknown` truth. The
 frontend uses the existing Support Hub dialog, button, status, and toast
+primitives; it keeps tokens in local memory, prevents duplicate submissions,
+refreshes service evidence after completion, and never retries an unknown
+outcome automatically. Generated OpenAPI and Angular artifacts are regenerated
+from the Agent source; runtime/OpenAPI parity and production documentation
+absence remain covered by tests.
+
+Validation evidence for this gate is POS Domain 7, Application 76,
+Infrastructure 60, Agent integration 114, and frontend 345 tests passed, with
+the Agent OpenAPI/client generation and frontend production build passing. No
+live or Production service was controlled; disposable test fakes were used.
+INT-13 representative-device/live operational evidence has been executed and
+is recorded as `BLOCKED` on representative-device live prerequisites (DNS,
+certificate, Agent listener, and disposable Testing service); see
+[POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
+INT-13 remains open.
+
+## Canonical architecture seam
+
+The future path is:
+
 ```text
 Support Hub Angular
     |
