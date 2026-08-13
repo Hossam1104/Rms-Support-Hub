@@ -1,81 +1,50 @@
 # Current Project State
+
 - **Updated:** 2026-08-13
-- **Branch:** `int-06i-admin-auth-scalar`
-- **Programme:** RMS+ Support Hub UI/branding/rename complete; INT-00 through INT-05F and INT-CI01 POS integration work complete within their approved boundaries; INT-06I implementation is complete at its bounded source/documentation scope.
-- **Next gate:** Independent security review of INT-06I. The UAC-safe local-Administrator resolver, shared session/mutation authorization seam, corrected non-production Scalar/OpenAPI contracts, and live Chrome/Edge post-remediation evidence are complete; the focused PR is not merged and INT-07 remains unauthorized.
-This file records durable facts only; milestone history lives in `.ai/HISTORY.md` and implementation evidence lives in Git.
-## Identity
-| Facet | Value |
-|---|---|
-| Display name | RMS+ Support Hub |
-| .NET root | `RmsSupportHub.*` (`Api`, `Core`, `Data`, `Tests`) |
-| npm package | `rms-support-hub` |
-| GitHub repository | `Hossam1104/Rms-Support-Hub` |
-| Canonical origin | `https://github.com/Hossam1104/Rms-Support-Hub.git` |
-| Local folder | `D:\AI Tools\DBS\online_order_tool` (rename to `Rms-Support-Hub` pending; live processes previously held it) |
-| Visibility | Public by explicit owner decision; owner intends Private after POS integration |
+- **Branch:** `int-07-pos-readonly-first-release` (delivery branch; reconcile to `main` after merge)
+- **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
+- **Programme:** INT-00 through INT-06I complete/accepted; INT-07 read-only POS integration complete/accepted; INT-13 open; INT-08 staged, not executed.
+- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`. No general API relay or POS mutation route exists.
+
 ## Application
-- One Angular 22 SPA and one .NET 10 Web API. QA Prompt Studio and Online Order Tool are available; POS Maintenance is Coming Soon and non-operational.
-- Routes are lazy/typed through `ToolRouteData`; topology is in `docs/REPOSITORY_STRUCTURE.md`.
-- Prompt Studio is frozen: deterministic builders, Bug 11/Story 7/Test Case 9, advisory quality, drafts, ten-entry history, copy/exports, shortcuts; no external AI execution.
-- Online Order is frozen/server-authoritative: API/DTO/payload contracts, validation, totals, filters, paging, statuses, capability guarding, send/cancel/resend.
-- UPC Testing/Production retain existing architecture; no browser connection detail or local Production validation.
-- No POS operation/generic execution surface exists. Order Requests use month-to-date, tokenized filters, a ten-newest base-only path, and paging for header-derived filters.
-## POS integration architecture checkpoint
-INT-00 and INT-00R are documentation/governance complete. The canonical target is a separate Windows `RmsSupportHub.Pos.Agent` reached directly by Support Hub Angular over trusted HTTPS on fixed loopback using HTTP/1.1 only; `RmsSupportHub.Api`, `Core`, and `Data` are not its path.
-```text
-INT-00 / INT-00R: COMPLETE; CLAUDE ARCHITECTURE CHECKPOINT: PASS
-ORIGINAL IMPORT PROVENANCE (INT-01/02/03): 25922b499d33bd73f241ffc26c212dd000e81433
-CORRECTED AGENT PROVENANCE BASELINE (INT-04): 010abc52dc110cfde3dc2c53e057890ff6edaf97
-CLAUDE OPUS PRIVILEGED-BOUNDARY REVIEW: PROV-1 CLOSED BY INT-03R / LIVE EVIDENCE OPEN
-INT-04: AGENT HOST / RUNTIME COMPOSITION COMPLETE
-INT-05: BROWSER TRANSPORT / OPENAPI / CLIENT ADAPTER COMPLETE / ACCEPTED AFTER INT-05F
-INT-05F: OPENAPI GENERATOR PEER-DEPENDENCY ISOLATION COMPLETE; ISOLATED TOOLING DEPENDENCY GRAPH
-ANGULAR TYPESCRIPT: 6.x; GENERATOR TYPESCRIPT: 5.x PEER-COMPATIBLE; GLOBAL LEGACY PEER BYPASS: NONE
-INT-CI01: PORTABLE APPLICATION LINUX CI BASELINE REMEDIATION COMPLETE; WINDOWS-DETERMINISTIC MAINTENANCE/SMB PATH SEMANTICS
-PORTABLE UBUNTU POS CI: ALL FIVE POS CI LANES GREEN
-INT-06: LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
-INT-06F: ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
-INT-06G: PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE - BLOCKED / FAILED
-INT-06H: REAL BROWSER RUNTIME EVIDENCE - BLOCKED / FAILED
-BLOCKER: NORMAL CHROME/EDGE BROWSER NEGOTIATE SESSION AUTHENTICATED BUT LOCAL-ADMINISTRATOR AUTHORIZATION WAS FALSE; ELEVATED CONTROL WAS AUTHORIZED AND REACHED OPERATION_NOT_SUPPORTED, INDICATING A POTENTIAL UAC-FILTERED-TOKEN DEFECT
-INT-06I: UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION - IMPLEMENTED; INDEPENDENT SECURITY REVIEW OPEN
-AUTHORIZATION: WINDOWS ACCOUNT LOCAL-GROUP MEMBERSHIP VIA NETUSERGETLOCALGROUPS / LG_INCLUDE_INDIRECT; WELL-KNOWN BUILTIN-ADMINISTRATORS SID; FAIL CLOSED
-DOCUMENTATION: SCALAR.ASPNETCORE 2.16.18; DEVELOPMENT/INTEGRATIONTEST ONLY; AI AGENT AND DEFAULT FONTS DISABLED; OPENAPI/CLIENT DRIFT CHECKED
-INT-06I-F1: SCALAR CONTRACT ACCURACY + LIVE BROWSER CLOSURE - PASS; runtime response shapes, route/OpenAPI parity, local Scalar CSP, Production Kestrel document-route isolation, normal Chrome/Edge authorization, and cleanup verified
-LIVE POST-REMEDIATION BROWSER EVIDENCE: PASS / Chrome 151.0.7922.109 and Edge 151.0.4129.78; normal medium-integrity browser sessions returned isAuthorized=true and unknown mutation operation_not_supported without SID/token exposure
-NEXT: INDEPENDENT SECURITY REVIEW; PR NOT MERGED
-TRANSPORT: TRUSTED HTTPS / HTTP/1.1; SUPPORT HUB SECURE CONTEXT REQUIRED
-LNA: VERSIONED CHROME/EDGE MATRIX / INT-06H PROVEN ON TESTED DEVICE
-WINDOWS LOOPBACK AUTH: EXACT BACK-CONNECTION / HOSTNAME PROVEN; REPRESENTATIVE-DEVICE EVIDENCE OPEN
-CORS: ANONYMOUS EXACT-ORIGIN PREFLIGHT; APP: NEGOTIATE + LOCAL ADMIN
-MACHINE TRUST: MANDATORY; SSE: READ-ONLY / NO MUTATION TOKEN
-REPOSITORY IMPORT / INTEGRATION IMPLEMENTATION: INT-05 Agent contract/client foundation composed; no Support Hub backend relay or POS UI activation
-```
-Agent origin: `https://rms-pos-agent.localhost:5001`; the host is headless,
-Windows Service-capable, loopback-only, HTTPS-only, HTTP/1.1-only, and uses
-production Negotiate, exact-origin CORS, SID/local-Administrators checks, and
-only foundation routes. INT-05 owns `/pos/openapi`, the generated client, and
-direct `HttpBackend` transport; INT-06I owns shared UAC-safe authorization and
-non-production Scalar/OpenAPI reachability; Production still has no feature
-registry or runtime OpenAPI. Trusted machine certificate provisioning and
-`.localhost` SPN/NTLM
-loopback behavior remain live evidence; feature transports and POS UI activation
-remain future scope.
-INT-04 destination: `/pos/RmsSupportHub.Pos.slnx` contains six source and four
-test projects. Graph: Application→Domain; Infrastructure→Application+Domain;
-Agent→Contracts+Domain+Application+Infrastructure; WinUI→Application+Domain+
-Infrastructure; tests→their source projects. Domain/Contracts have no packages;
-Application uses `Microsoft.Extensions.Logging.Abstractions` 10.0.10;
-Infrastructure owns the Windows SQL/SCM/DPAPI graph and WinUI retains its
-Windows App SDK packages. The Agent host has only foundation routes; feature
-operations, POS UI activation, standalone POS Angular source, raw history, and
-general backend/frontend integration remain excluded. CI validates portable
-POS projects, Windows Agent/Infrastructure, OpenAPI/client drift, and WinUI
-publish. POS Release tests pass Domain 7/7, Application 76/76,
-Infrastructure 60/60, and Agent 95/95; frontend passes 341/341.
+
+- Angular 22 SPA and .NET 10 Web API. Prompt Studio and Online Orders are
+  available; `/tools/pos-maintenance` is a direct operational read-only POS
+  workspace.
+- Routes are lazy and typed through `ToolRouteData`. Business/API, payload,
+  SQL, module-key, and persisted-storage contracts remain unchanged.
+- POS feature ownership is the separate `RmsSupportHub.Pos.Agent`; the Hub
+  never relays privileged POS traffic through `RmsSupportHub.Api`, `Core`, or
+  `Data`.
+
+## POS architecture and gates
+
+- Agent origin: `https://rms-pos-agent.localhost:5001`; headless,
+  Windows-Service-capable, loopback-only, HTTPS/HTTP/1.1, production Negotiate,
+  exact-origin CORS, server-resolved local Built-in Administrators membership,
+  and fail-closed SID handling.
+- INT-03R Agent provenance: `010abc52dc110cfde3dc2c53e057890ff6edaf97`;
+  historical INT-01/02/03 import provenance: `25922b499d33bd73f241ffc26c212dd000e81433`.
+- INT-05 owns versioned `/pos/openapi`, generated client, and direct
+  `HttpBackend` transport. INT-06I owns UAC-safe authorization and non-
+  production Scalar/OpenAPI. INT-07 owns device, connectivity, redacted
+  configuration, service-status reads, and the direct Angular workspace.
+- Production runtime OpenAPI remains hidden. INT-13 still owns certificate/
+  hostname/representative-device/live operational evidence. INT-08 owns future
+  typed service mutation and is not executed.
+
+## Security and review record
+
+- INT-06/06F/06G/06H blocked states are historical. INT-06I remediated local
+  Administrator resolution with indirect local-group membership and the
+  Built-in Administrators SID; independent review PASS found no Critical/High.
+- Post-remediation Chrome/Edge browser authorization and Scalar/OpenAPI
+  evidence passed; no SID/token exposure. PR #3 is merged normally.
+
 ## Compatibility contracts
-These persisted storage keys are byte-exact; no migration exists:
+
+Persisted keys are byte-exact; no migration exists:
+
 ```text
 onlineOrderTool.activeEnvironment.<moduleKey>
 qa-support-hub:theme
@@ -86,46 +55,30 @@ qa-support-hub.prompt-studio.story-draft
 qa-support-hub.prompt-studio.test-case-draft
 order-tool.sidebar-collapsed
 ```
-External/business identifiers remain unchanged: API `/api`, JSON/payload contracts,
-fixtures, database/table/SQL names, module keys, payment values, statuses, and wording. Behavior is capability-gated; UPC methods are Visa/Tamara/Tabby (ADR-0014).
-Asset filenames/folders are owner-supplied, not a contract: `frontend/public/assets/` mirrors the supplied `assets/` drop (`CompanyLogos/`, `ClientsLogo/`, `Payments/`, `CustomMessageBox/`, root `Saudi_Riyal.svg`, `loader.svg`, and `offer_logo.png`); `app-assets.ts` is the only path source, and RMS+/DBS use `themedAsset` colourway pairs.
-## Design system
-Semantic tokens, density, surfaces, typography, cards, tables, forms,
-`ThemeService`, and `MotionService` are UI touch points; raw colors stay in token files. The decorative lazy Hub Three.js scene degrades safely; details: `docs/design-system.md`.
-The Hub is a two-band single-viewport layout: a hero carrying the paired RMS+ and DBS lockups in one plate at a shared height, and an elastic tool grid. There is no footer band. Above 1024x720 the page is locked to `100dvh`, while smaller viewports scroll normally.
-The Online Order landing mirrors that reading order: hero with a module summary, a directory heading, then a 3/2/1-column grid. `app-module-card` follows the tool-card structure and accent names; its grid uses `grid-auto-rows: auto` so Coming Soon rows stay compact.
-Environment reachability is a separate fact from the Live/Test lane label and is never merged into it (ADR-0019): `GET /api/modules/health` TCP-probes each endpoint, caches 30s, and the card shows the result as its own chip. A missing entry is `unknown`, never `unreachable`.
+
+Raw colors stay in token files. The Hub scene is decorative/lazy and safely
+degrades; all current UI feature styles consume design tokens.
+
 ## Validation baseline
-Frontend rows re-recorded 2026-08-11; backend row stands from 2026-08-10. See `docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md` for the prior full gate table.
+
 | Gate | Result |
 |---|---|
-| Frontend tests | 56 files / 341 tests passed, 0 skipped |
-| Backend tests | 192 passed, 0 failed, 0 skipped |
-| Release build | 0 warnings, 0 errors; Angular budgets clear |
-| POS portable CI | GitHub Actions run `31540243375`; all five POS CI lanes passed |
-| POS Release tests | Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 95/95; 0 skipped |
-| POS Release build | 0 warnings, 0 errors |
-| Retained WinUI publish | `PosAdminTool.WinUI.exe`, 27 `.pri`, and 66 `.xbf` resources present |
-| Production initial bundle | 456.13 kB raw / 104.22 kB estimated transfer |
-| Lazy `three-module` chunk | 734.66 kB raw / 153.96 kB estimated transfer |
-| Production-offline initial bundle | 442.06 kB raw / 103.59 kB estimated transfer |
-| Riyal asset verifier | Passed; SHA-1 verified, 924 bytes |
-| Rendered browser pass | Chrome/Edge post-remediation Scalar and direct-Agent evidence passed 2026-08-13 |
-## Boundaries and deferred scope
-- Production access, SQL, deployment, and state-changing actions are out of bounds; Testing is default. A running local API can lock `backend/src/**/bin`; use a stopped API or temporary artifacts path.
-- `ConnectionStrings:UpcEcommerceTest` is absent locally, so Testing-only UPC
-  order/request calls return HTTP 500; deferred environment setup.
-- UPC fixture/live acceptance, Production index/deployment, and POS Agent
-  business-operation/device validation remain deferred. INT-05 transport was
-  build/test validated; INT-06G proved temporary machine transport/Negotiate,
-  and INT-06H proved actual-browser LNA/direct health/session transport, but
-  browser mutation authorization is remediated and post-remediation browser
-  evidence is complete; POS operations remain open.
-- POS evidence gates remain open: LocalSystem/Session 0 SMB, representative-
-  device/live transport, managed-browser deployment, Negotiate/SPN, real SQL/SCM/restore/maintenance/
-  downloader, remote-trigger reconciliation/idempotency, SQL TLS
-  (`TrustServerCertificate = true`), and WinUI cutover; architecture decisions
-  are not evidence. INT-06/INT-06F remain historical blocks; INT-06G and
-  INT-06H restored all temporary machine/browser state, with the browser admin
-  authorization finding remediated in source and closed by post-remediation
-  browser evidence; independent security review remains open.
+| POS Release build | Passed, 0 warnings/errors with Testing origin set |
+| POS tests | Domain 7, Application 76, Infrastructure 60, Agent 100 passed |
+| Frontend tests | 56 files / 342 tests passed |
+| Frontend production build | Passed; 454.73 kB initial, 26.70 kB POS lazy; no budget warnings |
+| Frontend offline build | Passed; 440.41 kB initial, 26.69 kB POS lazy |
+| Generated client | `openapi-typescript` 7.13.0 generation passed |
+| Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
+| Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
+| POS Agent live | Unavailable: canonical DNS/certificate prerequisites absent in this environment |
+| Broad `scripts/build.ps1` | 190 backend tests passed; 2 known baseline route-status tests fail (expected 404, current 405); backend Release build passes separately |
+
+## Deferred boundaries
+
+- Testing is default; no Production calls, SQL changes, deployment, or
+  state-changing POS actions are authorized by this state.
+- UPC live/fixture acceptance, deployment/Production acceptance, and
+  representative-device Agent evidence remain deferred under INT-13.
+- `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls
+  are environment setup, not an INT-07 defect.

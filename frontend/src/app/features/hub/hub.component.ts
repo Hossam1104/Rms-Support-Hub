@@ -59,13 +59,16 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
             </div>
             <ul class="hub-hero__signals">
               @for (tool of tools; track tool.id) {
-                <li class="hub-signal" [class.hub-signal--pending]="tool.status === 'migration-pending'">
+                <li
+                  class="hub-signal"
+                  [class.hub-signal--pending]="tool.status === 'migration-pending'"
+                  [class.hub-signal--readonly]="tool.status === 'read-only'">
                   <span class="hub-signal__icon" aria-hidden="true"><i class="bi" [class]="tool.icon"></i></span>
                   <span class="hub-signal__copy">
                     <span class="hub-signal__label">{{ tool.title }}</span>
                     <span class="hub-signal__state">
                       <span class="hub-signal__dot" aria-hidden="true"></span>
-                      {{ tool.status === 'migration-pending' ? 'Coming Soon' : 'Available' }}
+                      {{ tool.status === 'migration-pending' ? 'Coming Soon' : tool.status === 'read-only' ? 'Read-only' : 'Available' }}
                     </span>
                   </span>
                 </li>
@@ -121,8 +124,6 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
        an elastic tool directory, so the page never needs to scroll. */
     .hub-page { display: flex; min-height: 100dvh; flex-direction: column; background: var(--surface-page); }
 
-    /* The scene is atmosphere; the two-column content is the landing's actual
-       hierarchy, keeping the hero useful above the fold instead of tall. */
     .hub-hero { position: relative; flex: 0 0 auto; overflow: hidden; padding: calc(var(--navbar-height) + var(--space-4)) var(--page-padding-inline) var(--space-5); border-bottom: 1px solid var(--divider); isolation: isolate; }
     .hub-hero__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); align-items: stretch; gap: clamp(var(--space-5), 4vw, var(--space-7)); width: min(100%, 1240px); margin: 0 auto; }
     .hub-page__inner { display: flex; flex: 1; min-height: 0; width: min(100%, 1240px); margin: 0 auto; padding: var(--section-gap) var(--page-padding-inline); }
@@ -130,7 +131,7 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
     .hub-hero__copy { display: flex; min-width: 0; flex-direction: column; justify-content: center; }
     .hub-hero__lockups { display: flex; align-self: start; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--card-sheen), var(--surface-interactive); }
     .hub-hero__rule { width: 1px; height: 2.25rem; background: var(--divider); }
-    .hub-tools__eyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: var(--text-accent); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; }
+    .hub-tools__eyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-1); color: var(--text-muted); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; }
     .hub-tools__eyebrow i { font-size: .9rem; }
     .hub-hero h1 { max-width: 15ch; margin: 0; color: var(--text-primary); font-size: clamp(2rem, 4vw, 2.9rem); font-weight: var(--weight-heavy); letter-spacing: -.035em; line-height: 1.02; }
     .hub-hero__description { max-width: 56ch; margin: var(--space-3) 0 0; color: var(--text-secondary); font-size: var(--text-md); line-height: var(--leading-normal); }
@@ -154,16 +155,13 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
     .hub-signal__label { overflow: hidden; color: var(--text-primary); font-weight: var(--weight-semibold); text-overflow: ellipsis; white-space: nowrap; }
     .hub-signal__state { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--state-success-fg); font-weight: var(--weight-bold); }
     .hub-signal__dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-    .hub-signal--pending .hub-signal__state { color: var(--text-muted); }
-    .hub-signal--pending .hub-signal__icon { color: var(--text-muted); }
+    .hub-signal--pending .hub-signal__state, .hub-signal--pending .hub-signal__icon { color: var(--text-muted); }
+    .hub-signal--readonly .hub-signal__state, .hub-signal--readonly .hub-signal__icon { color: var(--state-info-fg); }
 
     .hub-tools__heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-4); }
-    .hub-tools__eyebrow { margin-bottom: var(--space-1); color: var(--text-muted); }
     .hub-tools h2 { margin: 0; color: var(--text-primary); font-size: var(--text-xl); line-height: var(--leading-tight); }
     .hub-tools__hint { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
 
-    /* Equal-height peers: 1fr rows stretch every card to the tallest one, and
-       leftover viewport height lands here instead of below the footer. */
     .hub-tools__grid { display: grid; flex: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); align-items: stretch; gap: var(--card-gap); }
     .hub-tools__grid > app-tool-card { height: 100%; }
     .hub-tools__grid--motion > app-tool-card { opacity: 0; animation: hub-card-in var(--d-slow) var(--ease-out) forwards; }
@@ -177,8 +175,6 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Lock to one screen only where the bands demonstrably fit; smaller
-       viewports keep normal scrolling rather than clipping the cards. */
     @media (min-width: 1025px) and (min-height: 720px) {
       .hub-page { height: 100dvh; overflow: hidden; }
     }
@@ -191,7 +187,6 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
     }
     @media (max-width: 680px) {
       .hub-hero { padding: calc(var(--navbar-height) + var(--space-4)) var(--space-4) var(--space-5); }
-      /* The lockups wrap here; a dangling divider would read as a stray tick. */
       .hub-hero__rule { display: none; }
       .hub-hero__meta { gap: var(--space-2); }
       .hub-tools__heading { align-items: flex-start; flex-direction: column; gap: var(--space-2); }

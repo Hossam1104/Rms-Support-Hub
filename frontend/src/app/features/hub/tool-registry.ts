@@ -25,11 +25,11 @@ export const QA_TOOL_REGISTRY = [
     {
         id: 'pos-maintenance',
         ...TOOL_ROUTE_DATA.posMaintenance,
-        description: 'A future POS support workspace for approved diagnostics, backups, and service visibility.',
+        description: 'Read-only POS diagnostics, redacted configuration visibility, connectivity evidence, and service status.',
         route: '/tools/pos-maintenance',
         icon: 'bi-pc-display',
         actionLabel: 'View Status',
         capabilities: ['Diagnostics', 'Backup', 'Services'],
-        availabilityMessage: 'The POS Maintenance Tool is under development and will be integrated when ready.'
+        availabilityMessage: 'Read-only first release; state-changing maintenance workflows are coming later.'
     }
 ] as const satisfies readonly QaToolDefinition[];

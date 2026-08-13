@@ -18,21 +18,19 @@ export const POS_CAPABILITIES: readonly PosCapability[] = [
     {
         id: 'diagnostics',
         title: 'Diagnostics',
-        description: 'Future support views for understanding the POS application and its environment.',
+        description: 'Safe first-release views for understanding the local POS device and Agent environment.',
         icon: 'bi-activity',
-        status: 'pending',
+        status: 'read-only',
         examples: [
-            'Application and environment information',
-            'Connectivity status',
-            'Configured endpoint visibility',
-            'Local service state',
-            'Support diagnostics'
+            'Device identity and Agent capabilities',
+            'Connectivity evidence',
+            'Read-only support diagnostics'
         ]
     },
     {
         id: 'backup-restore',
         title: 'Backup & Restore',
-        description: 'Future approved workflows for protecting and recovering POS data and configuration.',
+        description: 'Approved workflows for protecting and recovering POS data and configuration.',
         icon: 'bi-database-check',
         status: 'pending',
         examples: [
@@ -44,36 +42,36 @@ export const POS_CAPABILITIES: readonly PosCapability[] = [
     {
         id: 'configuration',
         title: 'Configuration',
-        description: 'Future controlled views and edits for approved POS identity and environment settings.',
+        description: 'Read-only view of safe POS identity and redacted environment settings.',
         icon: 'bi-sliders2-vertical',
-        status: 'pending',
+        status: 'read-only',
         examples: [
-            'Approved configuration viewing and editing',
+            'Redacted configuration visibility',
             'Branch and POS identity',
-            'Environment information'
+            'Secret-presence flags only'
         ]
     },
     {
         id: 'windows-services',
         title: 'Windows Services',
-        description: 'Future allow-listed service visibility and controlled lifecycle workflows.',
+        description: 'Allow-listed Windows service visibility without lifecycle controls.',
         icon: 'bi-gear-wide-connected',
-        status: 'pending',
+        status: 'read-only',
         examples: [
-            'Approved Windows service status',
-            'Controlled start, stop, and restart'
+            'Windows service status evidence',
+            'No start, stop, or restart actions'
         ]
     },
     {
         id: 'environment-connectivity',
         title: 'Environment / Connectivity',
-        description: 'Future support checks for machine reachability and dependency health.',
+        description: 'Bounded support checks for machine reachability and dependency evidence.',
         icon: 'bi-diagram-3',
-        status: 'pending',
+        status: 'read-only',
         examples: [
-            'Server reachability',
+            'Server reachability evidence',
             'Environment detection',
-            'Dependency status'
+            'Dependency status evidence'
         ]
     }
 ] as const;

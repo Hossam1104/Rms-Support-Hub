@@ -68,6 +68,34 @@ describe('PosAgentTransportService', () => {
     await expect(result).resolves.toMatchObject({ isAuthorized: true, apiVersion: '1.0' });
   });
 
+  it('uses fixed credentialed GETs for every read-only first-release surface', async () => {
+    const results = [
+      firstValueFrom(service.getDeviceIdentity()),
+      firstValueFrom(service.getDeviceConnectivity()),
+      firstValueFrom(service.getDeviceCapabilities()),
+      firstValueFrom(service.getConfiguration()),
+      firstValueFrom(service.getServices())
+    ];
+    const requests = [
+      { path: POS_AGENT_PATHS.deviceIdentity, body: { branchCode: 'BR-001' } },
+      { path: POS_AGENT_PATHS.deviceConnectivity, body: { localSql: { freshness: 'fresh' }, mainServer: { freshness: 'stale' } } },
+      { path: POS_AGENT_PATHS.deviceCapabilities, body: { agentVersion: '1.0.0', operatingSystem: 'Windows', browseRoots: [] } },
+      { path: POS_AGENT_PATHS.configuration, body: { hasSqlPassword: false, downloader: { hasRdbPassword: false } } },
+      { path: POS_AGENT_PATHS.services, body: [] }
+    ];
+
+    requests.forEach(({ path, body }) => {
+      const request = httpTesting.expectOne(`${POS_AGENT_ORIGIN}${path}`);
+      expect(request.request.method).toBe('GET');
+      expect(request.request.withCredentials).toBe(true);
+      expect(request.request.headers.get('Accept')).toBe('application/json');
+      request.flush(body);
+    });
+
+    await Promise.all(results);
+    expect(interceptorCalls).toBe(0);
+  });
+
   it('posts only the operation identifier and keeps credentials enabled for issuance', async () => {
     const result = firstValueFrom(service.issueMutationToken('integration.test-mutation'));
     const request = httpTesting.expectOne(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.mutationToken}`);

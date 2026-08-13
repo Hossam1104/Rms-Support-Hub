@@ -53,7 +53,7 @@ describe('HubComponent', () => {
         expect(cards.map(card => card.querySelector('.tool-card__status')?.textContent?.trim())).toEqual([
             'Available',
             'Available',
-            'Coming Soon'
+            'Read-only'
         ]);
         expect(cards.map(card => card.querySelector('a')?.getAttribute('href'))).toEqual([
             '/tools/prompt-studio',
@@ -145,7 +145,7 @@ describe('HubComponent', () => {
 
         const signals = Array.from(fixture.nativeElement.querySelectorAll('.hub-signal')) as HTMLElement[];
         expect(signals.map(signal => signal.querySelector('.hub-signal__state')?.textContent?.trim()))
-            .toEqual(['Available', 'Available', 'Coming Soon']);
+            .toEqual(['Available', 'Available', 'Read-only']);
     });
 
     it('renders the compact hero status rail and shared icon language', () => {

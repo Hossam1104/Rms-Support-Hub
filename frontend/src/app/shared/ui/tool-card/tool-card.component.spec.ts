@@ -38,4 +38,16 @@ describe('ToolCardComponent', () => {
     expect(host.querySelector('.tool-card__status')?.textContent).toContain('Coming Soon');
     expect(host.querySelector('.tool-card__status-icon')?.classList.contains('bi-hourglass-split')).toBe(true);
   });
+
+  it('uses the informational status language for a read-only card', () => {
+    const fixture = TestBed.createComponent(ToolCardComponent);
+    fixture.componentRef.setInput('title', 'POS Maintenance Tool');
+    fixture.componentRef.setInput('status', 'read-only');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.tool-card__status')?.textContent).toContain('Read-only');
+    expect(host.querySelector('.tool-card__status-icon')?.classList.contains('bi-eye')).toBe(true);
+    expect(host.querySelector('.tool-card__status')?.classList.contains('tool-card__status--readonly')).toBe(true);
+  });
 });

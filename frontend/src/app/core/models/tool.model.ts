@@ -2,7 +2,7 @@
  * to each tool route through Route.data so the shell and breadcrumbs share one
  * consistent contract. */
 export type ToolId = 'prompt-studio' | 'online-orders' | 'pos-maintenance';
-export type ToolStatus = 'available' | 'migration-pending';
+export type ToolStatus = 'available' | 'read-only' | 'migration-pending';
 
 /** Accent keys map to the `--tool-<accent>-from/to` identity tokens in
  * styles/_tokens.css. Components consume the key, never a raw color
@@ -46,7 +46,7 @@ export const TOOL_ROUTE_DATA = {
   posMaintenance: {
     title: 'POS Maintenance Tool',
     breadcrumb: 'POS Maintenance',
-    status: 'migration-pending',
+    status: 'read-only',
     accent: 'amber'
   }
 } as const satisfies Record<string, ToolRouteData>;

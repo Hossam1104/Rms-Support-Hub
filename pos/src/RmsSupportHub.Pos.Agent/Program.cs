@@ -8,14 +8,19 @@ using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Correlation;
+using RmsSupportHub.Pos.Agent.Device;
+using RmsSupportHub.Pos.Agent.Endpoints;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
+using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Application.UseCases;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Infrastructure.Backups;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
+using RmsSupportHub.Pos.Infrastructure.Windows;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -104,11 +109,16 @@ builder.Services.AddOpenApi("v1", options =>
     options.AddDocumentTransformer<AgentOpenApiDocumentTransformer>();
 });
 
-// INT-04 composes only the safe storage ports. It deliberately does not register legacy WinUI
-// configuration importers, configuration mutation services, operation workers, or feature endpoints.
+// INT-07 composes only the safe storage ports and read-only diagnostics. It deliberately does not
+// register legacy WinUI configuration importers, configuration mutation services, operation
+// workers, or state-changing feature endpoints.
 builder.Services.AddSingleton(new AgentConfigurationStoreOptions());
 builder.Services.AddSingleton<IAgentConfigurationStore, JsonAgentConfigurationStore>();
 builder.Services.AddSingleton<IAgentSecretStore, DpapiAgentSecretStore>();
+builder.Services.AddSingleton<AgentConfigurationUseCase>();
+builder.Services.AddSingleton<DeviceDiagnosticsService>();
+builder.Services.AddSingleton<IServiceManager, WindowsServiceManager>();
+builder.Services.AddSingleton<ReadOnlyServiceStatusService>();
 
 // ArtifactCatalog is retained as a process-local foundation, but no HTTP artifact endpoint is
 // mapped in this session. Its file capability remains behind the existing Infrastructure port.
@@ -140,7 +150,8 @@ app.MapGet("/health/live", () => Results.Ok(new HealthStatusDto("live")))
         "Confirms that the local POS Agent process is alive and able to answer HTTP requests. " +
         "This anonymous check has no side effects and does not prove POS SQL, SCM, SMB, backup, " +
         "restore, browser authentication, or mutation authorization readiness.")
-    .Produces<HealthStatusDto>(StatusCodes.Status200OK);
+    .Produces<HealthStatusDto>(StatusCodes.Status200OK)
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json");
 app.MapGet("/health/ready", () => Results.Ok(new HealthStatusDto("ready")))
     .AllowAnonymous()
     .WithName("GetHealthReady")
@@ -150,7 +161,8 @@ app.MapGet("/health/ready", () => Results.Ok(new HealthStatusDto("ready")))
         "Returns the current foundation-stage readiness response. This endpoint is anonymous, has " +
         "no side effects, and currently has the same implementation behavior as the liveness " +
         "endpoint; it does not probe POS SQL, SCM, SMB, backup, restore, or feature readiness.")
-    .Produces<HealthStatusDto>(StatusCodes.Status200OK);
+    .Produces<HealthStatusDto>(StatusCodes.Status200OK)
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json");
 
 app.MapGet(
         "/api/v1/session",
@@ -188,6 +200,7 @@ app.MapGet(
         "Windows independently of UAC browser-token elevation; the raw Windows SID is never returned. " +
         "The endpoint has no side effects.")
     .Produces<SessionInfoDto>(StatusCodes.Status200OK)
+    .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
     .Produces(StatusCodes.Status401Unauthorized)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
@@ -250,6 +263,10 @@ app.MapPost(
     .Produces(StatusCodes.Status401Unauthorized)
     .Produces(StatusCodes.Status403Forbidden)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status429TooManyRequests, "application/problem+json");
+
+app.MapDeviceEndpoints();
+app.MapConfigurationEndpoints();
+app.MapServiceEndpoints();
 
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))

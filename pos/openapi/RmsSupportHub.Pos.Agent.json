@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "RMS+ POS Agent API",
-    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes mutations, and no Support Hub backend relay is involved. Mutation tokens are short-lived, one-use, and server-operation-bound.",
+    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes protected reads and future mutations, and no Support Hub backend relay is involved. INT-07 exposes only read-only device, redacted configuration, and Windows service visibility endpoints. Mutation tokens are short-lived, one-use, and server-operation-bound for future state-changing operations.",
     "version": "1.0"
   },
   "servers": [
@@ -33,6 +33,23 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
           }
         }
       }
@@ -55,6 +72,23 @@
                 },
                 "example": {
                   "status": "ready"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
                 }
               }
             }
@@ -90,6 +124,23 @@
               }
             }
           },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
           "401": {
             "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header.",
             "headers": {
@@ -103,7 +154,7 @@
             }
           },
           "403": {
-            "description": "The authenticated identity reached the endpoint, but its Windows SID could not be resolved. The Agent returns application/problem+json with code windows_sid_unavailable.",
+            "description": "The authenticated identity reached the endpoint, but its Windows SID could not be resolved. The Agent returns application/problem+json with code windows_sid_unavailable. The exact-origin transport gate may also reject a browser origin with code origin_rejected.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -165,7 +216,7 @@
             }
           },
           "400": {
-            "description": "The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported; no mutation token is issued.",
+            "description": "The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported; no mutation token is issued. The host and HTTPS middleware may also return host_rejected or https_required in this transport response.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -194,7 +245,7 @@
             }
           },
           "403": {
-            "description": "AuthorizationMiddleware may reject a non-Administrator before the endpoint executes; that policy-forbid response is bodyless and is not guaranteed to be AgentProblemDetails. If the endpoint executes and cannot resolve the authenticated Windows SID, it returns application/problem+json with code windows_sid_unavailable."
+            "description": "AuthorizationMiddleware may reject a non-Administrator before the endpoint executes; that policy-forbid response is bodyless and is not guaranteed to be AgentProblemDetails. If the endpoint executes and cannot resolve the authenticated Windows SID, it returns application/problem+json with code windows_sid_unavailable. The exact-origin transport gate may reject an untrusted browser origin with code origin_rejected."
           },
           "429": {
             "description": "The bounded in-memory mutation-token retention limit has been reached; the Agent returns application/problem+json with code mutation_token_capacity and issues no token.",
@@ -209,6 +260,419 @@
                   "status": 429,
                   "code": "mutation_token_capacity",
                   "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/configuration": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Read redacted POS configuration",
+        "description": "Returns the service-owned POS configuration read model for the local device. Password values are represented only by secret-presence flags; SQL/RDB passwords, protected data, backup paths, configuration source paths, and unrestricted host paths are never returned. This GET does not perform configuration mutation.",
+        "operationId": "GetConfiguration",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the redacted configuration read model without secret values.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedactedConfigurationDto"
+                },
+                "example": {
+                  "sqlInstance": "localhost",
+                  "sqlUser": "agent-user",
+                  "hasSqlPassword": false,
+                  "branchCode": "BR-001",
+                  "posNumber": "POS-01",
+                  "release": "2026.08",
+                  "clientName": "RMS+",
+                  "apiBaseUrl": "https://rms-api.test",
+                  "databases": [
+                    "RmsBranchSrv"
+                  ],
+                  "services": [
+                    "RMS.BranchService"
+                  ],
+                  "downloader": {
+                    "apiUrl": "https://rms-downloader.test",
+                    "rdbServerIp": "192.0.2.10",
+                    "rdbUsername": "agent-reader",
+                    "hasRdbPassword": false,
+                    "knownBranchCodes": [
+                      "BR-001"
+                    ],
+                    "pollIntervalSeconds": 5,
+                    "timeoutSeconds": 1800
+                  },
+                  "version": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/services": {
+      "get": {
+        "tags": [
+          "Windows Services"
+        ],
+        "summary": "Read allow-listed Windows service visibility",
+        "description": "Returns current status evidence for the server-owned, allow-listed Windows services configured on the local Agent. Service identifiers are opaque and the response contains visibility/status only. No start, stop, restart, delete, command, or process control is registered in this first release; allowedActions is always empty.",
+        "operationId": "GetServices",
+        "responses": {
+          "200": {
+            "description": "The Agent returned allow-listed service status summaries with no mutation actions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceSummaryDto"
+                  }
+                },
+                "example": [
+                  {
+                    "serviceId": "svc-example-opaque",
+                    "displayName": "RMS.BranchService",
+                    "state": "running",
+                    "lastChecked": {
+                      "freshness": "fresh",
+                      "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                      "detail": "Windows service is running."
+                    },
+                    "allowedActions": [ ],
+                    "lastOutcome": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/device/identity": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Read safe POS device identity",
+        "description": "Returns the Agent's server-owned branch, POS, release, and client identity for the local device. The response has no side effects and never includes a Windows SID, credential, or unrestricted host path.",
+        "operationId": "GetDeviceIdentity",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the safe server-owned DeviceIdentityDto identity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceIdentityDto"
+                },
+                "example": {
+                  "branchCode": "BR-001",
+                  "posNumber": "POS-01",
+                  "release": "2026.08",
+                  "clientName": "RMS+"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/device/connectivity": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Read local POS connectivity evidence",
+        "description": "Performs bounded, read-only TCP reachability checks for the configured local SQL endpoint and main-server address. Each evidence node carries its own freshness and safe detail; reachable TCP is not a claim that SQL or the application is healthy.",
+        "operationId": "GetDeviceConnectivity",
+        "responses": {
+          "200": {
+            "description": "The Agent returned independent local SQL and main-server EvidenceDto nodes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceConnectivityDto"
+                },
+                "example": {
+                  "localSql": {
+                    "freshness": "fresh",
+                    "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                    "detail": "SQL endpoint is reachable; database health was not queried."
+                  },
+                  "mainServer": {
+                    "freshness": "fresh",
+                    "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                    "detail": "Main-server TCP endpoint is reachable; application health was not queried."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/device/capabilities": {
+      "get": {
+        "tags": [
+          "Device"
+        ],
+        "summary": "Read safe Agent capabilities",
+        "description": "Returns non-secret capability metadata for the installed Agent, including its contract version and operating-system label. Browse-root entries contain display metadata only; host paths remain server-owned. This first release publishes no file-browse or mutation capability.",
+        "operationId": "GetDeviceCapabilities",
+        "responses": {
+          "200": {
+            "description": "The Agent returned safe DeviceCapabilitiesDto metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceCapabilitiesDto"
+                },
+                "example": {
+                  "agentVersion": "0.0.0",
+                  "operatingSystem": "Windows",
+                  "browseRoots": [ ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
                 }
               }
             }
@@ -266,6 +730,131 @@
         },
         "description": "Safe application/problem+json error contract. Code is a stable problem code and correlationId may identify the request; sensitive identity and machine details are not included."
       },
+      "BrowseRootDto": {
+        "required": [
+          "rootId",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "rootId": {
+            "type": "string",
+            "description": "Opaque server-owned browse-root identifier."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "User-facing browse-root label; it is not a host path."
+          }
+        },
+        "description": "Safe browse-root display metadata. The corresponding host path remains server-owned."
+      },
+      "DeviceCapabilitiesDto": {
+        "required": [
+          "agentVersion",
+          "operatingSystem",
+          "browseRoots"
+        ],
+        "type": "object",
+        "properties": {
+          "agentVersion": {
+            "type": "string",
+            "description": "Installed Agent assembly version produced by the Agent."
+          },
+          "operatingSystem": {
+            "type": "string",
+            "description": "Operating-system label produced by the Agent."
+          },
+          "browseRoots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrowseRootDto"
+            },
+            "description": "Safe browse-root display metadata. INT-07 publishes no file-browse capability."
+          }
+        },
+        "description": "Non-secret capability metadata for the installed Agent. Browse roots expose display metadata only and do not expose host paths."
+      },
+      "DeviceConnectivityDto": {
+        "required": [
+          "localSql",
+          "mainServer"
+        ],
+        "type": "object",
+        "properties": {
+          "localSql": {
+            "description": "Independent local SQL endpoint reachability evidence.",
+            "$ref": "#/components/schemas/EvidenceDto"
+          },
+          "mainServer": {
+            "description": "Independent main-server endpoint reachability evidence.",
+            "$ref": "#/components/schemas/EvidenceDto"
+          }
+        },
+        "description": "Independent local SQL and main-server reachability evidence. Reachable TCP does not claim that SQL or application health was queried."
+      },
+      "DeviceIdentityDto": {
+        "required": [
+          "branchCode",
+          "posNumber",
+          "release",
+          "clientName"
+        ],
+        "type": "object",
+        "properties": {
+          "branchCode": {
+            "type": "string",
+            "description": "Server-owned branch code for the local POS device."
+          },
+          "posNumber": {
+            "type": "string",
+            "description": "Server-owned POS number for the local device."
+          },
+          "release": {
+            "type": "string",
+            "description": "Configured RMS+ release label for the local device."
+          },
+          "clientName": {
+            "type": "string",
+            "description": "Configured client/product label for the local device."
+          }
+        },
+        "description": "Safe server-owned branch, POS, release, and client identity. It contains no Windows SID, credential, or unrestricted host path."
+      },
+      "EvidenceDto": {
+        "required": [
+          "freshness",
+          "lastCheckedUtc",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "freshness": {
+            "description": "Freshness classification for this observation; it is never collapsed into a bare online boolean.",
+            "$ref": "#/components/schemas/FreshnessState"
+          },
+          "lastCheckedUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC time at which this observation was last checked, when available.",
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe diagnostic detail without credentials, Windows SIDs, or raw exception text."
+          }
+        },
+        "description": "Freshness and check-time evidence for the service state."
+      },
+      "FreshnessState": {
+        "enum": [
+          "unknown",
+          "fresh",
+          "stale"
+        ],
+        "description": "Freshness classification for this observation; it is never collapsed into a bare online boolean."
+      },
       "HealthStatusDto": {
         "required": [
           "status"
@@ -310,6 +899,202 @@
           }
         },
         "description": "Opaque, short-lived mutation-token response produced by the Agent. The token is intended for browser memory only."
+      },
+      "RedactedConfigurationDto": {
+        "required": [
+          "sqlInstance",
+          "sqlUser",
+          "hasSqlPassword",
+          "branchCode",
+          "posNumber",
+          "release",
+          "clientName",
+          "apiBaseUrl",
+          "databases",
+          "services",
+          "downloader",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "sqlInstance": {
+            "type": "string",
+            "description": "Configured SQL endpoint label. It is not a credential and does not expose a password."
+          },
+          "sqlUser": {
+            "type": "string",
+            "description": "Configured SQL user name; the corresponding password is never returned."
+          },
+          "hasSqlPassword": {
+            "type": "boolean",
+            "description": "Whether the Agent has a stored SQL password, without returning the password value."
+          },
+          "branchCode": {
+            "type": "string",
+            "description": "Configured branch code for the local POS device."
+          },
+          "posNumber": {
+            "type": "string",
+            "description": "Configured POS number for the local device."
+          },
+          "release": {
+            "type": "string",
+            "description": "Configured RMS+ release label for the local device."
+          },
+          "clientName": {
+            "type": "string",
+            "description": "Configured client/product label for the local device."
+          },
+          "apiBaseUrl": {
+            "type": "string",
+            "description": "Configured main API base URL used by the Agent's server-side connectivity check."
+          },
+          "databases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Configured database labels; connection credentials are not included."
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Configured Windows service names used internally by the Agent; no control operation is implied."
+          },
+          "downloader": {
+            "description": "Redacted DB Downloader settings with secret-presence metadata only.",
+            "$ref": "#/components/schemas/RedactedDownloaderConfigurationDto"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Service-owned optimistic-concurrency version for future configuration mutations.",
+            "format": "int64"
+          }
+        },
+        "description": "Service-owned POS configuration with secret-presence flags. Password values, protected data, backup paths, and configuration source paths are never returned."
+      },
+      "RedactedDownloaderConfigurationDto": {
+        "required": [
+          "apiUrl",
+          "rdbServerIp",
+          "rdbUsername",
+          "hasRdbPassword",
+          "knownBranchCodes",
+          "pollIntervalSeconds",
+          "timeoutSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "apiUrl": {
+            "type": "string",
+            "description": "Configured DB Downloader API URL."
+          },
+          "rdbServerIp": {
+            "type": "string",
+            "description": "Configured RDB server address; no RDB password is returned."
+          },
+          "rdbUsername": {
+            "type": "string",
+            "description": "Configured RDB user name; the corresponding password is never returned."
+          },
+          "hasRdbPassword": {
+            "type": "boolean",
+            "description": "Whether the Agent has a stored RDB password, without returning the password value."
+          },
+          "knownBranchCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Configured downloader branch-code labels."
+          },
+          "pollIntervalSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Configured downloader polling interval in seconds.",
+            "format": "int32"
+          },
+          "timeoutSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Configured downloader operation timeout in seconds.",
+            "format": "int32"
+          }
+        },
+        "description": "Redacted DB Downloader settings with secret-presence metadata only."
+      },
+      "ServiceActionKind": {
+        "enum": [
+          "start",
+          "stop",
+          "restart"
+        ]
+      },
+      "ServiceRuntimeState": {
+        "enum": [
+          "unknown",
+          "running",
+          "stopped",
+          "transitioning",
+          "notFound"
+        ],
+        "description": "Current Windows service runtime state observed by the Agent."
+      },
+      "ServiceSummaryDto": {
+        "required": [
+          "serviceId",
+          "displayName",
+          "state",
+          "lastChecked",
+          "allowedActions",
+          "lastOutcome"
+        ],
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "description": "Opaque server-issued service identifier; the raw Windows service name is not accepted from a browser."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Safe display name for the allow-listed Windows service."
+          },
+          "state": {
+            "description": "Current Windows service runtime state observed by the Agent.",
+            "$ref": "#/components/schemas/ServiceRuntimeState"
+          },
+          "lastChecked": {
+            "description": "Freshness and check-time evidence for the service state.",
+            "$ref": "#/components/schemas/EvidenceDto"
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceActionKind"
+            },
+            "description": "Mutation actions exposed by this Agent. INT-07 always returns an empty array."
+          },
+          "lastOutcome": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe prior-operation outcome, when present; INT-07 performs no service operation."
+          }
+        },
+        "description": "Allow-listed Windows service visibility and status evidence. This first release exposes no service control actions."
       },
       "SessionInfoDto": {
         "required": [
@@ -365,6 +1150,15 @@
     },
     {
       "name": "Security"
+    },
+    {
+      "name": "Configuration"
+    },
+    {
+      "name": "Windows Services"
+    },
+    {
+      "name": "Device"
     }
   ]
 }

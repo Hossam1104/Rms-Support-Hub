@@ -25,10 +25,11 @@ feature or Support Hub API relay/UI integration was implemented. INT-CI01
 restored the portable Ubuntu Application lane and all five destination POS CI
 lanes are green. INT-06I then implemented the bounded UAC-safe Administrator
 authorization remediation and the permanent Agent Scalar/OpenAPI
-documentation gate; no feature route, POS UI, or Support Hub backend relay was
-added.
+documentation gate; INT-07 then added the first destination-owned read-only
+Agent feature routes and replaced the Support Hub POS placeholder with a
+direct operational workspace. No Support Hub backend relay was added.
 
-**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / INT-06H DEFECT CONFIRMED / INT-06I IMPLEMENTED / PROV-1 CLOSED FOR COMPOSITION / ARCHITECTURE CLOSED / INDEPENDENT SECURITY REVIEW OPEN.** The process
+**Status: INT-00R / INT-01 / INT-02 / INT-03 / INT-03R / INT-04 COMPLETE / INT-05 ACCEPTED AFTER INT-05F / INT-05F COMPLETE / INT-CI01 COMPLETE / INT-06H DEFECT CONFIRMED / INT-06I COMPLETE AND ACCEPTED / INT-07 COMPLETE AND ACCEPTED / PROV-1 CLOSED FOR COMPOSITION / ARCHITECTURE CLOSED / INDEPENDENT SECURITY REVIEW PASS / PR #3 MERGED.** The process
 boundary, direct browser transport, LNA version/policy matrix, Negotiate and
 loopback back-connection behavior, hostname/port/certificate, CORS preflight,
 antiforgery, identity, ownership, source-import, contract, and CI decisions are
@@ -38,8 +39,8 @@ indirect local-group resolution and the well-known Built-in Administrators
 SID, failing closed on lookup failure. Session and mutation-token authorization
 share that server-derived boundary; synthetic claims remain test-only.
 Scalar/OpenAPI documentation is local and non-production, with generated
-artifacts drift-checked. Browser Administrator authorization,
-representative-device, and real-operation evidence remains open. INT-02
+artifacts drift-checked. Representative-device and real-operation evidence
+remains open under INT-13; INT-08 is staged but not executed. INT-02
   portable source import is complete; Windows Infrastructure and Agent tests and
   retained WinUI publish validation are complete. Agent host composition is
   complete, while Support Hub feature work, live browser transport evidence,
@@ -82,20 +83,25 @@ One Angular 22 SPA and one .NET 10 Web API.
   tokens and primitives, and [api-spec.md](api-spec.md) for the current REST
   surface.
 
-## Current POS placeholder
+## Current POS first-release workspace
 
 | Aspect | Current state |
 | --- | --- |
 | Route | `/tools/pos-maintenance`, lazy, typed `TOOL_ROUTE_DATA.posMaintenance` |
-| Component | `frontend/src/app/features/pos-maintenance/pos-maintenance-placeholder.component.ts` |
+| Component | `frontend/src/app/features/pos-maintenance/pos-maintenance.component.ts` |
 | Model | `frontend/src/app/core/models/pos-capability.model.ts` |
-| Hub entry | `pos-maintenance` in `frontend/src/app/features/hub/tool-registry.ts`, accent `amber`, status not-available |
-| Backend | **None.** No POS controller, service, repository, configuration key, or DI registration exists. |
+| Hub entry | `pos-maintenance` in `frontend/src/app/features/hub/tool-registry.ts`, accent `amber`, status `read-only` |
+| Agent routes | `/api/v1/device/identity`, `/api/v1/device/connectivity`, `/api/v1/device/capabilities`, `/api/v1/configuration`, `/api/v1/services` |
+| Backend ownership | Destination-owned `RmsSupportHub.Pos.Agent`; no `RmsSupportHub.Api` relay |
 
-The page is informational only: status text and planned capability areas. It
-performs no operation and calls no API. Negative tests assert that boundary and
-must stay green until a future, authorized integration branch deliberately
-replaces the placeholder.
+The page performs direct, credentialed read-only Agent calls for liveness,
+session diagnostics, device identity/connectivity/capabilities, redacted
+configuration, and allow-listed Windows service status. It shows safe loading,
+partial-failure, authorization, and unavailable states. It exposes no password,
+SID, unrestricted host path, browse operation, service control, configuration
+mutation, SQL, or generic command control. INT-08 owns the next bounded
+mutation-operation work; INT-13 owns representative-device/live operational
+evidence.
 
 ## Canonical architecture seam
 
@@ -289,13 +295,12 @@ feature UI, raw POS history, or live Windows/device runtime was executed.
 
 The following remain future owner-gated work:
 
-1. Validate the live browser transport: certificate trust/lifecycle, LNA,
-   Negotiate/SPN, browser policy, loopback back-connection, and representative
-   device behavior in the authorized evidence gate.
-2. Implement and validate the final Support Hub feature and later privileged
-operations in their separately authorized gates. INT-05's contract/client
-foundation is accepted after INT-05F; live SQL/SCM/SMB/device behavior remains
-evidence work.
+1. Validate representative-device/live operational behavior: certificate
+   trust/lifecycle, LNA, Negotiate/SPN, browser policy, loopback back-connection,
+   and real Agent reads on the tested device under INT-13.
+2. Implement and validate bounded service-control mutation operations under
+   INT-08. The first-release read-only Agent surface is complete; live
+   SQL/SCM/SMB/device behavior remains evidence work.
 
 INT-01, INT-02, INT-03, INT-03R, INT-04, and INT-CI01 are complete; INT-05 is
 accepted after INT-05F, which is complete. `PROV-1` is closed for the
@@ -316,18 +321,20 @@ The same server-derived boundary feeds session diagnostics and mutation-token
 authorization; claims are synthetic only in the dedicated IntegrationTest
 host. `Scalar.AspNetCore` `2.16.18` is pinned, Scalar/OpenAPI are
 Development/IntegrationTest-only, AI Agent and default external fonts are
-disabled, and generated contract/client drift is checked. The focused PR is
-not merged and requires independent security review. Every future POS Agent
-HTTP operation must carry complete OpenAPI metadata and be fully described in
-Scalar before its integration gate closes. POS feature operations and INT-07
-were not executed.
+disabled, and generated contract/client drift is checked. The focused PR was
+reviewed and merged as PR #3. INT-07 then added the destination-owned
+read-only Agent routes, generated client updates, direct Support Hub workspace,
+and focused tests; there is no general API relay and no POS mutation operation.
+Every future POS Agent HTTP operation must carry complete OpenAPI metadata and
+be fully described in Scalar before its integration gate closes. INT-13 remains
+open and INT-08 is staged but not executed.
 
 ## Required post-integration validation
 
 | Gate | Requirement |
 | --- | --- |
-| Frontend suite | `npm --prefix tools/pos-agent-client-generator ci`; `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 341 tests across 56 files passed |
-| Backend suite | POS Domain 7, Application 76, Infrastructure 60, and Agent 85 tests pass |
+| Frontend suite | `npm --prefix tools/pos-agent-client-generator ci`; `npm --prefix frontend ci`; `npm --prefix frontend run generate:pos-agent-client`; `npm --prefix frontend test -- --watch=false`; 342 tests across 56 files passed |
+| Backend suite | POS Domain 7, Application 76, Infrastructure 60, and Agent 100 tests pass |
 | Full gate | `./scripts/build.ps1` or the repository's Windows equivalent: backend tests, Release build with 0 warnings, and Angular production build |
 | Bundle budgets | POS stays out of the initial bundle beyond its route chunk; investigate meaningful growth |
 | Offline build | `production-offline` still succeeds |
