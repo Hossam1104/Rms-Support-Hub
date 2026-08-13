@@ -454,7 +454,7 @@ INT-13 remains open. On the owner-authorized Testing machine, the next safe
 action is an elevated Administrator PowerShell run of:
 
 ```powershell
-.\scripts\start-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false
+.\scripts\start-pos-agent-testing.ps1 -IUnderstandTestingOnly
 ```
 
 After the script proves the exact root and `/tools/pos-maintenance` route over

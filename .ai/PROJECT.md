@@ -92,7 +92,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 - INT-13C Testing provisioning: run `scripts/setup-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false` and `scripts/remove-pos-agent-testing.ps1 -IUnderstandTestingOnly -WhatIf -Confirm:$false` only on the authorized Testing machine. Exact browser/IWA policy logic is in `scripts/PosAgentWindowsProvisioning.psm1`; the task-scoped normal-user browser evidence launcher is `scripts/invoke-pos-browser-evidence.ps1` and uses `tools/pos-browser-evidence`.
 - INT-13D secure Support Hub Testing runtime: use the exact origin
   `https://support-hub.integration.test:4443` and run
-  `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false`
+  `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly`
   only from an elevated, owner-authorized Testing PowerShell session. The start
   path builds the real Angular production bundle, publishes the existing API to
   external machine-local staging, serves it from API `wwwroot` on loopback
