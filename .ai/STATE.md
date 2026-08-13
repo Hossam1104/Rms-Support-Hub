@@ -4,7 +4,7 @@
 - **Branch:** `int-08-pos-service-control` (INT-08 implementation and delivery branch)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
 - **Programme:** INT-00 through INT-07 complete/accepted; INT-08 complete/validated on this branch; INT-13 remains open.
-- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`. INT-08 adds only the typed target-bound service-control route; no general API relay or generic POS mutation surface exists.
+- **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`; INT-08 draft PR #5 is open from this branch. INT-08 adds only the typed target-bound service-control route; no general API relay or generic POS mutation surface exists.
 
 ## Application
 
