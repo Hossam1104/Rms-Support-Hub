@@ -72,7 +72,7 @@ degrades; all current UI feature styles consume design tokens.
 | Generated client | `openapi-typescript` 7.13.0 generation passed |
 | Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
 | Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
-| POS Agent live | Unavailable: canonical DNS/certificate prerequisites absent in this environment |
+| POS Agent live | INT-13 executed on a representative machine; `BLOCKED` — DNS `rms-pos-agent.localhost`, TLS certificate, port 5001 listener, and disposable Testing service are absent; see `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` |
 | Broad `scripts/build.ps1` | Blocked by the existing local `RmsSupportHub.Api` Debug process locking referenced DLLs; the safe no-build backend regression run had 190 passed and 2 known unchanged 404-vs-405 route-status failures, and the backend Release build passed separately |
 
 ## Deferred boundaries
@@ -80,6 +80,8 @@ degrades; all current UI feature styles consume design tokens.
 - Testing is default; no Production calls, SQL changes, deployment, or live
   service actions were performed for INT-08. Fakes covered service dispatch.
 - UPC live/fixture acceptance, deployment/Production acceptance, and
-  representative-device Agent evidence remain deferred under INT-13.
+  representative-device Agent evidence remain deferred under INT-13. INT-13
+  remains open pending machine DNS, certificate, Agent listener, and a
+  disposable Testing service.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls
   are environment setup, not an INT-07 defect.

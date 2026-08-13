@@ -29,11 +29,13 @@ the linked planning/evidence documents.
 | INT-06I acceptance | PR #3 merge `c8706745a9ee8b423b4813badf0ca863b37a5d0e` | Reviewed security remediation landed normally; no Critical/High findings. |
 | INT-07 read-only first release | PR #4 merge `3a3d58b2406b8e80954fac0174bbdc3b623962f2` | Added protected device/connectivity/configuration/service reads, generated artifacts, direct operational Support Hub workspace, and no mutation/API relay. Agent 100/100; frontend 342/342; all five POS CI lanes green. |
 | INT-08 service-control mutation runtime | PR #5 merge `3907bd024acda7fa3af6e1b3ade1502fa4aabce6` | Added the typed opaque-target Start/Stop/Restart Agent route, target/method/path-bound one-use tokens, bounded idempotency/concurrency, explicit outcome truth, direct Angular controls, OpenAPI/client regeneration, and 114 Agent / 345 frontend test coverage. No live or Production service was controlled. |
+| INT-13 representative-device evidence | `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` | Executed authorized INT-13 evidence run on representative machine. Live operational tests are `BLOCKED` (DNS, cert, port 5001 listener, and disposable test service absent). Automated contract tests passed 100% (Domain 7, Application 76, Infrastructure 60, Agent 114, Frontend 345, Release build 0 warnings/errors). |
 
 ## Current programme status
 
 INT-00 through INT-08 are complete within their approved boundaries. INT-13
-representative-device/live operational evidence remains open. The broad build
-was environment-blocked by a running local API process; its safe no-build
+representative-device/live operational evidence is executed and recorded as
+`BLOCKED` on machine prerequisites in `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`.
+The broad build was environment-blocked by a running local API process; its safe no-build
 regression run still has the two known unchanged route-status assertions (404
-expected vs 405 actual), unrelated to INT-08.
+expected vs 405 actual), unrelated to POS.
