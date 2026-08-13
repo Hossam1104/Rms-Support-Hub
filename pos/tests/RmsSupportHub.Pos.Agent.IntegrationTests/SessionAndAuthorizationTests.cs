@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
@@ -70,15 +72,31 @@ public sealed class SessionAndAuthorizationTests : IClassFixture<AgentWebApplica
     }
 
     [Fact]
-    public void SidResolutionUsesCanonicalServerPrincipalClaim()
+    public void ProductionSidResolutionRejectsClaimsAndIntegrationTestResolverIsExplicit()
     {
         var identity = new ClaimsIdentity(
             [new Claim(ClaimTypes.Name, "display-name"), new Claim(ClaimTypes.PrimarySid, FakeAuthenticationHandler.DefaultSid)],
             "test");
         var principal = new ClaimsPrincipal(identity);
 
-        Assert.True(AgentPrincipal.TryGetSid(principal, out var sid));
+        Assert.False(AgentPrincipal.TryGetSid(principal, out _));
+        Assert.True(AgentPrincipal.TryGetIntegrationTestSid(principal, out var sid));
         Assert.Equal(FakeAuthenticationHandler.DefaultSid, sid);
+    }
+
+    [Theory]
+    [InlineData("Production", false)]
+    [InlineData("IntegrationTest", true)]
+    public void PrincipalSidResolverAcceptsSyntheticClaimsOnlyInIntegrationTest(string environmentName, bool expected)
+    {
+        var identity = new ClaimsIdentity(
+            [new Claim(ClaimTypes.PrimarySid, FakeAuthenticationHandler.DefaultSid)],
+            "test");
+        var principal = new ClaimsPrincipal(identity);
+        var resolver = new AgentPrincipalSidResolver(new TestHostEnvironment(environmentName));
+
+        Assert.Equal(expected, resolver.TryGetSid(principal, out var sid));
+        Assert.Equal(expected ? FakeAuthenticationHandler.DefaultSid : string.Empty, sid);
     }
 
     [Fact]
@@ -91,5 +109,16 @@ public sealed class SessionAndAuthorizationTests : IClassFixture<AgentWebApplica
         var result = await authorization.AuthorizeAsync(new ClaimsPrincipal(identity), PolicyNames.LocalAdministratorsOnly);
 
         Assert.True(result.Succeeded);
+    }
+
+    private sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+
+        public string ApplicationName { get; set; } = typeof(Program).Assembly.GetName().Name!;
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

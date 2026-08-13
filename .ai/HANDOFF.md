@@ -1,19 +1,9 @@
 # Active Handoff
 
-- **Status:** Blocked
-- **Gate:** INT-06F Elevated Live Transport Security Evidence
-- **Completed:** Read required docs/source; confirmed `f04f88d` matches `origin/main`;
-  captured sanitized machine/browser preflight; made the single controlled UAC
-  elevation attempt, which returned no elevated child/result.
-- **Next action:** Planner review; rerun INT-06F only on an executor that can
-  complete controlled elevation, then provision the dedicated test certificates
-  and temporary LocalSystem service before live transport/browser evidence.
-- **Changed files:** `docs/evidence/POS_INT06_LIVE_TRANSPORT_EVIDENCE.md`,
-  `TASK.md`, `.ai/STATE.md`, `.ai/HANDOFF.md`.
-- **Validation:** No Agent/frontend runtime source changed. The UAC attempt
-  produced no elevated child/result. No certificate, service, hosts mapping, browser
-  policy, browser profile, auth trace, or private key was created or retained.
-- **Blocker:** The single controlled UAC attempt returned no elevated child/result;
-  LocalMachine certificate/trust, LocalSystem hosting, and browser-to-live-Agent
-  evidence remain unproven.
-- **Risk:** Do not mark INT-06 complete or stage INT-07 from this state.
+- **Status:** Empty
+- **Gate:** INT-06I-F1 complete; PR #3 remains open/draft/unmerged.
+- **Next gate:** Independent security review.
+- **Scope closed:** Endpoint-specific Scalar/OpenAPI response contracts, runtime response-shape tests, route/OpenAPI parity, safe examples, local Scalar CSP, real Production Kestrel route isolation, normal Chrome/Edge post-remediation authorization, live Development Scalar rendering, sanitized evidence, and machine cleanup.
+- **Validation:** POS Release tests Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 95/95; POS Release build 0 warnings/errors; frontend 56 files/341 tests and production build; deterministic OpenAPI/client generation; Agent and frontend audits clear; WinUI publish executable plus 27 `.pri` and 66 `.xbf` resources.
+- **Known unrelated failure:** `scripts/build.ps1` still stops on two pre-existing backend route-status assertions (`NotFound` expected, `MethodNotAllowed` returned).
+- **Boundary:** INT-07 was not executed. No POS operation was registered or executed.

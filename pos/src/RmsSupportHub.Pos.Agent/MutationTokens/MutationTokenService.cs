@@ -8,14 +8,17 @@ namespace RmsSupportHub.Pos.Agent.MutationTokens;
 /// method resolved from the server-owned operation registry. The issuance request's POST method
 /// is never used as the future mutation target.
 /// </summary>
-public sealed class MutationTokenService(IMutationTokenStore store, AgentSecurityOptions options)
+public sealed class MutationTokenService(
+    IMutationTokenStore store,
+    AgentSecurityOptions options,
+    IAgentPrincipalSidResolver principalSidResolver)
 {
     public MutationTokenIssue Issue(HttpContext context, MutationOperationDescriptor operation)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(operation);
 
-        if (!AgentPrincipal.TryGetSid(context.User, out var sid))
+        if (!principalSidResolver.TryGetSid(context.User, out var sid))
         {
             throw new InvalidOperationException("The authenticated Windows SID could not be resolved.");
         }

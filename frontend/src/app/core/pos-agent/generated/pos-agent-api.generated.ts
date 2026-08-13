@@ -11,6 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Check Agent liveness
+         * @description Confirms that the local Agent process is alive and able to answer HTTP requests. Authentication and authorization are anonymous/none. The check has no side effects and a successful 200 response does not prove POS SQL connectivity, SCM connectivity, SMB connectivity, backup readiness, restore readiness, browser authentication, or mutation authorization.
+         */
         get: operations["GetHealthLive"];
         put?: never;
         post?: never;
@@ -27,6 +31,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Check Agent readiness
+         * @description Returns the foundation-stage readiness response. Authentication and authorization are anonymous/none, and the check has no side effects. At this stage readiness uses the same implementation behavior as liveness and does not probe POS SQL, SCM, SMB, backup, restore, or feature dependencies.
+         */
         get: operations["GetHealthReady"];
         put?: never;
         post?: never;
@@ -43,6 +51,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read authenticated Agent session diagnostics
+         * @description Returns security and API-version diagnostics for the Windows account authenticated by Negotiate. Any authenticated Windows account with a resolvable Windows SID may call this endpoint. IsAuthorized represents membership in the local machine's Built-in Administrators group as resolved by Windows account membership, independently of UAC browser-token elevation. The raw Windows SID is not returned to the browser. The endpoint has no side effects.
+         */
         get: operations["GetAgentSession"];
         put?: never;
         post?: never;
@@ -61,6 +73,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Issue a one-use mutation authorization token
+         * @description Issues a short-lived, one-use token for one server-registered mutation operation. Windows Negotiate authentication and local Built-in Administrators membership are required; normal browser elevation is not. The request supplies only a logical operationId. The server registry resolves the target operation and HTTP method. The result is bound to the authenticated Windows SID, exact Support Hub Origin, target operation, and server-resolved method, with replay and expiry enforcement. The token is header-only, memory-only, and does not itself perform the POS mutation. Production registers no feature mutation during this foundation gate, so unknown operations return operation_not_supported without issuing a token.
+         */
         post: operations["IssueMutationToken"];
         delete?: never;
         options?: never;
@@ -72,30 +88,53 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Safe application/problem+json error contract. Code is a stable problem code and correlationId may identify the request; sensitive identity and machine details are not included. */
         AgentProblemDetailsDto: {
+            /** @description Problem type identifier for the stable Agent error contract. */
             type: string;
+            /** @description Safe human-readable explanation of why the Agent rejected the request. */
             title: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description HTTP status code returned by the Agent.
+             */
             status: number | string;
+            /** @description Optional stable machine-readable Agent problem code used by clients; it never carries raw identity or credential data. */
             code?: null | string;
+            /** @description Optional request correlation identifier echoed by the Agent for diagnostics. */
             correlationId?: null | string;
         };
+        /** @description Anonymous health response produced by the Agent. Status identifies the foundation check that answered; it contains no machine or credential detail. */
         HealthStatusDto: {
+            /** @description Identifies which anonymous foundation health check produced the response (live or ready). */
             status: string;
         };
+        /** @description Browser request for a token for one logical operation known to the server. The browser cannot supply the target HTTP method or path. */
         MutationTokenIssueRequestDto: {
+            /** @description Stable logical identifier for a server-registered operation. The browser supplies this identifier only; it cannot choose the target path or HTTP method. */
             operationId: string;
         };
+        /** @description Opaque, short-lived mutation-token response produced by the Agent. The token is intended for browser memory only. */
         MutationTokenIssueResponseDto: {
+            /** @description Opaque short-lived, one-use token produced by the Agent. It is bound to the authenticated Windows SID, exact Origin, operation, and server-resolved method and should remain in browser memory. */
             token: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description UTC expiry instant enforced by the Agent for the one-use mutation token.
+             */
             expiresAtUtc: string;
         };
+        /** @description Security and API-version diagnostics produced by the Agent for the authenticated Windows account. The raw Windows SID is intentionally omitted. */
         SessionInfoDto: {
+            /** @description The OS-provided display name of the authenticated Windows principal. It is produced by Negotiate and is not browser-supplied. */
             principalName: string;
+            /** @description Whether the authenticated account is a member of the local Built-in Administrators group. This is account membership resolved by Windows and is independent of UAC token elevation; the browser cannot supply it. */
             isAuthorized: boolean;
+            /** @description The installed Agent assembly version produced by the Agent. */
             agentVersion: string;
+            /** @description The Agent contract version produced by the Agent. */
             apiVersion: string;
+            /** @description Contract versions the installed Agent can serve, produced by the Agent rather than accepted from the browser. */
             supportedApiVersions: string[];
         };
     };
@@ -116,12 +155,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description The Agent process is alive and returned a HealthStatusDto. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "status": "live"
+                     *     }
+                     */
                     "application/json": components["schemas"]["HealthStatusDto"];
                 };
             };
@@ -136,12 +180,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description The Agent returned its current HealthStatusDto readiness state. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "status": "ready"
+                     *     }
+                     */
                     "application/json": components["schemas"]["HealthStatusDto"];
                 };
             };
@@ -156,21 +205,50 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description The authenticated account's SessionInfoDto diagnostics and API-version metadata. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "principalName": "EXAMPLE\\support-user",
+                     *       "isAuthorized": true,
+                     *       "agentVersion": "0.0.0",
+                     *       "apiVersion": "1.0",
+                     *       "supportedApiVersions": [
+                     *         "1.0"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["SessionInfoDto"];
                 };
             };
-            /** @description Forbidden */
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The authenticated identity reached the endpoint, but its Windows SID could not be resolved. The Agent returns application/problem+json with code windows_sid_unavailable. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The authenticated Windows SID could not be resolved.",
+                     *       "status": 403,
+                     *       "code": "windows_sid_unavailable",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };
@@ -183,54 +261,82 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The browser supplies only the server-known logical operationId. It does not supply a target path or HTTP method; the Agent's operation registry owns those semantics. */
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "operationId": "example.registered-operation"
+                 *     }
+                 */
                 "application/json": components["schemas"]["MutationTokenIssueRequestDto"];
             };
         };
         responses: {
-            /** @description OK */
+            /** @description The Agent issued a short-lived one-use token for the registered operation. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "token": "opaque-placeholder-not-a-real-token",
+                     *       "expiresAtUtc": "2030-01-01T00:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["MutationTokenIssueResponseDto"];
                 };
             };
-            /** @description Bad Request */
+            /** @description The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported; no mutation token is issued. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The requested mutation operation is not supported.",
+                     *       "status": 400,
+                     *       "code": "operation_not_supported",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };
-            /** @description Unauthorized */
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header. */
             401: {
                 headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
-                };
+                content?: never;
             };
-            /** @description Forbidden */
+            /** @description AuthorizationMiddleware may reject a non-Administrator before the endpoint executes; that policy-forbid response is bodyless and is not guaranteed to be AgentProblemDetails. If the endpoint executes and cannot resolve the authenticated Windows SID, it returns application/problem+json with code windows_sid_unavailable. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
-                };
+                content?: never;
             };
-            /** @description Too Many Requests */
+            /** @description The bounded in-memory mutation-token retention limit has been reached; the Agent returns application/problem+json with code mutation_token_capacity and issues no token. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The mutation-token retention limit has been reached.",
+                     *       "status": 429,
+                     *       "code": "mutation_token_capacity",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };

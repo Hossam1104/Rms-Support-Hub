@@ -85,6 +85,38 @@ public sealed class HostAndSecurityTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
         Assert.Contains("frame-ancestors 'none'", response.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.Contains("default-src 'none'", response.Headers.GetValues("Content-Security-Policy").Single());
+    }
+
+    [Fact]
+    public async Task ScalarDocumentAllowsOnlyLocalDocumentationAssets()
+    {
+        using var client = _factory.CreateSecureClient();
+
+        var response = await client.GetAsync("/scalar/");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var policy = response.Headers.GetValues("Content-Security-Policy").Single();
+        Assert.Contains("script-src 'self' 'unsafe-inline'", policy);
+        Assert.Contains("style-src 'self' 'unsafe-inline'", policy);
+        Assert.Contains("connect-src 'self'", policy);
+        Assert.Contains("font-src 'self'", policy);
+        Assert.Contains("frame-ancestors 'none'", policy);
+        Assert.DoesNotContain("googleapis", policy, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("gstatic", policy, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cdn.", policy, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ScalarDocumentWithoutTrailingSlashUsesTheSameLocalPolicy()
+    {
+        using var client = _factory.CreateSecureClient();
+
+        var response = await client.GetAsync("/scalar");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("script-src 'self' 'unsafe-inline'",
+            response.Headers.GetValues("Content-Security-Policy").Single());
     }
 
     [Fact]

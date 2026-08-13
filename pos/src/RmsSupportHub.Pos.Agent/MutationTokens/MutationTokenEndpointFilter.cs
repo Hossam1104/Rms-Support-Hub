@@ -26,7 +26,9 @@ public sealed class MutationTokenEndpointFilter : IEndpointFilter
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 
-        if (!AgentPrincipal.TryGetSid(context.HttpContext.User, out var sid))
+        var principalSidResolver = context.HttpContext.RequestServices
+            .GetRequiredService<IAgentPrincipalSidResolver>();
+        if (!principalSidResolver.TryGetSid(context.HttpContext.User, out var sid))
         {
             return new ValueTask<object?>(Results.Unauthorized());
         }

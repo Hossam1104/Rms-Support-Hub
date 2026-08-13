@@ -1,7 +1,7 @@
 # RMS+ Support Hub - Maintenance
 
-**Role:** Test (INT-06F Live Transport Security Evidence; blocked at machine prerequisites)
-**Branch:** `main`
+**Role:** Implement (INT-06I-F1 Scalar/OpenAPI contract accuracy + live browser closure)
+**Branch:** `int-06i-admin-auth-scalar`
 **Repository:** `Hossam1104/Rms-Support-Hub`
 
 ## Current phase
@@ -12,6 +12,13 @@ trusted HTTPS, HTTP/1.1 transport, LNA/browser-policy matrix, Negotiate,
 anonymous exact-origin preflight, mutation-token contract, per-device scope,
 and clean source-import boundary are canonical in the ADRs and integration
 documents.
+
+INT-06I is the single bounded active implementation session. It remediates the
+INT-06H UAC-filtered browser authorization finding by resolving local
+Administrator membership from the authenticated Windows account rather than
+the current browser token, and it adds the permanent non-production
+Scalar/OpenAPI documentation gate. No feature operation, POS UI activation,
+Support Hub backend relay, or INT-07 work is authorized in this session.
 
 INT-01 - DESTINATION PROJECT / BUILD / CI SKELETON: COMPLETE
 
@@ -97,24 +104,61 @@ Application failures are resolved, and no Agent feature route or POS UI was
 activated.
 
 INT-06 - LIVE TRANSPORT SECURITY EVIDENCE:
-BLOCKED / FAILED
+BLOCKED / FAILED (historical)
 
-INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE:
-BLOCKED / FAILED
+INT-06F - ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED (historical)
 
-BLOCKER:
-The single controlled UAC elevation attempt returned no elevated child/result.
-The mandatory LocalMachine certificate, machine trust, LocalSystem service,
-and live browser/Agent flow remain unproven.
+INT-06G - PRE-ELEVATED LIVE TRANSPORT SECURITY EVIDENCE: BLOCKED / FAILED
+Machine/certificate/LocalSystem/loopback/Negotiate/CORS/Origin/route evidence
+was collected and cleaned.
 
-RUNTIME REMEDIATION:
-NOT EXECUTED
+INT-06H - REAL BROWSER RUNTIME EVIDENCE: COMPLETE AS DEFECT EVIDENCE
+Actual installed Chrome 151.0.7922.77 and Edge 151.0.4129.78 proved the exact
+public-source secure page, direct browser-to-Agent health/session path, and
+exact LNA allow/block behavior. Browser Negotiate/session passed with no SID
+exposure, but the normal browser session was not authorized as a local
+Administrator: mutation-token returned 403 while an equivalent elevated
+Windows request returned safe `operation_not_supported`, exposing the
+UAC-filtered-token authorization defect.
+
+INT-06I - UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION:
+IMPLEMENTED / INDEPENDENT SECURITY REVIEW REQUIRED
+Production now resolves local Administrator membership from the authenticated
+Windows account through `NetUserGetLocalGroups` with `LG_INCLUDE_INDIRECT`,
+compares group SIDs to the well-known Built-in Administrators SID, and fails
+closed on lookup failure. Session and mutation-token authorization use the
+same server-derived boundary; synthetic claims are IntegrationTest-only.
+Scalar.AspNetCore `2.16.18` is pinned, docs are Development/IntegrationTest
+only, AI Agent/default fonts are disabled, all current operations/responses/
+DTO properties are documented, and generated OpenAPI/client drift is checked.
+
+INT-06I-F1 corrected framework-versus-endpoint response representations,
+added runtime response-shape and route/OpenAPI parity guards, and added a
+docs-only local Scalar CSP so the non-production page renders its local assets
+without external fonts or CDN bundles.
+
+POST-REMEDIATION LIVE BROWSER EVIDENCE: PASS
+Real installed Chrome 151.0.7922.109 and Edge 151.0.4129.78 ran as normal
+medium-integrity limited-token processes. Both direct Agent sessions returned
+200 with `isAuthorized=true`; unknown mutation requests returned safe 400
+`operation_not_supported`, with no SID exposure, no token, and no POS
+operation executed. Production Kestrel returned 404 for `/scalar`, `/scalar/`,
+and `/openapi/v1.json`; Development Scalar rendered all four foundation
+operations with local assets only.
+
+PR STATE: OPEN / NOT MERGED / INDEPENDENT SECURITY REVIEW REQUIRED
+
+VALIDATION:
+POS Release build 0 warnings/errors; Domain 7/7, Application 76/76,
+Infrastructure 60/60, Agent 95/95; frontend 341/341 and production build;
+deterministic OpenAPI/client generation; Agent and frontend audits report no
+vulnerabilities; and retained WinUI publish produced the executable plus 27
+`.pri` and 66 `.xbf` resources. The repository-wide `scripts/build.ps1` still
+has two unrelated pre-existing backend route-status test failures.
 
 NEXT:
-PLANNER REVIEW
+INDEPENDENT SECURITY REVIEW
 
-INT-07:
-OWNER AUTHORIZATION REQUIRED
-NOT YET EXECUTED
+INT-07: OWNER AUTHORIZATION REQUIRED / NOT YET EXECUTED
 
 INT-07 MUST NOT BE EXECUTED IN THIS SESSION.

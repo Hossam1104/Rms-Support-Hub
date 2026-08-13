@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "RMS+ POS Agent API",
-    "description": "Destination-owned foundation contract for the per-device POS Agent. Browser credentials are supplied by Windows Negotiate; mutation tokens are short-lived, one-use, and server-operation-bound.",
+    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes mutations, and no Support Hub backend relay is involved. Mutation tokens are short-lived, one-use, and server-operation-bound.",
     "version": "1.0"
   },
   "servers": [
@@ -15,16 +15,21 @@
     "/health/live": {
       "get": {
         "tags": [
-          "RmsSupportHub.Pos.Agent"
+          "Health"
         ],
+        "summary": "Check Agent liveness",
+        "description": "Confirms that the local Agent process is alive and able to answer HTTP requests. Authentication and authorization are anonymous/none. The check has no side effects and a successful 200 response does not prove POS SQL connectivity, SCM connectivity, SMB connectivity, backup readiness, restore readiness, browser authentication, or mutation authorization.",
         "operationId": "GetHealthLive",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The Agent process is alive and returned a HealthStatusDto.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthStatusDto"
+                },
+                "example": {
+                  "status": "live"
                 }
               }
             }
@@ -35,16 +40,21 @@
     "/health/ready": {
       "get": {
         "tags": [
-          "RmsSupportHub.Pos.Agent"
+          "Health"
         ],
+        "summary": "Check Agent readiness",
+        "description": "Returns the foundation-stage readiness response. Authentication and authorization are anonymous/none, and the check has no side effects. At this stage readiness uses the same implementation behavior as liveness and does not probe POS SQL, SCM, SMB, backup, restore, or feature dependencies.",
         "operationId": "GetHealthReady",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The Agent returned its current HealthStatusDto readiness state.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthStatusDto"
+                },
+                "example": {
+                  "status": "ready"
                 }
               }
             }
@@ -55,26 +65,56 @@
     "/api/v1/session": {
       "get": {
         "tags": [
-          "RmsSupportHub.Pos.Agent"
+          "Session"
         ],
+        "summary": "Read authenticated Agent session diagnostics",
+        "description": "Returns security and API-version diagnostics for the Windows account authenticated by Negotiate. Any authenticated Windows account with a resolvable Windows SID may call this endpoint. IsAuthorized represents membership in the local machine's Built-in Administrators group as resolved by Windows account membership, independently of UAC browser-token elevation. The raw Windows SID is not returned to the browser. The endpoint has no side effects.",
         "operationId": "GetAgentSession",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The authenticated account's SessionInfoDto diagnostics and API-version metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionInfoDto"
+                },
+                "example": {
+                  "principalName": "EXAMPLE\\support-user",
+                  "isAuthorized": true,
+                  "agentVersion": "0.0.0",
+                  "apiVersion": "1.0",
+                  "supportedApiVersions": [
+                    "1.0"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
                 }
               }
             }
           },
           "403": {
-            "description": "Forbidden",
+            "description": "The authenticated identity reached the endpoint, but its Windows SID could not be resolved. The Agent returns application/problem+json with code windows_sid_unavailable.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The authenticated Windows SID could not be resolved.",
+                  "status": 403,
+                  "code": "windows_sid_unavailable",
+                  "correlationId": "example-correlation-id"
                 }
               }
             }
@@ -90,14 +130,20 @@
     "/api/v1/security/mutation-token": {
       "post": {
         "tags": [
-          "RmsSupportHub.Pos.Agent"
+          "Security"
         ],
+        "summary": "Issue a one-use mutation authorization token",
+        "description": "Issues a short-lived, one-use token for one server-registered mutation operation. Windows Negotiate authentication and local Built-in Administrators membership are required; normal browser elevation is not. The request supplies only a logical operationId. The server registry resolves the target operation and HTTP method. The result is bound to the authenticated Windows SID, exact Support Hub Origin, target operation, and server-resolved method, with replay and expiry enforcement. The token is header-only, memory-only, and does not itself perform the POS mutation. Production registers no feature mutation during this foundation gate, so unknown operations return operation_not_supported without issuing a token.",
         "operationId": "IssueMutationToken",
         "requestBody": {
+          "description": "The browser supplies only the server-known logical operationId. It does not supply a target path or HTTP method; the Agent's operation registry owns those semantics.",
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/MutationTokenIssueRequestDto"
+              },
+              "example": {
+                "operationId": "example.registered-operation"
               }
             }
           },
@@ -105,51 +151,64 @@
         },
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The Agent issued a short-lived one-use token for the registered operation.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MutationTokenIssueResponseDto"
+                },
+                "example": {
+                  "token": "opaque-placeholder-not-a-real-token",
+                  "expiresAtUtc": "2030-01-01T00:00:00Z"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad Request",
+            "description": "The Agent rejected an unregistered operationId with application/problem+json code operation_not_supported; no mutation token is issued.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The requested mutation operation is not supported.",
+                  "status": 400,
+                  "code": "operation_not_supported",
+                  "correlationId": "example-correlation-id"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is not guaranteed to contain an AgentProblemDetailsDto body; clients should inspect the WWW-Authenticate header.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
                 "schema": {
-                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                  "type": "string",
+                  "example": "Negotiate"
                 }
               }
             }
           },
           "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
-                }
-              }
-            }
+            "description": "AuthorizationMiddleware may reject a non-Administrator before the endpoint executes; that policy-forbid response is bodyless and is not guaranteed to be AgentProblemDetails. If the endpoint executes and cannot resolve the authenticated Windows SID, it returns application/problem+json with code windows_sid_unavailable."
           },
           "429": {
-            "description": "Too Many Requests",
+            "description": "The bounded in-memory mutation-token retention limit has been reached; the Agent returns application/problem+json with code mutation_token_capacity and issues no token.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The mutation-token retention limit has been reached.",
+                  "status": 429,
+                  "code": "mutation_token_capacity",
+                  "correlationId": "example-correlation-id"
                 }
               }
             }
@@ -174,10 +233,12 @@
         "type": "object",
         "properties": {
           "type": {
-            "type": "string"
+            "type": "string",
+            "description": "Problem type identifier for the stable Agent error contract."
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "description": "Safe human-readable explanation of why the Agent rejected the request."
           },
           "status": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -185,21 +246,25 @@
               "integer",
               "string"
             ],
+            "description": "HTTP status code returned by the Agent.",
             "format": "int32"
           },
           "code": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Optional stable machine-readable Agent problem code used by clients; it never carries raw identity or credential data."
           },
           "correlationId": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Optional request correlation identifier echoed by the Agent for diagnostics."
           }
-        }
+        },
+        "description": "Safe application/problem+json error contract. Code is a stable problem code and correlationId may identify the request; sensitive identity and machine details are not included."
       },
       "HealthStatusDto": {
         "required": [
@@ -208,9 +273,11 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Identifies which anonymous foundation health check produced the response (live or ready)."
           }
-        }
+        },
+        "description": "Anonymous health response produced by the Agent. Status identifies the foundation check that answered; it contains no machine or credential detail."
       },
       "MutationTokenIssueRequestDto": {
         "required": [
@@ -219,9 +286,11 @@
         "type": "object",
         "properties": {
           "operationId": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable logical identifier for a server-registered operation. The browser supplies this identifier only; it cannot choose the target path or HTTP method."
           }
-        }
+        },
+        "description": "Browser request for a token for one logical operation known to the server. The browser cannot supply the target HTTP method or path."
       },
       "MutationTokenIssueResponseDto": {
         "required": [
@@ -231,13 +300,16 @@
         "type": "object",
         "properties": {
           "token": {
-            "type": "string"
+            "type": "string",
+            "description": "Opaque short-lived, one-use token produced by the Agent. It is bound to the authenticated Windows SID, exact Origin, operation, and server-resolved method and should remain in browser memory."
           },
           "expiresAtUtc": {
             "type": "string",
+            "description": "UTC expiry instant enforced by the Agent for the one-use mutation token.",
             "format": "date-time"
           }
-        }
+        },
+        "description": "Opaque, short-lived mutation-token response produced by the Agent. The token is intended for browser memory only."
       },
       "SessionInfoDto": {
         "required": [
@@ -250,24 +322,30 @@
         "type": "object",
         "properties": {
           "principalName": {
-            "type": "string"
+            "type": "string",
+            "description": "The OS-provided display name of the authenticated Windows principal. It is produced by Negotiate and is not browser-supplied."
           },
           "isAuthorized": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the authenticated account is a member of the local Built-in Administrators group. This is account membership resolved by Windows and is independent of UAC token elevation; the browser cannot supply it."
           },
           "agentVersion": {
-            "type": "string"
+            "type": "string",
+            "description": "The installed Agent assembly version produced by the Agent."
           },
           "apiVersion": {
-            "type": "string"
+            "type": "string",
+            "description": "The Agent contract version produced by the Agent."
           },
           "supportedApiVersions": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Contract versions the installed Agent can serve, produced by the Agent rather than accepted from the browser."
           }
-        }
+        },
+        "description": "Security and API-version diagnostics produced by the Agent for the authenticated Windows account. The raw Windows SID is intentionally omitted."
       }
     },
     "securitySchemes": {
@@ -280,7 +358,13 @@
   },
   "tags": [
     {
-      "name": "RmsSupportHub.Pos.Agent"
+      "name": "Health"
+    },
+    {
+      "name": "Session"
+    },
+    {
+      "name": "Security"
     }
   ]
 }

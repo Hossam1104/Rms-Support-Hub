@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
+using Scalar.AspNetCore;
 using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
@@ -57,6 +58,10 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddSingleton<IAuthorizationHandler, LocalAdministratorsOnlyHandler>();
 builder.Services.AddSingleton<IAdministratorGroupChecker, WindowsAdministratorGroupChecker>();
+builder.Services.AddSingleton<IWindowsLocalGroupMembershipResolver, WindowsLocalGroupMembershipResolver>();
+builder.Services.AddSingleton<IWindowsLocalGroupMembershipLookup, WindowsLocalGroupMembershipLookup>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IAgentPrincipalSidResolver, AgentPrincipalSidResolver>();
 
 builder.Services.AddCors(options => options.AddPolicy(AgentCors.PolicyName, policy =>
 {
@@ -94,6 +99,8 @@ builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationR
 
 builder.Services.AddOpenApi("v1", options =>
 {
+    options.AddOperationTransformer<AgentOpenApiOperationTransformer>();
+    options.AddSchemaTransformer<AgentOpenApiSchemaTransformer>();
     options.AddDocumentTransformer<AgentOpenApiDocumentTransformer>();
 });
 
@@ -127,15 +134,31 @@ app.UseMiddleware<ExactOriginMiddleware>();
 app.MapGet("/health/live", () => Results.Ok(new HealthStatusDto("live")))
     .AllowAnonymous()
     .WithName("GetHealthLive")
+    .WithTags("Health")
+    .WithSummary("Check Agent liveness")
+    .WithDescription(
+        "Confirms that the local POS Agent process is alive and able to answer HTTP requests. " +
+        "This anonymous check has no side effects and does not prove POS SQL, SCM, SMB, backup, " +
+        "restore, browser authentication, or mutation authorization readiness.")
     .Produces<HealthStatusDto>(StatusCodes.Status200OK);
 app.MapGet("/health/ready", () => Results.Ok(new HealthStatusDto("ready")))
     .AllowAnonymous()
     .WithName("GetHealthReady")
+    .WithTags("Health")
+    .WithSummary("Check Agent readiness")
+    .WithDescription(
+        "Returns the current foundation-stage readiness response. This endpoint is anonymous, has " +
+        "no side effects, and currently has the same implementation behavior as the liveness " +
+        "endpoint; it does not probe POS SQL, SCM, SMB, backup, restore, or feature readiness.")
     .Produces<HealthStatusDto>(StatusCodes.Status200OK);
 
-app.MapGet("/api/v1/session", (HttpContext context, IAdministratorGroupChecker administratorGroupChecker) =>
+app.MapGet(
+        "/api/v1/session",
+        (HttpContext context,
+            IAdministratorGroupChecker administratorGroupChecker,
+            IAgentPrincipalSidResolver principalSidResolver) =>
     {
-        if (!AgentPrincipal.TryGetSid(context.User, out _))
+        if (!principalSidResolver.TryGetSid(context.User, out _))
         {
             return AgentProblemDetails.CreateResult(
                 context,
@@ -156,7 +179,16 @@ app.MapGet("/api/v1/session", (HttpContext context, IAdministratorGroupChecker a
     })
     .RequireAuthorization()
     .WithName("GetAgentSession")
+    .WithTags("Session")
+    .WithSummary("Read authenticated Agent session diagnostics")
+    .WithDescription(
+        "Returns security and API-version diagnostics for the Windows account authenticated by " +
+        "Negotiate. Any authenticated Windows account with a resolvable SID may call this endpoint. " +
+        "IsAuthorized represents membership in the local Built-in Administrators group resolved by " +
+        "Windows independently of UAC browser-token elevation; the raw Windows SID is never returned. " +
+        "The endpoint has no side effects.")
     .Produces<SessionInfoDto>(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status401Unauthorized)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
 app.MapPost(
@@ -164,9 +196,10 @@ app.MapPost(
         (HttpContext context,
             MutationTokenIssueRequestDto request,
             IMutationOperationRegistry operationRegistry,
-            MutationTokenService mutationTokenService) =>
+            MutationTokenService mutationTokenService,
+            IAgentPrincipalSidResolver principalSidResolver) =>
         {
-            if (!AgentPrincipal.TryGetSid(context.User, out _))
+            if (!principalSidResolver.TryGetSid(context.User, out _))
             {
                 return AgentProblemDetails.CreateResult(
                     context,
@@ -200,17 +233,36 @@ app.MapPost(
         })
     .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
     .WithName("IssueMutationToken")
+    .WithTags("Security")
+    .WithSummary("Issue a one-use mutation authorization token")
+    .WithDescription(
+        "Issues a short-lived, one-use token for one server-registered mutation operation. Windows " +
+        "Negotiate authentication and local Built-in Administrators membership are required; normal " +
+        "browser elevation is not. The browser supplies only a logical operationId, while the server " +
+        "registry resolves the target method. The token is bound to the authenticated Windows SID, " +
+        "exact Support Hub Origin, operation, and server-resolved method, and is replay protected in " +
+        "memory. Production registers no feature mutation during this foundation gate, so an unknown " +
+        "operation returns operation_not_supported without issuing a token. Issuance changes only " +
+        "short-lived in-memory token state; it does not perform the POS mutation.")
     .Accepts<MutationTokenIssueRequestDto>("application/json")
     .Produces<MutationTokenIssueResponseDto>(StatusCodes.Status200OK)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
-    .Produces<AgentProblemDetailsDto>(StatusCodes.Status401Unauthorized, "application/problem+json")
-    .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+    .Produces(StatusCodes.Status401Unauthorized)
+    .Produces(StatusCodes.Status403Forbidden)
     .Produces<AgentProblemDetailsDto>(StatusCodes.Status429TooManyRequests, "application/problem+json");
 
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))
 {
     app.MapOpenApi("/openapi/{documentName}.json");
+    app.MapScalarApiReference(
+            "/scalar",
+            options => options
+                .WithTitle("RMS+ POS Agent API")
+                .WithOpenApiRoutePattern("/openapi/{documentName}.json")
+                .DisableAgent()
+                .DisableDefaultFonts())
+        .AllowAnonymous();
 }
 
 app.Run();
