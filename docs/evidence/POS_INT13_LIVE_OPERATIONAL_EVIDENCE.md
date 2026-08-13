@@ -1,9 +1,9 @@
 # POS INT-13 Live Operational Evidence
 
-**Latest Execution Date:** 2026-08-13 (13:16 UTC continuation)
-**Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; BROWSER CONTROL SURFACE UNAVAILABLE)`
+**Latest Execution Date:** 2026-08-13 (21:38 UTC INT-13D continuation)
+**Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; SECURE ORIGIN IMPLEMENTED; LIVE PROTECTED BROWSE BLOCKED)`
 **Latest Result:** `PARTIALLY COMPLETED`
-**Latest Repository Baseline:** `1ad33ae` (branch `int-13p-testing-agent-provisioning`, PR #7)
+**Latest Repository Baseline:** `77c5d70` (branch `int-13p-testing-agent-provisioning`, PR #7)
 
 ---
 
