@@ -444,6 +444,9 @@ added.
 - The repository-wide build script reproduced the two unchanged backend
   route-status failures (`190` passed, `2` failed: expected 404 vs actual
   405). The backend Release build passed separately with 0 warnings/errors.
+- PR #7 CI passed all five required lanes: portable projects, Windows
+  build/Infrastructure, Agent security foundation, retained WinUI publish, and
+  OpenAPI/Angular contract generation.
 
 ### Continuation gate
 

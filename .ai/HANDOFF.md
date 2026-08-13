@@ -4,7 +4,7 @@
 - **Gate:** INT-13D secure Support Hub origin and final protected browse closure on PR #7 branch `int-13p-testing-agent-provisioning`.
 - **Checkpoint:** implementation `77c5d70`; current documentation head `64e2191`; PR #7 remains open pending live evidence.
 - **Completed:** Exact Testing origin configuration; separate loopback host and certificate ownership; real Angular/API external staging and Kestrel startup path; ownership-scoped cleanup; exact-origin browser launcher integration.
-- **Validation:** Focused Pester `22/22`; POS Release build/tests and WinUI publish passed; frontend `56/56` files / `345/345` tests and production build passed; backend Release build passed; PowerShell/Node syntax and `git diff --check` passed.
+- **Validation:** Focused Pester `22/22`; POS Release build/tests and WinUI publish passed; frontend `56/56` files / `345/345` tests and production build passed; backend Release build passed; PowerShell/Node syntax and `git diff --check` passed; PR #7 CI passed all five lanes.
 - **Known baseline:** Repository-wide `scripts/build.ps1` remains `190/192` with two unchanged 404-vs-405 backend assertions; no task-scoped source defect was identified there.
 - **Live blocker:** Current PowerShell is non-elevated. Setup/start correctly refuse before machine writes; Support Hub port 4443 and Agent port 5001 are not listening, and the existing Agent/disposable services are stopped.
 - **Browser blocker:** The connected in-app browser surface reported no available channels; the repository Chrome/Edge launcher requires an elevated parent and was not run for INT-13D.

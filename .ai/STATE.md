@@ -104,7 +104,7 @@ degrades; all current UI feature styles consume design tokens.
 | Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
 | Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
 | POS Agent live | INT-13C automatic Chrome/Edge policy and BackConnection verification plus prior anonymous transport/browser launch evidence are recorded. Current INT-13D secure-origin startup is `BLOCKED` by the non-elevated session; ports 4443 and 5001 had no listeners, and protected Negotiate/browser reads and Agent-dispatched service-control evidence remain `NOT RUN`; see `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` |
-| INT-13D focused validation | Pester `22/22`, all modified PowerShell parse checks, browser harness `node --check`, POS Release build/tests, WinUI publish, frontend `56/56` files / `345/345` tests, frontend production build, and backend Release build passed. Repository-wide build remains `190/192` with two known unchanged 404-vs-405 assertions. |
+| INT-13D focused validation | Pester `22/22`, all modified PowerShell parse checks, browser harness `node --check`, POS Release build/tests, WinUI publish, frontend `56/56` files / `345/345` tests, frontend production build, backend Release build, and all five PR #7 CI lanes passed. Repository-wide build remains `190/192` with two known unchanged 404-vs-405 assertions. |
 | Broad `scripts/build.ps1` | Reached backend tests after the verified stale `RmsSupportHub.Api` Debug lock was stopped; 190 passed and 2 known unchanged 404-vs-405 route-status assertions failed. POS Release build and frontend gates passed separately. |
 
 ## Deferred boundaries
