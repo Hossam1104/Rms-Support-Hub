@@ -92,7 +92,7 @@ export const routes: Routes = [
   },
   {
     path: 'tools/pos-maintenance',
-    loadComponent: () => import('./features/pos-maintenance/pos-maintenance-placeholder.component').then(m => m.PosMaintenancePlaceholderComponent),
+    loadComponent: () => import('./features/pos-maintenance/pos-maintenance.component').then(m => m.PosMaintenanceComponent),
     data: { ...TOOL_ROUTE_DATA.posMaintenance } satisfies ToolRouteData
   },
   // Legacy compatibility mount: pre-hub Online Order URLs keep working.

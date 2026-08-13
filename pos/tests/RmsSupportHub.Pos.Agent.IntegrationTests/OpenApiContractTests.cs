@@ -18,7 +18,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
     }
 
     [Fact]
-    public async Task IntegrationDocumentContainsOnlyTheCurrentFoundationSurface()
+    public async Task IntegrationDocumentContainsTheReadOnlyFirstReleaseSurface()
     {
         using var client = _factory.CreateSecureClient();
         var document = await GetDocumentAsync(client);
@@ -26,14 +26,19 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
 
         Assert.Equal(
             [
+                "/api/v1/configuration",
+                "/api/v1/device/capabilities",
+                "/api/v1/device/connectivity",
+                "/api/v1/device/identity",
                 "/api/v1/security/mutation-token",
+                "/api/v1/services",
                 "/api/v1/session",
                 "/health/live",
                 "/health/ready"
             ],
             paths.Select(entry => entry.Key).OrderBy(path => path, StringComparer.Ordinal));
 
-        foreach (var forbidden in new[] { "backup", "restore", "maintenance", "downloader", "configuration", "service" })
+        foreach (var forbidden in new[] { "backup", "restore", "maintenance", "downloader" })
         {
             Assert.DoesNotContain(
                 paths.Select(entry => entry.Key),
@@ -51,6 +56,11 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetHealthReady", Operation(document, "/health/ready", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetAgentSession", Operation(document, "/api/v1/session", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("IssueMutationToken", Operation(document, "/api/v1/security/mutation-token", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetDeviceIdentity", Operation(document, "/api/v1/device/identity", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetDeviceConnectivity", Operation(document, "/api/v1/device/connectivity", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetDeviceCapabilities", Operation(document, "/api/v1/device/capabilities", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetConfiguration", Operation(document, "/api/v1/configuration", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetServices", Operation(document, "/api/v1/services", "get")["operationId"]!.GetValue<string>());
 
         var servers = document["servers"]!.AsArray();
         Assert.Single(servers);
@@ -65,6 +75,11 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.False(Operation(document, "/health/ready", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/session", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/security/mutation-token", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/device/identity", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/device/connectivity", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/device/capabilities", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/configuration", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/services", "get").ContainsKey("security"));
 
         var serialized = document.ToJsonString();
         Assert.DoesNotContain("bearer", serialized, StringComparison.OrdinalIgnoreCase);
@@ -178,6 +193,33 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "mutation_token_capacity",
             mutation["responses"]!["429"]!["description"]!.GetValue<string>(),
             StringComparison.Ordinal);
+
+        var identity = Operation(document, "/api/v1/device/identity", "get");
+        AssertResponseSchema(identity, "200", "application/json", "DeviceIdentityDto");
+        Assert.Equal("BR-001", ResponseExample(identity, "200", "application/json")["branchCode"]!.GetValue<string>());
+        AssertProtectedReadResponses(identity);
+
+        var connectivity = Operation(document, "/api/v1/device/connectivity", "get");
+        AssertResponseSchema(connectivity, "200", "application/json", "DeviceConnectivityDto");
+        Assert.Equal("fresh", ResponseExample(connectivity, "200", "application/json")["localSql"]!["freshness"]!.GetValue<string>());
+        AssertProtectedReadResponses(connectivity);
+
+        var capabilities = Operation(document, "/api/v1/device/capabilities", "get");
+        AssertResponseSchema(capabilities, "200", "application/json", "DeviceCapabilitiesDto");
+        Assert.Empty(ResponseExample(capabilities, "200", "application/json")["browseRoots"]!.AsArray());
+        AssertProtectedReadResponses(capabilities);
+
+        var configuration = Operation(document, "/api/v1/configuration", "get");
+        AssertResponseSchema(configuration, "200", "application/json", "RedactedConfigurationDto");
+        var configurationExample = ResponseExample(configuration, "200", "application/json");
+        Assert.False(configurationExample["hasSqlPassword"]!.GetValue<bool>());
+        Assert.False(configurationExample["downloader"]!["hasRdbPassword"]!.GetValue<bool>());
+        AssertProtectedReadResponses(configuration);
+
+        var services = Operation(document, "/api/v1/services", "get");
+        AssertArrayResponseSchema(services, "200", "application/json", "ServiceSummaryDto");
+        Assert.Empty(ResponseArrayExample(services, "200", "application/json")[0]!["allowedActions"]!.AsArray());
+        AssertProtectedReadResponses(services);
     }
 
     [Fact]
@@ -230,7 +272,15 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "SessionInfoDto",
             "MutationTokenIssueRequestDto",
             "MutationTokenIssueResponseDto",
-            "AgentProblemDetailsDto"
+            "AgentProblemDetailsDto",
+            "DeviceIdentityDto",
+            "DeviceConnectivityDto",
+            "DeviceCapabilitiesDto",
+            "BrowseRootDto",
+            "EvidenceDto",
+            "RedactedConfigurationDto",
+            "RedactedDownloaderConfigurationDto",
+            "ServiceSummaryDto"
         })
         {
             var schema = schemas[schemaName]!.AsObject();
@@ -287,6 +337,18 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.DoesNotContain(problemFields, field => field.Contains("path", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(problemFields, field => field.Contains("target", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(problemFields, field => field.Contains("secret", StringComparison.OrdinalIgnoreCase));
+
+        foreach (var schemaName in new[] { "RedactedConfigurationDto", "RedactedDownloaderConfigurationDto" })
+        {
+            var configurationFields = PropertyNames(schemas[schemaName]!.AsObject());
+            Assert.DoesNotContain(configurationFields, field => field.Equals("sqlPassword", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(configurationFields, field => field.Equals("rdbPassword", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(configurationFields, field => field.Contains("path", StringComparison.OrdinalIgnoreCase));
+        }
+
+        var serialized = document.ToJsonString();
+        Assert.DoesNotContain("BackupFolder", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbFilesPath", serialized, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -329,6 +391,33 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal($"#/components/schemas/{schemaName}", schemaReference);
     }
 
+    private static void AssertArrayResponseSchema(
+        JsonObject operation,
+        string statusCode,
+        string mediaType,
+        string itemSchemaName)
+    {
+        var schema = operation["responses"]![statusCode]!["content"]![mediaType]!["schema"]!.AsObject();
+        Assert.Equal("array", schema["type"]!.GetValue<string>());
+        Assert.Equal(
+            $"#/components/schemas/{itemSchemaName}",
+            schema["items"]!["$ref"]!.GetValue<string>());
+    }
+
+    private static void AssertProtectedReadResponses(JsonObject operation)
+    {
+        AssertBodylessFrameworkResponse(operation, "401");
+        AssertNegotiateChallenge(operation, "401");
+
+        var forbidden = operation["responses"]!["403"]!.AsObject();
+        Assert.False(forbidden.ContainsKey("content"));
+        Assert.Contains("AuthorizationMiddleware", forbidden["description"]!.GetValue<string>(), StringComparison.Ordinal);
+
+        AssertResponseSchema(operation, "400", "application/problem+json", "AgentProblemDetailsDto");
+        Assert.Contains("host_rejected", operation["responses"]!["400"]!["description"]!.GetValue<string>(), StringComparison.Ordinal);
+        AssertResponseSchema(operation, "500", "application/problem+json", "AgentProblemDetailsDto");
+    }
+
     private static void AssertBodylessFrameworkResponse(JsonObject operation, string statusCode)
     {
         var response = operation["responses"]![statusCode]!.AsObject();
@@ -348,6 +437,9 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
 
     private static JsonObject ResponseExample(JsonObject operation, string statusCode, string mediaType) =>
         operation["responses"]![statusCode]!["content"]![mediaType]!["example"]!.AsObject();
+
+    private static JsonArray ResponseArrayExample(JsonObject operation, string statusCode, string mediaType) =>
+        operation["responses"]![statusCode]!["content"]![mediaType]!["example"]!.AsArray();
 
     private static string NormalizePath(string? rawPath) =>
         "/" + (rawPath ?? string.Empty).TrimStart('/');

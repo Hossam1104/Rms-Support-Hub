@@ -63,12 +63,30 @@ INT-06H:
 COMPLETE AS DEFECT EVIDENCE - NORMAL-BROWSER ADMINISTRATOR AUTHORIZATION MISMATCH
 
 INT-06I:
-IMPLEMENTED - UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION
-INDEPENDENT SECURITY REVIEW REQUIRED; PR NOT MERGED
+COMPLETE / ACCEPTED - UAC-SAFE ADMINISTRATOR AUTHORIZATION + SCALAR/OPENAPI DOCUMENTATION
+INDEPENDENT SECURITY REVIEW: PASS
+PR #3: MERGED - c8706745a9ee8b423b4813badf0ca863b37a5d0e
 
 INT-07:
-OWNER AUTHORIZATION REQUIRED / NOT EXECUTED
+COMPLETE / ACCEPTED - FIRST RELEASE READ-ONLY POS INTEGRATION
+PR: INT-07 DELIVERY PENDING FINAL CI/MERGE RECONCILIATION
+
+INT-13:
+OPEN - REPRESENTATIVE-DEVICE / LIVE OPERATIONAL EVIDENCE
+
+INT-08:
+STAGED BUT NOT EXECUTED - POS SERVICE CONTROL + MUTATION OPERATION RUNTIME INTEGRATION
 ```
+
+INT-06I is closed by the owner-supplied independent security review
+(`PASS`, no Critical/High findings), the normal merge of PR #3, and the
+post-remediation Chrome/Edge authorization evidence. INT-07 is the first
+destination-owned read-only feature slice: the Agent now owns protected device
+diagnostics, redacted configuration, and Windows service visibility reads,
+while Support Hub Angular consumes them directly over the existing fixed
+loopback origin. No general Support Hub API relay or POS mutation operation is
+part of INT-07. The older INT-06/INT-06I gate narratives below remain
+historical evidence and are not current authorization state.
 
 INT-00 closes the cross-project architecture decision. INT-01 created the
 isolated destination skeleton and its build/CI boundary. INT-02 imported the
@@ -84,8 +102,10 @@ foundations, and only health/live, health/ready, authenticated session, and
 mutation-token foundation routes. INT-05 adds the destination-owned versioned
 OpenAPI document, deterministic Support Hub generated types, and a dedicated
 direct-Agent Angular transport; INT-05F isolates the generator's TypeScript 5
-peer dependency from Angular's TypeScript 6 graph. Neither gate adds feature
-operations or activates the POS UI.
+peer dependency from Angular's TypeScript 6 graph. INT-07 composes the first
+read-only Agent feature surface and replaces the Support Hub POS placeholder
+with a direct operational workspace. No Support Hub API relay is involved and
+no state-changing POS operation is registered.
 
 INT-CI01 then made Windows maintenance and SMB path semantics deterministic in
 portable Application code and resolved the nine pre-existing Ubuntu
@@ -144,6 +164,8 @@ The focused records are [ADR-0015](../.ai/decisions/ADR-0015-separate-pos-agent-
 [ADR-0016](../.ai/decisions/ADR-0016-pos-browser-transport-security-boundary.md),
 [ADR-0017](../.ai/decisions/ADR-0017-pos-clean-snapshot-and-project-isolation.md),
 and [ADR-0018](../.ai/decisions/ADR-0018-pos-contract-and-client-ownership.md).
+The accepted account-membership authorization decision is recorded in
+[ADR-0020](../.ai/decisions/ADR-0020-pos-account-membership-authorization.md).
 
 ## Canonical target topology
 
@@ -634,7 +656,26 @@ AGENT HOST / RUNTIME COMPOSITION:
 NOT AUTHORIZED
 ```
 
-## Next gate
+## Current INT-07 result and next gate
+
+INT-07 implemented the first operational Support Hub POS workspace and the
+destination-owned read-only Agent surface:
+
+| Surface | Result |
+| --- | --- |
+| Device identity, connectivity, capabilities | Implemented as protected, bounded reads; no SID, credential, or unrestricted path exposure |
+| Redacted configuration | Implemented through `AgentConfigurationUseCase`; password presence only, no mutation endpoints |
+| Windows service visibility | Implemented through the existing `IServiceManager` seam; status only and `allowedActions: []` |
+| Direct browser transport | Generated-client-backed `HttpBackend` GETs to the fixed Agent origin; no general API relay |
+| Support Hub workspace | Operational read-only overview with safe partial-failure UX, loading states, responsive tokenized UI, and no mutation controls |
+| OpenAPI / client | Nine-route document regenerated; runtime/OpenAPI parity, metadata, security, redaction, and production-hidden documentation tests pass |
+| Next bounded direction | INT-08 service control + mutation operation runtime integration, staged but not executed |
+
+INT-13 representative-device/live operational validation remains open. The
+following block is the historical pre-INT-06I gate snapshot retained for audit
+continuity.
+
+## Historical pre-INT-06I gate snapshot
 
 INT-00R, INT-01, INT-02, and INT-03 are complete. The root task now stages the
 next Windows-only owner gate:
@@ -726,18 +767,18 @@ the generated OpenAPI/client artifacts, and the related evidence/state records.
 The focused PR remains unmerged pending independent security review. INT-07
 was not executed.
 
-## INT-06I implementation gate
+## INT-06I implementation gate (historical gate record)
 
 | Gate | Result |
 | --- | --- |
 | UAC-safe local Administrator authorization | Implemented with Windows account local-group resolution, indirect membership, well-known Administrators SID comparison, fail-closed behavior, and safe categorical correlation logging. |
 | Shared authorization semantics | Session `isAuthorized` and mutation-token policy use the same server-derived Windows identity boundary; production never trusts browser role/SID/name/JWT claims. |
 | Scalar/OpenAPI package | Exact stable `Scalar.AspNetCore` `2.16.18`; AI Agent and default external fonts disabled. |
-| Documentation routes | `/openapi/{documentName}.json` and `/scalar` are available only in Development/IntegrationTest; the Production endpoint inventory contains neither route. Interactive/Kestrel HTTP 404 evidence remains part of the blocked post-remediation live gate. |
-| Documentation completeness | All four current Agent operations have tags, summaries, semantic descriptions, response meanings, security metadata where required, and problem response media; reachable DTOs and properties are described. |
+| Documentation routes | `/openapi/{documentName}.json` and `/scalar` are available only in Development/IntegrationTest; the Production endpoint inventory contains neither route. The post-remediation browser evidence passed. |
+| Documentation completeness | The foundation operations had tags, summaries, semantic descriptions, response meanings, security metadata where required, and problem response media; reachable DTOs and properties were described. |
 | Future operation governance | Every new POS Agent HTTP operation must carry complete OpenAPI metadata and be fully described in Scalar before its integration gate closes. |
-| Scope | No feature operation, POS UI activation, backend relay, persistence, schema, migration, or INT-07 work. |
-| Review state | Implementation validation is green; focused PR is not merged and requires independent security review. |
+| Scope at INT-06I | No feature operation, POS UI activation, backend relay, persistence, schema, migration, or INT-07 work. |
+| Review state at INT-06I | Implementation validation was green; the focused PR then proceeded through independent review and merged as PR #3. |
 
 ## Reference material
 

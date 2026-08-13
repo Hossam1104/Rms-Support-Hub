@@ -9,6 +9,11 @@ type HealthStatus = components['schemas']['HealthStatusDto'];
 type SessionInfo = components['schemas']['SessionInfoDto'];
 type MutationTokenIssueRequest = components['schemas']['MutationTokenIssueRequestDto'];
 type MutationTokenIssueResponse = components['schemas']['MutationTokenIssueResponseDto'];
+type DeviceIdentity = components['schemas']['DeviceIdentityDto'];
+type DeviceConnectivity = components['schemas']['DeviceConnectivityDto'];
+type DeviceCapabilities = components['schemas']['DeviceCapabilitiesDto'];
+type RedactedConfiguration = components['schemas']['RedactedConfigurationDto'];
+type ServiceSummary = components['schemas']['ServiceSummaryDto'];
 
 @Injectable({ providedIn: 'root' })
 export class PosAgentTransportService {
@@ -30,6 +35,51 @@ export class PosAgentTransportService {
   getSession(): Observable<SessionInfo> {
     return this.http
       .get<SessionInfo>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.session}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDeviceIdentity(): Observable<DeviceIdentity> {
+    return this.http
+      .get<DeviceIdentity>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.deviceIdentity}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDeviceConnectivity(): Observable<DeviceConnectivity> {
+    return this.http
+      .get<DeviceConnectivity>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.deviceConnectivity}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDeviceCapabilities(): Observable<DeviceCapabilities> {
+    return this.http
+      .get<DeviceCapabilities>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.deviceCapabilities}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getConfiguration(): Observable<RedactedConfiguration> {
+    return this.http
+      .get<RedactedConfiguration>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.configuration}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getServices(): Observable<ServiceSummary[]> {
+    return this.http
+      .get<ServiceSummary[]>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.services}`, {
         headers: this.jsonHeaders,
         withCredentials: true
       })

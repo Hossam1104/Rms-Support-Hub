@@ -8,6 +8,7 @@ using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
+using RmsSupportHub.Pos.Domain.Interfaces;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
@@ -53,6 +54,13 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IAdministratorGroupChecker>();
             services.AddSingleton<IAdministratorGroupChecker, ClaimBasedAdministratorGroupChecker>();
+
+            services.RemoveAll<IAgentConfigurationStore>();
+            services.AddSingleton<IAgentConfigurationStore>(new InMemoryAgentConfigurationStore());
+            services.RemoveAll<IAgentSecretStore>();
+            services.AddSingleton<IAgentSecretStore>(new InMemoryAgentSecretStore());
+            services.RemoveAll<IServiceManager>();
+            services.AddSingleton<IServiceManager>(new InMemoryServiceManager());
 
             services.RemoveAll<IMutationOperationRegistry>();
             services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(

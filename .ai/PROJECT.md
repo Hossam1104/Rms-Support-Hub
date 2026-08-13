@@ -4,7 +4,8 @@ Do not copy facts that can be cheaply discovered from the repository.
 ## Product and Business Boundaries
 - RMS+ Support Hub is an internal browser application hosting QA support tools;
   Online Orders compose/validate/send/inspect/cancel/resend pharmacy orders;
-  Prompt Studio generates locally; POS Maintenance is informational only.
+  Prompt Studio generates locally; POS Maintenance is a direct, read-only
+  operational workspace backed by the local POS Agent.
 - Implemented user-facing domains are UPC E-Commerce, GHC E-Commerce,
   GHC Uni-Commerce, and SQL-backed Order Requests. OMS and Call Center are
   registered unavailable stubs.
@@ -35,12 +36,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   detail-only; related rows use the most recent matching record.
 - Drafts are JSON under API `var/drafts`, isolated by HttpOnly session GUID plus
   module key, serialized per key, and replaced atomically.
-- Angular uses standalone lazy components, typed models, signals, relative
-  `/api`, and a dev proxy. Future privileged POS is direct trusted HTTPS/
-  HTTP/1.1 browser -> loopback `RmsSupportHub.Pos.Agent`, not a path through
-  `RmsSupportHub.Api`, `Core`, or `Data`; CORS preflight is anonymous exact
-  origin; application requests use Windows Negotiate/authorization; token is
-  single-use/server-operation-bound; SSE is read-only; artifacts use authenticated fetch.
+- Angular uses standalone lazy components, typed models, signals, relative `/api`, and a dev proxy; privileged POS is direct trusted HTTPS/HTTP/1.1 browser -> loopback `RmsSupportHub.Pos.Agent`, not API/Core/Data; CORS is exact-origin anonymous preflight; application requests use Windows Negotiate/authorization; tokens are single-use/server-bound; SSE is read-only; artifacts use authenticated fetch.
 - Supplied assets use the typed `app-assets.ts` catalog and semantic public
   folders; `frontend/public/assets/Saudi_Riyal.svg` remains verifier-required.
   Shared identity marks use `app-brand-mark` with contain-fit sizing and
@@ -71,17 +67,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   solution; INT-03R set Agent provenance to `010abc52dc110cfde3dc2c53e057890ff6edaf97`.
   Historical INT-01/02/03 imports remain attributed to
   `25922b499d33bd73f241ffc26c212dd000e81433`.
-- INT-04 composes a Windows-targeted, headless ASP.NET Core host capable of
-  Windows Service deployment at `https://rms-pos-agent.localhost:5001`.
-  INT-05 adds the Agent-owned versioned OpenAPI source under `/pos/openapi`,
-  Support Hub-owned generated types, and dedicated `HttpBackend` transport
-  under `frontend/src/app/core/pos-agent`; INT-05F isolates exact
-  `openapi-typescript@7.13.0` in `tools/pos-agent-client-generator` with a
-  TypeScript 5 peer-compatible lockfile. Production registers no feature
-  operations and does not expose runtime OpenAPI; POS UI activation, feature
-  operations, and live-device/browser evidence remain governed gates. INT-CI01
-  makes Windows maintenance/SMB path semantics deterministic in portable
-  Application code and all five POS CI lanes are green.
+- INT-04 composes the Windows-Service-capable Agent at `https://rms-pos-agent.localhost:5001`; INT-05 adds versioned `/pos/openapi`, generated types, and direct `HttpBackend`; INT-05F isolates `openapi-typescript@7.13.0` with a TypeScript 5 peer-compatible lockfile. INT-07 adds the first production read-only device/connectivity/configuration/service routes and direct workspace, with no mutation route or API relay; runtime OpenAPI remains hidden. INT-CI01 makes Windows maintenance/SMB semantics deterministic and all five POS CI lanes green.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.

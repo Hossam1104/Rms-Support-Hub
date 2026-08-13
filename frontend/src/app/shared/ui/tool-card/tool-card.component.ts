@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { UiCardComponent } from '../ui-card/ui-card.component';
 
 export type ToolCardAccent = 'brand' | 'info' | 'amber' | 'teal';
-export type ToolCardStatus = 'available' | 'migration-pending';
+export type ToolCardStatus = 'available' | 'read-only' | 'migration-pending';
 
 /**
  * The navigation card of the shared card system: an identity-tinted icon
@@ -32,6 +32,7 @@ export type ToolCardStatus = 'available' | 'migration-pending';
           <span
             class="tool-card__status"
             [class.tool-card__status--pending]="status() === 'migration-pending'"
+            [class.tool-card__status--readonly]="status() === 'read-only'"
             role="status">
             <i class="bi tool-card__status-icon" [class]="statusIcon()" aria-hidden="true"></i>
             <span>{{ statusLabel() }}</span>
@@ -151,6 +152,7 @@ export type ToolCardStatus = 'available' | 'migration-pending';
     }
     .tool-card__status-icon { font-size: .8rem; line-height: 1; }
     .tool-card__status--pending { border-color: var(--state-neutral-border); background: var(--state-neutral-bg); color: var(--text-muted); }
+    .tool-card__status--readonly { border-color: var(--state-info-border); background: var(--state-info-bg); color: var(--state-info-fg); }
     @keyframes tool-card-status-reveal {
       from { opacity: 0; transform: translateX(var(--card-status-shift)); }
       to { opacity: 1; transform: translateX(0); }
@@ -221,10 +223,20 @@ export class ToolCardComponent {
   readonly activated = output<void>();
 
   readonly accentClass = computed(() => `tool-card--${this.accent()}`);
-  readonly statusLabel = computed(() =>
-    this.status() === 'migration-pending' ? 'Coming Soon' : 'Available');
-  readonly statusIcon = computed(() =>
-    this.status() === 'migration-pending' ? 'bi-hourglass-split' : 'bi-check2-circle');
+  readonly statusLabel = computed(() => {
+    switch (this.status()) {
+      case 'migration-pending': return 'Coming Soon';
+      case 'read-only': return 'Read-only';
+      default: return 'Available';
+    }
+  });
+  readonly statusIcon = computed(() => {
+    switch (this.status()) {
+      case 'migration-pending': return 'bi-hourglass-split';
+      case 'read-only': return 'bi-eye';
+      default: return 'bi-check2-circle';
+    }
+  });
   readonly accessibleLabel = computed(() => this.ariaLabel() || [
     `${this.actionLabel()}: ${this.title()}`,
     this.statusLabel(),

@@ -1,9 +1,8 @@
 # Active Handoff
 
 - **Status:** Empty
-- **Gate:** INT-06I-F1 complete; PR #3 remains open/draft/unmerged.
-- **Next gate:** Independent security review.
-- **Scope closed:** Endpoint-specific Scalar/OpenAPI response contracts, runtime response-shape tests, route/OpenAPI parity, safe examples, local Scalar CSP, real Production Kestrel route isolation, normal Chrome/Edge post-remediation authorization, live Development Scalar rendering, sanitized evidence, and machine cleanup.
-- **Validation:** POS Release tests Domain 7/7, Application 76/76, Infrastructure 60/60, Agent 95/95; POS Release build 0 warnings/errors; frontend 56 files/341 tests and production build; deterministic OpenAPI/client generation; Agent and frontend audits clear; WinUI publish executable plus 27 `.pri` and 66 `.xbf` resources.
-- **Known unrelated failure:** `scripts/build.ps1` still stops on two pre-existing backend route-status assertions (`NotFound` expected, `MethodNotAllowed` returned).
-- **Boundary:** INT-07 was not executed. No POS operation was registered or executed.
+- **Gate:** INT-07 read-only first release implemented and validated; INT-06I security review PASS and PR #3 merged.
+- **Current surface:** Protected Agent reads for device identity/connectivity/capabilities, redacted configuration, and Windows service visibility; direct Angular workspace at `/tools/pos-maintenance`.
+- **Validation:** Agent 100/100; frontend 342/342; Agent Release build and OpenAPI/client generation passed; frontend production and offline builds passed with clear budgets.
+- **Boundary:** No Support Hub API relay, service mutation, configuration mutation, file browse, SQL, PowerShell, restore, downloader trigger, or generic process endpoint.
+- **Open:** INT-13 representative-device/live operational evidence; INT-08 service-control mutation runtime is staged in root `TASK.md` but not executed.

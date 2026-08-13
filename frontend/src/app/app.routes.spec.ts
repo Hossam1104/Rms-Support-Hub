@@ -62,7 +62,7 @@ describe('RMS+ Support Hub route skeleton', () => {
       const data = route?.data as ToolRouteData;
       expect(data.title, path).toBeTruthy();
       expect(data.breadcrumb, path).toBeTruthy();
-      expect(['available', 'migration-pending'], path).toContain(data.status);
+      expect(['available', 'read-only', 'migration-pending'], path).toContain(data.status);
       expect(['brand', 'info', 'amber'], path).toContain(data.accent);
     }
     // Prompt Studio and POS Maintenance are lazy feature routes; Online Orders
@@ -71,9 +71,9 @@ describe('RMS+ Support Hub route skeleton', () => {
     expect(routeAt('tools/pos-maintenance')?.loadComponent).toBeTruthy();
   });
 
-  it('keeps POS Maintenance pending while migrated tools are available', () => {
+  it('marks POS Maintenance read-only while migrated tools remain available', () => {
     expect(toolData('tools/pos-maintenance')).toEqual({ ...TOOL_ROUTE_DATA.posMaintenance });
-    expect(toolData('tools/pos-maintenance').status).toBe('migration-pending');
+    expect(toolData('tools/pos-maintenance').status).toBe('read-only');
     expect(toolData('tools/prompt-studio')).toEqual({ ...TOOL_ROUTE_DATA.promptStudio });
     expect(toolData('tools/prompt-studio').status).toBe('available');
     expect(toolData('tools/online-orders').status).toBe('available');

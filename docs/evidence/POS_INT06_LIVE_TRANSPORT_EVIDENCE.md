@@ -1,8 +1,17 @@
 # POS INT-06 Live Transport Security Evidence
 
-**Result:** `BLOCKED / FAILED — INT-06F elevation unavailable`
+**Current result (2026-08-13):** `INT-06I COMPLETE / ACCEPTED; PR #3 MERGED; INT-07 COMPLETE / ACCEPTED`
 
-**Execution date:** 2026-08-12
+**Current security review:** `PASS - no Critical/High findings`
+
+**Current live authorization:** `PASS ON TESTED CHROME/EDGE DEVICE`
+
+**Current follow-on gates:** `INT-13 OPEN; INT-08 STAGED BUT NOT EXECUTED`
+
+The blocked INT-06/INT-06F/INT-06H outcomes below are preserved historical
+evidence. They are not the current INT-06I or INT-07 result.
+
+**Historical execution date:** 2026-08-12
 
 **Scope:** INT-06 and the authorized INT-06F continuation. No POS feature operation, POS Maintenance UI
 activation, Support Hub API relay, runtime Agent remediation, SQL, SCM, SMB,

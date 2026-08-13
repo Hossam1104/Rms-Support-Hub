@@ -23,8 +23,10 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "Destination-owned foundation contract for the per-device Windows POS Agent. " +
             "The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser " +
             "access. Windows Negotiate supplies the authenticated identity, local Built-in " +
-            "Administrators membership authorizes mutations, and no Support Hub backend relay " +
-            "is involved. Mutation tokens are short-lived, one-use, and server-operation-bound.";
+            "Administrators membership authorizes protected reads and future mutations, and no " +
+            "Support Hub backend relay is involved. INT-07 exposes only read-only device, redacted " +
+            "configuration, and Windows service visibility endpoints. Mutation tokens are short-lived, " +
+            "one-use, and server-operation-bound for future state-changing operations.";
         document.Servers = [new OpenApiServer
         {
             Url = AgentHostConstants.CanonicalOrigin,
@@ -46,8 +48,75 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
 
         AddWindowsSecurityRequirement(document, "/api/v1/session", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/security/mutation-token", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/device/identity", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/device/connectivity", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/device/capabilities", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/configuration", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/services", HttpMethod.Get);
+        AddReferencePropertyDescriptions(document);
 
         return Task.CompletedTask;
+    }
+
+    private static void AddReferencePropertyDescriptions(OpenApiDocument document)
+    {
+        SetPropertyDescription(
+            document,
+            "DeviceConnectivityDto",
+            "localSql",
+            "Independent local SQL endpoint reachability evidence.");
+        SetPropertyDescription(
+            document,
+            "DeviceConnectivityDto",
+            "mainServer",
+            "Independent main-server endpoint reachability evidence.");
+        SetPropertyDescription(
+            document,
+            "EvidenceDto",
+            "freshness",
+            "Freshness classification for this observation; it is never collapsed into a bare online boolean.");
+        SetPropertyDescription(
+            document,
+            "RedactedConfigurationDto",
+            "downloader",
+            "Redacted DB Downloader settings with secret-presence metadata only.");
+        SetPropertyDescription(
+            document,
+            "ServiceSummaryDto",
+            "state",
+            "Current Windows service runtime state observed by the Agent.");
+        SetPropertyDescription(
+            document,
+            "ServiceSummaryDto",
+            "lastChecked",
+            "Freshness and check-time evidence for the service state.");
+    }
+
+    private static void SetPropertyDescription(
+        OpenApiDocument document,
+        string schemaName,
+        string propertyName,
+        string description)
+    {
+        if (document.Components?.Schemas is null
+            || !document.Components.Schemas.TryGetValue(schemaName, out var schema)
+            || schema is not OpenApiSchema openApiSchema
+            || openApiSchema.Properties is null
+            || !openApiSchema.Properties.TryGetValue(propertyName, out var property)
+            )
+        {
+            return;
+        }
+
+        switch (property)
+        {
+            case OpenApiSchema propertySchema:
+                propertySchema.Description = description;
+                break;
+            case OpenApiSchemaReference propertyReference:
+                propertyReference.Description = description;
+                break;
+        }
     }
 
     private static void AddWindowsSecurityRequirement(

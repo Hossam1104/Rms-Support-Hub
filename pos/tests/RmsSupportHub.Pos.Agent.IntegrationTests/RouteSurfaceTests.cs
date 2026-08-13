@@ -14,7 +14,7 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
     }
 
     [Fact]
-    public async Task OnlyFoundationRouteCategoriesAreMapped()
+    public void CurrentReadOnlyFirstReleaseRouteCategoriesAreMapped()
     {
         using var scope = _factory.Services.CreateScope();
         var endpoints = scope.ServiceProvider
@@ -29,13 +29,16 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
         Assert.Contains("/health/ready", endpoints);
         Assert.Contains("/api/v1/session", endpoints);
         Assert.Contains("/api/v1/security/mutation-token", endpoints);
+        Assert.Contains("/api/v1/device/identity", endpoints);
+        Assert.Contains("/api/v1/device/connectivity", endpoints);
+        Assert.Contains("/api/v1/device/capabilities", endpoints);
+        Assert.Contains("/api/v1/configuration", endpoints);
+        Assert.Contains("/api/v1/services", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("downloader", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("artifact", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(endpoints, path => path!.Contains("service", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(endpoints, path => path!.Contains("configuration", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -43,8 +46,6 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
     [InlineData("/api/v1/downloader/branches")]
     [InlineData("/api/v1/restore/options")]
     [InlineData("/api/v1/maintenance/options")]
-    [InlineData("/api/v1/services")]
-    [InlineData("/api/v1/configuration")]
     [InlineData("/api/v1/operations")]
     [InlineData("/api/v1/artifacts")]
     [InlineData("/api/v1/security/other")]
