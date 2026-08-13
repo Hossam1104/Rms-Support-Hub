@@ -1,11 +1,18 @@
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
     [switch]$IUnderstandTestingOnly,
-    [string]$SupportHubOrigin = 'https://support-hub.integration.test:4443'
+    [string]$SupportHubOrigin
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+Import-Module (Join-Path $PSScriptRoot 'PosAgentWindowsProvisioning.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosTestingConfiguration.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosSupportHubProvisioning.psm1') -Force
+
+$testingConfiguration = Get-PosTestingConfiguration $SupportHubOrigin
+$SupportHubOrigin = $testingConfiguration.SupportHubOrigin
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $canonicalHost = 'rms-pos-agent.localhost'
@@ -24,6 +31,8 @@ $hostsPath = Join-Path $env:SystemRoot 'System32/drivers/etc/hosts'
 $ownershipMarker = 'RmsSupportHub INT-13P Testing Provisioning v1'
 $hostsMarker = '# RmsSupportHub INT-13P'
 $certificateFriendlyName = "RmsSupportHub INT-13P Testing Agent ($canonicalHost)"
+$supportHubHost = $testingConfiguration.SupportHubHost
+$supportHubCertificateFriendlyName = "RmsSupportHub INT-13D Testing Support Hub ($supportHubHost)"
 $certificateDays = 30
 
 function Assert-Administrator {
@@ -96,6 +105,17 @@ function New-InitialState {
         CertificateCreated = $false
         CertificateTrusted = $false
         CertificateThumbprint = $null
+        SupportHubHost = $supportHubHost
+        SupportHubHostEntryCreated = $false
+        SupportHubCertificateCreated = $false
+        SupportHubCertificateTrusted = $false
+        SupportHubCertificateThumbprint = $null
+        SupportHubRuntimeRootCreated = $false
+        SupportHubRuntimeRoot = $null
+        SupportHubRuntimeApiDll = $null
+        SupportHubRuntimeProcessId = $null
+        SupportHubRuntimePublishedFiles = @()
+        SupportHubRuntimeLogFiles = @()
         AgentConfigurationDirectoryCreated = $false
         AgentConfigurationFileCreated = $false
         AgentConfigurationAdopted = $false
@@ -109,6 +129,35 @@ function New-InitialState {
         TestServiceCreated = $false
         AgentPublishedFiles = @()
         TestPublishedFiles = @()
+    }
+}
+
+function Ensure-INT13DStateFields($state) {
+    if ($state.SupportHubOrigin -ne $SupportHubOrigin) {
+        throw "Provisioning state is bound to SupportHubOrigin '$($state.SupportHubOrigin)', not '$SupportHubOrigin'. Refusing to mix Testing origins."
+    }
+
+    $defaults = [ordered]@{
+        SupportHubHost = $supportHubHost
+        SupportHubHostEntryCreated = $false
+        SupportHubCertificateCreated = $false
+        SupportHubCertificateTrusted = $false
+        SupportHubCertificateThumbprint = $null
+        SupportHubRuntimeRootCreated = $false
+        SupportHubRuntimeRoot = $null
+        SupportHubRuntimeApiDll = $null
+        SupportHubRuntimeProcessId = $null
+        SupportHubRuntimePublishedFiles = @()
+        SupportHubRuntimeLogFiles = @()
+    }
+    foreach ($entry in $defaults.GetEnumerator()) {
+        if ($null -eq $state.PSObject.Properties[$entry.Key]) {
+            Add-Member -InputObject $state -MemberType NoteProperty -Name $entry.Key -Value $entry.Value
+        }
+    }
+
+    if ($state.SupportHubHost -ne $supportHubHost) {
+        throw "Provisioning state is bound to Support Hub host '$($state.SupportHubHost)', not '$supportHubHost'. Refusing to mix Testing hosts."
     }
 }
 
@@ -161,6 +210,27 @@ function Assert-PreexistingResourceConflicts($state) {
     $existingListeners = @(Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue)
     if ($existingListeners.Count -gt 0 -and -not $state.AgentServiceCreated) {
         throw 'TCP port 5001 already has a listener without INT-13P ownership. Refusing to interfere with it.'
+    }
+
+    # Run the exact host-entry checks before any machine write. WhatIf keeps
+    # this preflight read-only while still rejecting an unowned host entry.
+    Ensure-PosSupportHubHostEntry `
+        -Hostname $supportHubHost `
+        -HostsPath $hostsPath `
+        -Marker $hostsMarker `
+        -State $state `
+        -WhatIf | Out-Null
+
+    if (-not [bool]$state.SupportHubCertificateCreated) {
+        $existingSupportHubCertificates = @(Get-PosSupportHubCertificates $supportHubHost)
+        if ($existingSupportHubCertificates.Count -gt 0) {
+            throw 'A matching LocalMachine Support Hub certificate already exists without INT-13D ownership. Refusing to replace it.'
+        }
+    }
+
+    $existingSupportHubListeners = @(Get-NetTCPConnection -LocalPort $testingConfiguration.SupportHubPort -State Listen -ErrorAction SilentlyContinue)
+    if ($existingSupportHubListeners.Count -gt 0 -and [string]::IsNullOrWhiteSpace([string]$state.SupportHubRuntimeProcessId)) {
+        throw "TCP port $($testingConfiguration.SupportHubPort) already has a listener without INT-13D ownership. Refusing to interfere with it."
     }
 }
 
@@ -227,6 +297,29 @@ function Test-ServerAuthenticationEku($certificate) {
     return @($certificate.EnhancedKeyUsageList | Where-Object { $_.ObjectId -eq '1.3.6.1.5.5.7.3.1' }).Count -eq 1
 }
 
+function Assert-TestingCertificateProperties($certificate) {
+    $certificateValid = Test-ExactCertificate $certificate
+    $serverAuthenticationEku = Test-ServerAuthenticationEku $certificate
+    $validityValid = $certificate.NotBefore -le (Get-Date).AddMinutes(1) -and $certificate.NotAfter -gt (Get-Date)
+    $invalidCertificate = -not $certificateValid -or -not $serverAuthenticationEku -or -not $validityValid
+    if ($invalidCertificate) {
+        throw 'The Testing certificate did not meet the exact SAN, private-key, validity, or server-authentication requirements.'
+    }
+
+    $privateKey = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
+    try {
+        $expectedProvider = $privateKey -is [Security.Cryptography.RSACng] -and $privateKey.Key.Provider.Provider -eq 'Microsoft Software Key Storage Provider'
+        $nonExportable = [string]$privateKey.Key.ExportPolicy -eq 'None'
+        if (-not $expectedProvider -or -not $nonExportable) {
+            throw 'The Testing certificate did not use the Microsoft Software Key Storage Provider with a non-exportable private key.'
+        }
+    } finally {
+        if ($null -ne $privateKey) {
+            $privateKey.Dispose()
+        }
+    }
+}
+
 function Get-CertificateKeyFile($certificate) {
     $privateKey = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
     if ($privateKey -isnot [Security.Cryptography.RSACng]) {
@@ -274,9 +367,10 @@ function Ensure-TestingCertificate {
     $certificate = $null
     if ($state.CertificateThumbprint) {
         $certificate = Get-ChildItem "Cert:\LocalMachine\My\$($state.CertificateThumbprint)" -ErrorAction SilentlyContinue
-        if ($null -eq $certificate -or -not (Test-ExactCertificate $certificate) -or $certificate.FriendlyName -ne $certificateFriendlyName) {
+        if ($null -eq $certificate -or $certificate.FriendlyName -ne $certificateFriendlyName) {
             throw 'The certificate recorded by INT-13P is missing or no longer matches its ownership metadata.'
         }
+        Assert-TestingCertificateProperties $certificate
     } else {
         $existing = @(Get-MatchingAgentCertificates)
         if ($existing.Count -gt 0) {
@@ -298,11 +392,7 @@ function Ensure-TestingCertificate {
                 -FriendlyName $certificateFriendlyName `
                 -CertStoreLocation 'Cert:\LocalMachine\My'
 
-            $certificateValid = Test-ExactCertificate $certificate
-            $serverAuthenticationEku = Test-ServerAuthenticationEku $certificate
-            if (-not $certificateValid -or -not $serverAuthenticationEku -or ($certificate.NotAfter -le (Get-Date))) {
-                throw 'The generated Testing certificate did not meet the exact SAN, private-key, validity, or server-authentication requirements.'
-            }
+            Assert-TestingCertificateProperties $certificate
 
             $state.CertificateCreated = $true
             $state.CertificateThumbprint = $certificate.Thumbprint
@@ -498,6 +588,23 @@ function Assert-ExistingServiceOwnership($state, [string]$name, [string]$expecte
     Assert-ExpectedService $service $expectedExecutable $name
 }
 
+function Stop-OwnedServiceForPublish($state, [string]$name, [string]$expectedExecutable, [string]$stateProperty) {
+    if (-not $state.$stateProperty) {
+        return
+    }
+
+    $service = Get-ServiceRecord $name
+    if ($null -eq $service) {
+        return
+    }
+    Assert-ExpectedService $service $expectedExecutable $name
+    $controller = Get-Service -Name $name -ErrorAction Stop
+    if ($controller.Status -ne 'Stopped' -and $PSCmdlet.ShouldProcess($name, 'Stop the owned service before replacing its published binaries')) {
+        Stop-Service -Name $name -Force
+        $controller.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+    }
+}
+
 function Get-RelativeManifest([string]$root) {
     if (-not (Test-Path -LiteralPath $root)) {
         return @()
@@ -554,24 +661,26 @@ function Start-AndVerify-Service([string]$name) {
 }
 
 function Invoke-Http11HealthCheck {
-    $handler = [System.Net.Http.HttpClientHandler]::new()
-    $handler.ServerCertificateCustomValidationCallback = { $true }
-    $client = [System.Net.Http.HttpClient]::new($handler)
-    $client.Timeout = [TimeSpan]::FromSeconds(10)
-    $client.DefaultRequestVersion = [Version]::new(1, 1)
-    $client.DefaultVersionPolicy = [System.Net.Http.HttpVersionPolicy]::RequestVersionExact
-    try {
-        foreach ($path in @('/health/live', '/health/ready')) {
-            $response = $client.GetAsync("https://$canonicalHost`:5001$path").GetAwaiter().GetResult()
-            $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            if (-not $response.IsSuccessStatusCode -or $response.Version -ne [Version]::new(1, 1)) {
-                throw "Agent health check failed for ${path}: HTTP $([int]$response.StatusCode), protocol $($response.Version)."
+    foreach ($path in @('/health/live', '/health/ready')) {
+        $request = [Net.HttpWebRequest]::Create("https://$canonicalHost`:5001$path")
+        $request.Method = 'GET'
+        $request.ProtocolVersion = [Version]::new(1, 1)
+        $request.AllowAutoRedirect = $false
+        $request.Timeout = 10000
+        $response = $null
+        $reader = $null
+        try {
+            $response = [Net.HttpWebResponse]$request.GetResponse()
+            if ($response.StatusCode -ne [Net.HttpStatusCode]::OK -or $response.ProtocolVersion -ne [Version]::new(1, 1)) {
+                throw "Agent health check failed for ${path}: HTTP $([int]$response.StatusCode), protocol $($response.ProtocolVersion)."
             }
-            Write-Host "[PASS] $path -> HTTP $([int]$response.StatusCode), HTTP/$($response.Version), body status recorded as $((ConvertFrom-Json $body).status)" -ForegroundColor Green
+            $reader = [IO.StreamReader]::new($response.GetResponseStream())
+            $body = $reader.ReadToEnd()
+            Write-Host "[PASS] $path -> HTTP $([int]$response.StatusCode), HTTP/$($response.ProtocolVersion), body status recorded as $((ConvertFrom-Json $body).status)" -ForegroundColor Green
+        } finally {
+            if ($null -ne $reader) { $reader.Dispose() }
+            if ($null -ne $response) { $response.Dispose() }
         }
-    } finally {
-        $client.Dispose()
-        $handler.Dispose()
     }
 }
 
@@ -599,20 +708,65 @@ if ($null -eq $state) {
     }
 }
 
+Ensure-INT13DStateFields $state
+if (-not $WhatIfPreference) {
+    Write-ProvisioningState $state
+}
+
 Assert-PreexistingResourceConflicts $state
 if (-not $WhatIfPreference) {
     Write-ProvisioningState $state
 }
 
 if ($WhatIfPreference) {
-    Write-Host "[WHATIF] Would provision $canonicalHost, the LocalMachine certificate, the Agent, the opaque allow-list target, and $testServiceName." -ForegroundColor Yellow
+    $browserPlan = Ensure-PosAgentBrowserProvisioning `
+        -SupportHubOrigin $SupportHubOrigin `
+        -CanonicalHost $canonicalHost `
+        -State $state `
+        -WhatIf:$WhatIfPreference
+    Write-Host "[WHATIF] Would provision $canonicalHost, the LocalMachine certificate, the Agent, the exact browser IWA/LNA policies, the BackConnectionHostNames entry, the opaque allow-list target, and $testServiceName." -ForegroundColor Yellow
+    foreach ($browserResult in @($browserPlan.Browsers)) {
+        if ($browserResult.Installed) {
+            Write-Host "[WHATIF] $($browserResult.Browser) $($browserResult.Version): $($browserResult.LoopbackPolicy) would allow only $SupportHubOrigin; AuthServerAllowlist would include $canonicalHost." -ForegroundColor Yellow
+        } else {
+            Write-Host "[WHATIF] $($browserResult.Browser) is not installed; no policy would be written." -ForegroundColor Yellow
+        }
+    }
+    Write-Host "[WHATIF] Would add only the loopback hosts entry for $supportHubHost and create/trust its separate LocalMachine Testing certificate." -ForegroundColor Yellow
+    Write-Host '[WHATIF] BackConnectionHostNames would remain REG_MULTI_SZ and DisableLoopbackCheck would remain absent.' -ForegroundColor Yellow
     return
 }
+
+$browserProvisioning = Ensure-PosAgentBrowserProvisioning `
+    -SupportHubOrigin $SupportHubOrigin `
+    -CanonicalHost $canonicalHost `
+    -State $state `
+    -WhatIf:$WhatIfPreference
+Write-ProvisioningState $state
+
+Ensure-PosSupportHubHostEntry `
+    -Hostname $supportHubHost `
+    -HostsPath $hostsPath `
+    -Marker $hostsMarker `
+    -State $state `
+    -WhatIf:$WhatIfPreference
+Write-ProvisioningState $state
+
+Ensure-PosSupportHubCertificate `
+    -Hostname $supportHubHost `
+    -FriendlyName $supportHubCertificateFriendlyName `
+    -CertificateDays $certificateDays `
+    -State $state `
+    -WhatIf:$WhatIfPreference
+Write-ProvisioningState $state
 
 Add-ManagedHostEntry $state
 Ensure-TestingCertificate $state
 Ensure-AgentConfiguration $state
 
+$agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
+$testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
+Stop-OwnedServiceForPublish $state $agentServiceName $agentExecutable 'AgentServiceCreated'
 Ensure-OwnedInstallRoot $agentInstallRoot 'AgentInstallDirectoryCreated' $state
 Publish-Project $agentProject $agentInstallRoot 'POS Agent'
 Ensure-AgentAppSettings $state $agentInstallRoot
@@ -620,12 +774,11 @@ $state.AgentPublishedFiles = @(Get-RelativeManifest $agentInstallRoot)
 Write-ProvisioningState $state
 
 Ensure-OwnedInstallRoot $testInstallRoot 'TestInstallDirectoryCreated' $state
+Stop-OwnedServiceForPublish $state $testServiceName $testExecutable 'TestServiceCreated'
 Publish-Project $testServiceProject $testInstallRoot 'INT-13 disposable test service'
 $state.TestPublishedFiles = @(Get-RelativeManifest $testInstallRoot)
 Write-ProvisioningState $state
 
-$agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
-$testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
 if (-not (Test-Path -LiteralPath $agentExecutable -PathType Leaf) -or -not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
     throw 'The published Agent or disposable Testing service executable is missing.'
 }
@@ -651,6 +804,18 @@ if ($listeners.Count -eq 0 -or @($listeners | Where-Object { $_.LocalAddress -no
 Write-Host '[PASS] Agent port 5001 listener is loopback-only.' -ForegroundColor Green
 
 Invoke-Http11HealthCheck
+
+$browserVerification = Get-PosAgentBrowserProvisioningVerification `
+    -SupportHubOrigin $SupportHubOrigin `
+    -CanonicalHost $canonicalHost
+foreach ($browserResult in @($browserVerification.Browsers)) {
+    if ($browserResult.Installed) {
+        Write-Host "[PASS] $($browserResult.Browser) $($browserResult.Version): exact AuthServerAllowlist hostname and $($browserResult.LoopbackPolicy) origin policy verified." -ForegroundColor Green
+    } else {
+        Write-Host "[INFO] $($browserResult.Browser) is not installed; browser policy verification was not applicable." -ForegroundColor Yellow
+    }
+}
+Write-Host '[PASS] BackConnectionHostNames contains only the owned exact hostname addition; DisableLoopbackCheck is absent.' -ForegroundColor Green
 
 Write-Host "INT-13P provisioning completed. Owned state: $statePath" -ForegroundColor Green
 Write-Host "Agent service: $agentServiceName; disposable service: $testServiceName" -ForegroundColor Green

@@ -89,6 +89,19 @@ Do not copy facts that can be cheaply discovered from the repository.
   then `npm --prefix frontend run generate:pos-agent-client`. Output is under
   `frontend/src/app/core/pos-agent/generated/` and is not edited manually.
 - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj -c Release --no-build --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
+- INT-13C Testing provisioning: run `scripts/setup-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false` and `scripts/remove-pos-agent-testing.ps1 -IUnderstandTestingOnly -WhatIf -Confirm:$false` only on the authorized Testing machine. Exact browser/IWA policy logic is in `scripts/PosAgentWindowsProvisioning.psm1`; the task-scoped normal-user browser evidence launcher is `scripts/invoke-pos-browser-evidence.ps1` and uses `tools/pos-browser-evidence`.
+- INT-13D secure Support Hub Testing runtime: use the exact origin
+  `https://support-hub.integration.test:4443` and run
+  `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly`
+  only from an elevated, owner-authorized Testing PowerShell session. The start
+  path builds the real Angular production bundle, publishes the existing API to
+  external machine-local staging, serves it from API `wwwroot` on loopback
+  HTTPS/HTTP/1.1, selects the separately owned LocalMachine certificate, and
+  proves `/` plus `/tools/pos-maintenance`. `scripts/PosTestingConfiguration.psm1`
+  rejects alternate origins; `scripts/PosSupportHubProvisioning.psm1` owns the
+  Support Hub host/certificate lifecycle. Do not claim live protected evidence
+  until the exact endpoint and both Limited interactive-user browser channels
+  respond.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 - Manual IIS publish package: `.\scripts\publish-iis.ps1` - Angular production
   build + .NET Release publish combined into `publish/RmsSupportHub-IIS/`
@@ -124,6 +137,12 @@ Do not copy facts that can be cheaply discovered from the repository.
   surface as 5xx.
 - Testing is the default environment. Production actions have UI typed
   confirmation, but that is not authorization.
+- INT-13C browser provisioning is exact-origin and version-selected: Chrome/Edge
+  146+ use `LoopbackNetworkAllowedForUrls`, older supported generations use
+  `LocalNetworkAccessAllowedForUrls`, AuthServerAllowlist contains only the
+  exact Agent hostname, and `BackConnectionHostNames` remains REG_MULTI_SZ.
+  Preserve unrelated values, use ownership/WhatIf, fail closed on conflicts,
+  and never write `DisableLoopbackCheck=1`.
 - Frontend feature code consumes typed models and live module metadata;
   production API URLs remain relative.
 - Component styles consume CSS variables. Raw colors are restricted to

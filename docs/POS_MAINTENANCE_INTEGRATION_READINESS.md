@@ -132,10 +132,91 @@ Infrastructure 60, Agent integration 114, and frontend 345 tests passed, with
 the Agent OpenAPI/client generation and frontend production build passing. No
 live or Production service was controlled; disposable test fakes were used.
 INT-13 representative-device/live operational evidence has been executed and
-is recorded as `BLOCKED` on representative-device live prerequisites (DNS,
-certificate, Agent listener, and disposable Testing service); see
+is recorded as `PARTIALLY COMPLETED`: INT-13P provisioned the representative
+Testing DNS, certificate, Agent listener, service-owned allow-list extension,
+and disposable Testing service, while protected Negotiate/browser evidence is
+blocked by the current execution context; see
 [POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
 INT-13 remains open.
+
+### INT-13P Testing provisioning and live-proof boundary
+
+The repository now contains a bounded, idempotent, reversible Testing-only
+provisioning pair:
+
+- `scripts/setup-pos-agent-testing.ps1` — elevated preflight, exact loopback
+  host entry, per-device LocalMachine certificate/trust, stable Release Agent
+  publish/service installation, one dedicated disposable Testing service, and
+  server-owned allow-list configuration.
+- `scripts/remove-pos-agent-testing.ps1` — ownership-checked service removal,
+  published-file cleanup, certificate/trust cleanup, exact host-entry removal,
+  and byte-for-byte restoration of any pre-existing Agent configuration/ACL
+  adopted by the Testing run.
+
+Both scripts require an explicit Testing acknowledgement and support `-WhatIf`.
+They refuse unowned service, certificate, host, configuration, executable, or
+state conflicts. The disposable service is a separate tool project and is not
+part of Support Hub or Agent production output. It is included in the POS
+solution only so the bounded harness is build-validated; setup publishes it to
+a machine-local Testing directory outside the repository.
+
+The current run proves implementation/deployment prerequisites and direct
+anonymous transport behavior. It does not claim live protected behavior from
+fakes or from the independent SCM harness. Protected Agent reads, server-side
+Administrator authorization, mutation token issuance/binding/replay/expiry,
+Agent-dispatched typed outcomes, and Chrome/Edge LNA/Negotiate/UI behavior
+remain open until a connected browser session with a usable Windows Negotiate
+credential context completes the fixed direct path.
+
+### INT-13C automatic browser/IWA provisioning
+
+The Testing setup now owns a separate `PosAgentWindowsProvisioning.psm1`
+seam. It detects installed Chrome/Edge versions, uses the exact configured
+Support Hub origin, merges `AuthServerAllowlist` and the selected exact-origin
+loopback policy without replacing unrelated values, rejects higher-precedence
+block policies and incompatible registry types, and keeps
+`BackConnectionHostNames` as `REG_MULTI_SZ`. Chrome/Edge 146+ use
+`LoopbackNetworkAllowedForUrls`; older supported generations use
+`LocalNetworkAccessAllowedForUrls`. `DisableLoopbackCheck` is never written.
+
+The setup state records whether each value was pre-existing or written by the
+Testing provisioner, and the cleanup path removes only values that still match
+the recorded owned value. `-WhatIf` is supported for setup and cleanup. Focused
+Pester coverage verifies exact-origin normalization, wildcard/block/type
+rejection, preservation, version selection, idempotency, and no-write WhatIf
+behavior. The browser evidence helper uses pinned `playwright-core`, installed
+Chrome/Edge channels, a fresh profile, and a Limited interactive-user task;
+it verifies Medium integrity and records sanitized status only. An explicit
+repository-localhost smoke switch exists for the Angular dev server, but it is
+not an approved Agent origin and cannot establish protected evidence.
+
+The 2026-08-13 INT-13C run passed automatic provisioning and both normal-user
+browser launch gates. The configured HTTPS Support Hub origin did not serve the
+real workspace, so protected browser reads, Administrator authorization,
+mutation-token evidence, and Agent-dispatched service control remain blocked;
+see the timestamped [live evidence](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
+
+### INT-13D secure Support Hub origin closure
+
+INT-13D adds the missing real Testing-origin start path without introducing a
+Support Hub API relay or changing the fixed direct Agent origin. The canonical
+Testing origin is exactly `https://support-hub.integration.test:4443`, backed by
+a loopback-only hosts entry and a separately owned LocalMachine certificate.
+The certificate contract requires one exact DNS SAN, Server Authentication EKU,
+the Microsoft Software Key Storage Provider, a non-exportable RSA private key,
+and public-only trust import. Matching unowned host/certificate material is a
+fail-closed conflict; cleanup is ownership-scoped.
+
+`scripts/start-pos-agent-testing.ps1` builds the real Angular production bundle,
+publishes the existing API to machine-local external staging, serves the bundle
+through the existing API `wwwroot`, and configures Kestrel for only loopback
+`https://127.0.0.1:4443`, HTTP/1.1, the exact allowed host, and the owned
+certificate. It proves both the root and `/tools/pos-maintenance` shell before
+reporting success. The current INT-13D implementation/offline gates passed
+(`22/22` focused Pester tests, POS build/tests, frontend tests/build, and syntax
+checks), but live setup was blocked by a non-elevated PowerShell session and no
+Chrome/Edge protected browse was claimed. See the timestamped
+[INT-13D evidence](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
 
 ## Canonical architecture seam
 
@@ -389,13 +470,15 @@ converted into architecture claims:
 - `ADR-012 LOCAL SYSTEM / SESSION 0 SMB`: open; representative device evidence
   required.
 - Live Agent/browser transport: open.
-- LNA and managed-browser policy: open; architecture defined, live evidence
-  required.
+- Managed-browser policy provisioning: automatic exact-value provisioning,
+  version selection, conflict/type rejection, WhatIf, and cleanup preview
+  passed; live browser LNA/permission behavior remains open.
 - Negotiate browser policy, Kerberos/NTLM, custom-hostname loopback/back-
   connection, and any SPN registration: open; live evidence required. SPN
   behavior is not guessed, and `DisableLoopbackCheck = 1` is prohibited.
 - Support Hub HTTPS secure context and trusted Agent machine certificate
-  provisioning/lifecycle: open; mandatory deployment evidence required.
+  provisioning/lifecycle: implementation present; live elevated Testing
+  evidence remains open and mandatory.
 - Anonymous exact-origin CORS preflight, HTTP/1.1-only transport, read-only
   SSE, authenticated artifact fetch/opaque handles, and single-use
   server-operation-bound mutation tokens: open; implementation evidence

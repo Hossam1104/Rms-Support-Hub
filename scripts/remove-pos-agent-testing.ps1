@@ -6,6 +6,10 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+Import-Module (Join-Path $PSScriptRoot 'PosAgentWindowsProvisioning.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosTestingConfiguration.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosSupportHubProvisioning.psm1') -Force
+
 $canonicalHost = 'rms-pos-agent.localhost'
 $agentServiceName = 'RmsSupportHub.Pos.Agent'
 $testServiceName = 'RmsSupportHub.Pos.Int13.TestService'
@@ -19,6 +23,8 @@ $hostsPath = Join-Path $env:SystemRoot 'System32/drivers/etc/hosts'
 $ownershipMarker = 'RmsSupportHub INT-13P Testing Provisioning v1'
 $hostsMarker = '# RmsSupportHub INT-13P'
 $certificateFriendlyName = "RmsSupportHub INT-13P Testing Agent ($canonicalHost)"
+$supportHubHost = (Get-PosTestingConfiguration).SupportHubHost
+$supportHubCertificateFriendlyName = "RmsSupportHub INT-13D Testing Support Hub ($supportHubHost)"
 
 function Assert-Administrator {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -208,6 +214,89 @@ function Remove-OwnedConfiguration($state) {
     }
 }
 
+function Stop-OwnedSupportHubRuntime($state) {
+    $hasRuntimeState = $null -ne $state.PSObject.Properties['SupportHubCertificateCreated']
+    if (-not $hasRuntimeState) {
+        return
+    }
+
+    $processId = if ($null -ne $state.PSObject.Properties['SupportHubRuntimeProcessId']) {
+        [string]$state.SupportHubRuntimeProcessId
+    } else {
+        ''
+    }
+    $runtimeApiDll = if ($null -ne $state.PSObject.Properties['SupportHubRuntimeApiDll']) {
+        [string]$state.SupportHubRuntimeApiDll
+    } else {
+        ''
+    }
+
+    if ([string]::IsNullOrWhiteSpace($processId)) {
+        $listeners = @(Get-NetTCPConnection -LocalPort (Get-PosTestingConfiguration).SupportHubPort -State Listen -ErrorAction SilentlyContinue)
+        if ($listeners.Count -gt 0 -and [bool]$state.SupportHubCertificateCreated) {
+            throw 'The Testing Support Hub port has a listener without an owned runtime PID. Refusing certificate or host cleanup.'
+        }
+        return
+    }
+
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId=$processId" -ErrorAction SilentlyContinue
+    if ($null -eq $process) {
+        $state.SupportHubRuntimeProcessId = $null
+        return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($runtimeApiDll)) {
+        throw 'The owned Support Hub runtime has a PID but no recorded API assembly. Refusing to stop an unverifiable process.'
+    }
+    $expectedApiDll = (Get-FullPath $runtimeApiDll)
+    $unownedProcess = [string]::IsNullOrWhiteSpace([string]$process.CommandLine) `
+        -or [string]$process.CommandLine.IndexOf($expectedApiDll, [StringComparison]::OrdinalIgnoreCase) -lt 0
+    if ($unownedProcess) {
+        throw 'The recorded Support Hub runtime PID no longer points to the owned API assembly. Refusing to stop it.'
+    }
+
+    if ($PSCmdlet.ShouldProcess($processId, 'Stop the owned Testing Support Hub runtime')) {
+        Stop-Process -Id ([int]$processId) -Force
+        Wait-Process -Id ([int]$processId) -Timeout 30 -ErrorAction SilentlyContinue
+        $state.SupportHubRuntimeProcessId = $null
+    }
+}
+
+function Remove-OwnedSupportHubRuntime($state) {
+    $missingRuntimeRoot = $null -eq $state.PSObject.Properties['SupportHubRuntimeRootCreated'] `
+        -or -not [bool]$state.SupportHubRuntimeRootCreated `
+        -or [string]::IsNullOrWhiteSpace([string]$state.SupportHubRuntimeRoot)
+    if ($missingRuntimeRoot) {
+        return
+    }
+
+    $root = Get-FullPath ([string]$state.SupportHubRuntimeRoot)
+    $prefix = $root.TrimEnd('\') + '\'
+    if (-not $root.StartsWith((Get-FullPath $programDataRoot).TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Recorded Support Hub runtime root escaped the INT-13 state directory: $root"
+    }
+
+    foreach ($logPath in @($state.SupportHubRuntimeLogFiles)) {
+        if ([string]::IsNullOrWhiteSpace([string]$logPath)) {
+            continue
+        }
+        $fullLogPath = Get-FullPath ([string]$logPath)
+        if (-not $fullLogPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Recorded Support Hub log path escaped its owned runtime root: $logPath"
+        }
+        if ((Test-Path -LiteralPath $fullLogPath -PathType Leaf) -and $PSCmdlet.ShouldProcess($fullLogPath, 'Remove the owned Testing Support Hub log')) {
+            Remove-Item -LiteralPath $fullLogPath -Force
+        }
+    }
+
+    Remove-ManifestFiles $root @($state.SupportHubRuntimePublishedFiles)
+    $emptyRuntimeRoot = (Test-Path -LiteralPath $root -PathType Container) `
+        -and @(Get-ChildItem -LiteralPath $root -Force).Count -eq 0
+    if ($emptyRuntimeRoot -and $PSCmdlet.ShouldProcess($root, 'Remove the empty owned Testing Support Hub runtime directory')) {
+        Remove-Item -LiteralPath $root -Force
+    }
+}
+
 Assert-Administrator
 Assert-TestingAuthorization
 $state = Read-State
@@ -218,15 +307,29 @@ if ($null -eq $state) {
 
 $agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
 $testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
+Stop-OwnedSupportHubRuntime $state
+Remove-OwnedSupportHubRuntime $state
 Stop-AndRemoveOwnedService $state.AgentServiceName $agentExecutable ([bool]$state.AgentServiceCreated)
 Stop-AndRemoveOwnedService $state.TestServiceName $testExecutable ([bool]$state.TestServiceCreated)
 Remove-ManifestFiles $agentInstallRoot @($state.AgentPublishedFiles)
 Remove-ManifestFiles $testInstallRoot @($state.TestPublishedFiles)
+Remove-PosAgentBrowserProvisioning $state -WhatIf:$WhatIfPreference
 Remove-OwnedConfiguration $state
+Remove-PosSupportHubCertificate `
+    -Hostname $supportHubHost `
+    -FriendlyName $supportHubCertificateFriendlyName `
+    -State $state `
+    -WhatIf:$WhatIfPreference
 Remove-OwnedCertificate $state
 if ($state.HostEntryCreated) {
     Remove-ManagedHostEntry
 }
+Remove-PosSupportHubHostEntry `
+    -Hostname $supportHubHost `
+    -HostsPath $hostsPath `
+    -Marker $hostsMarker `
+    -State $state `
+    -WhatIf:$WhatIfPreference
 
 if ((Test-Path -LiteralPath $statePath -PathType Leaf) -and $PSCmdlet.ShouldProcess($statePath, 'Remove the INT-13P ownership state')) {
     Remove-Item -LiteralPath $statePath -Force

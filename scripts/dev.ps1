@@ -8,7 +8,7 @@ $apiProject = Join-Path $root "backend\src\RmsSupportHub.Api"
 $frontend = Join-Path $root "frontend"
 
 Write-Host "Starting API (http://localhost:5200) in a new window..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList @(
+Start-Process powershell -WindowStyle Hidden -ArgumentList @(
     "-NoExit", "-Command",
     "Set-Location '$apiProject'; `$env:ASPNETCORE_ENVIRONMENT = 'Development'; dotnet run"
 )

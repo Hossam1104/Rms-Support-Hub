@@ -89,6 +89,17 @@ Small, well-scoped tasks should use one model only. Use multiple models only whe
 - Component styles must consume design tokens; raw color literals belong only in the designated token/gradient files.
 - For broad changes, run `.\scripts\build.ps1`; record any unavailable live dependency separately.
 
+## Final runtime verification
+
+After an authorized execution session completes its implementation, validation,
+and Git delivery steps, stop only stale project-owned Support Hub development
+processes when required, run `.\scripts\dev.ps1`, probe the actual frontend and
+backend endpoints, and leave successful frontend/backend processes running for
+the owner. POS sessions that provision the Testing Agent also leave the
+Testing-only Agent running and verify its health endpoints. Do not claim a
+runtime URL from configuration alone; report only endpoints that actually
+responded.
+
 ## Memory update policy
 
 ### Plan and prompt lifecycle
