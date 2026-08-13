@@ -1,9 +1,9 @@
 # POS INT-13 Live Operational Evidence
 
-**Latest Execution Date:** 2026-08-13
-**Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; PROTECTED LIVE PATH BLOCKED)`
+**Latest Execution Date:** 2026-08-13 (13:16 UTC continuation)
+**Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; BROWSER CONTROL SURFACE UNAVAILABLE)`
 **Latest Result:** `PARTIALLY COMPLETED`
-**Latest Repository Baseline:** `b7a11fb409641bd7c9b7fbdf8abfefddddbda98d`
+**Latest Repository Baseline:** `1ad33ae` (branch `int-13p-testing-agent-provisioning`, PR #7)
 
 ---
 
@@ -236,3 +236,51 @@ continuation: the Agent and disposable service are `Running`, the exact host
 entry and certificate are owned by the local INT-13P state, and the original
 Agent configuration/ACL rollback materials remain local and untracked. No
 Production or customer service was contacted or controlled.
+
+---
+
+## INT-13 Continuation Attempt — Browser Control Still Unavailable
+
+**Run window:** 2026-08-13 13:16 UTC
+**Environment classification:** same representative Windows Testing machine; same INT-13P prerequisites reused, not reprovisioned
+**Authorization:** owner-authorized INT-13 completion attempt on the existing PR #7 branch (`1ad33ae`)
+**Result:** `PARTIALLY COMPLETED` — transport/service prerequisites reverified live; protected Negotiate/browser evidence remains genuinely `BLOCKED` for the same class of reason as the prior run, plus one new disqualifying condition
+
+### Prerequisite reverification (no reprovisioning performed)
+
+| ID | Check | Result | Observation |
+|---|---|---|---|
+| C13.1 | Executor elevation | `Elevated=True` | Read-only query; no elevation was requested or changed. |
+| C13.2 | DNS | `rms-pos-agent.localhost` | Resolved only to `127.0.0.1`. |
+| C13.3 | Listener | Port 5001 | Listening on `127.0.0.1` and `::1` only. |
+| C13.4 | Agent service | `RmsSupportHub.Pos.Agent` (Testing) | `Running` |
+| C13.5 | Disposable Testing service | `RmsSupportHub.Pos.Int13.TestService` | `Running` |
+| C13.6 | Health | `GET /health/live`, `GET /health/ready` | Both `200` over `--http1.1` |
+| C13.7 | Non-browser Negotiate diagnostic (not browser evidence) | `curl --negotiate` to `/api/v1/session` | `401`; SSPI reports `SEC_E_NO_CREDENTIALS`; challenge header `WWW-Authenticate: Negotiate` present; exact-origin CORS headers present. Identical class of result to the prior run — recorded only as a transport/challenge sanity check, not as proof of browser Negotiate success or failure per the task's explicit instruction not to treat this as the final browser result. |
+
+### Browser evidence — still not run
+
+| Item | Result | Reason |
+|---|---|---|
+| Connected Chrome browser control/session | `BLOCKED` | This execution session has no browser-automation tool (no CDP/DevTools client, no Playwright/Puppeteer binding, no browser MCP server) registered or discoverable in the toolset available to this session. |
+| Connected Edge browser control/session | `BLOCKED` | Same reason as above. |
+| Any GUI browser launch from this shell | `NOT ATTEMPTED` | The current shell is elevated (Administrator). Launching a GUI browser from an elevated shell would inherit the elevated token, which would itself violate the required normal-user, medium-integrity, non-elevated browser evidence contract established by the INT-06I-F1 precedent (`docs/evidence/POS_INT06_LIVE_TRANSPORT_EVIDENCE.md`). No such launch was attempted, so no misleading elevated-browser result was produced. |
+| Chrome Negotiate/session/protected-reads/mutation-token/UI evidence | `NOT RUN` | Depends on the blocked browser control surface above. |
+| Edge Negotiate/session/protected-reads/mutation-token/UI evidence | `NOT RUN` | Depends on the blocked browser control surface above. |
+| Agent-dispatched disposable-service control through the mutation-token path | `NOT RUN` | Requires an issued mutation token, which requires an authenticated authorized browser session. Not attempted; existing `MutationTokenIssuanceTests.cs`/`MutationTokenTests.cs`/`ServiceActionEndpointTests.cs` remain the only current binding/replay/typed-outcome evidence, labeled `AUTOMATED CONTRACT EVIDENCE` per the historical matrix above. |
+
+### Cleanup state
+
+No machine, certificate, hosts, service, or browser-policy change was made in this continuation. The Agent and disposable Testing service were left `Running` exactly as found. No mutation, no token issuance, and no service-control action was performed.
+
+### Governance result
+
+```text
+INT-13 CONTINUATION (2026-08-13 13:16 UTC): PARTIALLY COMPLETED
+TRANSPORT/SERVICE PREREQUISITES: REVERIFIED LIVE, UNCHANGED
+BROWSER CONTROL SURFACE: UNAVAILABLE IN THIS EXECUTION SESSION
+ELEVATED-SHELL BROWSER LAUNCH: DELIBERATELY NOT ATTEMPTED (WOULD TAINT EVIDENCE)
+NEXT: RUN THE BROWSER PORTION FROM A CONNECTED, NON-ELEVATED CHROME/EDGE SESSION
+       ON THIS SAME MACHINE WHILE THE EXISTING TESTING PREREQUISITES REMAIN ACTIVE
+INT-13: REMAINS OPEN
+```

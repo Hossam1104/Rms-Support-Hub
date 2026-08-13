@@ -78,7 +78,7 @@ degrades; all current UI feature styles consume design tokens.
 | Generated client | `openapi-typescript` 7.13.0 generation passed |
 | Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
 | Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
-| POS Agent live | INT-13P provisioned DNS, exact trusted TLS, loopback port 5001 Agent, and disposable Testing service; anonymous health/CORS/HTTP/1.1 evidence passed, while protected Negotiate/browser evidence is `BLOCKED` by unavailable SSPI credentials and no connected browser; see `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` |
+| POS Agent live | INT-13P provisioned DNS, exact trusted TLS, loopback port 5001 Agent, and disposable Testing service; anonymous health/CORS/HTTP/1.1 evidence passed and was reverified live on 2026-08-13 13:16 UTC, while protected Negotiate/browser evidence remains `BLOCKED` because this execution session has no browser-automation tool and is itself elevated; see `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` |
 | Broad `scripts/build.ps1` | Reached backend tests after the verified stale `RmsSupportHub.Api` Debug lock was stopped; 190 passed and 2 known unchanged 404-vs-405 route-status assertions failed. POS Release build and frontend gates passed separately. |
 
 ## Deferred boundaries
@@ -86,9 +86,10 @@ degrades; all current UI feature styles consume design tokens.
 - Testing is default; no Production calls, SQL changes, deployment, or live
   service actions were performed for INT-08. Fakes covered service dispatch.
 - UPC live/fixture acceptance and deployment/Production acceptance remain
-  deferred. INT-13 remains open pending a connected Chrome/Edge session with
-  usable Windows Negotiate credentials and completion of protected Agent reads,
-  server-derived authorization, mutation-token, and Agent-dispatched service
-  control evidence.
+  deferred. INT-13 remains open pending a connected, non-elevated Chrome/Edge
+  session with a real browser-automation surface and usable Windows Negotiate
+  credentials, and completion of protected Agent reads, server-derived
+  authorization, mutation-token, and Agent-dispatched service control
+  evidence.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls
   are environment setup, not an INT-07 defect.
