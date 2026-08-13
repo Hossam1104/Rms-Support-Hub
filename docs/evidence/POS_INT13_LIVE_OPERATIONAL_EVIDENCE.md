@@ -9,13 +9,25 @@
 
 ## Executive Summary
 
-Owner authorization was granted to execute INT-13 verification on this machine.
-In accordance with repository governance and strict safety guidelines:
-1. Live operational tests on `https://rms-pos-agent.localhost:5001` were evaluated.
-2. Canonical DNS resolution (`rms-pos-agent.localhost`), machine TLS certificate, loopback port 5001 listener, and disposable Testing Windows Service are **ABSENT** on this machine.
-3. System configuration (hosts file, certificate stores, firewall, SPNs, registry, browser policies) was **NOT modified**, preserving machine integrity.
-4. Per Section 7 Safety Gate and Section 14 Completion Rule, real SCM mutation was **NOT RUN / BLOCKED** because no approved disposable Testing service exists on the machine.
-5. All automated contract tests (Domain, Application, Infrastructure, Agent Integration, Frontend, OpenAPI Generation) passed 100%.
+Owner authorization was granted to execute INT-13P on this representative Testing
+machine. The latest run provisioned only the bounded Testing prerequisites and
+verified the fixed direct path's anonymous transport boundary:
+1. `https://rms-pos-agent.localhost:5001` resolved to loopback, presented the
+   trusted exact-host certificate, listened on HTTP/1.1, and returned healthy
+   live/ready responses.
+2. Exact-origin CORS and negative preflight checks passed; plain HTTP fallback
+   was absent.
+3. The disposable Testing harness passed an independent lifecycle check, but no
+   authenticated Agent mutation was sent.
+4. Protected Negotiate evidence is still blocked because the non-browser SSPI
+   context has no usable credentials, and no connected Chrome/Edge browser
+   session is available. Browser policy and Production/customer state were not
+   changed or contacted.
+5. Task-scoped POS and frontend contract/build gates passed; the broad backend
+   regression reached 190 passes plus two known unchanged 404-vs-405 assertions.
+
+The pre-provisioning machine state and its blocked safety-gate conclusions are
+retained in the historical sections below for audit continuity.
 
 ---
 
