@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Updated:** 2026-08-13
-- **Branch:** `int-13p-testing-agent-provisioning` (INT-13P follow-up branch; base `b7a11fb`)
+- **Branch:** `int-13p-testing-agent-provisioning` (INT-13P follow-up branch; current task head `b5e4de1`)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
 - **Programme:** INT-00 through INT-07 complete/accepted; INT-08 complete/validated; INT-13P Testing prerequisites provisioned; INT-13 remains open.
 - **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`; INT-08 PR #5 merged at `3907bd024acda7fa3af6e1b3ade1502fa4aabce6`. INT-08 adds only the typed target-bound service-control route; no general API relay or generic POS mutation surface exists.
@@ -39,6 +39,18 @@
   LocalMachine certificate, running Agent, running disposable service, and one
   server-owned disposable allow-list target. No Production or customer state
   was touched.
+- INT-13C adds `scripts/PosAgentWindowsProvisioning.psm1` for exact, typed,
+  version-selected Chrome/Edge IWA and loopback policy provisioning plus the
+  exact `BackConnectionHostNames` REG_MULTI_SZ entry. It preserves unrelated
+  values, records ownership, supports WhatIf, and fails closed on wildcard,
+  block-policy, malformed-value, and registry-type conflicts. Installed Chrome
+  and Edge are generation 151 and use `LoopbackNetworkAllowedForUrls`.
+- INT-13C adds `tools/pos-browser-evidence` and
+  `scripts/invoke-pos-browser-evidence.ps1`: pinned Playwright channel launch,
+  fresh profile, Limited interactive-user task, Medium-integrity verification,
+  sanitized output, and optional opaque-target one-action path. Chrome and Edge
+  launch gates passed on 2026-08-13, but the configured exact Support Hub origin
+  did not serve the real workspace; protected browser evidence remains open.
 
 ## Security and review record
 
@@ -78,7 +90,7 @@ degrades; all current UI feature styles consume design tokens.
 | Generated client | `openapi-typescript` 7.13.0 generation passed |
 | Riyal asset verifier | Passed; 924 bytes, SHA-1 verified |
 | Runtime smoke | `localhost:4200` and API `/api/modules/health` returned 200 |
-| POS Agent live | INT-13P provisioned DNS, exact trusted TLS, loopback port 5001 Agent, and disposable Testing service; anonymous health/CORS/HTTP/1.1 evidence passed and was reverified live on 2026-08-13 13:16 UTC, while protected Negotiate/browser evidence remains `BLOCKED` because this execution session has no browser-automation tool and is itself elevated; see `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` |
+| POS Agent live | INT-13P prerequisites remain provisioned; INT-13C automatic Chrome/Edge policy and BackConnection verification, anonymous health/CORS/HTTP/1.1, and normal-user browser launch gates passed. The configured exact Support Hub origin was unavailable, so protected Negotiate/browser reads and Agent-dispatched service-control evidence remain `BLOCKED`; see `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` |
 | Broad `scripts/build.ps1` | Reached backend tests after the verified stale `RmsSupportHub.Api` Debug lock was stopped; 190 passed and 2 known unchanged 404-vs-405 route-status assertions failed. POS Release build and frontend gates passed separately. |
 
 ## Deferred boundaries
@@ -86,10 +98,9 @@ degrades; all current UI feature styles consume design tokens.
 - Testing is default; no Production calls, SQL changes, deployment, or live
   service actions were performed for INT-08. Fakes covered service dispatch.
 - UPC live/fixture acceptance and deployment/Production acceptance remain
-  deferred. INT-13 remains open pending a connected, non-elevated Chrome/Edge
-  session with a real browser-automation surface and usable Windows Negotiate
-  credentials, and completion of protected Agent reads, server-derived
-  authorization, mutation-token, and Agent-dispatched service control
-  evidence.
+  deferred. INT-13 remains open pending the real Support Hub workspace being
+  served at the configured exact HTTPS origin, followed by protected Agent
+  reads, server-derived authorization, mutation-token, and Agent-dispatched
+  service-control evidence from the non-elevated Chrome/Edge harness.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls
   are environment setup, not an INT-07 defect.

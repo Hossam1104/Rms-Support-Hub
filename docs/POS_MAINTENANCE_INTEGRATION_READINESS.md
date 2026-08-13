@@ -168,6 +168,34 @@ Agent-dispatched typed outcomes, and Chrome/Edge LNA/Negotiate/UI behavior
 remain open until a connected browser session with a usable Windows Negotiate
 credential context completes the fixed direct path.
 
+### INT-13C automatic browser/IWA provisioning
+
+The Testing setup now owns a separate `PosAgentWindowsProvisioning.psm1`
+seam. It detects installed Chrome/Edge versions, uses the exact configured
+Support Hub origin, merges `AuthServerAllowlist` and the selected exact-origin
+loopback policy without replacing unrelated values, rejects higher-precedence
+block policies and incompatible registry types, and keeps
+`BackConnectionHostNames` as `REG_MULTI_SZ`. Chrome/Edge 146+ use
+`LoopbackNetworkAllowedForUrls`; older supported generations use
+`LocalNetworkAccessAllowedForUrls`. `DisableLoopbackCheck` is never written.
+
+The setup state records whether each value was pre-existing or written by the
+Testing provisioner, and the cleanup path removes only values that still match
+the recorded owned value. `-WhatIf` is supported for setup and cleanup. Focused
+Pester coverage verifies exact-origin normalization, wildcard/block/type
+rejection, preservation, version selection, idempotency, and no-write WhatIf
+behavior. The browser evidence helper uses pinned `playwright-core`, installed
+Chrome/Edge channels, a fresh profile, and a Limited interactive-user task;
+it verifies Medium integrity and records sanitized status only. An explicit
+repository-localhost smoke switch exists for the Angular dev server, but it is
+not an approved Agent origin and cannot establish protected evidence.
+
+The 2026-08-13 INT-13C run passed automatic provisioning and both normal-user
+browser launch gates. The configured HTTPS Support Hub origin did not serve the
+real workspace, so protected browser reads, Administrator authorization,
+mutation-token evidence, and Agent-dispatched service control remain blocked;
+see the timestamped [live evidence](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
+
 ## Canonical architecture seam
 
 The future path is:
@@ -420,8 +448,9 @@ converted into architecture claims:
 - `ADR-012 LOCAL SYSTEM / SESSION 0 SMB`: open; representative device evidence
   required.
 - Live Agent/browser transport: open.
-- LNA and managed-browser policy: open; architecture defined, live evidence
-  required.
+- Managed-browser policy provisioning: automatic exact-value provisioning,
+  version selection, conflict/type rejection, WhatIf, and cleanup preview
+  passed; live browser LNA/permission behavior remains open.
 - Negotiate browser policy, Kerberos/NTLM, custom-hostname loopback/back-
   connection, and any SPN registration: open; live evidence required. SPN
   behavior is not guessed, and `DisableLoopbackCheck = 1` is prohibited.

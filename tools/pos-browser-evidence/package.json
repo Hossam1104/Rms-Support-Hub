@@ -1,0 +1,13 @@
+{
+  "name": "rms-support-hub-pos-browser-evidence",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Task-scoped disposable Chrome/Edge evidence harness for INT-13C.",
+  "type": "module",
+  "scripts": {
+    "evidence": "node run-evidence.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.55.0"
+  }
+}

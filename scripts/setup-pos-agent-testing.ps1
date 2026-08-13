@@ -7,6 +7,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+Import-Module (Join-Path $PSScriptRoot 'PosAgentWindowsProvisioning.psm1') -Force
+
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $canonicalHost = 'rms-pos-agent.localhost'
 $agentServiceName = 'RmsSupportHub.Pos.Agent'
@@ -644,9 +646,29 @@ if (-not $WhatIfPreference) {
 }
 
 if ($WhatIfPreference) {
-    Write-Host "[WHATIF] Would provision $canonicalHost, the LocalMachine certificate, the Agent, the opaque allow-list target, and $testServiceName." -ForegroundColor Yellow
+    $browserPlan = Ensure-PosAgentBrowserProvisioning `
+        -SupportHubOrigin $SupportHubOrigin `
+        -CanonicalHost $canonicalHost `
+        -State $state `
+        -WhatIf:$WhatIfPreference
+    Write-Host "[WHATIF] Would provision $canonicalHost, the LocalMachine certificate, the Agent, the exact browser IWA/LNA policies, the BackConnectionHostNames entry, the opaque allow-list target, and $testServiceName." -ForegroundColor Yellow
+    foreach ($browserResult in @($browserPlan.Browsers)) {
+        if ($browserResult.Installed) {
+            Write-Host "[WHATIF] $($browserResult.Browser) $($browserResult.Version): $($browserResult.LoopbackPolicy) would allow only $SupportHubOrigin; AuthServerAllowlist would include $canonicalHost." -ForegroundColor Yellow
+        } else {
+            Write-Host "[WHATIF] $($browserResult.Browser) is not installed; no policy would be written." -ForegroundColor Yellow
+        }
+    }
+    Write-Host '[WHATIF] BackConnectionHostNames would remain REG_MULTI_SZ and DisableLoopbackCheck would remain absent.' -ForegroundColor Yellow
     return
 }
+
+$browserProvisioning = Ensure-PosAgentBrowserProvisioning `
+    -SupportHubOrigin $SupportHubOrigin `
+    -CanonicalHost $canonicalHost `
+    -State $state `
+    -WhatIf:$WhatIfPreference
+Write-ProvisioningState $state
 
 Add-ManagedHostEntry $state
 Ensure-TestingCertificate $state
@@ -692,6 +714,18 @@ if ($listeners.Count -eq 0 -or @($listeners | Where-Object { $_.LocalAddress -no
 Write-Host '[PASS] Agent port 5001 listener is loopback-only.' -ForegroundColor Green
 
 Invoke-Http11HealthCheck
+
+$browserVerification = Get-PosAgentBrowserProvisioningVerification `
+    -SupportHubOrigin $SupportHubOrigin `
+    -CanonicalHost $canonicalHost
+foreach ($browserResult in @($browserVerification.Browsers)) {
+    if ($browserResult.Installed) {
+        Write-Host "[PASS] $($browserResult.Browser) $($browserResult.Version): exact AuthServerAllowlist hostname and $($browserResult.LoopbackPolicy) origin policy verified." -ForegroundColor Green
+    } else {
+        Write-Host "[INFO] $($browserResult.Browser) is not installed; browser policy verification was not applicable." -ForegroundColor Yellow
+    }
+}
+Write-Host '[PASS] BackConnectionHostNames contains only the owned exact hostname addition; DisableLoopbackCheck is absent.' -ForegroundColor Green
 
 Write-Host "INT-13P provisioning completed. Owned state: $statePath" -ForegroundColor Green
 Write-Host "Agent service: $agentServiceName; disposable service: $testServiceName" -ForegroundColor Green

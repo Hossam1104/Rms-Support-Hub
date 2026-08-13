@@ -694,14 +694,64 @@ HTTP/1.1 health, exact-origin CORS preflight/negative rejection, and the
 disposable harness's independent SCM lifecycle. It did not change the Agent
 architecture, add a relay, widen the listener, or alter browser policy.
 
+### INT-13C automatic browser/IWA provisioning contract
+
+INT-13C adds the bounded Windows policy seam to the existing Testing-only
+provisioning scripts. `scripts/PosAgentWindowsProvisioning.psm1` detects the
+installed Chrome/Edge major versions, merges only exact values, preserves
+unrelated registry entries, records ownership for uninstall, supports WhatIf,
+and fails closed on wildcard/block-policy conflicts, malformed values, and
+incompatible registry types. It never writes `DisableLoopbackCheck=1`.
+
+The browser contract is deliberately version-selected: installed generations
+at or above 146 use `LoopbackNetworkAllowedForUrls`, while older supported
+generations use `LocalNetworkAccessAllowedForUrls`. Chrome and Edge
+`AuthServerAllowlist` receive only `rms-pos-agent.localhost`; the allowlist
+entry is merged without replacing unrelated hostnames. The exact
+`SupportHubOrigin` is the only allowed origin value. The Windows
+`BackConnectionHostNames` value remains `REG_MULTI_SZ` and receives only the
+exact Agent hostname. The policy names and version gates are aligned with the
+[Chrome AuthServerAllowlist](https://chromeenterprise.google/policies/auth-server-allowlist/),
+[Chrome Local Network Access](https://chromeenterprise.google/policies/local-network-access-allowed-for-urls/),
+[Chrome Loopback Network](https://chromeenterprise.google/policies/loopback-network-allowed-for-urls/),
+[Edge AuthServerAllowlist](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/authserverallowlist),
+[Edge Local Network Access](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/localnetworkaccessallowedforurls),
+and [Edge Loopback Network](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/loopbacknetworkallowedforurls)
+policy references.
+
+The task-scoped browser harness under `tools/pos-browser-evidence` pins
+`playwright-core`, launches only the installed `chrome`/`msedge` channel, uses a
+fresh profile, and is invoked from an elevated executor only through a
+Limited interactive-user Scheduled Task. The child verifies Medium integrity,
+does not inject credentials or browser bypasses, and writes sanitized evidence
+only. The optional disposable action accepts only an opaque service ID, holds
+the token in page memory, performs one state-valid typed action, and never
+retries an unknown outcome.
+
+The current INT-13C run passed automatic provisioning, idempotency, WhatIf,
+cleanup preview, and both normal-user browser launch gates. An explicit
+repository-localhost smoke mode also rendered the Angular page, but it is not
+the configured exact Agent CORS origin and did not prove protected reads. The
+configured Support Hub HTTPS origin was not serving the real workspace, so
+protected Negotiate reads, authorization, mutation-token, UI, and
+Agent-dispatched service-control evidence remain open. This separation is
+recorded in the [timestamped live evidence](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
+
+For deployment, the supported choices are (A) a signed/device-scoped Testing
+installer owning these exact machine values and its rollback state, or (B) an
+enterprise GPO/MDM package owning the same exact values while the installer
+performs read-only verification. Both choices remove manual cashier/browser
+setup; neither permits wildcard origins, broad authentication, loopback
+disablement, or policy ownership claims over unrelated values.
+
 This implementation/provisioning proof is deliberately separate from live
-operational proof. The current execution context could not complete a Windows
-Negotiate session because its non-browser SSPI client had no usable credentials
-(`SEC_E_NO_CREDENTIALS`), and no connected Chrome/Edge browser session was
-available. Therefore protected Agent reads, server-derived Administrator
-authorization, mutation-token lifecycle, Agent-dispatched service control, and
-browser secure-context/LNA/UI evidence remain open. The timestamped rows and
-exact safe observations are recorded in
+operational proof. The earlier non-browser SSPI diagnostic could not complete
+a Windows Negotiate session because it had no usable credentials
+(`SEC_E_NO_CREDENTIALS`); the installed Chrome/Edge harness is now available,
+but the exact Support Hub page is not. Therefore protected Agent reads,
+server-derived Administrator authorization, mutation-token lifecycle,
+Agent-dispatched service control, and browser secure-context/LNA/UI evidence
+remain open. The timestamped rows and exact safe observations are recorded in
 [POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
 
 ## Historical pre-INT-06I gate snapshot

@@ -6,6 +6,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+Import-Module (Join-Path $PSScriptRoot 'PosAgentWindowsProvisioning.psm1') -Force
+
 $canonicalHost = 'rms-pos-agent.localhost'
 $agentServiceName = 'RmsSupportHub.Pos.Agent'
 $testServiceName = 'RmsSupportHub.Pos.Int13.TestService'
@@ -222,6 +224,7 @@ Stop-AndRemoveOwnedService $state.AgentServiceName $agentExecutable ([bool]$stat
 Stop-AndRemoveOwnedService $state.TestServiceName $testExecutable ([bool]$state.TestServiceCreated)
 Remove-ManifestFiles $agentInstallRoot @($state.AgentPublishedFiles)
 Remove-ManifestFiles $testInstallRoot @($state.TestPublishedFiles)
+Remove-PosAgentBrowserProvisioning $state -WhatIf:$WhatIfPreference
 Remove-OwnedConfiguration $state
 Remove-OwnedCertificate $state
 if ($state.HostEntryCreated) {

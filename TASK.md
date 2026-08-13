@@ -20,6 +20,14 @@ reads, server-derived Administrator authorization, mutation-token behavior,
 and Agent-dispatched disposable-service control await a connected Chrome/Edge
 session with usable Windows credentials.
 
+The owner has now explicitly authorized INT-13C on the same Testing machine:
+implement exact, idempotent Chrome/Edge IWA and LNA/loopback policy
+provisioning, exact `BackConnectionHostNames` ownership, safe WhatIf/uninstall,
+and a task-scoped non-elevated browser evidence harness. This exception is
+limited to the configured Testing SupportHubOrigin and Agent hostname; it does
+not authorize Production/customer changes, wildcard policies, loopback
+disablement, listener widening, or any Agent architecture change.
+
 Do not force-push, bypass CI, weaken security, trust `oot_sid`, add JWT/Bearer
 authentication, add a generic command/process/PowerShell/SQL endpoint, route
 privileged POS calls through `RmsSupportHub.Api`, or make machine changes to
@@ -94,7 +102,8 @@ headers unless a safe non-secret fact is required to prove the gate.
 Do not change certificates, hosts files, SPNs, registry policy, LNA policy,
 browser managed policy, firewall rules, service startup configuration, machine
 security settings, SQL/data, deployment state, or Production state to make the
-evidence pass. Do not add `DisableLoopbackCheck`, wildcard CORS, LAN binding,
+evidence pass, except for the owner-authorized exact INT-13C Testing-machine
+policy provisioning described above. Do not add `DisableLoopbackCheck`, wildcard CORS, LAN binding,
 JWT/Bearer fallback, API relay, or a generic execution surface. Do not send,
 cancel, resend, restart, or retry a real service action unless it is the
 approved disposable Testing service and the live evidence plan explicitly

@@ -284,3 +284,111 @@ NEXT: RUN THE BROWSER PORTION FROM A CONNECTED, NON-ELEVATED CHROME/EDGE SESSION
        ON THIS SAME MACHINE WHILE THE EXISTING TESTING PREREQUISITES REMAIN ACTIVE
 INT-13: REMAINS OPEN
 ```
+
+## INT-13C Automatic Browser/IWA Provisioning + Protected Browser Closure
+
+**Run window:** 2026-08-13 14:20–14:29 UTC (17:20–17:29 +03:00)
+**Environment classification:** same owner-authorized representative Windows Testing machine only
+**Authorization:** INT-13C bounded machine provisioning and task-scoped browser evidence tooling; no Production/customer access
+**Result:** `PARTIALLY COMPLETED` — automatic policy provisioning and normal-user browser launch gates passed; the exact configured Support Hub page was unavailable, so protected browser reads, token issuance, and Agent-dispatched service control remain open.
+
+### Automatic device provisioning
+
+| ID | Check | Result | Safe observation |
+|---|---|---|---|
+| C13C.1 | Exact SupportHubOrigin validation | `PASS` | Setup accepts only the configured exact HTTPS origin `https://support-hub.integration.test:4443`; no wildcard, path, query, fragment, credentials, or hardcoded future production origin is introduced. |
+| C13C.2 | Installed browser detection | `PASS` | Chrome `151.0.7922.109` and Edge `151.0.4129.78` were detected from their installed executables. |
+| C13C.3 | Chrome policy selection | `PASS` | Chrome selected `LoopbackNetworkAllowedForUrls` for the installed generation and verified the exact Support Hub origin plus the exact Agent hostname allowlist entry. |
+| C13C.4 | Edge policy selection | `PASS` | Edge selected `LoopbackNetworkAllowedForUrls` for the installed generation and verified the exact Support Hub origin plus the exact Agent hostname allowlist entry. |
+| C13C.5 | BackConnectionHostNames | `PASS` | `BackConnectionHostNames` contains the exact `rms-pos-agent.localhost` addition as `REG_MULTI_SZ`; unrelated values were preserved and `DisableLoopbackCheck` remained absent. |
+| C13C.6 | Conflict/type fail-closed behavior | `PASS` | Focused Pester coverage rejects wildcard/block-policy conflicts, malformed entries, and incompatible registry value kinds before rewriting machine policy. |
+| C13C.7 | Idempotent setup/WhatIf/cleanup preview | `PASS` | Normal setup rerun completed without duplicate policy entries; setup WhatIf was covered without writes; remove WhatIf completed and the Agent/disposable Testing services remained running. |
+
+The policy implementation follows the installed-generation browser contracts:
+Chrome/Edge loopback and Local Network Access policy generations are selected by
+version, while the Windows back-connection entry remains a typed multi-string.
+No `DisableLoopbackCheck=1`, wildcard CORS, listener widening, HTTP fallback,
+credential, private-key export, or browser security bypass was used.
+
+### Chrome / Edge normal-user evidence
+
+The elevated executor used `scripts/invoke-pos-browser-evidence.ps1`. It created
+a one-shot interactive-user Scheduled Task with Limited run level; the child
+verified a non-elevated Medium-integrity token, launched the installed browser
+channel with `channel: chrome` or `channel: msedge`, used a fresh disposable
+profile, and removed the task/profile after the attempt. No cookies, credentials,
+tokens, response bodies, principals, service names, or paths were recorded.
+
+| Browser | Channel/user-agent | Integrity | Exact Support Hub page | Result |
+|---|---|---|---|---|
+| Chrome | `chrome`; user-agent matched Chrome and not Edge | `Medium`, non-elevated | Unavailable at the configured exact origin | `BLOCKED` |
+| Edge | `msedge`; user-agent matched Edge | `Medium`, non-elevated | Unavailable at the configured exact origin | `BLOCKED` |
+
+Both browser channels reached the intended normal-user launch gate. Neither
+attempt proceeded to the Angular workspace because the configured HTTPS Support
+Hub origin did not return a page. This is a real browser-path blocker, not an
+inference from configuration; no protected browser result is claimed.
+
+### Protected Agent evidence
+
+| Check | Result | Observation |
+|---|---|---|
+| Protected session read | `NOT RUN` | The exact Support Hub page was unavailable, so no browser-origin Negotiate session was created. |
+| Protected device/configuration/service reads | `NOT RUN` | No browser page was available to issue the credentialed direct Agent reads. |
+| Server-derived Administrator authorization | `NOT RUN` | No authenticated browser session was available; no authorization claim is made. |
+| Mutation-token issuance/binding/replay | `NOT RUN` | No token was issued or recorded. |
+
+### Service-control evidence
+
+No Agent-dispatched service action was attempted. The explicit disposable-action
+flag was not used because the required exact Support Hub page and authenticated
+browser session were unavailable. No retry or ambiguous-outcome handling was
+needed.
+
+### Continuation gate
+
+INT-13 remains open. The next safe action is to serve the real Support Hub
+workspace at the already configured exact HTTPS origin, then rerun the Chrome
+and Edge harness from the same non-elevated interactive-user path. Only after
+the protected reads and authorization labels pass may the bounded opaque-target
+token/service-action step be attempted. The current Testing Agent and
+disposable prerequisites remain running for that continuation.
+
+## INT-13C Continuation — Hardened provisioning and installed-channel browser attempt
+
+**Run window:** 2026-08-13 19:32–20:15 UTC (22:32–23:15 +03:00)
+**Environment classification:** same owner-authorized representative Windows Testing machine only
+**Authorization:** INT-13C bounded machine provisioning and task-scoped browser evidence tooling; no Production/customer access
+**Result:** `PARTIALLY COMPLETED` — automatic provisioning and normal-user browser launch gates passed; the configured exact Support Hub page remained unavailable and the local Angular smoke path was not an approved Agent origin, so protected browser evidence remains open.
+
+### Required gate summary
+
+| Gate | Result | Safe observation |
+|---|---|---|
+| Automatic device provisioning | `PASS` | Focused policy/ownership tests passed `16/16`; setup `WhatIf`, cleanup `WhatIf`, and an authorized idempotent Testing setup rerun completed during this continuation. Chrome and Edge generation 151 selected `LoopbackNetworkAllowedForUrls`; exact authentication host, exact Support Hub origin, typed `BackConnectionHostNames`, absent `DisableLoopbackCheck`, loopback-only DNS/listener, and Agent health remained verified. |
+| Chrome normal-user IWA | `BLOCKED` | Installed `chrome` launched through the Limited interactive-user task with a matching user-agent, fresh profile, Medium integrity, and non-elevated classification, but the configured exact HTTPS Support Hub origin had no DNS address and no reachable port 4443, so no browser page was returned. |
+| Edge normal-user IWA | `BLOCKED` | Installed `msedge` reached the same normal-user launch gate, but the configured exact HTTPS Support Hub origin had no DNS address and no reachable port 4443, so no browser page was returned. |
+| Chrome login prompt | `NOT REACHED` | No prompt was observed because the exact Support Hub page was unavailable; no `ABSENT`/`PRESENT` claim is made. |
+| Edge login prompt | `NOT REACHED` | No prompt was observed because the exact Support Hub page was unavailable; no `ABSENT`/`PRESENT` claim is made. |
+| Chrome localhost dev smoke | `BLOCKED` | `http://localhost:4200/tools/pos-maintenance` rendered HTTP 200 in a normal-user Medium-integrity Chrome profile, but no protected Agent responses or authorization labels were confirmed. The HTTP localhost origin is not the configured exact Agent CORS origin. |
+| Edge localhost dev smoke | `BLOCKED` | The same local page rendered HTTP 200 in normal-user Medium-integrity Edge, but no protected Agent responses or authorization labels were confirmed. |
+| Server authorization | `NOT RUN` | No authenticated browser session was created; no Administrator authorization claim is made. |
+| Protected reads | `NOT RUN` | The exact-origin page was unavailable; the localhost smoke path did not establish the approved direct-Agent origin contract. |
+| Mutation token | `NOT RUN` | No token was issued or recorded. |
+| Agent-dispatched SCM | `NOT RUN` | The explicit disposable-service action flag was not used because authenticated protected reads did not pass. |
+
+The launcher now starts its one-shot Limited interactive task before the
+bounded evidence deadline and keeps its test-only task settings non-idle and
+non-battery-blocking. This corrected collection timing only; it did not relax
+browser integrity, origin, certificate, CORS, credential, or mutation rules.
+No credentials, cookies, tokens, response bodies, principals, SIDs, machine
+names, or private certificate material were recorded.
+
+### Continuation gate
+
+INT-13 remains open. The next safe action is to serve the real Support Hub
+workspace at the already configured exact HTTPS origin, then rerun both
+installed-channel harnesses from the same Limited interactive-user path. Only
+after the protected reads and server-derived authorization labels pass may the
+bounded opaque-target token/service-action step be attempted. The Testing
+Agent and disposable prerequisites remain running for that continuation.
