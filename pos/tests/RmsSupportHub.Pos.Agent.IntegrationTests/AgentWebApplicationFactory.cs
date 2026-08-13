@@ -15,7 +15,7 @@ namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
 public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public const string SupportHubOrigin = "https://support-hub.integration.test";
+    public const string SupportHubOrigin = "https://support-hub.integration.test:4443";
 
     private readonly string _environment;
 

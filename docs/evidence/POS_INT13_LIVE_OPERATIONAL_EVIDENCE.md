@@ -60,7 +60,7 @@ retained in the historical sections below for audit continuity.
 | ID | Area | Verification Item | Evidence Type | Result | Details / Observations |
 |---|---|---|---|---|---|
 | E2.1 | CORS | Configured Support Hub Origin | Live Evidence | `BLOCKED` | Agent service not running live to receive HTTP OPTIONS preflight. |
-| E2.2 | CORS | Reject Unapproved / Alternate Origins | Automated Contract | `PASS` | `CorsTests.cs` (in IntegrationTests) verifies exact origin matching (`https://support-hub.integration.test`), rejecting non-matching origins with 403 Forbidden. No wildcard origins. |
+| E2.2 | CORS | Reject Unapproved / Alternate Origins | Automated Contract | `PASS` | `CorsTests.cs` (in IntegrationTests) verifies exact origin matching (`https://support-hub.integration.test:4443`), rejecting non-matching origins with 403 Forbidden. No wildcard origins. |
 
 ### 3. Chrome + Edge Browser Support
 
@@ -392,3 +392,71 @@ installed-channel harnesses from the same Limited interactive-user path. Only
 after the protected reads and server-derived authorization labels pass may the
 bounded opaque-target token/service-action step be attempted. The Testing
 Agent and disposable prerequisites remain running for that continuation.
+
+## INT-13D Continuation - Secure Support Hub origin implementation and final protected browse gate
+
+**Run window:** 2026-08-13 21:38 UTC (2026-08-14 00:38 +03:00)
+**Environment classification:** owner-authorized representative Windows Testing machine only
+**Authorization:** INT-13D secure-origin implementation and final protected-browse closure; no Production/customer access
+**Result:** `PARTIALLY COMPLETED` - the secure-origin implementation and offline gates passed, but live machine provisioning and protected browser evidence were blocked by the current execution context.
+
+### Implementation contract
+
+The repository now has one Testing-only origin configuration:
+`https://support-hub.integration.test:4443`. It rejects alternate hosts,
+ports, schemes, paths, queries, fragments, credentials, and wildcards. The
+Support Hub host entry is loopback-only and separately owned from the fixed
+Agent host. The Support Hub certificate is created in LocalMachine/My with one
+exact DNS SAN, Server Authentication EKU, an explicitly selected Microsoft
+Software Key Storage Provider, a non-exportable RSA private key, and public
+certificate trust in LocalMachine/Root. No PFX or private-key export is used.
+
+The Testing start path builds the real Angular production application and
+publishes the existing Support Hub API into an external machine-local staging
+directory. Kestrel is configured only for `https://127.0.0.1:4443`, HTTP/1.1,
+the exact allowed host, and the owned LocalMachine certificate. Cleanup stops
+only a process whose recorded command line contains the owned API assembly and
+removes only owned runtime files, certificate material, trust, and host entry.
+The direct browser-to-Agent origin remains
+`https://rms-pos-agent.localhost:5001`; no API relay or generic endpoint was
+added.
+
+### Required gate summary
+
+| Gate | Result | Safe observation |
+|---|---|---|
+| Exact Testing origin contract | `PASS` | The new configuration tests passed `3/3`; the existing browser/IWA provisioning tests remained green. |
+| Support Hub host/certificate ownership code | `PASS` | Host ownership, conflict refusal, WhatIf, cleanup, exact SAN/EKU/provider/private-key checks, and public-only trust flow are implemented; focused host tests passed `3/3`. |
+| POS and frontend offline gates | `PASS` | POS Release build passed with 0 warnings/errors; Domain 7, Application 76, Infrastructure 60, Agent 114, and WinUI publish passed. Frontend passed 56 files / 345 tests and the production build. |
+| Live secure-origin provisioning | `BLOCKED` | The current PowerShell session is not elevated. Setup/start and cleanup correctly refuse before machine writes; current port 4443 has no listener, and the existing Agent/disposable services are stopped. |
+| Secure Support Hub root and deep route | `NOT RUN` | No live Support Hub process was started in this session, so no endpoint response is claimed. |
+| Chrome protected browse | `BLOCKED` | The repository launcher requires an elevated parent for its task-scoped Limited interactive-user channel. The connected in-app browser surface reported no available browser channels; no Chrome page or login-prompt conclusion was reached. |
+| Edge protected browse | `BLOCKED` | Same environment gate as Chrome; no Edge page or login-prompt conclusion was reached. |
+| Protected Agent reads / Negotiate / authorization | `NOT RUN` | The real exact-origin page was not reached; no session, principal, authorization, or token claim is made. |
+| Mutation token and disposable service action | `NOT RUN` | The protected-read prerequisite did not pass, so no token or service action was issued. No retry or `OutcomeUnknown` path was exercised. |
+
+### Offline validation record
+
+- Focused Pester: `16/16` existing provisioning tests, `3/3` exact-origin
+  configuration tests, and `3/3` Support Hub host tests passed (`22/22`).
+- PowerShell parsing passed for every modified script/module/test; the browser
+  harness passed `node --check`; `git diff --check` passed.
+- The repository-wide build script reproduced the two unchanged backend
+  route-status failures (`190` passed, `2` failed: expected 404 vs actual
+  405). The backend Release build passed separately with 0 warnings/errors.
+
+### Continuation gate
+
+INT-13 remains open. On the owner-authorized Testing machine, the next safe
+action is an elevated Administrator PowerShell run of:
+
+```powershell
+.\scripts\start-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false
+```
+
+After the script proves the exact root and `/tools/pos-maintenance` route over
+trusted HTTPS and the fixed Agent health endpoints are healthy, run the Chrome
+and Edge evidence launcher from its Limited interactive-user path. Only after
+both protected read paths and server-derived authorization pass may the
+explicit disposable service-action flag be used. Do not run against
+Production/customer state.

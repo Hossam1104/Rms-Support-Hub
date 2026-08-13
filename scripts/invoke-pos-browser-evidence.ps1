@@ -4,8 +4,8 @@ param(
     [switch]$IUnderstandTestingOnly,
     [ValidateSet('chrome', 'edge')]
     [string]$Browser = 'chrome',
-    [string]$SupportHubOrigin = 'https://support-hub.integration.test:4443',
-    [string]$AgentOrigin = 'https://rms-pos-agent.localhost:5001',
+    [string]$SupportHubOrigin,
+    [string]$AgentOrigin,
     [string]$StartUrl,
     [switch]$AllowLocalhostDevTest,
     [string]$ServiceId,
@@ -17,6 +17,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+Import-Module (Join-Path $PSScriptRoot 'PosTestingConfiguration.psm1') -Force
+$testingConfiguration = Get-PosTestingConfiguration $SupportHubOrigin
+$SupportHubOrigin = $testingConfiguration.SupportHubOrigin
+if ([string]::IsNullOrWhiteSpace($AgentOrigin)) {
+    $AgentOrigin = $testingConfiguration.AgentOrigin
+} elseif ($AgentOrigin -ne $testingConfiguration.AgentOrigin) {
+    throw "AgentOrigin must remain the configured direct Agent origin: $($testingConfiguration.AgentOrigin)"
+}
 
 function Assert-Administrator {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()

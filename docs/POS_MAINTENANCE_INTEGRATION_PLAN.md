@@ -72,8 +72,8 @@ COMPLETE / ACCEPTED - FIRST RELEASE READ-ONLY POS INTEGRATION
 PR #4: MERGED - 3a3d58b2406b8e80954fac0174bbdc3b623962f2
 
 INT-13:
-OPEN - REPRESENTATIVE-DEVICE / LIVE OPERATIONAL EVIDENCE; INT-13P TESTING PREREQUISITES PROVISIONED; PROTECTED LIVE/BROWSER EVIDENCE REMAINS OPEN
-EVIDENCE DOCUMENT: docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md (INT-13P PREREQUISITES PROVISIONED; PROTECTED LIVE/BROWSER EVIDENCE OPEN)
+OPEN - REPRESENTATIVE-DEVICE / LIVE OPERATIONAL EVIDENCE; INT-13D SECURE SUPPORT HUB ORIGIN IMPLEMENTED; PROTECTED LIVE/BROWSER EVIDENCE REMAINS OPEN
+EVIDENCE DOCUMENT: docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md (INT-13D IMPLEMENTATION PASS; LIVE PROTECTED/BROWSER EVIDENCE BLOCKED)
 
 INT-08:
 COMPLETE / VALIDATED - POS SERVICE CONTROL + MUTATION OPERATION RUNTIME INTEGRATION
@@ -753,6 +753,39 @@ server-derived Administrator authorization, mutation-token lifecycle,
 Agent-dispatched service control, and browser secure-context/LNA/UI evidence
 remain open. The timestamped rows and exact safe observations are recorded in
 [POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
+
+### INT-13D secure Support Hub origin contract
+
+INT-13D closes the missing Testing-origin implementation seam without changing
+the direct browser-to-Agent architecture. `scripts/PosTestingConfiguration.psm1`
+owns the one exact Testing origin `https://support-hub.integration.test:4443`
+and the unchanged direct Agent origin. The configuration rejects alternate
+hosts, ports, schemes, paths, queries, fragments, credentials, and wildcards.
+
+`scripts/PosSupportHubProvisioning.psm1` owns the Support Hub loopback hosts
+entry and a separate machine certificate. The certificate is created in
+LocalMachine/My with one exact DNS SAN, Server Authentication EKU, an explicit
+Microsoft Software Key Storage Provider, and a non-exportable RSA private key;
+only the public certificate is imported into LocalMachine/Root. Existing
+matching certificates or host entries without INT-13 ownership are conflicts,
+and cleanup removes only owned material.
+
+`scripts/start-pos-agent-testing.ps1` calls the existing Testing provisioning
+path, builds the real Angular production bundle, publishes the existing API to
+an external machine-local staging directory, copies the bundle into API
+`wwwroot`, and starts Kestrel only on `127.0.0.1:4443` with HTTP/1.1, the exact
+allowed host, and the owned LocalMachine certificate. It proves both `/` and
+`/tools/pos-maintenance` return the real Angular shell before reporting a live
+origin. `scripts/remove-pos-agent-testing.ps1` verifies the owned API assembly
+before stopping the runtime and removes only recorded runtime files.
+
+The INT-13D implementation and offline validation gates passed, including
+`22/22` focused Pester tests, POS Release build/tests, frontend tests/build, and
+syntax checks. Live provisioning was not claimed in the current non-elevated
+session; the exact start command refused before machine writes, and protected
+Chrome/Edge reads, Negotiate, authorization, mutation-token, and service-action
+evidence remain open. The separation is recorded in the timestamped evidence
+document above.
 
 ## Historical pre-INT-06I gate snapshot
 

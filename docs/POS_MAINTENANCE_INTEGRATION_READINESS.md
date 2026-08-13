@@ -196,6 +196,28 @@ real workspace, so protected browser reads, Administrator authorization,
 mutation-token evidence, and Agent-dispatched service control remain blocked;
 see the timestamped [live evidence](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
 
+### INT-13D secure Support Hub origin closure
+
+INT-13D adds the missing real Testing-origin start path without introducing a
+Support Hub API relay or changing the fixed direct Agent origin. The canonical
+Testing origin is exactly `https://support-hub.integration.test:4443`, backed by
+a loopback-only hosts entry and a separately owned LocalMachine certificate.
+The certificate contract requires one exact DNS SAN, Server Authentication EKU,
+the Microsoft Software Key Storage Provider, a non-exportable RSA private key,
+and public-only trust import. Matching unowned host/certificate material is a
+fail-closed conflict; cleanup is ownership-scoped.
+
+`scripts/start-pos-agent-testing.ps1` builds the real Angular production bundle,
+publishes the existing API to machine-local external staging, serves the bundle
+through the existing API `wwwroot`, and configures Kestrel for only loopback
+`https://127.0.0.1:4443`, HTTP/1.1, the exact allowed host, and the owned
+certificate. It proves both the root and `/tools/pos-maintenance` shell before
+reporting success. The current INT-13D implementation/offline gates passed
+(`22/22` focused Pester tests, POS build/tests, frontend tests/build, and syntax
+checks), but live setup was blocked by a non-elevated PowerShell session and no
+Chrome/Edge protected browse was claimed. See the timestamped
+[INT-13D evidence](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
+
 ## Canonical architecture seam
 
 The future path is:
@@ -455,7 +477,8 @@ converted into architecture claims:
   connection, and any SPN registration: open; live evidence required. SPN
   behavior is not guessed, and `DisableLoopbackCheck = 1` is prohibited.
 - Support Hub HTTPS secure context and trusted Agent machine certificate
-  provisioning/lifecycle: open; mandatory deployment evidence required.
+  provisioning/lifecycle: implementation present; live elevated Testing
+  evidence remains open and mandatory.
 - Anonymous exact-origin CORS preflight, HTTP/1.1-only transport, read-only
   SSE, authenticated artifact fetch/opaque handles, and single-use
   server-operation-bound mutation tokens: open; implementation evidence

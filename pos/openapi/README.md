@@ -7,7 +7,7 @@ To regenerate locally, provide the deployment-owned exact Support Hub origin
 configuration and build the Agent:
 
 ```powershell
-$env:PosAgentSecurity__SupportHubOrigin = 'https://support-hub.integration.test'
+$env:PosAgentSecurity__SupportHubOrigin = 'https://support-hub.integration.test:4443'
 dotnet build pos/src/RmsSupportHub.Pos.Agent/RmsSupportHub.Pos.Agent.csproj -c Release
 ```
 

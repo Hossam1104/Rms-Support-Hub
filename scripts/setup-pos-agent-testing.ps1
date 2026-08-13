@@ -1,13 +1,18 @@
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
     [switch]$IUnderstandTestingOnly,
-    [string]$SupportHubOrigin = 'https://support-hub.integration.test:4443'
+    [string]$SupportHubOrigin
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 Import-Module (Join-Path $PSScriptRoot 'PosAgentWindowsProvisioning.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosTestingConfiguration.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosSupportHubProvisioning.psm1') -Force
+
+$testingConfiguration = Get-PosTestingConfiguration $SupportHubOrigin
+$SupportHubOrigin = $testingConfiguration.SupportHubOrigin
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $canonicalHost = 'rms-pos-agent.localhost'
@@ -26,6 +31,8 @@ $hostsPath = Join-Path $env:SystemRoot 'System32/drivers/etc/hosts'
 $ownershipMarker = 'RmsSupportHub INT-13P Testing Provisioning v1'
 $hostsMarker = '# RmsSupportHub INT-13P'
 $certificateFriendlyName = "RmsSupportHub INT-13P Testing Agent ($canonicalHost)"
+$supportHubHost = $testingConfiguration.SupportHubHost
+$supportHubCertificateFriendlyName = "RmsSupportHub INT-13D Testing Support Hub ($supportHubHost)"
 $certificateDays = 30
 
 function Assert-Administrator {
@@ -98,6 +105,17 @@ function New-InitialState {
         CertificateCreated = $false
         CertificateTrusted = $false
         CertificateThumbprint = $null
+        SupportHubHost = $supportHubHost
+        SupportHubHostEntryCreated = $false
+        SupportHubCertificateCreated = $false
+        SupportHubCertificateTrusted = $false
+        SupportHubCertificateThumbprint = $null
+        SupportHubRuntimeRootCreated = $false
+        SupportHubRuntimeRoot = $null
+        SupportHubRuntimeApiDll = $null
+        SupportHubRuntimeProcessId = $null
+        SupportHubRuntimePublishedFiles = @()
+        SupportHubRuntimeLogFiles = @()
         AgentConfigurationDirectoryCreated = $false
         AgentConfigurationFileCreated = $false
         AgentConfigurationAdopted = $false
@@ -111,6 +129,35 @@ function New-InitialState {
         TestServiceCreated = $false
         AgentPublishedFiles = @()
         TestPublishedFiles = @()
+    }
+}
+
+function Ensure-INT13DStateFields($state) {
+    if ($state.SupportHubOrigin -ne $SupportHubOrigin) {
+        throw "Provisioning state is bound to SupportHubOrigin '$($state.SupportHubOrigin)', not '$SupportHubOrigin'. Refusing to mix Testing origins."
+    }
+
+    $defaults = [ordered]@{
+        SupportHubHost = $supportHubHost
+        SupportHubHostEntryCreated = $false
+        SupportHubCertificateCreated = $false
+        SupportHubCertificateTrusted = $false
+        SupportHubCertificateThumbprint = $null
+        SupportHubRuntimeRootCreated = $false
+        SupportHubRuntimeRoot = $null
+        SupportHubRuntimeApiDll = $null
+        SupportHubRuntimeProcessId = $null
+        SupportHubRuntimePublishedFiles = @()
+        SupportHubRuntimeLogFiles = @()
+    }
+    foreach ($entry in $defaults.GetEnumerator()) {
+        if ($null -eq $state.PSObject.Properties[$entry.Key]) {
+            Add-Member -InputObject $state -MemberType NoteProperty -Name $entry.Key -Value $entry.Value
+        }
+    }
+
+    if ($state.SupportHubHost -ne $supportHubHost) {
+        throw "Provisioning state is bound to Support Hub host '$($state.SupportHubHost)', not '$supportHubHost'. Refusing to mix Testing hosts."
     }
 }
 
@@ -163,6 +210,27 @@ function Assert-PreexistingResourceConflicts($state) {
     $existingListeners = @(Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue)
     if ($existingListeners.Count -gt 0 -and -not $state.AgentServiceCreated) {
         throw 'TCP port 5001 already has a listener without INT-13P ownership. Refusing to interfere with it.'
+    }
+
+    # Run the exact host-entry checks before any machine write. WhatIf keeps
+    # this preflight read-only while still rejecting an unowned host entry.
+    Ensure-PosSupportHubHostEntry `
+        -Hostname $supportHubHost `
+        -HostsPath $hostsPath `
+        -Marker $hostsMarker `
+        -State $state `
+        -WhatIf | Out-Null
+
+    if (-not [bool]$state.SupportHubCertificateCreated) {
+        $existingSupportHubCertificates = @(Get-PosSupportHubCertificates $supportHubHost)
+        if ($existingSupportHubCertificates.Count -gt 0) {
+            throw 'A matching LocalMachine Support Hub certificate already exists without INT-13D ownership. Refusing to replace it.'
+        }
+    }
+
+    $existingSupportHubListeners = @(Get-NetTCPConnection -LocalPort $testingConfiguration.SupportHubPort -State Listen -ErrorAction SilentlyContinue)
+    if ($existingSupportHubListeners.Count -gt 0 -and [string]::IsNullOrWhiteSpace([string]$state.SupportHubRuntimeProcessId)) {
+        throw "TCP port $($testingConfiguration.SupportHubPort) already has a listener without INT-13D ownership. Refusing to interfere with it."
     }
 }
 
@@ -640,6 +708,11 @@ if ($null -eq $state) {
     }
 }
 
+Ensure-INT13DStateFields $state
+if (-not $WhatIfPreference) {
+    Write-ProvisioningState $state
+}
+
 Assert-PreexistingResourceConflicts $state
 if (-not $WhatIfPreference) {
     Write-ProvisioningState $state
@@ -659,6 +732,7 @@ if ($WhatIfPreference) {
             Write-Host "[WHATIF] $($browserResult.Browser) is not installed; no policy would be written." -ForegroundColor Yellow
         }
     }
+    Write-Host "[WHATIF] Would add only the loopback hosts entry for $supportHubHost and create/trust its separate LocalMachine Testing certificate." -ForegroundColor Yellow
     Write-Host '[WHATIF] BackConnectionHostNames would remain REG_MULTI_SZ and DisableLoopbackCheck would remain absent.' -ForegroundColor Yellow
     return
 }
@@ -666,6 +740,22 @@ if ($WhatIfPreference) {
 $browserProvisioning = Ensure-PosAgentBrowserProvisioning `
     -SupportHubOrigin $SupportHubOrigin `
     -CanonicalHost $canonicalHost `
+    -State $state `
+    -WhatIf:$WhatIfPreference
+Write-ProvisioningState $state
+
+Ensure-PosSupportHubHostEntry `
+    -Hostname $supportHubHost `
+    -HostsPath $hostsPath `
+    -Marker $hostsMarker `
+    -State $state `
+    -WhatIf:$WhatIfPreference
+Write-ProvisioningState $state
+
+Ensure-PosSupportHubCertificate `
+    -Hostname $supportHubHost `
+    -FriendlyName $supportHubCertificateFriendlyName `
+    -CertificateDays $certificateDays `
     -State $state `
     -WhatIf:$WhatIfPreference
 Write-ProvisioningState $state
