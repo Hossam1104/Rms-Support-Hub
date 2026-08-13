@@ -227,6 +227,29 @@ function Test-ServerAuthenticationEku($certificate) {
     return @($certificate.EnhancedKeyUsageList | Where-Object { $_.ObjectId -eq '1.3.6.1.5.5.7.3.1' }).Count -eq 1
 }
 
+function Assert-TestingCertificateProperties($certificate) {
+    $certificateValid = Test-ExactCertificate $certificate
+    $serverAuthenticationEku = Test-ServerAuthenticationEku $certificate
+    $validityValid = $certificate.NotBefore -le (Get-Date).AddMinutes(1) -and $certificate.NotAfter -gt (Get-Date)
+    $invalidCertificate = -not $certificateValid -or -not $serverAuthenticationEku -or -not $validityValid
+    if ($invalidCertificate) {
+        throw 'The Testing certificate did not meet the exact SAN, private-key, validity, or server-authentication requirements.'
+    }
+
+    $privateKey = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
+    try {
+        $expectedProvider = $privateKey -is [Security.Cryptography.RSACng] -and $privateKey.Key.Provider.Provider -eq 'Microsoft Software Key Storage Provider'
+        $nonExportable = [string]$privateKey.Key.ExportPolicy -eq 'None'
+        if (-not $expectedProvider -or -not $nonExportable) {
+            throw 'The Testing certificate did not use the Microsoft Software Key Storage Provider with a non-exportable private key.'
+        }
+    } finally {
+        if ($null -ne $privateKey) {
+            $privateKey.Dispose()
+        }
+    }
+}
+
 function Get-CertificateKeyFile($certificate) {
     $privateKey = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
     if ($privateKey -isnot [Security.Cryptography.RSACng]) {
@@ -274,9 +297,10 @@ function Ensure-TestingCertificate {
     $certificate = $null
     if ($state.CertificateThumbprint) {
         $certificate = Get-ChildItem "Cert:\LocalMachine\My\$($state.CertificateThumbprint)" -ErrorAction SilentlyContinue
-        if ($null -eq $certificate -or -not (Test-ExactCertificate $certificate) -or $certificate.FriendlyName -ne $certificateFriendlyName) {
+        if ($null -eq $certificate -or $certificate.FriendlyName -ne $certificateFriendlyName) {
             throw 'The certificate recorded by INT-13P is missing or no longer matches its ownership metadata.'
         }
+        Assert-TestingCertificateProperties $certificate
     } else {
         $existing = @(Get-MatchingAgentCertificates)
         if ($existing.Count -gt 0) {
@@ -298,11 +322,7 @@ function Ensure-TestingCertificate {
                 -FriendlyName $certificateFriendlyName `
                 -CertStoreLocation 'Cert:\LocalMachine\My'
 
-            $certificateValid = Test-ExactCertificate $certificate
-            $serverAuthenticationEku = Test-ServerAuthenticationEku $certificate
-            if (-not $certificateValid -or -not $serverAuthenticationEku -or ($certificate.NotAfter -le (Get-Date))) {
-                throw 'The generated Testing certificate did not meet the exact SAN, private-key, validity, or server-authentication requirements.'
-            }
+            Assert-TestingCertificateProperties $certificate
 
             $state.CertificateCreated = $true
             $state.CertificateThumbprint = $certificate.Thumbprint
@@ -498,6 +518,23 @@ function Assert-ExistingServiceOwnership($state, [string]$name, [string]$expecte
     Assert-ExpectedService $service $expectedExecutable $name
 }
 
+function Stop-OwnedServiceForPublish($state, [string]$name, [string]$expectedExecutable, [string]$stateProperty) {
+    if (-not $state.$stateProperty) {
+        return
+    }
+
+    $service = Get-ServiceRecord $name
+    if ($null -eq $service) {
+        return
+    }
+    Assert-ExpectedService $service $expectedExecutable $name
+    $controller = Get-Service -Name $name -ErrorAction Stop
+    if ($controller.Status -ne 'Stopped' -and $PSCmdlet.ShouldProcess($name, 'Stop the owned service before replacing its published binaries')) {
+        Stop-Service -Name $name -Force
+        $controller.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+    }
+}
+
 function Get-RelativeManifest([string]$root) {
     if (-not (Test-Path -LiteralPath $root)) {
         return @()
@@ -554,24 +591,26 @@ function Start-AndVerify-Service([string]$name) {
 }
 
 function Invoke-Http11HealthCheck {
-    $handler = [System.Net.Http.HttpClientHandler]::new()
-    $handler.ServerCertificateCustomValidationCallback = { $true }
-    $client = [System.Net.Http.HttpClient]::new($handler)
-    $client.Timeout = [TimeSpan]::FromSeconds(10)
-    $client.DefaultRequestVersion = [Version]::new(1, 1)
-    $client.DefaultVersionPolicy = [System.Net.Http.HttpVersionPolicy]::RequestVersionExact
-    try {
-        foreach ($path in @('/health/live', '/health/ready')) {
-            $response = $client.GetAsync("https://$canonicalHost`:5001$path").GetAwaiter().GetResult()
-            $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            if (-not $response.IsSuccessStatusCode -or $response.Version -ne [Version]::new(1, 1)) {
-                throw "Agent health check failed for ${path}: HTTP $([int]$response.StatusCode), protocol $($response.Version)."
+    foreach ($path in @('/health/live', '/health/ready')) {
+        $request = [Net.HttpWebRequest]::Create("https://$canonicalHost`:5001$path")
+        $request.Method = 'GET'
+        $request.ProtocolVersion = [Version]::new(1, 1)
+        $request.AllowAutoRedirect = $false
+        $request.Timeout = 10000
+        $response = $null
+        $reader = $null
+        try {
+            $response = [Net.HttpWebResponse]$request.GetResponse()
+            if ($response.StatusCode -ne [Net.HttpStatusCode]::OK -or $response.ProtocolVersion -ne [Version]::new(1, 1)) {
+                throw "Agent health check failed for ${path}: HTTP $([int]$response.StatusCode), protocol $($response.ProtocolVersion)."
             }
-            Write-Host "[PASS] $path -> HTTP $([int]$response.StatusCode), HTTP/$($response.Version), body status recorded as $((ConvertFrom-Json $body).status)" -ForegroundColor Green
+            $reader = [IO.StreamReader]::new($response.GetResponseStream())
+            $body = $reader.ReadToEnd()
+            Write-Host "[PASS] $path -> HTTP $([int]$response.StatusCode), HTTP/$($response.ProtocolVersion), body status recorded as $((ConvertFrom-Json $body).status)" -ForegroundColor Green
+        } finally {
+            if ($null -ne $reader) { $reader.Dispose() }
+            if ($null -ne $response) { $response.Dispose() }
         }
-    } finally {
-        $client.Dispose()
-        $handler.Dispose()
     }
 }
 
@@ -613,6 +652,9 @@ Add-ManagedHostEntry $state
 Ensure-TestingCertificate $state
 Ensure-AgentConfiguration $state
 
+$agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
+$testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
+Stop-OwnedServiceForPublish $state $agentServiceName $agentExecutable 'AgentServiceCreated'
 Ensure-OwnedInstallRoot $agentInstallRoot 'AgentInstallDirectoryCreated' $state
 Publish-Project $agentProject $agentInstallRoot 'POS Agent'
 Ensure-AgentAppSettings $state $agentInstallRoot
@@ -620,12 +662,11 @@ $state.AgentPublishedFiles = @(Get-RelativeManifest $agentInstallRoot)
 Write-ProvisioningState $state
 
 Ensure-OwnedInstallRoot $testInstallRoot 'TestInstallDirectoryCreated' $state
+Stop-OwnedServiceForPublish $state $testServiceName $testExecutable 'TestServiceCreated'
 Publish-Project $testServiceProject $testInstallRoot 'INT-13 disposable test service'
 $state.TestPublishedFiles = @(Get-RelativeManifest $testInstallRoot)
 Write-ProvisioningState $state
 
-$agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
-$testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
 if (-not (Test-Path -LiteralPath $agentExecutable -PathType Leaf) -or -not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
     throw 'The published Agent or disposable Testing service executable is missing.'
 }

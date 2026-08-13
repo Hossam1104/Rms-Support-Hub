@@ -72,8 +72,8 @@ COMPLETE / ACCEPTED - FIRST RELEASE READ-ONLY POS INTEGRATION
 PR #4: MERGED - 3a3d58b2406b8e80954fac0174bbdc3b623962f2
 
 INT-13:
-OPEN - REPRESENTATIVE-DEVICE / LIVE OPERATIONAL EVIDENCE
-EVIDENCE DOCUMENT: docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md (BLOCKED ON REPRESENTATIVE-DEVICE LIVE PREREQUISITES)
+OPEN - REPRESENTATIVE-DEVICE / LIVE OPERATIONAL EVIDENCE; INT-13P TESTING PREREQUISITES PROVISIONED; PROTECTED LIVE/BROWSER EVIDENCE REMAINS OPEN
+EVIDENCE DOCUMENT: docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md (INT-13P PREREQUISITES PROVISIONED; PROTECTED LIVE/BROWSER EVIDENCE OPEN)
 
 INT-08:
 COMPLETE / VALIDATED - POS SERVICE CONTROL + MUTATION OPERATION RUNTIME INTEGRATION
@@ -681,6 +681,28 @@ same direct browser-to-Agent trust boundary:
 INT-13 representative-device/live operational validation remains open. The
 following block is the historical pre-INT-06I gate snapshot retained for audit
 continuity.
+
+### INT-13P provisioning result and live-proof separation
+
+INT-13P provisioned the authorized representative Testing machine through the
+bounded repository scripts `scripts/setup-pos-agent-testing.ps1` and
+`scripts/remove-pos-agent-testing.ps1`. The exact loopback hostname, trusted
+machine certificate, fixed Agent service, service-owned allow-list extension,
+and dedicated disposable Testing service are now available and reversible.
+The provisioning run proved DNS, certificate selection/trust, loopback-only
+HTTP/1.1 health, exact-origin CORS preflight/negative rejection, and the
+disposable harness's independent SCM lifecycle. It did not change the Agent
+architecture, add a relay, widen the listener, or alter browser policy.
+
+This implementation/provisioning proof is deliberately separate from live
+operational proof. The current execution context could not complete a Windows
+Negotiate session because its non-browser SSPI client had no usable credentials
+(`SEC_E_NO_CREDENTIALS`), and no connected Chrome/Edge browser session was
+available. Therefore protected Agent reads, server-derived Administrator
+authorization, mutation-token lifecycle, Agent-dispatched service control, and
+browser secure-context/LNA/UI evidence remain open. The timestamped rows and
+exact safe observations are recorded in
+[POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
 
 ## Historical pre-INT-06I gate snapshot
 

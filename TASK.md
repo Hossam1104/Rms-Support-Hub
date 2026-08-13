@@ -13,6 +13,13 @@ Production/customer service control, SQL changes, browser-policy changes, or
 unrelated Support Hub work. Do not close INT-13 without evidence or fabricate
 evidence when a live prerequisite is unavailable.
 
+The owner-authorized INT-13P provisioning run has now provisioned the bounded
+Testing prerequisites and recorded transport/SCM-harness evidence. INT-13
+remains open while protected Negotiate/browser evidence, authenticated Agent
+reads, server-derived Administrator authorization, mutation-token behavior,
+and Agent-dispatched disposable-service control await a connected Chrome/Edge
+session with usable Windows credentials.
+
 Do not force-push, bypass CI, weaken security, trust `oot_sid`, add JWT/Bearer
 authentication, add a generic command/process/PowerShell/SQL endpoint, route
 privileged POS calls through `RmsSupportHub.Api`, or make machine changes to

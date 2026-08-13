@@ -30,12 +30,17 @@ the linked planning/evidence documents.
 | INT-07 read-only first release | PR #4 merge `3a3d58b2406b8e80954fac0174bbdc3b623962f2` | Added protected device/connectivity/configuration/service reads, generated artifacts, direct operational Support Hub workspace, and no mutation/API relay. Agent 100/100; frontend 342/342; all five POS CI lanes green. |
 | INT-08 service-control mutation runtime | PR #5 merge `3907bd024acda7fa3af6e1b3ade1502fa4aabce6` | Added the typed opaque-target Start/Stop/Restart Agent route, target/method/path-bound one-use tokens, bounded idempotency/concurrency, explicit outcome truth, direct Angular controls, OpenAPI/client regeneration, and 114 Agent / 345 frontend test coverage. No live or Production service was controlled. |
 | INT-13 representative-device evidence | `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` | Executed authorized INT-13 evidence run on representative machine. Live operational tests are `BLOCKED` (DNS, cert, port 5001 listener, and disposable test service absent). Automated contract tests passed 100% (Domain 7, Application 76, Infrastructure 60, Agent 114, Frontend 345, Release build 0 warnings/errors). |
+| INT-13P Testing provisioning | `scripts/setup-pos-agent-testing.ps1`, `scripts/remove-pos-agent-testing.ps1`, `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` | Provisioned the exact loopback host, trusted per-device certificate, fixed Agent service, server-owned disposable allow-list target, and dedicated disposable Testing service. Anonymous transport/CORS/HTTP/1.1 and independent disposable SCM lifecycle passed; protected Negotiate/browser/Agent-dispatch proof remains open because no usable SSPI credentials or connected browser were available. |
 
 ## Current programme status
 
-INT-00 through INT-08 are complete within their approved boundaries. INT-13
-representative-device/live operational evidence is executed and recorded as
-`BLOCKED` on machine prerequisites in `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`.
-The broad build was environment-blocked by a running local API process; its safe no-build
-regression run still has the two known unchanged route-status assertions (404
-expected vs 405 actual), unrelated to POS.
+INT-00 through INT-08 are complete within their approved boundaries. INT-13P
+Testing prerequisites are provisioned, while representative-device/live
+operational evidence remains open and is recorded as `PARTIALLY COMPLETED` in
+`docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`. The protected Agent
+path still requires a connected Chrome/Edge session with usable Windows
+Negotiate credentials.
+The broad build reached the two known unchanged backend route-status assertions
+after the verified stale local API process was stopped: 190 passed, with 404
+expected versus 405 actual in both legacy-route tests, unrelated to POS. POS and
+frontend task gates passed separately.

@@ -1,9 +1,9 @@
 # POS INT-13 Live Operational Evidence
 
-**Execution Date:** 2026-08-13  
-**Gate Status:** `INT-13 OPEN (BLOCKED ON REPRESENTATIVE-DEVICE LIVE PREREQUISITES)`  
-**Overall Result:** `BLOCKED`  
-**Repository Baseline:** `369ed345cde177cba5bdccedb9330538a55c2e08`  
+**Latest Execution Date:** 2026-08-13
+**Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; PROTECTED LIVE PATH BLOCKED)`
+**Latest Result:** `PARTIALLY COMPLETED`
+**Latest Repository Baseline:** `b7a11fb409641bd7c9b7fbdf8abfefddddbda98d`
 
 ---
 
@@ -19,7 +19,7 @@ In accordance with repository governance and strict safety guidelines:
 
 ---
 
-## Machine Environment Preflight
+## Historical Pre-Provisioning Machine Environment Preflight
 
 | Environment Component | Observed State | Classification | Result | Notes |
 |---|---|---|---|---|
@@ -32,7 +32,7 @@ In accordance with repository governance and strict safety guidelines:
 
 ---
 
-## Evidence Matrix
+## Historical Pre-Provisioning Evidence Matrix
 
 ### 1. Transport / Certificate / Loopback
 
@@ -114,7 +114,7 @@ In accordance with repository governance and strict safety guidelines:
 
 ---
 
-## Blockers & Next Safe Actions
+## Historical Blockers & Next Safe Actions
 
 1. **Current Blocker:**  
    The representative Windows Testing environment lacks the canonical DNS mapping (`rms-pos-agent.localhost`), trusted machine TLS certificate, running `RmsSupportHub.Pos.Agent` background service, and an approved disposable Testing Windows Service.
@@ -124,4 +124,103 @@ In accordance with repository governance and strict safety guidelines:
    - Provision `rms-pos-agent.localhost` loopback DNS / hosts resolution.
    - Provision and trust the testing TLS certificate in `Cert:\LocalMachine\My`.
    - Install and start `RmsSupportHub.Pos.Agent` as a Windows Service listening on `https://rms-pos-agent.localhost:5001`.
-   - Register an approved disposable Testing Windows Service (e.g., `RmsPosTestDummyService`) for live SCM mutation testing.
+   - Register an approved disposable Testing Windows Service for live SCM mutation testing.
+
+---
+
+## INT-13P Testing Provisioning + Live Rerun
+
+**Run window:** 2026-08-13 15:23–15:31 +03:00
+**Environment classification:** representative Windows Testing machine only
+**Authorization:** owner-authorized INT-13P provisioning and Testing-only live verification
+**Result:** `PARTIALLY COMPLETED` — transport and disposable-service prerequisites passed; protected Negotiate/browser evidence could not complete in this execution context.
+
+This section is a new run and does not replace the historical blocked evidence
+above. The setup was performed through the repository-owned, reversible
+`scripts/setup-pos-agent-testing.ps1` mechanism. The disposable target is
+represented below only by its opaque browser ID: `svc-80099324ea397d79`.
+
+### Provisioning evidence
+
+| ID | Provisioned item | Result | Redacted observation |
+|---|---|---|---|
+| P13.1 | Elevation and Testing gate | `PASS` | Setup ran from an elevated Administrator PowerShell session with the explicit `-IUnderstandTestingOnly` acknowledgement. |
+| P13.2 | Canonical hostname | `PASS` | `rms-pos-agent.localhost` resolved to `127.0.0.1` only during provisioning; no LAN/public address was added. The hosts entry is exact and tool-owned. |
+| P13.3 | LocalMachine TLS certificate | `PASS` | Exact DNS SAN `rms-pos-agent.localhost`; currently valid; private key present; CNG provider; non-exportable key policy; server-authentication EKU only; trusted in LocalMachine; LocalSystem read access verified. Runtime thumbprint: `91093374EA55BF014E53A0B9C96487C3678F0ACA`. |
+| P13.4 | Agent deployment | `PASS` | Release `win-x64` publish installed outside the Git tree; the existing `UseWindowsService` identity and fixed loopback binding were preserved. Agent service reached `Running`. |
+| P13.5 | Disposable Testing service | `PASS` | A dedicated unmistakable INT-13 Testing harness was published outside the Git tree. It has no business, SQL, network, child-process, or generic command behavior and reached `Running` as LocalSystem. |
+| P13.6 | Server-owned allow-list | `PASS` | Existing service configuration was backed up byte-for-byte with its ACL; exactly one disposable Testing target was appended. Browser-facing evidence uses only `svc-80099324ea397d79`; no raw target name crosses the HTTP contract. |
+| P13.7 | Idempotency and rollback preview | `PASS` | Setup rerun reused the owned certificate/services and did not duplicate the host or target. `setup... -WhatIf` and `remove... -WhatIf` completed without machine changes. Cleanup checks ownership, executable identity, hashes, and original configuration/ACL before removal or restore. |
+| P13.8 | Security boundary | `PASS` | No wildcard CORS, HTTP fallback, LAN binding, TLS bypass, browser-policy change, `DisableLoopbackCheck`, SPN, registry bypass, credential, PFX, private-key export, SQL, Production, or customer-service operation was used. |
+
+### Direct live transport and Agent evidence
+
+Commands used included the following, with response bodies and headers reduced
+to safe facts before recording:
+
+```powershell
+[Net.Dns]::GetHostAddresses('rms-pos-agent.localhost')
+Get-NetTCPConnection -LocalPort 5001 -State Listen
+curl.exe --http1.1 https://rms-pos-agent.localhost:5001/health/live
+curl.exe --http1.1 https://rms-pos-agent.localhost:5001/health/ready
+curl.exe -X OPTIONS -H 'Origin: https://support-hub.integration.test:4443' `
+  -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: Accept' `
+  --http1.1 https://rms-pos-agent.localhost:5001/api/v1/session
+curl.exe --negotiate -u : -H 'Origin: https://support-hub.integration.test:4443' `
+  -H 'Accept: application/json' --http1.1 `
+  https://rms-pos-agent.localhost:5001/api/v1/session
+```
+
+| ID | Area | Live check | Result | Evidence |
+|---|---|---|---|---|
+| L13.1 | DNS | Canonical host resolution | `PASS` | Only `127.0.0.1` was returned by the provisioning/runtime resolver check. |
+| L13.2 | Listener | Port 5001 binding | `PASS` | Listening addresses were `127.0.0.1` and `::1`; no non-loopback listener was present. |
+| L13.3 | TLS | Trusted HTTPS and exact hostname | `PASS` | `curl.exe` completed HTTPS health requests without `--insecure`; the machine-trusted certificate matched the canonical SAN. |
+| L13.4 | Protocol | HTTP/1.1 | `PASS` | `/health/live`, `/health/ready`, and CORS responses reported HTTP/1.1. |
+| L13.5 | HTTP fallback | Plain HTTP on port 5001 | `PASS` | Plain HTTP produced no response (`curl` status `000`); there is no HTTP listener/fallback. |
+| L13.6 | CORS | Exact-origin anonymous preflight | `PASS` | Exact origin returned `204`; `Access-Control-Allow-Origin` was the one configured origin, allowed methods were `GET,POST`, allowed headers were the typed contract headers, credentials were enabled, and `Vary: Origin` was present. |
+| L13.7 | CORS negative | Wrong origin, method, and header preflights | `PASS` | Each rejected preflight returned `403` with the safe CORS rejection contract; no wildcard/reflected origin was returned. |
+| L13.8 | Negotiate | Authenticated Windows session | `BLOCKED` | The endpoint issued a Negotiate challenge, but this non-browser execution context reported `SEC_E_NO_CREDENTIALS`; no credential or challenge blob was recorded. |
+| L13.9 | Authorization | Server-derived local Administrator decision | `NOT RUN` | No authenticated session was available, so no live authorization claim is made. Existing server-side implementation and contract tests remain separate evidence. |
+| L13.10 | Agent liveness | `/health/live` and `/health/ready` | `PASS` | Both returned HTTP `200`, JSON status `live`/`ready`, and HTTP/1.1. |
+| L13.11 | Agent reads | Session, device, configuration, and service routes | `BLOCKED` | Exact-origin Negotiate probes reached the Agent but returned `401` for each protected read because SSPI credentials were unavailable. No raw identity, SID, machine name, service name, path, or response header was retained. |
+| L13.12 | Mutation token | Issue/binding/replay/expiry | `NOT RUN` | No token was issued because authentication was blocked. Existing Agent contract tests cover operation, target, method/path, one-use, replay, and expiry semantics. |
+| L13.13 | Typed service control | Agent dispatch and typed outcome | `NOT RUN` | No HTTP mutation was sent; the direct SCM harness check below is explicitly not represented as Agent dispatch evidence. |
+
+### Disposable SCM harness check (not Agent dispatch)
+
+Only the newly provisioned disposable Testing target was used. This was a
+bounded independent SCM health check to prove that the harness itself has
+predictable lifecycle behavior; it does not substitute for the blocked
+authenticated Agent route.
+
+| Step | Result |
+|---|---|
+| Initial state | `Running` |
+| Restart | `Running` |
+| Stop | `Stopped` |
+| Start for continued Testing readiness | `Running` |
+| Automatic retry after `OutcomeUnknown` | Not used; no `OutcomeUnknown` occurred |
+
+### Chrome and Edge evidence
+
+| Browser | Installed build observed | Browser control surface | Result |
+|---|---|---|---|
+| Chrome | `151.0.7922.109` | No connected in-app/extension browser instance | `NOT RUN` |
+| Edge | `151.0.4129.78` | No connected in-app/extension browser instance | `NOT RUN` |
+
+The browser runtime reported zero connected instances. Consequently, secure
+context, LNA permission/policy behavior, browser Negotiate back-connection,
+Angular workspace reads, confirmation UI, mutation UI, and post-action refresh
+remain unproven. No browser managed policy or temporary browser bypass was
+applied. The next safe action is to run the browser portion from a connected
+Chrome/Edge session while retaining the current Testing prerequisites, then
+authenticate through the fixed direct Agent origin.
+
+### Cleanup state
+
+The Testing prerequisites remain installed for the owner’s connected-browser
+continuation: the Agent and disposable service are `Running`, the exact host
+entry and certificate are owned by the local INT-13P state, and the original
+Agent configuration/ACL rollback materials remain local and untracked. No
+Production or customer service was contacted or controlled.

@@ -132,10 +132,41 @@ Infrastructure 60, Agent integration 114, and frontend 345 tests passed, with
 the Agent OpenAPI/client generation and frontend production build passing. No
 live or Production service was controlled; disposable test fakes were used.
 INT-13 representative-device/live operational evidence has been executed and
-is recorded as `BLOCKED` on representative-device live prerequisites (DNS,
-certificate, Agent listener, and disposable Testing service); see
+is recorded as `PARTIALLY COMPLETED`: INT-13P provisioned the representative
+Testing DNS, certificate, Agent listener, service-owned allow-list extension,
+and disposable Testing service, while protected Negotiate/browser evidence is
+blocked by the current execution context; see
 [POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md](evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md).
 INT-13 remains open.
+
+### INT-13P Testing provisioning and live-proof boundary
+
+The repository now contains a bounded, idempotent, reversible Testing-only
+provisioning pair:
+
+- `scripts/setup-pos-agent-testing.ps1` — elevated preflight, exact loopback
+  host entry, per-device LocalMachine certificate/trust, stable Release Agent
+  publish/service installation, one dedicated disposable Testing service, and
+  server-owned allow-list configuration.
+- `scripts/remove-pos-agent-testing.ps1` — ownership-checked service removal,
+  published-file cleanup, certificate/trust cleanup, exact host-entry removal,
+  and byte-for-byte restoration of any pre-existing Agent configuration/ACL
+  adopted by the Testing run.
+
+Both scripts require an explicit Testing acknowledgement and support `-WhatIf`.
+They refuse unowned service, certificate, host, configuration, executable, or
+state conflicts. The disposable service is a separate tool project and is not
+part of Support Hub or Agent production output. It is included in the POS
+solution only so the bounded harness is build-validated; setup publishes it to
+a machine-local Testing directory outside the repository.
+
+The current run proves implementation/deployment prerequisites and direct
+anonymous transport behavior. It does not claim live protected behavior from
+fakes or from the independent SCM harness. Protected Agent reads, server-side
+Administrator authorization, mutation token issuance/binding/replay/expiry,
+Agent-dispatched typed outcomes, and Chrome/Edge LNA/Negotiate/UI behavior
+remain open until a connected browser session with a usable Windows Negotiate
+credential context completes the fixed direct path.
 
 ## Canonical architecture seam
 
