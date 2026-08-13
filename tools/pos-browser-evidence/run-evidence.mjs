@@ -282,7 +282,14 @@ async function run() {
       throw new HarnessError('support_hub_surface_unavailable', 'The POS Maintenance surface did not render at the exact Support Hub origin.');
     }
 
+    const startWait = Date.now();
+    while (Date.now() - startWait < options.timeoutMs) {
+      const allPathsReceived = EXPECTED_PROTECTED_PATHS.every(pathName => responses.has(pathName));
+      if (allPathsReceived) break;
+      await page.waitForTimeout(200);
+    }
     await page.waitForTimeout(500);
+
     const protectedReads = {};
     for (const protectedPath of EXPECTED_PROTECTED_PATHS) {
       const response = responses.get(protectedPath);
@@ -293,6 +300,13 @@ async function run() {
       status: protectedReads['/api/v1/session'].status === 200 ? 'authenticated' : 'not-confirmed',
       challengeResponses
     };
+
+    try {
+      await page.waitForSelector('text="Local Administrator authorized"', { timeout: 5000 });
+    } catch {
+      // let authorization check below capture actual count
+    }
+
     evidence.checks.authorization = {
       authenticatedLabel: await page.getByText('Windows authenticated', { exact: true }).count() > 0,
       administratorAuthorizedLabel: await page.getByText('Local Administrator authorized', { exact: true }).count() > 0
@@ -366,9 +380,10 @@ async function executeDisposableServiceAction(page, agentOrigin, serviceId, resp
       body: JSON.stringify({ action, idempotencyKey: `support-int13c-${crypto.randomUUID()}` })
     });
     let outcome = 'notAttempted';
+    const validOutcomes = new Set(['accepted', 'failed', 'outcomeUnknown', 'notAttempted']);
     if (actionResponse.ok) {
       const body = await actionResponse.json();
-      if (ACTION_OUTCOMES.has(body?.outcome)) outcome = body.outcome;
+      if (validOutcomes.has(body?.outcome)) outcome = body.outcome;
     }
     return { status: outcome, serviceReadStatus: servicesResponse.status, tokenStatus: tokenResponse.status, actionStatus: actionResponse.status, action };
   }, { origin: agentOrigin, targetId: serviceId });

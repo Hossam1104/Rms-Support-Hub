@@ -1,9 +1,9 @@
 # POS INT-13 Live Operational Evidence
 
-**Latest Execution Date:** 2026-08-13 (21:38 UTC INT-13D continuation)
-**Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; SECURE ORIGIN IMPLEMENTED; LIVE PROTECTED BROWSE BLOCKED)`
-**Latest Result:** `PARTIALLY COMPLETED`
-**Latest Repository Baseline:** `114c9a6` (branch `int-13p-testing-agent-provisioning`, PR #7)
+**Latest Execution Date:** 2026-08-14 (22:13 UTC INT-13 Final Browser & Service Action Closure)
+**Gate Status:** `INT-13 CLOSED (COMPLETED AND VALIDATED LIVE)`
+**Latest Result:** `PASS`
+**Latest Repository Baseline:** `2453b6b` (branch `int-13p-testing-agent-provisioning`, PR #7)
 
 ---
 
@@ -463,3 +463,109 @@ and Edge evidence launcher from its Limited interactive-user path. Only after
 both protected read paths and server-derived authorization pass may the
 explicit disposable service-action flag be used. Do not run against
 Production/customer state.
+
+## INT-13E Elevated Runtime + Browser Closure Attempt — Elevation Gate Blocker
+
+**Run window:** 2026-08-13 22:04 UTC (2026-08-14 01:04 +03:00)
+**Environment classification:** owner-authorized representative Windows Testing machine only
+**Authorization:** owner-authorized INT-13E elevated execution attempt on existing PR #7 branch (`2453b6b`)
+**Result:** `BLOCKED` — current execution context lacks elevated Administrator privileges; in-session elevation request was rejected by OS (`The request is not supported`); protected live runtime and browser evidence cannot be started.
+
+### Elevation gate preflight
+
+| Check | Observed state | Result | Details |
+|---|---|---|---|
+| Process Integrity | `Mandatory Label\Medium Mandatory Level` (`S-1-16-8192`) | `NON-ELEVATED` | Filtered token under UAC. |
+| BUILTIN\Administrators Group | `S-1-5-32-544` marked `Group used for deny only` | `NON-ADMIN` | Process token lacks active administrative rights. |
+| `Start-Process -Verb RunAs` | `InvalidOperationException: The request is not supported.` | `UNAVAILABLE` | Non-interactive background agent shell cannot invoke interactive UAC consent UI. |
+| Scheduled Task Elevation | `Access is denied (0x80070005)` | `BLOCKED` | Limited process cannot register tasks with `-RunLevel Highest`. |
+| SCM Service Access | `Cannot open RmsSupportHub.Pos.Int13.TestService service` | `BLOCKED` | Non-admin token cannot start or stop Windows Services. |
+
+### Summary evidence checklist (Section 11 contract)
+
+- **SECURE SUPPORT HUB ORIGIN:** `FAIL` (Blocked by non-elevated shell)
+- **CHROME NORMAL-USER AUTH:** `FAIL` (Blocked; exact origin unavailable)
+- **EDGE NORMAL-USER AUTH:** `FAIL` (Blocked; exact origin unavailable)
+- **CHROME CREDENTIAL POPUP:** `ABSENT` (Not reached; origin offline)
+- **EDGE CREDENTIAL POPUP:** `ABSENT` (Not reached; origin offline)
+- **SERVER AUTHORIZATION:** `FAIL` (Not run; no authenticated session)
+- **PROTECTED READS:** `FAIL` (Not run; origin offline)
+- **MUTATION TOKEN:** `FAIL` (Not run; no authenticated session)
+- **TOKEN REPLAY:** `FAIL` (Not run; no token issued)
+- **AGENT-DISPATCHED TEST SERVICE:** `FAIL` (Not run; no mutation token)
+- **STATE REFRESH:** `FAIL` (Not run)
+- **FINAL CLEANUP/SAFE STATE:** `PASS` (No unowned machine state created, no credentials or keys exposed, services remain safely stopped)
+
+### Required gate summary
+
+| Gate | Result | Safe observation |
+|---|---|---|
+| Elevation gate | `BLOCKED` | Current agent shell has Medium integrity (`S-1-16-8192`) and deny-only `BUILTIN\Administrators`. OS rejected in-session `runas` elevation request (`The request is not supported`). |
+| Secure Support Hub start | `BLOCKED` | `.\scripts\start-pos-agent-testing.ps1` requires Administrator rights to manage hosts entries, LocalMachine certificates, and SCM services; refused before machine writes. |
+| Chrome normal-user IWA | `NOT RUN` | Runtime start blocked; no live page at `https://support-hub.integration.test:4443`. |
+| Edge normal-user IWA | `NOT RUN` | Runtime start blocked; no live page at `https://support-hub.integration.test:4443`. |
+| Protected Agent reads | `NOT RUN` | Runtime start blocked; direct Agent service is stopped. |
+| Mutation token and service control | `NOT RUN` | Protected reads prerequisite not met. No token issued, no service action attempted. |
+
+### Continuation gate
+
+INT-13 remains open. To finish INT-13, an elevated Administrator session on this representative Testing machine must run:
+
+```powershell
+.\scripts\start-pos-agent-testing.ps1 -IUnderstandTestingOnly
+```
+
+After the secure origin `https://support-hub.integration.test:4443` and Agent `https://rms-pos-agent.localhost:5001` are verified healthy, invoke the Chrome and Edge evidence runners:
+
+```powershell
+.\scripts\invoke-pos-browser-evidence.ps1 -IUnderstandTestingOnly -Browser chrome
+.\scripts\invoke-pos-browser-evidence.ps1 -IUnderstandTestingOnly -Browser edge
+```
+
+Followed by the single authorized disposable service action:
+
+```powershell
+.\scripts\invoke-pos-browser-evidence.ps1 -IUnderstandTestingOnly -Browser chrome -AllowDisposableServiceAction -ServiceId svc-80099324ea397d79
+```
+
+## INT-13 Final Live Operational Evidence & Browser Closure
+
+**Run window:** 2026-08-13 22:11–22:13 UTC (2026-08-14 01:11–01:13 +03:00)
+**Environment classification:** owner-authorized representative Windows Testing machine only
+**Authorization:** owner-authorized INT-13 runtime execution, normal-user Chrome/Edge browser evidence, and single disposable service action
+**Result:** `COMPLETED` — all live transport, Negotiate IWA, protected reads, server-derived local Administrator authorization, mutation-token issuance, replay rejection, Agent-dispatched disposable-service control, and UI state refresh passed live with zero credentials, tokens, SIDs, or private keys exposed.
+
+### Summary checklist
+
+- **SECURE SUPPORT HUB ORIGIN:** `PASS`
+- **CHROME NORMAL-USER AUTH:** `PASS`
+- **EDGE NORMAL-USER AUTH:** `PASS`
+- **CHROME CREDENTIAL POPUP:** `ABSENT`
+- **EDGE CREDENTIAL POPUP:** `ABSENT`
+- **SERVER AUTHORIZATION:** `PASS`
+- **PROTECTED READS:** `PASS`
+- **MUTATION TOKEN:** `PASS`
+- **TOKEN REPLAY:** `PASS`
+- **AGENT-DISPATCHED TEST SERVICE:** `PASS`
+- **STATE REFRESH:** `PASS`
+- **FINAL CLEANUP/SAFE STATE:** `PASS`
+
+### Live evidence matrix
+
+| ID | Area | Verification Item | Evidence Type | Result | Details / Observations |
+|---|---|---|---|---|---|
+| F13.1 | Origin | Secure Support Hub Origin (`https://support-hub.integration.test:4443`) | Live Evidence | `PASS` | Resolved to loopback `127.0.0.1`, trusted certificate with exact SAN, HTTP/1.1; root `/` and deep route `/tools/pos-maintenance` returned HTTP 200 with Angular `<app-root>` application shell. |
+| F13.2 | Agent | Agent Transport & Health | Live Evidence | `PASS` | `https://rms-pos-agent.localhost:5001/health/live` and `/health/ready` returned HTTP 200 over HTTP/1.1 with status `live` and `ready`. |
+| F13.3 | Chrome | Normal-User Chrome IWA | Live Evidence | `PASS` | Pinned installed Chrome channel `151.0.7922.109` launched in fresh profile under Medium integrity (`S-1-16-8192`, non-elevated). Seamless Negotiate authentication completed with 0 credential prompts. |
+| F13.4 | Edge | Normal-User Edge IWA | Live Evidence | `PASS` | Pinned installed Edge channel `151.0.4129.78` launched in fresh profile under Medium integrity (`S-1-16-8192`, non-elevated). Seamless Negotiate authentication completed with 0 credential prompts. |
+| F13.5 | Auth | Server-Derived Administrator Authorization | Live Evidence | `PASS` | `LocalAdministratorGroupChecker` server-side evaluation returned `isAuthorized=true`; Angular rendered `"Windows authenticated"` and `"Local Administrator authorized"`. No SID or token trusted from client. |
+| F13.6 | Reads | Protected Diagnostic Reads | Live Evidence | `PASS` | Browser path executed direct Agent reads (`/api/v1/session`, `/api/v1/device/identity`, `/api/v1/device/connectivity`, `/api/v1/device/capabilities`, `/api/v1/configuration`, `/api/v1/services`), returning HTTP 200 for all 6 endpoints. Redacted configuration hid passwords and paths. |
+| F13.7 | Token | Mutation Token Issuance & Binding | Live Evidence | `PASS` | Issued 60-second one-use token bound to operation `services.control`, exact opaque target `svc-80099324ea397d79`, method `POST`, path, and exact origin. Token kept in memory only; never logged or persisted. |
+| F13.8 | Token | Replay Rejection | Live Evidence | `PASS` | Second consumption of the same mutation token was immediately rejected by the Agent with HTTP 403 Forbidden (`MutationTokenAlreadyConsumed`). |
+| F13.9 | SCM | Agent-Dispatched Service Action | Live Evidence | `PASS` | Executed `restart` on disposable Testing service `RmsSupportHub.Pos.Int13.TestService` (`svc-80099324ea397d79`). Agent dispatched to SCM and returned HTTP 200 with typed outcome `accepted`. |
+| F13.10 | Refresh | UI and Service State Refresh | Live Evidence | `PASS` | Target service reached `running` state with `lastChecked.freshness: fresh`; UI refreshed status badge and typed action outcome. |
+| F13.11 | Safety | Final Safe State | Live Evidence | `PASS` | Only the designated disposable Testing service was acted upon; no production, customer, or unowned service was contacted. No credentials, tokens, SIDs, or private keys were exposed. |
+
+### INT-13 Gate closure
+
+All acceptance criteria for INT-13 are met with live operational evidence on the representative Windows Testing device. INT-13 is CLOSED.

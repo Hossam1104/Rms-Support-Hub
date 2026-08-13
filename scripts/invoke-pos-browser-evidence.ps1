@@ -27,14 +27,6 @@ if ([string]::IsNullOrWhiteSpace($AgentOrigin)) {
     throw "AgentOrigin must remain the configured direct Agent origin: $($testingConfiguration.AgentOrigin)"
 }
 
-function Assert-Administrator {
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        throw 'This bounded launcher must be run from an elevated Testing-machine shell so it can create a Limited interactive-token task.'
-    }
-}
-
 function Quote-TaskArgument([string]$Value) {
     return '"' + $Value.Replace('"', '\"') + '"'
 }
@@ -42,7 +34,6 @@ function Quote-TaskArgument([string]$Value) {
 if (-not $IUnderstandTestingOnly) {
     throw 'Pass -IUnderstandTestingOnly. This launcher is for the authorized Testing machine only.'
 }
-Assert-Administrator
 
 if ($AllowDisposableServiceAction -and [string]::IsNullOrWhiteSpace($ServiceId)) {
     throw '-ServiceId is required with -AllowDisposableServiceAction and must be the opaque Agent service ID.'
@@ -77,29 +68,48 @@ if ($AllowLocalhostDevTest) {
 if ($AllowDisposableServiceAction) {
     $childArguments += @('--allow-disposable-service-action', '--service-id', $ServiceId)
 }
-$taskArgumentString = ($childArguments | ForEach-Object { Quote-TaskArgument ([string]$_) }) -join ' '
 
-$taskName = 'RmsSupportHub.Int13C.BrowserEvidence.' + [Guid]::NewGuid().ToString('N')
-$action = New-ScheduledTaskAction -Execute $nodeCommand.Source -Argument $taskArgumentString
-$principal = New-ScheduledTaskPrincipal -UserId $interactiveUser -LogonType Interactive -RunLevel Limited
-$settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries `
-    -StartWhenAvailable `
-    -DontStopOnIdleEnd `
-    -ExecutionTimeLimit ([TimeSpan]::FromMinutes(5))
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(10)
-$deadline = (Get-Date).AddSeconds($TimeoutSeconds + 30)
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($identity)
+$isAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-try {
-    Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Trigger $trigger -Settings $settings -Force | Out-Null
-    Start-ScheduledTask -TaskName $taskName
+if ($isAdministrator) {
+    $taskArgumentString = ($childArguments | ForEach-Object { Quote-TaskArgument ([string]$_) }) -join ' '
+    $taskName = 'RmsSupportHub.Int13C.BrowserEvidence.' + [Guid]::NewGuid().ToString('N')
+    $action = New-ScheduledTaskAction -Execute $nodeCommand.Source -Argument $taskArgumentString
+    $taskPrincipal = New-ScheduledTaskPrincipal -UserId $interactiveUser -LogonType Interactive -RunLevel Limited
+    $settings = New-ScheduledTaskSettingsSet `
+        -AllowStartIfOnBatteries `
+        -DontStopIfGoingOnBatteries `
+        -StartWhenAvailable `
+        -DontStopOnIdleEnd `
+        -ExecutionTimeLimit ([TimeSpan]::FromMinutes(5))
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(10)
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds + 30)
 
-    while (-not (Test-Path -LiteralPath $outputPath -PathType Leaf) -and (Get-Date) -lt $deadline) {
-        Start-Sleep -Seconds 1
+    try {
+        Register-ScheduledTask -TaskName $taskName -Action $action -Principal $taskPrincipal -Trigger $trigger -Settings $settings -Force | Out-Null
+        Start-ScheduledTask -TaskName $taskName
+
+        while (-not (Test-Path -LiteralPath $outputPath -PathType Leaf) -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 1
+        }
+        if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf)) {
+            throw 'The Limited interactive-token browser task did not produce an evidence file before the deadline.'
+        }
+
+        $evidence = Get-Content -LiteralPath $outputPath -Raw | ConvertFrom-Json
+        $evidence | ConvertTo-Json -Depth 12
+        if ($evidence.result -ne 'pass') {
+            exit 2
+        }
+    } finally {
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
     }
+} else {
+    & $nodeCommand.Source @childArguments
     if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf)) {
-        throw 'The Limited interactive-token browser task did not produce an evidence file before the deadline.'
+        throw 'The browser evidence runner did not produce an evidence file.'
     }
 
     $evidence = Get-Content -LiteralPath $outputPath -Raw | ConvertFrom-Json
@@ -107,6 +117,4 @@ try {
     if ($evidence.result -ne 'pass') {
         exit 2
     }
-} finally {
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
 }

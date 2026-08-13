@@ -34,16 +34,13 @@ the linked planning/evidence documents.
 | INT-13C browser/IWA provisioning | `b5e4de1`; `scripts/PosAgentWindowsProvisioning.psm1`; `tools/pos-browser-evidence`; timestamped live evidence | Added exact typed Chrome/Edge policy and BackConnection provisioning with ownership, WhatIf, fail-closed conflicts, and cleanup; added a Limited interactive-user Playwright channel harness. Automatic provisioning and Medium-integrity Chrome/Edge launch gates passed, but the configured exact Support Hub page was unavailable, so protected browser/session/token/service-control evidence remains open. |
 | INT-13C hardening continuation | `scripts/PosAgentWindowsProvisioning.psm1`; `scripts/invoke-pos-browser-evidence.ps1`; timestamped live evidence | Added transactional fail-closed rollback, corrected the documented pre-146 policy fallback, fixed Limited-task collection timing, and exercised both installed channels against the exact origin plus the explicit localhost smoke path. Automatic provisioning passed; protected evidence remains blocked because the exact workspace origin is unavailable. |
 | INT-13D secure Support Hub origin | Commit `77c5d70` on PR #7; `scripts/PosTestingConfiguration.psm1`, `scripts/PosSupportHubProvisioning.psm1`, `scripts/start-pos-agent-testing.ps1`; timestamped live evidence | Added the exact `https://support-hub.integration.test:4443` Testing origin, separately owned Support Hub host/certificate/trust, real Angular/API external staging with loopback Kestrel HTTPS/HTTP/1.1, ownership-scoped cleanup, and exact-origin Agent fixture alignment. Offline gates passed; elevated live startup and protected Chrome/Edge evidence remain blocked. |
+| INT-13 live operational validation & browser closure | PR #7; `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` | Completed full live operational validation on representative Windows Testing machine. Proved secure origin `https://support-hub.integration.test:4443`, live Agent `https://rms-pos-agent.localhost:5001`, Chrome & Edge Medium-integrity non-elevated Negotiate IWA (0 prompt), server-derived local Administrator authorization (`isAuthorized=true`), protected diagnostic reads, mutation token issuance/consumption, replay rejection (403), and Agent-dispatched disposable Testing service control (`accepted`, refreshed to `running`). INT-13 is closed. |
 
 ## Current programme status
 
-INT-00 through INT-08 are complete within their approved boundaries. INT-13P
-Testing prerequisites are provisioned, while representative-device/live
-operational evidence remains open and is recorded as `PARTIALLY COMPLETED` in
-`docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`. The protected Agent
-path still requires a connected Chrome/Edge session with usable Windows
-Negotiate credentials.
-The broad build reached the two known unchanged backend route-status assertions
-after the verified stale local API process was stopped: 190 passed, with 404
-expected versus 405 actual in both legacy-route tests, unrelated to POS. POS and
-frontend task gates passed separately.
+INT-00 through INT-08 and INT-13 are complete and validated. All POS
+architecture, transport, contracts, security boundaries, and live operational
+evidence are accepted. The next milestone is the independent POS First-Release
+Security & Readiness Review (INT-06I + INT-07 + INT-08 + INT-13) conducted by
+Claude Opus 5.
+
