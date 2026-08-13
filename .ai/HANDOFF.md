@@ -2,7 +2,7 @@
 
 - **Status:** Blocked
 - **Gate:** INT-13D secure Support Hub origin and final protected browse closure on PR #7 branch `int-13p-testing-agent-provisioning`.
-- **Checkpoint:** implementation `77c5d70`; current documentation head `b967f4f`; PR #7 remains open pending live evidence.
+- **Checkpoint:** implementation `77c5d70`; current documentation head `114c9a6`; PR #7 remains open pending live evidence.
 - **Completed:** Exact Testing origin configuration; separate loopback host and certificate ownership; real Angular/API external staging and Kestrel startup path; ownership-scoped cleanup; exact-origin browser launcher integration.
 - **Validation:** Focused Pester `22/22`; POS Release build/tests and WinUI publish passed; frontend `56/56` files / `345/345` tests and production build passed; backend Release build passed; PowerShell/Node syntax and `git diff --check` passed; PR #7 CI passed all five lanes.
 - **Known baseline:** Repository-wide `scripts/build.ps1` remains `190/192` with two unchanged 404-vs-405 backend assertions; no task-scoped source defect was identified there.
