@@ -3,7 +3,7 @@
 **Latest Execution Date:** 2026-08-13 (21:38 UTC INT-13D continuation)
 **Gate Status:** `INT-13 OPEN (PARTIALLY COMPLETED; SECURE ORIGIN IMPLEMENTED; LIVE PROTECTED BROWSE BLOCKED)`
 **Latest Result:** `PARTIALLY COMPLETED`
-**Latest Repository Baseline:** `77c5d70` (branch `int-13p-testing-agent-provisioning`, PR #7)
+**Latest Repository Baseline:** `64e2191` (branch `int-13p-testing-agent-provisioning`, PR #7)
 
 ---
 

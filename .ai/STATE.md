@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Updated:** 2026-08-14
-- **Branch:** `int-13p-testing-agent-provisioning` (INT-13D follow-up on PR #7; current head `77c5d70`)
+- **Branch:** `int-13p-testing-agent-provisioning` (INT-13D follow-up on PR #7; current head `64e2191`)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
 - **Programme:** INT-00 through INT-07 complete/accepted; INT-08 complete/validated; INT-13P Testing prerequisites provisioned; INT-13 remains open.
 - **Current gate:** INT-06I independent security review PASS; PR #3 merged at `c8706745a9ee8b423b4813badf0ca863b37a5d0e`; INT-07 PR #4 merged at `3a3d58b2406b8e80954fac0174bbdc3b623962f2`; INT-08 PR #5 merged at `3907bd024acda7fa3af6e1b3ade1502fa4aabce6`. INT-08 adds only the typed target-bound service-control route; no general API relay or generic POS mutation surface exists.
