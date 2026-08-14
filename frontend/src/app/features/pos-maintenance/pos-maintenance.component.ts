@@ -35,6 +35,12 @@ type RmsDatabaseTarget = components['schemas']['RmsDatabaseTarget'];
 type RmsDatabaseWorkspace = components['schemas']['RmsDatabaseWorkspaceDto'];
 type RmsDatabaseOperation = components['schemas']['RmsDatabaseOperationDto'];
 type RmsDatabaseArtifact = components['schemas']['RmsDatabaseArtifactDto'];
+type BranchCatalogEntry = components['schemas']['BranchCatalogEntryDto'];
+type DownloaderOperation = components['schemas']['DownloaderOperationDto'];
+type DownloaderBranchOutcome = components['schemas']['DownloaderBranchOutcomeDto'];
+type CleanupPreview = components['schemas']['CleanupPreviewDto'];
+type BranchResetPreview = components['schemas']['BranchResetPreviewDto'];
+type MaintenanceOperation = components['schemas']['MaintenanceOperationDto'];
 type AgentState = 'loading' | 'reachable' | 'unreachable';
 type AuthState = 'loading' | 'authenticated' | 'authentication-required' | 'unavailable';
 type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: PosAgentTransportError };
@@ -43,6 +49,11 @@ type PendingDatabaseRestore = Readonly<{
   target: RmsDatabaseTarget;
   artifactId: string;
   displayName: string;
+  confirmationText: string;
+}>;
+type PendingMaintenanceAction = Readonly<{
+  mode: 'cleanup' | 'branch-reset';
+  challengeId: string;
   confirmationText: string;
 }>;
 
@@ -432,6 +443,90 @@ type PendingDatabaseRestore = Readonly<{
         </ui-card>
       </section>
 
+      <section class="operator-rail" aria-label="Downloader and maintenance operations">
+        <div class="dashboard-heading operator-rail__heading">
+          <div>
+            <p class="eyebrow">Operator safety rail</p>
+            <h2>Downloader and maintenance</h2>
+          </div>
+          <p class="dashboard-heading__copy">Server-owned targets, short-lived confirmation, and retained outcome evidence keep high-impact POS work reviewable.</p>
+        </div>
+        <div class="operator-grid">
+          <ui-card variant="raised" class="workspace-card operator-card operator-card--downloader">
+            <div uiCardHeader class="card-heading card-heading--split">
+              <div class="card-heading__copy"><p class="eyebrow">Artifact conveyor</p><h2>Download branch backups</h2></div>
+              <i class="bi bi-cloud-arrow-down card-heading__mark" aria-hidden="true"></i>
+            </div>
+            @if (downloaderBranches(); as branches) {
+              @if (branches.length) {
+                <div class="branch-picker" role="group" aria-label="Server-approved downloader branches">
+                  @for (branch of branches; track branch.branchCode) {
+                    <label class="branch-chip">
+                      <input type="checkbox" [checked]="isBranchSelected(branch.branchCode)" (change)="toggleBranch(branch.branchCode)">
+                      <span>{{ branch.branchCode }}</span>
+                    </label>
+                  }
+                </div>
+                <ui-button variant="secondary" size="sm" icon="bi-cloud-arrow-down" [loading]="submittingDownloader()" [disabled]="!canOperate() || !selectedBranches().length || submittingDownloader()" (pressed)="startDownloader()">Download selected</ui-button>
+              } @else {
+                <app-empty-state icon="bi-cloud-slash" title="No approved branches" description="The Agent has no server-approved downloader branch selection." />
+              }
+            } @else {
+              <app-empty-state icon="bi-cloud-slash" title="Downloader is unavailable" [description]="readError('downloader')" />
+            }
+            @if (downloaderOperation(); as operation) {
+              <div class="operation-ledger" [class.operation-ledger--danger]="operation.outcome === 'outcomeUnknown' || operation.outcome === 'failed'" role="status">
+                <div class="operation-ledger__heading"><strong>{{ downloaderOperationLabel(operation) }}</strong><span>{{ operation.progressPercent }}%</span></div>
+                <div class="progress-track" role="progressbar" [attr.aria-valuenow]="operation.progressPercent" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="operation.stage"><span [style.width.%]="numberValue(operation.progressPercent)"></span></div>
+                <p>{{ operation.detail }}</p>
+                @if (operation.downloaderOutcome; as outcome) {
+                  <div class="branch-results" role="list" aria-label="Downloader branch results">
+                    @for (branch of outcome.branches; track branch.branchCode) {
+                      <div class="branch-result" role="listitem"><span><strong>{{ branch.branchCode }}</strong> · {{ downloaderBranchLabel(branch.state) }}</span>@if (branch.artifactId; as artifactId) {<button type="button" class="artifact-link" (click)="downloadArtifact(artifactId, branch.branchCode + '.zip')">Download artifact</button>}</div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+            <p class="boundary-copy"><i class="bi bi-lock" aria-hidden="true"></i> Remote SMB paths and credentials stay inside the Agent; the browser receives only branch state and opaque artifacts.</p>
+          </ui-card>
+
+          <ui-card variant="raised" class="workspace-card operator-card operator-card--maintenance">
+            <div uiCardHeader class="card-heading card-heading--split">
+              <div class="card-heading__copy"><p class="eyebrow">Controlled cleanup</p><h2>Preview before mutation</h2></div>
+              <i class="bi bi-shield-check card-heading__mark" aria-hidden="true"></i>
+            </div>
+            <div class="maintenance-actions" role="group" aria-label="Maintenance previews">
+              <ui-button variant="secondary" size="sm" icon="bi-search" [loading]="previewingMaintenance() === 'cleanup'" [disabled]="!canOperate() || previewingMaintenance() !== null" (pressed)="previewCleanup()">Preview cleanup</ui-button>
+              <ui-button variant="secondary" size="sm" icon="bi-database-x" [loading]="previewingMaintenance() === 'branch-reset'" [disabled]="!canOperate() || previewingMaintenance() !== null" (pressed)="previewBranchReset()">Preview branch reset</ui-button>
+            </div>
+            @if (cleanupPreview(); as preview) {
+              <div class="preview-ledger" [class.preview-ledger--danger]="!preview.ready">
+                <div class="preview-ledger__heading"><strong>Cleanup preview</strong><app-status-badge [label]="preview.ready ? 'Ready' : 'Rejected'" [variant]="preview.ready ? 'warning' : 'danger'" role="status"></app-status-badge></div>
+                <p>{{ preview.ready ? preview.pathsToDelete.length + ' logical target(s) will be reviewed by the Agent.' : 'The Agent rejected this preview; no mutation challenge is available.' }}</p>
+                @if (preview.ready) { <ui-button variant="danger" size="sm" icon="bi-trash3" [disabled]="!canOperate()" (pressed)="requestMaintenanceExecution('cleanup')">Continue to cleanup</ui-button> }
+              </div>
+            }
+            @if (branchResetPreview(); as preview) {
+              <div class="preview-ledger" [class.preview-ledger--danger]="!preview.ready">
+                <div class="preview-ledger__heading"><strong>Branch reset preview</strong><app-status-badge [label]="preview.ready ? 'Ready' : 'Rejected'" [variant]="preview.ready ? 'warning' : 'danger'" role="status"></app-status-badge></div>
+                <p>{{ preview.ready ? preview.affectedTables.length + ' approved table scope(s) for ' + preview.branchCode + '.' : 'The Agent rejected this preview; no mutation challenge is available.' }}</p>
+                @if (preview.ready) { <ui-button variant="danger" size="sm" icon="bi-database-x" [disabled]="!canOperate()" (pressed)="requestMaintenanceExecution('branch-reset')">Continue to reset</ui-button> }
+              </div>
+            }
+            @if (maintenanceOperation(); as operation) {
+              <div class="operation-ledger" [class.operation-ledger--danger]="operation.outcome === 'outcomeUnknown' || operation.outcome === 'failed'" role="status">
+                <div class="operation-ledger__heading"><strong>{{ maintenanceOperationLabel(operation) }}</strong><span>{{ operation.progressPercent }}%</span></div>
+                <div class="progress-track" role="progressbar" [attr.aria-valuenow]="operation.progressPercent" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="operation.stage"><span [style.width.%]="numberValue(operation.progressPercent)"></span></div>
+                <p>{{ operation.detail }}</p>
+                @if (operation.maintenanceOutcome?.recoveryRequired) { <p class="recovery-note"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Recovery verification is required before retrying.</p> }
+              </div>
+            }
+            <p class="boundary-copy"><i class="bi bi-shield-lock" aria-hidden="true"></i> Every cleanup or reset re-runs server policy and requires an expiring preview challenge plus a one-use mutation token.</p>
+          </ui-card>
+        </div>
+      </section>
+
       <section class="boundary-banner" aria-label="POS Agent mutation boundary">
         <div class="boundary-banner__icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></div>
         <div>
@@ -466,6 +561,21 @@ type PendingDatabaseRestore = Readonly<{
         cancelLabel="Cancel"
         (cancel)="cancelPendingDatabaseAction()"
         (confirm)="executePendingDatabaseRestore($event)">
+      </app-confirm-dialog>
+    }
+    @if (pendingMaintenanceAction(); as pending) {
+      <app-confirm-dialog
+        variant="danger"
+        [title]="pending.mode === 'cleanup' ? 'Confirm cleanup' : 'Confirm branch reset'"
+        [message]="pending.mode === 'cleanup' ? 'The Agent will re-check its configured cleanup policy and may stop approved services before deleting approved targets.' : 'The Agent will re-check the configured branch and approved table scope before resetting data.'"
+        [requireReason]="true"
+        [requiredTypedValue]="pending.confirmationText"
+        reasonLabel="Type the exact Agent confirmation phrase"
+        [reasonPlaceholder]="pending.confirmationText"
+        confirmLabel="Execute"
+        cancelLabel="Cancel"
+        (cancel)="cancelPendingMaintenance()"
+        (confirm)="executePendingMaintenance($event)">
       </app-confirm-dialog>
     }
   `,
@@ -544,9 +654,20 @@ export class PosMaintenanceComponent {
   readonly submittingAction = signal<string | null>(null);
   readonly submittingDatabaseAction = signal<RmsDatabaseTarget | null>(null);
   readonly databaseOperationKind = signal<'backup' | 'restore' | null>(null);
+  readonly downloaderBranches = signal<BranchCatalogEntry[] | null>(null);
+  readonly selectedBranches = signal<string[]>([]);
+  readonly downloaderOperation = signal<DownloaderOperation | null>(null);
+  readonly cleanupPreview = signal<CleanupPreview | null>(null);
+  readonly branchResetPreview = signal<BranchResetPreview | null>(null);
+  readonly maintenanceOperation = signal<MaintenanceOperation | null>(null);
+  readonly pendingMaintenanceAction = signal<PendingMaintenanceAction | null>(null);
+  readonly submittingDownloader = signal(false);
+  readonly previewingMaintenance = signal<'cleanup' | 'branch-reset' | null>(null);
+  readonly submittingMaintenance = signal(false);
 
   private readonly errors = signal<Record<string, string>>({});
   private readonly actionOutcomes = signal<Record<string, ServiceActionResponse>>({});
+  private downloaderSelectionInitialized = false;
 
   constructor() {
     void this.load();
@@ -563,6 +684,193 @@ export class PosMaintenanceComponent {
 
   canControlDatabases(): boolean {
     return this.session()?.isAuthorized === true;
+  }
+
+  canOperate(): boolean {
+    return this.session()?.isAuthorized === true;
+  }
+
+  isBranchSelected(branchCode: string): boolean {
+    return this.selectedBranches().includes(branchCode);
+  }
+
+  toggleBranch(branchCode: string): void {
+    this.selectedBranches.update(selected => selected.includes(branchCode)
+      ? selected.filter(code => code !== branchCode)
+      : [...selected, branchCode]);
+  }
+
+  numberValue(value: number | string): number {
+    const number = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  downloaderOperationLabel(operation: DownloaderOperation): string {
+    switch (operation.outcome) {
+      case 'completed': return 'Downloader completed';
+      case 'failed': return 'Downloader failed';
+      case 'outcomeUnknown': return 'Downloader outcome unknown';
+      case 'accepted': return 'Downloader accepted';
+      default: return 'Downloader not attempted';
+    }
+  }
+
+  downloaderBranchLabel(state: DownloaderBranchOutcome['state']): string {
+    switch (state) {
+      case 'pending': return 'Pending';
+      case 'triggered': return 'Triggered';
+      case 'waiting': return 'Waiting for artifact';
+      case 'detected': return 'Artifact detected';
+      case 'validating': return 'Validating';
+      case 'ready': return 'Ready to download';
+      case 'downloading': return 'Downloading';
+      case 'completed': return 'Completed';
+      case 'timedOut': return 'Timed out';
+      case 'cancelled': return 'Cancelled';
+      case 'failed': return 'Failed';
+    }
+  }
+
+  maintenanceOperationLabel(operation: MaintenanceOperation): string {
+    const action = operation.mode === 'cleanup' ? 'Cleanup' : 'Branch reset';
+    switch (operation.outcome) {
+      case 'completed': return `${action} completed`;
+      case 'failed': return `${action} failed`;
+      case 'outcomeUnknown': return `${action} outcome unknown`;
+      case 'accepted': return `${action} accepted`;
+      default: return `${action} not attempted`;
+    }
+  }
+
+  async startDownloader(): Promise<void> {
+    if (!this.canOperate() || !this.selectedBranches().length || this.submittingDownloader()) return;
+
+    this.submittingDownloader.set(true);
+    try {
+      const issued = await firstValueFrom(
+        this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.downloaderBatchTrigger)
+      );
+      const accepted = await firstValueFrom(
+        this.transport.triggerDownloaderBatch(
+          this.selectedBranches(),
+          this.createIdempotencyKey(),
+          issued.token
+        )
+      );
+      const operation = await this.followDownloaderOperation(accepted);
+      this.downloaderOperation.set(operation);
+      this.notifyDownloaderOutcome(operation);
+      if (operation.outcome === 'completed') {
+        const branches = await this.settle(this.transport.getDownloaderBranches());
+        if (branches.ok) this.applyDownloaderBranches(branches, this.errors());
+      }
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.submittingDownloader.set(false);
+    }
+  }
+
+  async downloadArtifact(artifactId: string, fileName: string): Promise<void> {
+    if (!this.canOperate()) return;
+    try {
+      const artifact = await firstValueFrom(this.transport.downloadArtifact(artifactId));
+      const objectUrl = URL.createObjectURL(artifact);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = this.safeDownloadName(fileName);
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    }
+  }
+
+  async previewCleanup(): Promise<void> {
+    if (!this.canOperate() || this.previewingMaintenance() !== null) return;
+    this.previewingMaintenance.set('cleanup');
+    try {
+      const preview = await firstValueFrom(this.transport.previewCleanup());
+      this.cleanupPreview.set(preview);
+      this.toast.showInfo(preview.ready === true ? 'Cleanup preview is ready for operator confirmation.' : 'Cleanup preview was rejected by the Agent policy.');
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.previewingMaintenance.set(null);
+    }
+  }
+
+  async previewBranchReset(): Promise<void> {
+    if (!this.canOperate() || this.previewingMaintenance() !== null) return;
+    this.previewingMaintenance.set('branch-reset');
+    try {
+      const preview = await firstValueFrom(this.transport.previewBranchReset());
+      this.branchResetPreview.set(preview);
+      this.toast.showInfo(preview.ready === true ? 'Branch reset preview is ready for operator confirmation.' : 'Branch reset preview was rejected by the Agent policy.');
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.previewingMaintenance.set(null);
+    }
+  }
+
+  requestMaintenanceExecution(mode: 'cleanup' | 'branch-reset'): void {
+    if (!this.canOperate() || this.submittingMaintenance()) return;
+    const preview = mode === 'cleanup' ? this.cleanupPreview() : this.branchResetPreview();
+    if (!preview || preview.ready !== true) return;
+    this.pendingMaintenanceAction.set({
+      mode,
+      challengeId: preview.challengeId,
+      confirmationText: preview.confirmationPhrase
+    });
+  }
+
+  cancelPendingMaintenance(): void {
+    this.pendingMaintenanceAction.set(null);
+  }
+
+  async executePendingMaintenance(confirmationText: string): Promise<void> {
+    const pending = this.pendingMaintenanceAction();
+    if (!pending || !this.canOperate() || this.submittingMaintenance()) {
+      this.pendingMaintenanceAction.set(null);
+      return;
+    }
+
+    if (confirmationText !== pending.confirmationText) {
+      this.toast.showError('Type the exact Agent confirmation phrase before continuing.');
+      return;
+    }
+
+    this.pendingMaintenanceAction.set(null);
+    this.submittingMaintenance.set(true);
+    try {
+      const operationId = pending.mode === 'cleanup'
+        ? POS_AGENT_OPERATION_IDS.maintenanceCleanup
+        : POS_AGENT_OPERATION_IDS.maintenanceBranchReset;
+      const issued = await firstValueFrom(this.transport.issueMutationToken(operationId));
+      const accepted = pending.mode === 'cleanup'
+        ? await firstValueFrom(this.transport.executeCleanup(
+          pending.challengeId,
+          confirmationText,
+          this.createIdempotencyKey(),
+          issued.token
+        ))
+        : await firstValueFrom(this.transport.executeBranchReset(
+          pending.challengeId,
+          confirmationText,
+          this.createIdempotencyKey(),
+          issued.token
+        ));
+      const operation = await this.followMaintenanceOperation(accepted);
+      this.maintenanceOperation.set(operation);
+      this.notifyMaintenanceOutcome(operation);
+      if (pending.mode === 'cleanup') this.cleanupPreview.set(null);
+      else this.branchResetPreview.set(null);
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.submittingMaintenance.set(false);
+    }
   }
 
   databaseWorkspace(target: RmsDatabaseTarget): RmsDatabaseWorkspace | null {
@@ -877,6 +1185,46 @@ export class PosMaintenanceComponent {
     return current;
   }
 
+  private async followDownloaderOperation(accepted: DownloaderOperation): Promise<DownloaderOperation> {
+    let current = accepted;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (!['accepted', 'running'].includes(current.state)) return current;
+      await this.delay(250);
+      current = await firstValueFrom(this.transport.getDownloaderOperation(current.operationId));
+    }
+    return current;
+  }
+
+  private async followMaintenanceOperation(accepted: MaintenanceOperation): Promise<MaintenanceOperation> {
+    let current = accepted;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (!['accepted', 'running'].includes(current.state)) return current;
+      await this.delay(250);
+      current = await firstValueFrom(this.transport.getMaintenanceOperation(current.operationId));
+    }
+    return current;
+  }
+
+  private applyDownloaderBranches(
+    result: Settled<BranchCatalogEntry[]>,
+    errors: Record<string, string>
+  ): void {
+    if (!result.ok) {
+      this.downloaderBranches.set(null);
+      errors['downloader'] = this.userFacingError(result.error);
+      return;
+    }
+
+    this.downloaderBranches.set(result.value);
+    const available = new Set(result.value.map(branch => branch.branchCode));
+    if (!this.downloaderSelectionInitialized) {
+      this.selectedBranches.set(result.value.filter(branch => branch.isSelected).map(branch => branch.branchCode));
+      this.downloaderSelectionInitialized = true;
+    } else {
+      this.selectedBranches.update(selected => selected.filter(branchCode => available.has(branchCode)));
+    }
+  }
+
   private applyDatabaseOperation(target: RmsDatabaseTarget, operation: RmsDatabaseOperation): void {
     const current = this.databaseWorkspace(target);
     if (!current) return;
@@ -930,6 +1278,56 @@ export class PosMaintenanceComponent {
 
   private delay(milliseconds: number): Promise<void> {
     return new Promise(resolve => globalThis.setTimeout(resolve, milliseconds));
+  }
+
+  private safeDownloadName(fileName: string): string {
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '');
+    return safeName || 'rms-artifact.zip';
+  }
+
+  private notifyDownloaderOutcome(operation: DownloaderOperation): void {
+    switch (operation.outcome) {
+      case 'completed':
+        this.toast.showSuccess('The downloader completed and published approved artifacts.');
+        return;
+      case 'failed':
+        this.toast.showError('The downloader did not complete the requested branch batch.');
+        return;
+      case 'outcomeUnknown':
+        this.toast.showWarning('The downloader outcome is unknown. Inspect the Agent evidence before deciding whether to retry.');
+        return;
+      default:
+        this.toast.showInfo('The downloader request was not attempted.');
+    }
+  }
+
+  private notifyMaintenanceOutcome(operation: MaintenanceOperation): void {
+    const action = operation.mode === 'cleanup' ? 'Cleanup' : 'Branch reset';
+    switch (operation.outcome) {
+      case 'completed':
+        this.toast.showSuccess(`${action} completed under the Agent policy.`);
+        return;
+      case 'failed':
+        this.toast.showError(`${action} failed; review the retained Agent outcome.`);
+        return;
+      case 'outcomeUnknown':
+        this.toast.showWarning(`${action} outcome is unknown. Verify recovery evidence before retrying.`);
+        return;
+      default:
+        this.toast.showInfo(`${action} was not attempted.`);
+    }
+  }
+
+  private operatorErrorMessage(error: PosAgentTransportError): string {
+    switch (error.kind) {
+      case 'authenticationRequired': return 'Windows authentication is required for this Agent operation.';
+      case 'originRejected': return 'The Support Hub origin is not accepted by the POS Agent.';
+      case 'notAuthorized': return 'The signed-in Windows account is not authorized for this Agent operation.';
+      case 'transportUnavailableOrBlocked': return 'The fixed POS Agent endpoint could not be reached or the browser blocked this operation.';
+      case 'contractMismatch': return 'The POS Agent rejected the typed operation contract.';
+      case 'agentServerError': return 'The POS Agent reported an operation error without exposing implementation details.';
+      default: return 'The POS Agent did not complete the requested operation.';
+    }
   }
 
   componentInstallLabel(rms: RmsDiagnostics): string {
@@ -997,7 +1395,7 @@ export class PosMaintenanceComponent {
     this.refreshing.set(true);
     if (firstLoad) this.loading.set(true);
 
-    const [live, session, identity, connectivity, capabilities, configuration, services, rms, branchDatabase, cashierDatabase] = await Promise.all([
+    const [live, session, identity, connectivity, capabilities, configuration, services, rms, branchDatabase, cashierDatabase, downloaderBranches] = await Promise.all([
       this.settle(this.transport.getLive()),
       this.settle(this.transport.getSession()),
       this.settle(this.transport.getDeviceIdentity()),
@@ -1007,7 +1405,8 @@ export class PosMaintenanceComponent {
       this.settle(this.transport.getServices()),
       this.settle(this.transport.getRmsDiagnostics()),
       this.settle(this.transport.getRmsDatabaseWorkspace('branch')),
-      this.settle(this.transport.getRmsDatabaseWorkspace('cashier'))
+      this.settle(this.transport.getRmsDatabaseWorkspace('cashier')),
+      this.settle(this.transport.getDownloaderBranches())
     ]);
 
     const nextErrors: Record<string, string> = {};
@@ -1021,6 +1420,7 @@ export class PosMaintenanceComponent {
     this.applyValue('rms', rms, this.rmsDiagnostics, nextErrors);
     this.applyValue('branchDatabase', branchDatabase, this.branchDatabaseWorkspace, nextErrors);
     this.applyValue('cashierDatabase', cashierDatabase, this.cashierDatabaseWorkspace, nextErrors);
+    this.applyDownloaderBranches(downloaderBranches, nextErrors);
     this.errors.set(nextErrors);
 
     const failedReads = Object.keys(nextErrors).filter(key => key !== 'agent' && key !== 'session');

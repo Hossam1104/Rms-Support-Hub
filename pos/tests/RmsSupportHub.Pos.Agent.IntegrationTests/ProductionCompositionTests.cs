@@ -57,7 +57,12 @@ public sealed class ProductionCompositionTests
         Assert.Contains("/api/v1/rms/databases/{targetId}/restore", endpoints);
         Assert.Contains("/api/v1/rms/databases/{targetId}/operations/{operationId}", endpoints);
         Assert.Contains("/api/v1/rms/databases/{targetId}/operations/{operationId}/events", endpoints);
-        Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(endpoints, path => path!.Contains("downloader", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("/api/v1/downloads/branches", endpoints);
+        Assert.Contains("/api/v1/downloads/batches", endpoints);
+        Assert.Contains("/api/v1/maintenance/cleanup/preview", endpoints);
+        Assert.Contains("/api/v1/maintenance/cleanup/execute", endpoints);
+        Assert.Contains("/api/v1/maintenance/reset/preview", endpoints);
+        Assert.Contains("/api/v1/maintenance/reset/execute", endpoints);
+        Assert.Contains("/api/v1/artifacts/{artifactId}", endpoints);
     }
 }

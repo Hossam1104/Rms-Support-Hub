@@ -1,62 +1,43 @@
 # Current Project State
 
-- **Updated:** 2026-08-14
-- **Branch:** `main` at `615fda2` (PR #9 merged: `93d6875` review-correction commit on top of `2384414`/`e0a20bc`)
-- **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
-- **Programme:** INT-00 through INT-08 and INT-13 are complete/accepted on the representative Testing machine. Production/customer deployment remains blocked on M-1 managed browser policy and M-2 production certificate lifecycle.
-- **Current feature slice:** RMS installation discovery, sanitized Branch/Cashier diagnostics, endpoint reachability, canonical SCM visibility, typed Agent-owned Branch/Cashier database backup/restore, generated contracts, and Support Hub recovery controls are implemented and merged to `main`. A planner review of PR #9 found and this session fixed three recovery-blocking defects before merge (see below). M-1/M-2 remain open. Next slice is POS Downloader/Deployment+Cleanup/Maintenance (see `TASK.md`).
+- **Updated:** 2026-08-15
+- **Repository:** `Hossam1104/Rms-Support-Hub`; the POS Downloader / Deployment + Cleanup / Maintenance slice is implemented and validated for normal PR delivery.
+- **Programme:** INT-00 through INT-08 and INT-13 are complete/accepted on the representative Testing machine. The completed RMS discovery/diagnostics and typed Branch/Cashier database recovery work remains intact. Production/customer deployment remains blocked on M-1 managed browser policy and M-2 Production certificate lifecycle.
+- **Next executable task:** `TASK.md` is the full `POS Final Functional Integration + UX + Production Packaging` task. Do not execute it as part of the completed Downloader/Maintenance delivery.
 
 ## Application and POS architecture
 
-- Angular 22 SPA and .NET 10 Web API; `/tools/pos-maintenance` is a direct operational workspace.
+- Angular 22 SPA and .NET 10 Web API; `/tools/pos-maintenance` is the direct operational workspace.
 - POS privileged traffic is browser -> `RmsSupportHub.Pos.Agent` over direct loopback HTTPS/HTTP/1.1, never through API/Core/Data. Production uses Negotiate, exact-origin CORS, server-resolved local Built-in Administrators authorization, and fail-closed SID handling.
-- INT-05 owns versioned `/pos/openapi`, generated client, and direct `HttpBackend`; INT-07 owns device/connectivity/configuration/service reads; INT-08 owns typed service control.
-- RMS discovery uses a secret-bearing internal connection-string seam and fixed `DB_NAME()` probes. Raw credentials and connection strings never enter transport or UI models.
-- RMS database recovery exposes only typed `branch` and `cashier` routes. The Agent owns canonical names/service mapping, fixed roots, opaque approved artifact handles, native bounded SQL, exact restore confirmation, target-specific service coordination, one-use target/path-bound tokens, bounded idempotency/concurrency, principal-scoped REST/SSE progress, and safe privileged audit events.
-- No browser-selected database, SQL, filesystem path, service, credential, generic command, or uploaded script crosses the Agent boundary.
-- Restore preflights against SQL Server `master` and the approved backup artifact rather than requiring the target Branch/Cashier database to open, so it works when that database is unavailable/missing (the actual recovery scenario). Backup still requires the live target database and identity confirmation. See `RmsDatabaseDiagnostics.DiagnoseServerAsync`, `RmsSqlDatabaseOperations.InspectBackupAsync`.
-- Approved database backups live in a durable, Agent-owned `RmsDatabaseBackupCatalog` (atomic schema-versioned JSON under the backup root, fail-closed corruption handling, physical revalidation on every read) that survives an Agent restart, fully decoupled from the generic in-memory `ArtifactCatalog` used for browser-download artifacts. Retention is `RmsDatabaseStorageOptions.BackupRetention` (30-day default) plus the existing per-database count cap (`MaximumBackupsPerDatabase`, default 32); a still-valid backup is never deleted by the unrelated 24h `RuntimeRetentionPolicy.ArtifactLifetime`. See ADR-0022 consequences.
+- INT-05 owns versioned `/pos/openapi`, the generated client, and direct `HttpBackend`; INT-07 owns device/connectivity/configuration/service reads; INT-08 owns typed service control and the later POS operation slices.
+- RMS discovery uses a secret-bearing internal connection-string seam and fixed identity probes. Raw credentials and connection strings never enter transport or UI models.
+- RMS database recovery exposes only typed `branch` and `cashier` routes. The Agent owns canonical names/service mapping, fixed roots, the durable approved backup catalog, opaque database-backup artifacts, native bounded SQL, exact restore confirmation, target-specific service coordination, one-use target/path-bound tokens, bounded idempotency/concurrency, principal-scoped REST/SSE progress, and safe privileged audit events.
+- Downloader routes are typed and server-owned: approved branch catalog, batch trigger, principal-scoped REST/SSE operation state, and `/api/v1/artifacts/{artifactId}` for expiring principal-scoped opaque artifact capabilities. `AgentRuntimeSettingsFactory` projects stored configuration and encrypted secrets into the existing `DbDownloadService` seam; remote SMB/API values never cross to Angular.
+- Maintenance routes are typed and server-owned: cleanup/reset preview and execute, principal-bound expiring preview challenges, exact confirmation, re-evaluated `MaintenanceService` policy, bounded operation state/SSE, and sanitized partial/recovery/unknown outcome evidence. Browser requests never supply service, database, table, or filesystem targets.
+- All new downloader/maintenance operation, challenge, and idempotency stores are bounded and process-local; durable approved RMS database backups remain separate from the generic in-memory artifact catalog.
 
 ## Security and evidence
 
 - Exact Testing Support Hub origin: `https://support-hub.integration.test:4443`; direct Agent origin: `https://rms-pos-agent.localhost:5001`.
-- Testing live evidence is recorded in `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`; no Production calls were made.
-- Live RMS backup/restore SQL and service execution were not run. Automated recovery tests use synthetic SQL/filesystem/service fixtures and never touch installed `RmsBranchSrv` or `RmsCashierSrv` databases.
-- This session attempted bounded live non-destructive Backup validation against the representative Testing machine's real `RmsBranchSrv`/`RmsCashierSrv` (RMS.BranchService/RMS.CashierService/RmsSupportHub.Pos.Agent (Testing)/SQL Server MSSQLSERVER were all observed `Running`). It was blocked: the execution session's Windows token is non-elevated (`IsInRole(Administrator)=False`) and cannot open the `RmsSupportHub.Pos.Agent` service via SCM (`Cannot open ... service`), matching the same elevation-gate class of blocker recorded repeatedly in `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` (e.g. INT-13E). No service was stopped/started, no SQL was run, no ACL was changed. Real Restore was never attempted (not authorized). The next safe action is for an elevated Administrator session to redeploy the corrected Agent build to the Testing service, run Backup for both targets, verify the approved artifact/checksum, restart the Agent service, and confirm the same opaque backup ID resolves afterward.
-
-## Compatibility contracts
-
-Persisted keys are byte-exact; no migration exists:
-
-```text
-onlineOrderTool.activeEnvironment.<moduleKey>
-qa-support-hub:theme
-qa-support-hub:motion
-qa-support-hub.prompt-studio.history
-qa-support-hub.prompt-studio.bug-draft
-qa-support-hub.prompt-studio.story-draft
-qa-support-hub.prompt-studio.test-case-draft
-order-tool.sidebar-collapsed
-```
-
-Raw colors stay in token files; all current UI feature styles consume design tokens.
+- No Production calls, customer execution, real Restore, real branch reset, real cleanup, or real downloader trigger/download were performed in this slice. Automated endpoint coverage uses synthetic HTTP/SMB/filesystem/database/service seams and temporary test roots only.
+- The pending representative-device, non-destructive Branch/Cashier Backup proof remains open. The required elevated Administrator session must redeploy the corrected Agent to Testing, run Backup for both targets, verify approved artifact/checksum evidence, restart the Agent, and confirm the opaque backup handle survives the restart. Do not use Restore as part of that proof.
+- Any future live downloader or maintenance verification must remain Testing-only, use approved disposable/synthetic targets, and be separately evidenced. An unavailable elevated session is a recorded live-evidence blocker, not a reason to weaken the implementation boundary.
 
 ## Validation baseline
 
 | Gate | Result |
 |---|---|
 | POS Release build (`-warnaserror`) | Passed, 0 warnings/errors |
-| POS tests | Domain 9, Application 76, Infrastructure 80, Agent.IntegrationTests 141 passed (306 total, incl. 11 new durable-catalog tests) |
+| POS tests | Domain 9, Application 76, Infrastructure 80, Agent.IntegrationTests 146 passed (311 total) |
+| Focused Downloader/Maintenance endpoint tests | 5 passed, including artifact download, unauthorized/invalid token, cleanup/reset fake seams, ambiguous trigger, and concurrency paths |
 | Frontend tests | 56 files / 345 tests passed |
-| Frontend production build | Passed with typed RMS recovery UI and no budget warnings |
-| OpenAPI/client drift | Regenerated; `git diff --exit-code` clean against committed OpenAPI doc and Angular client |
-| `git diff --check` / secret scan | Clean |
-| PR #9 CI | All 5 lanes green on merge commit `93d6875` -> `615fda2` |
-| Existing live evidence | Agent/Support Hub/browser/service-control evidence remains in the INT-13 record |
-| Live backup (this slice) | `BLOCKED` by non-elevated session; see Security and evidence above |
+| Frontend production build | Passed; initial bundle 460.78 kB and no component-style budget warnings |
+| OpenAPI/client regeneration | Regenerated from the Agent document; second generation pass byte-stable |
+| `git diff --check` / secret review | Passed; no credential-like literals or credential-bearing URLs; the only UNC-like value is an isolated synthetic downloader fake used to prove it does not cross the response boundary |
 
 ## Deferred boundaries
 
-- Testing is the default; no Production calls, SQL changes, deployment, live database restore, or live RMS service control were performed for this slice.
-- UPC live/fixture acceptance and deployment/Production acceptance remain deferred.
-- `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls are environment setup, not an INT-07 defect.
+- M-1 managed Chrome/Edge browser policy and Local Network Access/IWA fleet behavior remain open external gates.
+- M-2 Production certificate issuance, trust distribution, renewal/rotation, private-key ACL, hostname, and rollback ownership remain open external gates.
+- The next task prepares final operator UX and the real Agent package/install boundary; it must not close M-1/M-2 or perform Production/customer actions.
+- `ConnectionStrings:UpcEcommerceTest` remains absent locally; unrelated UPC live calls are environment setup, not a POS defect.

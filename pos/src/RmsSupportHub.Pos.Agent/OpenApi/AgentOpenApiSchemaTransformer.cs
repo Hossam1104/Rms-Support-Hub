@@ -4,6 +4,8 @@ using Microsoft.OpenApi;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Configuration;
 using RmsSupportHub.Pos.Contracts.V1.Device;
+using RmsSupportHub.Pos.Contracts.V1.Downloader;
+using RmsSupportHub.Pos.Contracts.V1.Maintenance;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Services;
@@ -113,6 +115,36 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Typed service-action outcome: NotAttempted, Failed, Accepted, or OutcomeUnknown.",
             (var value, null) when value == typeof(EvidenceDto) =>
                 "A bounded status observation with explicit freshness and UTC check time.",
+            (var value, null) when value == typeof(BranchCatalogEntryDto) =>
+                "Server-approved downloader branch metadata. It contains no SMB path, credential, or endpoint detail.",
+            (var value, null) when value == typeof(TriggerBatchRequestDto) =>
+                "Typed downloader batch request containing only server-approved logical branch codes and a bounded idempotency key.",
+            (var value, null) when value == typeof(DownloaderBranchOutcomeDto) =>
+                "Sanitized outcome for one requested downloader branch; artifactId is an opaque Agent capability.",
+            (var value, null) when value == typeof(DownloaderOperationOutcomeDto) =>
+                "Downloader trigger and branch outcome truth without remote paths, credentials, or exception text.",
+            (var value, null) when value == typeof(DownloaderOperationDto) =>
+                "Principal-scoped downloader progress and outcome with opaque operation and artifact identifiers.",
+            (var value, null) when value == typeof(CleanupExecuteRequestDto) =>
+                "Typed cleanup execution request containing only a preview challenge, exact confirmation, and bounded idempotency key.",
+            (var value, null) when value == typeof(BranchResetExecuteRequestDto) =>
+                "Typed branch-reset execution request containing only a preview challenge, exact confirmation, and bounded idempotency key.",
+            (var value, null) when value == typeof(CleanupPreviewDto) =>
+                "Server-owned cleanup impact preview with logical target identifiers and an expiring principal-bound challenge.",
+            (var value, null) when value == typeof(CleanupTargetPreviewDto) =>
+                "Sanitized cleanup target evidence identified by a logical target ID; host paths never cross the Agent boundary.",
+            (var value, null) when value == typeof(BranchResetPreviewDto) =>
+                "Server-owned branch-reset scope preview with approved logical table scope and an expiring challenge.",
+            (var value, null) when value == typeof(BranchResetTablePreviewDto) =>
+                "Sanitized branch-reset table evidence from the server-owned read-only scope check.",
+            (var value, null) when value == typeof(MaintenancePolicyRejectionDto) =>
+                "Sanitized maintenance policy rejection containing a logical target ID and stable code, never a host path.",
+            (var value, null) when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Sanitized maintenance item outcome with logical target identity and explicit recovery truth.",
+            (var value, null) when value == typeof(MaintenanceOperationOutcomeDto) =>
+                "Retained cleanup or branch-reset outcome evidence without raw paths, service names, SQL, credentials, or exception text.",
+            (var value, null) when value == typeof(MaintenanceOperationDto) =>
+                "Principal-scoped maintenance progress and outcome with logical targets and recovery truth.",
             _ => schema.Description
         };
 
@@ -195,6 +227,160 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "UTC time at which this observation was last checked, when available.",
             (var value, "detail") when value == typeof(EvidenceDto) =>
                 "Safe diagnostic detail without credentials, Windows SIDs, or raw exception text.",
+            (var value, "branchCode") when value == typeof(BranchCatalogEntryDto) =>
+                "Server-approved logical branch code accepted by the typed downloader route.",
+            (var value, "isSelected") when value == typeof(BranchCatalogEntryDto) =>
+                "Server-owned selection hint; the browser cannot expand the approved branch catalog.",
+            (var value, "branchCodes") when value == typeof(TriggerBatchRequestDto) =>
+                "Branch codes selected from the server-approved downloader catalog.",
+            (var value, "idempotencyKey") when value == typeof(TriggerBatchRequestDto) =>
+                "Bounded caller-generated key; repeating the same branch selection returns the retained operation.",
+            (var value, "branchCode") when value == typeof(DownloaderBranchOutcomeDto) =>
+                "Logical branch code from the server-approved downloader selection.",
+            (var value, "state") when value == typeof(DownloaderBranchOutcomeDto) =>
+                "Sanitized branch download lifecycle state.",
+            (var value, "progressPercent") when value == typeof(DownloaderBranchOutcomeDto) =>
+                "Bounded server-reported progress percentage for this branch.",
+            (var value, "failureCode") when value == typeof(DownloaderBranchOutcomeDto) =>
+                "Stable safe branch failure code, when the branch did not complete.",
+            (var value, "artifactId") when value == typeof(DownloaderBranchOutcomeDto) =>
+                "Opaque Agent artifact capability, when the branch archive was published.",
+            (var value, "branches") when value == typeof(DownloaderOperationOutcomeDto) =>
+                "Sanitized outcome for each requested server-approved branch.",
+            (var value, "serial") when value == typeof(DownloaderOperationOutcomeDto) =>
+                "Safe downloader serial evidence, when available; remote path details are omitted.",
+            (var value, "triggerState") when value == typeof(DownloaderOperationOutcomeDto) =>
+                "Truth about the server-side backup trigger milestone.",
+            (var value, "operatorGuidance") when value == typeof(DownloaderOperationOutcomeDto) =>
+                "Safe operator guidance for an incomplete or ambiguous downloader outcome.",
+            (var value, "triggerAccepted") when value == typeof(DownloaderOperationOutcomeDto) =>
+                "Compatibility projection of triggerState; inspect triggerState for unknown outcomes.",
+            (var value, "operationId") when value == typeof(DownloaderOperationDto) =>
+                "Opaque downloader operation handle scoped to the authenticated Windows principal.",
+            (var value, "state") when value == typeof(DownloaderOperationDto) =>
+                "Current downloader REST/SSE lifecycle state.",
+            (var value, "outcome") when value == typeof(DownloaderOperationDto) =>
+                "Downloader outcome truth; OutcomeUnknown requires inspection before retry.",
+            (var value, "progressPercent") when value == typeof(DownloaderOperationDto) =>
+                "Bounded server-reported downloader progress percentage.",
+            (var value, "stage") when value == typeof(DownloaderOperationDto) =>
+                "Server-owned safe downloader workflow stage.",
+            (var value, "detail") when value == typeof(DownloaderOperationDto) =>
+                "Safe operator detail without SMB paths, credentials, raw exceptions, or transport data.",
+            (var value, "startedAtUtc") when value == typeof(DownloaderOperationDto) =>
+                "UTC operation start time recorded by the Agent.",
+            (var value, "completedAtUtc") when value == typeof(DownloaderOperationDto) =>
+                "UTC completion time when the downloader reached a final state.",
+            (var value, "downloaderOutcome") when value == typeof(DownloaderOperationDto) =>
+                "Sanitized branch and trigger outcome evidence, when available.",
+            (var value, "errorCode") when value == typeof(DownloaderOperationDto) =>
+                "Stable safe error code, when the downloader did not complete successfully.",
+            (var value, "correlationId") when value == typeof(DownloaderOperationDto) =>
+                "Safe request correlation identifier for diagnostics.",
+            (var value, "challengeId") when value == typeof(CleanupExecuteRequestDto) || value == typeof(BranchResetExecuteRequestDto) =>
+                "Opaque, principal-bound preview challenge required for this exact maintenance mode.",
+            (var value, "typedConfirmation") when value == typeof(CleanupExecuteRequestDto) || value == typeof(BranchResetExecuteRequestDto) =>
+                "Exact confirmation phrase returned by the matching server-owned preview.",
+            (var value, "idempotencyKey") when value == typeof(CleanupExecuteRequestDto) || value == typeof(BranchResetExecuteRequestDto) =>
+                "Bounded caller-generated key; repeating the same challenge returns the retained operation.",
+            (var value, "challengeId") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "Opaque, principal-bound challenge that expires and can be consumed only once.",
+            (var value, "servicesToStop") when value == typeof(CleanupPreviewDto) =>
+                "Logical server-owned service target identifiers; raw Windows service names are omitted.",
+            (var value, "pathsToDelete") when value == typeof(CleanupPreviewDto) =>
+                "Logical server-owned cleanup target identifiers; host paths are never returned.",
+            (var value, "confirmationPhrase") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "Exact phrase required by the matching execute request.",
+            (var value, "expiresAtUtc") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "UTC expiry instant enforced for the one-use preview challenge.",
+            (var value, "ready") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "Whether server-owned policy and read-only scope checks produced an executable preview.",
+            (var value, "targets") when value == typeof(CleanupPreviewDto) =>
+                "Detailed sanitized cleanup target evidence keyed by logical target ID.",
+            (var value, "rejections") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "Sanitized policy rejections keyed by logical target or scope identifier.",
+            (var value, "warnings") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "Bounded safe preview warnings without raw paths or exception text.",
+            (var value, "availableFreeSpaceBytes") when value == typeof(CleanupPreviewDto) || value == typeof(BranchResetPreviewDto) =>
+                "Read-only free-space evidence for the server-owned maintenance root, when available.",
+            (var value, "branchCode") when value == typeof(BranchResetPreviewDto) =>
+                "Server-resolved branch identity used for the approved reset scope.",
+            (var value, "affectedTables") when value == typeof(BranchResetPreviewDto) =>
+                "Code-owned logical table identifiers approved for the branch reset.",
+            (var value, "databaseName") when value == typeof(BranchResetPreviewDto) =>
+                "Server-approved database label for the branch reset; no connection string is returned.",
+            (var value, "tableScopes") when value == typeof(BranchResetPreviewDto) =>
+                "Read-only row-count evidence for the approved logical table scope.",
+            (var value, "targetId") when value == typeof(CleanupTargetPreviewDto) || value == typeof(MaintenancePolicyRejectionDto) || value == typeof(MaintenanceItemOutcomeDto) =>
+                "Logical server-owned target identifier; it is not a host path or raw service name.",
+            (var value, "accepted") when value == typeof(CleanupTargetPreviewDto) =>
+                "Whether the configured target passed server cleanup policy.",
+            (var value, "exists") when value == typeof(CleanupTargetPreviewDto) =>
+                "Whether the approved target existed at preview time.",
+            (var value, "isDirectory") when value == typeof(CleanupTargetPreviewDto) =>
+                "Whether the approved target is a directory at preview time.",
+            (var value, "lengthBytes") when value == typeof(CleanupTargetPreviewDto) =>
+                "Read-only target size evidence, when the target is a file.",
+            (var value, "childCount") when value == typeof(CleanupTargetPreviewDto) =>
+                "Bounded read-only child count, when the target is a directory.",
+            (var value, "rejectionCode") when value == typeof(CleanupTargetPreviewDto) =>
+                "Stable safe policy rejection code, when the target was rejected.",
+            (var value, "tableName") when value == typeof(BranchResetTablePreviewDto) =>
+                "Code-owned logical table identifier in the approved branch reset scope.",
+            (var value, "matchingRows") when value == typeof(BranchResetTablePreviewDto) =>
+                "Read-only row-count evidence for the approved table, when available.",
+            (var value, "code") when value == typeof(MaintenancePolicyRejectionDto) =>
+                "Stable safe maintenance policy rejection code.",
+            (var value, "reason") when value == typeof(MaintenancePolicyRejectionDto) =>
+                "Safe operator-facing rejection reason without raw implementation detail.",
+            (var value, "kind") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Logical maintenance item kind such as file or database.",
+            (var value, "state") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Sanitized maintenance item lifecycle state.",
+            (var value, "attempted") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Whether the Agent crossed the corresponding typed mutation seam.",
+            (var value, "completed") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Whether the item operation completed successfully.",
+            (var value, "residueUncertain") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Whether remaining state requires recovery verification before retrying.",
+            (var value, "failureCode") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Stable safe item failure code, when present.",
+            (var value, "recoveryGuidance") when value == typeof(MaintenanceItemOutcomeDto) =>
+                "Safe recovery guidance without raw paths, SQL, or exception text.",
+            (var value, "destructiveAttempted") when value == typeof(MaintenanceOperationOutcomeDto) =>
+                "Whether the maintenance workflow crossed a destructive typed seam.",
+            (var value, "recoveryRequired") when value == typeof(MaintenanceOperationOutcomeDto) =>
+                "Whether the Agent cannot prove cleanup or reset recovery is complete.",
+            (var value, "items") when value == typeof(MaintenanceOperationOutcomeDto) =>
+                "Sanitized logical item outcomes retained for operator review.",
+            (var value, "warnings") when value == typeof(MaintenanceOperationOutcomeDto) =>
+                "Bounded safe maintenance warnings.",
+            (var value, "recoveryGuidance") when value == typeof(MaintenanceOperationOutcomeDto) =>
+                "Safe recovery guidance for partial or ambiguous maintenance outcomes.",
+            (var value, "operationId") when value == typeof(MaintenanceOperationDto) =>
+                "Opaque maintenance operation handle scoped to the authenticated Windows principal.",
+            (var value, "mode") when value == typeof(MaintenanceOperationDto) =>
+                "Server-owned maintenance mode: cleanup or branch-reset.",
+            (var value, "state") when value == typeof(MaintenanceOperationDto) =>
+                "Current maintenance REST/SSE lifecycle state.",
+            (var value, "outcome") when value == typeof(MaintenanceOperationDto) =>
+                "Maintenance outcome truth; OutcomeUnknown requires recovery inspection before retry.",
+            (var value, "progressPercent") when value == typeof(MaintenanceOperationDto) =>
+                "Bounded server-reported maintenance progress percentage.",
+            (var value, "stage") when value == typeof(MaintenanceOperationDto) =>
+                "Server-owned safe maintenance workflow stage.",
+            (var value, "detail") when value == typeof(MaintenanceOperationDto) =>
+                "Safe operator detail without paths, service names, SQL, credentials, or exceptions.",
+            (var value, "startedAtUtc") when value == typeof(MaintenanceOperationDto) =>
+                "UTC operation start time recorded by the Agent.",
+            (var value, "completedAtUtc") when value == typeof(MaintenanceOperationDto) =>
+                "UTC completion time when maintenance reached a final state.",
+            (var value, "maintenanceOutcome") when value == typeof(MaintenanceOperationDto) =>
+                "Sanitized logical item outcomes and recovery truth, when available.",
+            (var value, "errorCode") when value == typeof(MaintenanceOperationDto) =>
+                "Stable safe maintenance error code, when the operation did not complete successfully.",
+            (var value, "correlationId") when value == typeof(MaintenanceOperationDto) =>
+                "Safe request correlation identifier for diagnostics.",
             (var value, "sqlInstance") when value == typeof(RedactedConfigurationDto) =>
                 "Configured SQL endpoint label. It is not a credential and does not expose a password.",
             (var value, "sqlUser") when value == typeof(RedactedConfigurationDto) =>

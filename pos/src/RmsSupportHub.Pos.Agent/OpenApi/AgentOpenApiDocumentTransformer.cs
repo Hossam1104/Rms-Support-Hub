@@ -26,7 +26,8 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "Administrators membership authorizes protected reads and typed Windows-service and RMS " +
             "database operations, and no Support Hub backend relay is involved. The Agent exposes " +
             "read-only device/configuration/RMS visibility plus allow-listed service control and " +
-            "server-owned RMS database backup/restore workflows. Mutation tokens are short-lived, " +
+            "server-owned RMS database backup/restore workflows. Downloader, maintenance, and " +
+            "artifact capabilities remain typed, principal-scoped, and fail-closed. Mutation tokens are short-lived, " +
             "one-use, and bound to the authenticated principal, exact Origin, registered operation, " +
             "target, method, and path.";
         document.Servers = [new OpenApiServer
@@ -62,6 +63,17 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/restore", HttpMethod.Post);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}/events", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/downloads/branches", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/downloads/batches", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/downloads/operations/{operationId}", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/downloads/operations/{operationId}/events", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/maintenance/cleanup/preview", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/maintenance/cleanup/execute", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/maintenance/reset/preview", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/maintenance/reset/execute", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/maintenance/operations/{operationId}", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/maintenance/operations/{operationId}/events", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/artifacts/{artifactId}", HttpMethod.Get);
         AddReferencePropertyDescriptions(document);
 
         return Task.CompletedTask;
@@ -192,6 +204,15 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         SetPropertyDescription(document, "RmsDatabaseWorkspaceDto", "approvedBackups", "Sanitized metadata for backup artifacts registered by this Agent instance and target.");
         SetPropertyDescription(document, "RmsDatabaseWorkspaceDto", "target", "Server-owned Branch or Cashier database target.");
         SetPropertyDescription(document, "RmsDatabaseWorkspaceDto", "latestOperation", "Latest principal-scoped operation state, when retained.");
+        SetPropertyDescription(document, "DownloaderBranchOutcomeDto", "state", "Sanitized branch download lifecycle state.");
+        SetPropertyDescription(document, "DownloaderOperationOutcomeDto", "triggerState", "Truth about the server-side backup trigger milestone.");
+        SetPropertyDescription(document, "DownloaderOperationDto", "state", "Current downloader REST/SSE lifecycle state.");
+        SetPropertyDescription(document, "DownloaderOperationDto", "outcome", "Downloader outcome truth; OutcomeUnknown requires inspection before retry.");
+        SetPropertyDescription(document, "DownloaderOperationDto", "downloaderOutcome", "Sanitized branch and trigger outcome evidence, when available.");
+        SetPropertyDescription(document, "MaintenanceItemOutcomeDto", "state", "Sanitized maintenance item lifecycle state.");
+        SetPropertyDescription(document, "MaintenanceOperationDto", "state", "Current maintenance REST/SSE lifecycle state.");
+        SetPropertyDescription(document, "MaintenanceOperationDto", "outcome", "Maintenance outcome truth; OutcomeUnknown requires recovery inspection before retry.");
+        SetPropertyDescription(document, "MaintenanceOperationDto", "maintenanceOutcome", "Sanitized logical item outcomes and recovery truth, when available.");
     }
 
     private static void SetPropertyDescription(

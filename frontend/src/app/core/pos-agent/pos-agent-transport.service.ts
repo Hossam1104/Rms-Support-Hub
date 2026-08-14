@@ -27,6 +27,14 @@ type RmsDatabaseWorkspace = components['schemas']['RmsDatabaseWorkspaceDto'];
 type RmsDatabaseOperation = components['schemas']['RmsDatabaseOperationDto'];
 type RmsDatabaseBackupRequest = components['schemas']['RmsDatabaseBackupRequestDto'];
 type RmsDatabaseRestoreRequest = components['schemas']['RmsDatabaseRestoreRequestDto'];
+type BranchCatalogEntry = components['schemas']['BranchCatalogEntryDto'];
+type DownloaderOperation = components['schemas']['DownloaderOperationDto'];
+type TriggerBatchRequest = components['schemas']['TriggerBatchRequestDto'];
+type CleanupPreview = components['schemas']['CleanupPreviewDto'];
+type CleanupExecuteRequest = components['schemas']['CleanupExecuteRequestDto'];
+type BranchResetPreview = components['schemas']['BranchResetPreviewDto'];
+type BranchResetExecuteRequest = components['schemas']['BranchResetExecuteRequestDto'];
+type MaintenanceOperation = components['schemas']['MaintenanceOperationDto'];
 
 @Injectable({ providedIn: 'root' })
 export class PosAgentTransportService {
@@ -187,6 +195,105 @@ export class PosAgentTransportService {
         body,
         { headers, withCredentials: true }
       )
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDownloaderBranches(): Observable<BranchCatalogEntry[]> {
+    return this.http
+      .get<BranchCatalogEntry[]>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.downloaderBranches}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  triggerDownloaderBatch(
+    branchCodes: string[],
+    idempotencyKey: string,
+    mutationToken: string
+  ): Observable<DownloaderOperation> {
+    const body: TriggerBatchRequest = { branchCodes, idempotencyKey };
+    return this.http
+      .post<DownloaderOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.downloaderBatches}`, body, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDownloaderOperation(operationId: string): Observable<DownloaderOperation> {
+    return this.http
+      .get<DownloaderOperation>(
+        `${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.downloaderOperations}/${encodeURIComponent(operationId)}`,
+        { headers: this.jsonHeaders, withCredentials: true }
+      )
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  previewCleanup(): Observable<CleanupPreview> {
+    return this.http
+      .post<CleanupPreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.maintenanceCleanupPreview}`, null, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  executeCleanup(
+    challengeId: string,
+    typedConfirmation: string,
+    idempotencyKey: string,
+    mutationToken: string
+  ): Observable<MaintenanceOperation> {
+    const body: CleanupExecuteRequest = { challengeId, typedConfirmation, idempotencyKey };
+    return this.http
+      .post<MaintenanceOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.maintenanceCleanupExecute}`, body, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  previewBranchReset(): Observable<BranchResetPreview> {
+    return this.http
+      .post<BranchResetPreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.maintenanceBranchResetPreview}`, null, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  executeBranchReset(
+    challengeId: string,
+    typedConfirmation: string,
+    idempotencyKey: string,
+    mutationToken: string
+  ): Observable<MaintenanceOperation> {
+    const body: BranchResetExecuteRequest = { challengeId, typedConfirmation, idempotencyKey };
+    return this.http
+      .post<MaintenanceOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.maintenanceBranchResetExecute}`, body, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getMaintenanceOperation(operationId: string): Observable<MaintenanceOperation> {
+    return this.http
+      .get<MaintenanceOperation>(
+        `${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.maintenanceOperations}/${encodeURIComponent(operationId)}`,
+        { headers: this.jsonHeaders, withCredentials: true }
+      )
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  downloadArtifact(artifactId: string): Observable<Blob> {
+    return this.http
+      .get(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.artifacts}/${encodeURIComponent(artifactId)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true,
+        responseType: 'blob'
+      })
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 

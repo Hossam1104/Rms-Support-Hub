@@ -146,6 +146,47 @@ describe('PosMaintenanceComponent', () => {
         approvedBackups: [],
         latestOperation: null
       })),
+      getDownloaderBranches: vi.fn(() => of([{ branchCode: 'BR-001', isSelected: true }])),
+      triggerDownloaderBatch: vi.fn(() => of({
+        operationId: 'downloader-operation',
+        state: 'completed',
+        outcome: 'completed',
+        progressPercent: 100,
+        stage: 'completed',
+        detail: 'The downloader completed.',
+        startedAtUtc: '2026-08-13T10:00:00Z',
+        completedAtUtc: '2026-08-13T10:00:02Z',
+        downloaderOutcome: {
+          branches: [{ branchCode: 'BR-001', state: 'completed', progressPercent: 100, failureCode: null, artifactId: '0123456789abcdef0123456789abcdef' }],
+          serial: null,
+          triggerState: 'accepted',
+          operatorGuidance: null,
+          triggerAccepted: true
+        },
+        errorCode: null,
+        correlationId: 'test-correlation'
+      })),
+      getDownloaderOperation: vi.fn(),
+      previewCleanup: vi.fn(() => of({
+        challengeId: 'cleanup-challenge',
+        servicesToStop: [],
+        pathsToDelete: [],
+        confirmationPhrase: 'CLEANUP POS',
+        expiresAtUtc: '2026-08-13T10:05:00Z',
+        ready: true
+      })),
+      executeCleanup: vi.fn(),
+      previewBranchReset: vi.fn(() => of({
+        challengeId: 'reset-challenge',
+        branchCode: 'BR-001',
+        affectedTables: [],
+        confirmationPhrase: 'RESET BRANCH',
+        expiresAtUtc: '2026-08-13T10:05:00Z',
+        ready: true
+      })),
+      executeBranchReset: vi.fn(),
+      getMaintenanceOperation: vi.fn(),
+      downloadArtifact: vi.fn(() => of(new Blob(['artifact'], { type: 'application/zip' }))),
       issueMutationToken: vi.fn(() => of({ token: 'opaque-token', expiresAtUtc: '2026-08-13T10:05:00Z' })),
       controlService: vi.fn(() => of({
         outcome: 'accepted',
@@ -242,7 +283,7 @@ describe('PosMaintenanceComponent', () => {
     expect(page.textContent).toContain('Stop');
     expect(page.textContent).toContain('Restart');
     expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Start')).toBe(false);
-    expect(page.querySelectorAll('button')).toHaveLength(5);
+    expect(page.querySelectorAll('button')).toHaveLength(8);
   });
 
   it('requires confirmation before issuing a one-use token and submitting a service action', async () => {
@@ -289,7 +330,7 @@ describe('PosMaintenanceComponent', () => {
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
-    expect(page.querySelectorAll('button')).toHaveLength(1);
+    expect(page.querySelectorAll('button')).toHaveLength(4);
     expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Stop')).toBe(false);
     expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Restart')).toBe(false);
   });
