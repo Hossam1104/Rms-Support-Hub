@@ -1,86 +1,115 @@
-# Independent POS First-Release Security & Readiness Review
+# POS Production Readiness — M-1 and M-2 Remediation Plan
 
 ## Role and scope
 
-**Role:** `Review`
-**Reviewer:** Claude Opus 5
-**Effort:** HIGH
+**Role:** `Plan`
+**Executor:** GPT-5.6 Luna Max
 **Repository:** `Hossam1104/Rms-Support-Hub`
-**Scope:** INT-06I + INT-07 + INT-08 + INT-13 comprehensive security, architecture, contract, and live operational readiness review.
+**Scope:** ONLY the two open Medium findings (M-1, M-2) from the independent
+POS first-release security & readiness review. Nothing else.
 
-You are the designated independent security and readiness reviewer for the completed RMS+ Support Hub Point of Sale (POS) first-release integration milestone.
+Produce an executable implementation plan for the two remaining Production
+blockers identified in
+`docs/reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md`. Do not
+implement code in this task — planning only. Do not touch, re-open, or
+re-scope any of the Low/Informational findings already remediated on `main`
+(PR #8, commit `2c8d664`) — those are closed. Do not start any other POS
+feature work. Do not begin implementation of M-1 or M-2 without an accepted
+plan and explicit owner sign-off, since both require production managed-fleet
+architecture decisions with real security and operational consequences.
 
-Do not implement new features, rewrite architectures, or open unnecessary PRs.
-Inspect code, contracts, tests, and live operational evidence under `.ai/`, `docs/`, `pos/`, `frontend/`, and `scripts/`.
-Report any Critical, High, Medium, or Low findings with concrete file links, line references, and remediation guidance.
+**Testing-environment first release (INT-06I + INT-07 + INT-08 + INT-13)
+remains APPROVED and is not affected by this task.** This task exists solely
+to close the gap to Production/customer-deployment approval.
+
+## Findings to plan for
+
+### M-1 — Managed-endpoint browser policy
+
+Current state: `scripts/PosAgentWindowsProvisioning.psm1` provisions
+Chrome/Edge exact-origin IWA and block policies via local Administrator-driven
+registry writes on a single representative Testing device
+(`docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`). This model does not
+scale to or secure a Production fleet.
+
+Plan must cover:
+- A managed-fleet delivery mechanism (e.g., GPO, Intune, or equivalent MDM)
+  that applies the same exact-origin IWA and URL block/allow policy
+  guarantees already validated in Testing — no wildcard or regex origin
+  matches, no weakening of the policies validated in INT-13.
+- How policy drift/removal is detected or prevented fleet-wide.
+- Migration path from the current single-device script-based model to the
+  fleet mechanism, without weakening Testing-environment provisioning
+  (`scripts/PosAgentWindowsProvisioning.psm1` and its Pester coverage in
+  `scripts/tests/PosAgentWindowsProvisioning.Tests.ps1` must remain valid for
+  Testing use).
+- Rollback/removal story for the managed policy at fleet scale.
+
+### M-2 — Production certificate lifecycle
+
+Current state: `scripts/PosSupportHubProvisioning.psm1` and
+`scripts/setup-pos-agent-testing.ps1` create a self-managed, non-exportable,
+machine-local certificate suitable for exactly one Testing device. There is
+no issuance, renewal, distribution, or revocation lifecycle defined for
+Production.
+
+Plan must cover:
+- Certificate issuance authority and trust chain for Production (internal CA
+  vs. other mechanism) — must not silently rely on the Testing self-signed
+  model.
+- Renewal cadence and automation before expiry, with no manual-only fallback
+  as the sole safety net at fleet scale.
+- Distribution mechanism to Production endpoints consistent with whatever
+  fleet delivery mechanism M-1 selects (do not design these two independently
+  of each other — they will likely share the same managed-endpoint delivery
+  path).
+- Revocation procedure for a compromised or decommissioned endpoint.
+- Impact on the existing loopback-only, exact-origin CORS/Negotiate model
+  (`pos/src/RmsSupportHub.Pos.Agent`) — the plan must not alter that model's
+  security guarantees, only how the certificate backing it is issued and
+  rotated.
 
 ## Mandatory startup
 
-1. Read `TASK.md`.
+1. Read `TASK.md` (this file).
 2. Read `.ai/STATE.md`.
 3. Run `python .ai/scripts/context.py`.
-4. Read `.ai/HISTORY.md`.
-5. Read `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` and `docs/evidence/POS_INT06_LIVE_TRANSPORT_EVIDENCE.md`.
-6. Read `docs/POS_MAINTENANCE_INTEGRATION_PLAN.md` and `docs/POS_MAINTENANCE_INTEGRATION_READINESS.md`.
-7. Review the codebase across the four reviewed milestones:
-   - **INT-06I:** Server-side local Built-in Administrator group resolution (`LocalAdministratorGroupChecker`), fail-closed SID/token handling, non-production Scalar/OpenAPI gating.
-   - **INT-07:** Protected read surface (`/session`, `/device/identity`, `/device/connectivity`, `/device/capabilities`, `/configuration`, `/services`), redacted configuration, direct Angular `HttpBackend` transport, no API relay.
-   - **INT-08:** Typed `services.control` mutation surface, opaque allow-listed service IDs, target/method/path-bound one-use mutation tokens, bounded memory store, concurrency/idempotency protection, truthful typed outcomes (`Accepted`, `Failed`, `OutcomeUnknown`, `NotAttempted`).
-   - **INT-13:** Representative Windows device provisioning, exact Support Hub origin (`https://support-hub.integration.test:4443`), LocalMachine certificates, exact-origin Chrome/Edge IWA policies, non-elevated Medium-integrity browser harness, live disposable service control and state refresh evidence.
+4. Read `docs/reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md` in
+   full.
+5. Read `docs/POS_MAINTENANCE_INTEGRATION_READINESS.md` (release approval
+   scope section) and `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`.
+6. Read `scripts/PosAgentWindowsProvisioning.psm1`,
+   `scripts/PosSupportHubProvisioning.psm1`, and
+   `scripts/setup-pos-agent-testing.ps1` to understand the current
+   single-device model being replaced for Production.
+7. Do not read unrelated POS history (INT-02 through INT-08 planning
+   documents) unless a specific architectural question requires it.
 
-## Review criteria
+## Non-goals
 
-Evaluate the codebase against these non-negotiable security and readiness boundaries:
-
-1. **Authentication & Authorization:**
-   - Is Windows Negotiate IWA strictly enforced on all protected endpoints?
-   - Is local Administrator authorization derived strictly server-side via `LocalAdministratorGroupChecker` using `S-1-5-32-544` and local group enumeration?
-   - Is any client-supplied SID, header, cookie, or token rejected as an authorization bypass?
-
-2. **Network & Transport Isolation:**
-   - Does the Agent bind strictly to loopback (`127.0.0.1`, port 5001) over HTTPS and HTTP/1.1?
-   - Is CORS restricted to the exact configured Support Hub origin without wildcards, regex matches, or header spoofing?
-   - Does the Support Hub frontend communicate directly with the local Agent via `HttpBackend`, ensuring the Hub backend (`RmsSupportHub.Api`) never relays or proxies privileged POS traffic?
-
-3. **Mutation Token & Service Control:**
-   - Are mutation tokens strictly one-use, short-lived (60s), memory-only, and cryptographically bound to caller principal, exact origin, HTTP method (`POST`), path (`/api/v1/services/{opaqueId}/actions`), operation (`services.control`), and target opaque service ID?
-   - Is token replay definitively rejected (HTTP 403)?
-   - Are service IDs opaque allow-listed hashes, preventing arbitrary service control?
-   - Is there any generic process execution, cmd/PowerShell invocation, or unrestricted file/registry access endpoint?
-
-4. **Information Disclosure & Privacy:**
-   - Are passwords, connection strings, private keys, tokens, and machine/account SIDs redacted from API responses and evidence logs?
-   - Is OpenAPI / Scalar documentation completely disabled in Production mode?
-
-5. **Operational Evidence & Rollback:**
-   - Is the live operational evidence in `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` truthful, complete, and reproducible on representative hardware?
-   - Are provisioning and cleanup scripts (`setup-pos-agent-testing.ps1`, `remove-pos-agent-testing.ps1`, `PosAgentWindowsProvisioning.psm1`, `PosSupportHubProvisioning.psm1`) idempotent, scoped, and non-destructive?
-
-## Validation commands
-
-```powershell
-python .ai/scripts/context.py
-dotnet build pos/RmsSupportHub.Pos.slnx -c Release --nologo --warnaserror
-dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests -c Release --no-restore --nologo
-dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests -c Release --no-restore --nologo
-dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests -c Release --no-restore --nologo
-dotnet test pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests -c Release --no-restore --nologo
-npm test --prefix frontend -- --watch=false
-Invoke-Pester -Script scripts/tests/*.Tests.ps1
-```
+- No production managed-fleet architecture is to be *built* in this task —
+  plan only.
+- No change to Testing-environment provisioning, evidence, or approval
+  status.
+- No re-litigation of the six remediated Low findings or I-1/I-2.
+- No new POS feature surface (endpoints, contracts, UI).
 
 ## Completion response
 
 Return only:
 
 ### Result
-Review Completed (or Blocked).
+Planning Completed (or Blocked).
 
-### Findings
-Grouped by severity (Critical, High, Medium, Low, Informational), or `None (Clean Bill of Health)`.
+### Plan
+Concrete, sequenced implementation plan for M-1 and M-2, including open
+decisions that require owner sign-off before implementation (e.g., choice of
+MDM/GPO tooling, choice of certificate authority) — do not make these
+decisions unilaterally where they carry organizational/procurement
+consequences beyond this repository.
 
-### Gate Assessment
-Verdict on POS First-Release production readiness across INT-06I, INT-07, INT-08, and INT-13.
+### Risks
+Security or operational risks the plan must guard against, and how.
 
 ### Remaining
-Any residual operational recommendations or post-review actions.
+Any information or access needed before implementation can begin.
