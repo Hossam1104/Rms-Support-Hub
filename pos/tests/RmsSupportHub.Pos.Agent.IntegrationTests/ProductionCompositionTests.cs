@@ -33,7 +33,7 @@ public sealed class ProductionCompositionTests
     }
 
     [Fact]
-    public void ProductionMapsInt08ServiceControlWithoutLaterFeatureRoutes()
+    public void ProductionMapsTypedRmsDatabaseRoutesAlongsideServiceControl()
     {
         using var factory = new AgentWebApplicationFactory("Production");
         using var scope = factory.Services.CreateScope();
@@ -51,8 +51,12 @@ public sealed class ProductionCompositionTests
         Assert.Contains("/api/v1/configuration", endpoints);
         Assert.Contains("/api/v1/services", endpoints);
         Assert.Contains("/api/v1/services/{serviceId}/actions", endpoints);
-        Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("/api/v1/rms/diagnostics", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/backup", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/restore", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/operations/{operationId}", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/operations/{operationId}/events", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("downloader", StringComparison.OrdinalIgnoreCase));
     }

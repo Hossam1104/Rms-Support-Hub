@@ -9,6 +9,7 @@ namespace RmsSupportHub.Pos.Contracts.V1.Services;
 public sealed record ServiceSummaryDto(
     string ServiceId,
     string DisplayName,
+    bool Installed,
     ServiceRuntimeState State,
     EvidenceDto LastChecked,
     IReadOnlyList<ServiceActionKind> AllowedActions,

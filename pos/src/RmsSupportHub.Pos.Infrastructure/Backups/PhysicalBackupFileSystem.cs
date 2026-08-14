@@ -23,7 +23,8 @@ public sealed class PhysicalBackupFileSystem : IBackupFileSystem
     {
         try
         {
-            return File.Exists(path) && File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+            return (File.Exists(path) || Directory.Exists(path))
+                && File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
         }
         catch (FileNotFoundException)
         {

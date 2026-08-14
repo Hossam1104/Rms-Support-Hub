@@ -71,18 +71,125 @@ describe('PosMaintenanceComponent', () => {
       getServices: vi.fn(() => of([
         {
           serviceId: 'svc-0123456789abcdef',
-          displayName: 'RMS.BranchService',
+          displayName: 'RMS Branch Service',
+          installed: true,
           state: 'running',
           lastChecked: { freshness: 'fresh', lastCheckedUtc: '2026-08-13T10:00:00Z', detail: 'Windows service is running.' },
           allowedActions: ['stop', 'restart'],
           lastOutcome: null
         }
       ])),
+      getRmsDiagnostics: vi.fn(() => of({
+        installation: {
+          installed: true,
+          branchInstalled: true,
+          cashierInstalled: true,
+          branchCode: 'BR-001',
+          posNumber: 'POS-01',
+          installationGuid: 'integration-installation-guid',
+          mainServerBranchId: '1',
+          mainServerPosId: '1',
+          mainServerUrl: 'main.integration.test:8443',
+          branchServerAddress: 'localhost',
+          installationMode: 'Branch + Cashier',
+          clientName: 'RMS+',
+          versions: {
+            branchServerBuildNumber: '2026.08',
+            cashierServerBuildNumber: '2026.08',
+            cashierUiBuildNumber: '2026.08'
+          },
+          consistency: {
+            branchCode: 'consistent',
+            posIdentity: 'consistent',
+            mainServerBranchId: 'consistent',
+            mainServerPosId: 'consistent',
+            version: 'consistent',
+            warnings: []
+          }
+        },
+        connectivity: {
+          mainServer: {
+            configured: true,
+            endpoint: 'main.integration.test:8443',
+            reachability: { freshness: 'fresh', lastCheckedUtc: '2026-08-13T10:00:00Z', detail: 'Main server reachable.' }
+          },
+          branchServer: {
+            configured: true,
+            endpoint: 'localhost:5100',
+            reachability: { freshness: 'fresh', lastCheckedUtc: '2026-08-13T10:00:00Z', detail: 'Branch server reachable.' }
+          }
+        },
+        branchDatabase: {
+          expectedDatabase: 'RmsBranchSrv',
+          configuredDatabase: 'RmsBranchSrv',
+          serverDisplay: 'sql.integration.test:1433',
+          configured: true,
+          databaseNameMatches: true,
+          connectivityStatus: 'reachable',
+          evidence: { freshness: 'fresh', lastCheckedUtc: '2026-08-13T10:00:00Z', detail: 'Branch database reachable.' }
+        },
+        cashierDatabase: {
+          expectedDatabase: 'RmsCashierSrv',
+          configuredDatabase: 'RmsCashierSrv',
+          serverDisplay: 'sql.integration.test:1433',
+          configured: true,
+          databaseNameMatches: true,
+          connectivityStatus: 'reachable',
+          evidence: { freshness: 'fresh', lastCheckedUtc: '2026-08-13T10:00:00Z', detail: 'Cashier database reachable.' }
+        },
+        services: []
+      })),
+      getRmsDatabaseWorkspace: vi.fn((target: 'branch' | 'cashier') => of({
+        target,
+        databaseDisplayName: target === 'branch' ? 'Branch Database' : 'Cashier Database',
+        restoreConfirmationText: target === 'branch' ? 'RESTORE BRANCH DATABASE' : 'RESTORE CASHIER DATABASE',
+        approvedBackups: [],
+        latestOperation: null
+      })),
       issueMutationToken: vi.fn(() => of({ token: 'opaque-token', expiresAtUtc: '2026-08-13T10:05:00Z' })),
       controlService: vi.fn(() => of({
         outcome: 'accepted',
         code: 'service_action_accepted',
         detail: 'The Agent acknowledged the service action.',
+        correlationId: 'test-correlation'
+      })),
+      backupRmsDatabase: vi.fn(() => of({
+        operationId: 'database-operation',
+        target: 'branch',
+        databaseDisplayName: 'Branch Database',
+        operation: 'backup',
+        state: 'completed',
+        outcome: 'completed',
+        progressPercent: 100,
+        stage: 'completed',
+        detail: 'The Branch database backup completed.',
+        startedAtUtc: '2026-08-13T10:00:00Z',
+        completedAtUtc: '2026-08-13T10:00:02Z',
+        artifact: null,
+        destructiveAttempted: false,
+        recoveryRequired: false,
+        warnings: [],
+        errorCode: null,
+        correlationId: 'test-correlation'
+      })),
+      restoreRmsDatabase: vi.fn(),
+      getRmsDatabaseOperation: vi.fn(() => of({
+        operationId: 'database-operation',
+        target: 'branch',
+        databaseDisplayName: 'Branch Database',
+        operation: 'backup',
+        state: 'completed',
+        outcome: 'completed',
+        progressPercent: 100,
+        stage: 'completed',
+        detail: 'The Branch database backup completed.',
+        startedAtUtc: '2026-08-13T10:00:00Z',
+        completedAtUtc: '2026-08-13T10:00:02Z',
+        artifact: null,
+        destructiveAttempted: false,
+        recoveryRequired: false,
+        warnings: [],
+        errorCode: null,
         correlationId: 'test-correlation'
       }))
     };
@@ -130,12 +237,12 @@ describe('PosMaintenanceComponent', () => {
     expect(page.textContent).toContain('BR-001');
     expect(page.textContent).toContain('POS-01');
     expect(page.textContent).toContain('Present (value hidden)');
-    expect(page.textContent).toContain('RMS.BranchService');
+    expect(page.textContent).toContain('RMS Branch Service');
     expect(page.textContent).toContain('Typed service controls with safe outcome truth');
     expect(page.textContent).toContain('Stop');
     expect(page.textContent).toContain('Restart');
     expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Start')).toBe(false);
-    expect(page.querySelectorAll('button')).toHaveLength(3);
+    expect(page.querySelectorAll('button')).toHaveLength(5);
   });
 
   it('requires confirmation before issuing a one-use token and submitting a service action', async () => {
@@ -195,6 +302,8 @@ describe('PosMaintenanceComponent', () => {
     transport['getDeviceCapabilities'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     transport['getConfiguration'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     transport['getServices'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    transport['getRmsDiagnostics'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    transport['getRmsDatabaseWorkspace'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     const fixture = TestBed.createComponent(PosMaintenanceComponent);
     await fixture.whenStable();

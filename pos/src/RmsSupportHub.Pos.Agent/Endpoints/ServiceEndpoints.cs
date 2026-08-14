@@ -19,8 +19,8 @@ public static class ServiceEndpoints
             .WithTags("Windows Services")
             .WithSummary("Read allow-listed Windows service visibility")
             .WithDescription(
-                "Returns current status evidence for the server-owned, allow-listed Windows services " +
-                "configured on the local Agent. Service identifiers are opaque and the response " +
+                "Returns current status evidence for the server-owned, canonical RMS Windows service " +
+                "catalog on the local machine. Service identifiers are opaque and the response " +
                 "contains visibility/status plus only the typed actions valid for the observed state. " +
                 "The endpoint has no side effects and never accepts a raw Windows service name.")
             .Produces<IReadOnlyList<ServiceSummaryDto>>(StatusCodes.Status200OK, "application/json")

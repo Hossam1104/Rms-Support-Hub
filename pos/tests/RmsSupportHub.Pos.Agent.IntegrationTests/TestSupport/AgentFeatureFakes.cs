@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
@@ -20,7 +21,7 @@ internal sealed class InMemoryAgentConfigurationStore : IAgentConfigurationStore
         DbFilesPath = @"C:\agent-secrets\db",
         BranchConfigPath = @"C:\agent-secrets\branch.json",
         Databases = ["RmsBranchSrv"],
-        Services = ["RMS.Downloader", "RMS.BranchService", "RMS.BranchService"],
+        Services = ["RMS.BranchService", "RMS.CashierService", "RMSServicesManager"],
         Downloader = new AgentDownloaderConfiguration
         {
             ApiUrl = "https://downloader.integration.test",
@@ -86,7 +87,8 @@ internal sealed class InMemoryServiceManager : IServiceManager
         new Dictionary<string, ServiceStatus>(StringComparer.OrdinalIgnoreCase)
         {
             ["RMS.BranchService"] = ServiceStatus.Running,
-            ["RMS.Downloader"] = ServiceStatus.Stopped
+            ["RMS.CashierService"] = ServiceStatus.Stopped,
+            ["RMSServicesManager"] = ServiceStatus.Stopped
         };
 
     public ConcurrentQueue<(string ServiceName, ServiceControlAction Action)> ControlCalls { get; } = new();
@@ -119,5 +121,205 @@ internal sealed class InMemoryServiceManager : IServiceManager
         cancellationToken.ThrowIfCancellationRequested();
         ControlCalls.Enqueue((serviceName, action));
         return ControlBehavior?.Invoke(serviceName, action, cancellationToken) ?? Task.CompletedTask;
+    }
+}
+
+internal sealed class InMemoryRmsInstallationDiscovery : IRmsInstallationDiscovery
+{
+    public Task<RmsInstallationSnapshot> DiscoverAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new RmsInstallationSnapshot(
+            true,
+            true,
+            true,
+            "BR-INT",
+            "POS-07",
+            "1",
+            "1",
+            "integration-installation-guid",
+            "https://main.integration.test:8443",
+            "localhost",
+            "RMS+ Integration",
+            "2026.08-int07",
+            new("2026.08", "2026.08", "2026.08"),
+            new(
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                []),
+            new(true, RmsConnectionStringState.Valid, "127.0.0.1,1", "RmsBranchSrv", false),
+            new(true, RmsConnectionStringState.Valid, "127.0.0.1,1", "RmsCashierSrv", false),
+            new(RmsEndpointConfigurationState.Unavailable, null, null, null),
+            new(RmsEndpointConfigurationState.Unavailable, null, null, null),
+            new(true, true, true, true)));
+    }
+}
+
+internal sealed class InMemoryRmsDatabaseDiagnostics : IRmsDatabaseDiagnostics
+{
+    public RmsDatabaseDiagnosticStatus Status { get; set; } = RmsDatabaseDiagnosticStatus.Reachable;
+
+    public bool? DatabaseNameMatches { get; set; } = true;
+
+    /// <summary>Status returned by the master/server-only probe used to preflight Restore.</summary>
+    public RmsDatabaseDiagnosticStatus ServerStatus { get; set; } = RmsDatabaseDiagnosticStatus.Reachable;
+
+    public bool? ServerDatabaseNameMatches { get; set; } = true;
+
+    public Task<RmsDatabaseDiagnosticResult> DiagnoseAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var expected = database == RmsDatabaseKind.Branch ? "RmsBranchSrv" : "RmsCashierSrv";
+        return Task.FromResult(new RmsDatabaseDiagnosticResult(
+            database,
+            expected,
+            expected,
+            "integration-sql:1433",
+            true,
+            DatabaseNameMatches,
+            Status,
+            DateTimeOffset.UtcNow,
+            "The configured RMS database answered the read-only identity probe."));
+    }
+
+    public Task<RmsDatabaseDiagnosticResult> DiagnoseServerAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var expected = database == RmsDatabaseKind.Branch ? "RmsBranchSrv" : "RmsCashierSrv";
+        return Task.FromResult(new RmsDatabaseDiagnosticResult(
+            database,
+            expected,
+            expected,
+            "integration-sql:1433",
+            true,
+            ServerDatabaseNameMatches,
+            ServerStatus,
+            DateTimeOffset.UtcNow,
+            "The SQL Server master connection answered the read-only connectivity probe."));
+    }
+}
+
+internal sealed class InMemoryRmsDatabaseSqlOperations : IRmsDatabaseSqlOperations
+{
+    public ConcurrentQueue<(RmsDatabaseKind Database, string BackupPath)> BackupCalls { get; } = new();
+
+    public ConcurrentQueue<(RmsDatabaseKind Database, string BackupPath)> RestoreCalls { get; } = new();
+
+    public Func<RmsDatabaseKind, CancellationToken, Task>? BackupBehavior { get; set; }
+
+    public Func<RmsDatabaseKind, CancellationToken, Task>? RestoreBehavior { get; set; }
+
+    public RmsDatabaseSqlOutcome BackupOutcome { get; set; } = RmsDatabaseSqlOutcome.Completed;
+
+    public RmsDatabaseSqlOutcome RestoreOutcome { get; set; } = RmsDatabaseSqlOutcome.Completed;
+
+    public bool VerifyResult { get; set; } = true;
+
+    public async Task<RmsDatabaseSqlBackupResult> BackupAsync(
+        RmsDatabaseKind database,
+        string backupPath,
+        CancellationToken cancellationToken = default)
+    {
+        BackupCalls.Enqueue((database, backupPath));
+        if (BackupBehavior is not null)
+        {
+            await BackupBehavior(database, cancellationToken);
+        }
+
+        if (BackupOutcome != RmsDatabaseSqlOutcome.Completed)
+        {
+            return BackupOutcome switch
+            {
+                RmsDatabaseSqlOutcome.OutcomeUnknown => new(
+                    BackupOutcome,
+                    "backup_sql_outcome_unknown",
+                    "The synthetic SQL backup dispatch outcome is unknown."),
+                _ => new(
+                    BackupOutcome,
+                    "backup_sql_failed",
+                    "The synthetic SQL backup was rejected before completion.")
+            };
+        }
+
+        var directory = Path.GetDirectoryName(backupPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllTextAsync(
+            backupPath,
+            $"synthetic-{database}-{Guid.NewGuid():N}",
+            Encoding.UTF8,
+            cancellationToken);
+        return new(
+            RmsDatabaseSqlOutcome.Completed,
+            "backup_sql_completed",
+            "The synthetic SQL backup completed.");
+    }
+
+    public Task<RmsDatabaseSqlInspectionResult> InspectBackupAsync(
+        RmsDatabaseKind database,
+        string backupPath,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(
+            new RmsDatabaseSqlInspectionResult(
+                RmsDatabaseSqlOutcome.Completed,
+                "restore_sql_inspection_completed",
+                "The synthetic backup passed inspection.",
+                [new RestoreFileInfo($"{database}-data", "D"), new RestoreFileInfo($"{database}-log", "L")]));
+    }
+
+    public async Task<RmsDatabaseSqlRestoreResult> RestoreAsync(
+        RmsDatabaseKind database,
+        string backupPath,
+        IReadOnlyList<RestoreFileInfo> logicalFiles,
+        string databaseFilesRoot,
+        CancellationToken cancellationToken = default)
+    {
+        RestoreCalls.Enqueue((database, backupPath));
+        if (RestoreBehavior is not null)
+        {
+            await RestoreBehavior(database, cancellationToken);
+        }
+
+        return RestoreOutcome switch
+        {
+            RmsDatabaseSqlOutcome.Completed => new(
+                RestoreOutcome,
+                "restore_sql_completed",
+                "The synthetic SQL restore completed.",
+                false,
+                []),
+            RmsDatabaseSqlOutcome.OutcomeUnknown => new(
+                RestoreOutcome,
+                "restore_sql_outcome_unknown",
+                "The synthetic SQL restore dispatch outcome is unknown.",
+                true,
+                ["Synthetic restore recovery was attempted."]),
+            _ => new(
+                RestoreOutcome,
+                "restore_sql_failed",
+                "The synthetic SQL restore was rejected.",
+                false,
+                [])
+        };
+    }
+
+    public Task<bool> VerifyDatabaseAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(VerifyResult);
     }
 }

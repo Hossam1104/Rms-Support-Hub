@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Read allow-listed Windows service visibility
-         * @description Returns current status evidence for the server-owned, allow-listed Windows services configured on the local Agent. Service identifiers are opaque and the response contains visibility/status plus only the typed actions valid for the observed state. No raw service name is accepted from the browser and the GET has no side effects.
+         * @description Returns current status evidence for the server-owned, canonical RMS Windows service catalog on the local machine. Service identifiers are opaque and the response contains visibility/status plus only the typed actions valid for the observed state. No raw service name is accepted from the browser and the GET has no side effects.
          */
         get: operations["GetServices"];
         put?: never;
@@ -138,6 +138,126 @@ export interface paths {
          * @description Controls one server-owned, allow-listed Windows service through the typed Start, Stop, or Restart contract. The browser supplies only an opaque serviceId path value and a bounded idempotency key; raw service names, paths, commands, SQL, scripts, and arbitrary SCM input are rejected. Windows Negotiate, server-derived local Built-in Administrators membership, the exact Support Hub Origin, and a short-lived one-use mutation token bound to this exact POST path are required. The token is consumed immediately before the typed SCM dispatch. NotAttempted means no SCM call was made, Accepted means the Agent acknowledged dispatch, Failed means an authoritative rejection was classified, and OutcomeUnknown means dispatch or cancellation was ambiguous. Unknown outcomes are never retried automatically. The response contains only a safe code, detail, and correlation identifier.
          */
         post: operations["ControlService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rms/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discover the installed RMS suite and read safe diagnostics
+         * @description Reads known RMS+ installation metadata, performs fixed read-only database identity probes, checks bounded endpoint reachability, and reads the canonical RMS Windows service catalog. No connection string, credential, arbitrary query, raw filesystem path, or caller-selected service name is returned.
+         */
+        get: operations["GetRmsDiagnostics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rms/databases/{targetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the typed RMS database workspace
+         * @description Returns the sanitized workspace for exactly one server-owned Branch or Cashier RMS database target, including approved artifact metadata and the latest principal-scoped operation. No connection string, credential, SQL, unrestricted path, or raw service target is returned, and no mutation token is required for this read.
+         */
+        get: operations["GetRmsDatabaseWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rms/databases/{targetId}/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a typed RMS database backup
+         * @description Starts a server-owned backup of exactly the canonical Branch or Cashier database. The request contains only a bounded idempotency key and the header-only one-use mutation token for this exact route; the Agent owns connection discovery, database identity, destination, and SQL.
+         */
+        post: operations["BackupRmsDatabase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rms/databases/{targetId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a confirmed typed RMS database restore
+         * @description Starts a destructive restore only from an approved Agent-owned backup artifact for the selected canonical Branch or Cashier database. The request contains only the logical target route, opaque artifact ID, exact confirmation text, bounded idempotency key, and header-only one-use mutation token. The Agent owns artifact validation, service coordination, bounded SQL, verification, and recovery truth.
+         */
+        post: operations["RestoreRmsDatabase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rms/databases/{targetId}/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped RMS database operation
+         * @description Returns sanitized REST state truth for one authenticated administrator's RMS database operation. The opaque operation ID is scoped to the authenticated Windows principal; mutation tokens are not accepted or needed.
+         */
+        get: operations["GetRmsDatabaseOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rms/databases/{targetId}/operations/{operationId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream authenticated RMS database operation progress
+         * @description Streams principal-scoped, read-only RMS database operation progress as authenticated server-sent events. The stream uses Windows authentication, administrator authorization, and exact Origin protection; mutation tokens never appear in URLs or query strings.
+         */
+        get: operations["StreamRmsDatabaseOperationEvents"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -350,6 +470,234 @@ export interface components {
              */
             timeoutSeconds: number | string;
         };
+        /** @description Safe main-server and Branch-server reachability evidence. */
+        RmsConnectivityDto: {
+            /** @description Main-server configuration and reachability evidence. */
+            mainServer: components["schemas"]["RmsEndpointDiagnosticDto"];
+            /** @description Branch-server configuration and reachability evidence. */
+            branchServer: components["schemas"]["RmsEndpointDiagnosticDto"];
+        };
+        /** @description Cross-file consistency evidence for duplicated RMS values. */
+        RmsConsistencyDto: {
+            /** @description Comparison status for duplicated BranchCode values. */
+            branchCode: components["schemas"]["RmsConsistencyState"];
+            /** @description Comparison status for duplicated POS identity values. */
+            posIdentity: components["schemas"]["RmsConsistencyState"];
+            /** @description Comparison status for duplicated main-server branch identifiers. */
+            mainServerBranchId: components["schemas"]["RmsConsistencyState"];
+            /** @description Comparison status for duplicated main-server POS identifiers. */
+            mainServerPosId: components["schemas"]["RmsConsistencyState"];
+            /** @description Comparison status for installed component build numbers. */
+            version: components["schemas"]["RmsConsistencyState"];
+            /** @description Safe operator warnings for mismatched or unavailable installed metadata. */
+            warnings: string[];
+        };
+        /**
+         * @description Comparison status for duplicated BranchCode values.
+         * @enum {unknown}
+         */
+        RmsConsistencyState: "consistent" | "mismatch" | "unavailable";
+        /** @description Sanitized metadata for an approved Agent-owned RMS database backup; the physical filesystem path and download URL are intentionally absent. */
+        RmsDatabaseArtifactDto: {
+            /** @description Opaque Agent-owned backup handle; it is not a filesystem path or download URL. */
+            artifactId: string;
+            /** @description Server-generated safe backup display name without a physical path. */
+            displayName: string;
+            /**
+             * Format: int64
+             * @description Size of the approved backup artifact in bytes, when safely known.
+             */
+            sizeBytes: number | string;
+            /** @description Checksum of the approved artifact used for server-side integrity validation. */
+            sha256Checksum: string;
+            /**
+             * Format: date-time
+             * @description UTC creation time recorded by the Agent.
+             */
+            createdAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC retention expiry, when the Agent assigns one.
+             */
+            expiresAtUtc: null | string;
+        };
+        /** @description Typed RMS database backup request containing only a bounded idempotency key. */
+        RmsDatabaseBackupRequestDto: {
+            /** @description Bounded caller-generated key scoped to the canonical database and backup operation. */
+            idempotencyKey: string;
+        };
+        /** @description Sanitized Branch database diagnostic for RmsBranchSrv. */
+        RmsDatabaseDiagnosticDto: {
+            /** @description Canonical database name expected for this RMS component. */
+            expectedDatabase: string;
+            /** @description Database name parsed from the installed RMS connection string, without returning the string itself. */
+            configuredDatabase: null | string;
+            /** @description Safe SQL data-source label parsed from the installed RMS connection string. */
+            serverDisplay: null | string;
+            /** @description Whether the known RMS connection-string setting is present. */
+            configured: boolean;
+            /** @description Whether the configured/queried database identity matches the canonical expected database. */
+            databaseNameMatches: null | boolean;
+            /** @description Sanitized result of configuration validation and the fixed read-only SQL probe. */
+            connectivityStatus: components["schemas"]["RmsDatabaseDiagnosticStatus"];
+            /** @description Freshness and safe detail for the database diagnostic. */
+            evidence: components["schemas"]["EvidenceDto"];
+        };
+        /**
+         * @description Sanitized result of configuration validation and the fixed read-only SQL probe.
+         * @enum {unknown}
+         */
+        RmsDatabaseDiagnosticStatus: "notConfigured" | "configurationInvalid" | "databaseNameMismatch" | "reachable" | "authenticationFailed" | "databaseUnavailable" | "unreachable";
+        /** @description Latest principal-scoped operation state, when retained. */
+        RmsDatabaseOperationDto: {
+            /** @description Opaque Agent operation handle scoped to the authenticated Windows principal. */
+            operationId: string;
+            /** @description Server-owned Branch or Cashier database target. */
+            target: components["schemas"]["RmsDatabaseTarget"];
+            /** @description Safe operator-facing database label. */
+            databaseDisplayName: string;
+            /** @description Typed Backup or Restore operation selected by the server route. */
+            operation: components["schemas"]["RmsDatabaseOperationKind"];
+            /** @description Current REST/SSE lifecycle state. */
+            state: components["schemas"]["RmsDatabaseOperationState"];
+            /** @description Typed operation outcome truth; OutcomeUnknown requires inspection before retry. */
+            outcome: components["schemas"]["RmsDatabaseOperationOutcome"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported progress percentage.
+             */
+            progressPercent: number | string;
+            /** @description Server-owned safe workflow stage label. */
+            stage: string;
+            /** @description Safe operator detail without credentials, connection strings, SQL, unrestricted paths, or raw service targets. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC operation start time recorded by the Agent.
+             */
+            startedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC completion time when the operation reached a final state.
+             */
+            completedAtUtc: null | string;
+            /** @description Sanitized approved artifact metadata, when the workflow produced or used one. */
+            artifact: null | components["schemas"]["RmsDatabaseArtifactDto"];
+            /** @description Whether destructive database work was attempted. */
+            destructiveAttempted: boolean;
+            /** @description Whether the Agent cannot prove that database/service recovery is complete and inspection is required before retrying. */
+            recoveryRequired: boolean;
+            /** @description Bounded safe recovery or operator warnings. */
+            warnings: string[];
+            /** @description Stable safe error code, when the operation did not complete successfully. */
+            errorCode: null | string;
+            /** @description Safe request correlation identifier for diagnostics. */
+            correlationId: string;
+        };
+        /**
+         * @description Typed Backup or Restore operation selected by the server route.
+         * @enum {unknown}
+         */
+        RmsDatabaseOperationKind: "backup" | "restore";
+        /**
+         * @description Typed operation outcome truth; OutcomeUnknown requires inspection before retry.
+         * @enum {unknown}
+         */
+        RmsDatabaseOperationOutcome: "notAttempted" | "accepted" | "completed" | "failed" | "outcomeUnknown";
+        /**
+         * @description Current REST/SSE lifecycle state.
+         * @enum {unknown}
+         */
+        RmsDatabaseOperationState: "notAttempted" | "accepted" | "running" | "completed" | "failed" | "outcomeUnknown";
+        /** @description Typed destructive RMS database restore request containing only an opaque approved artifact ID, exact target confirmation, and bounded idempotency key. */
+        RmsDatabaseRestoreRequestDto: {
+            /** @description Opaque approved backup handle returned by the Agent workspace; it is not a path. */
+            backupArtifactId: string;
+            /** @description Exact target-specific destructive confirmation, for example RESTORE BRANCH DATABASE. */
+            confirmationText: string;
+            /** @description Bounded caller-generated key scoped to the canonical database and restore operation. */
+            idempotencyKey: string;
+        };
+        /**
+         * @description Server-owned Branch or Cashier database target.
+         * @enum {unknown}
+         */
+        RmsDatabaseTarget: "branch" | "cashier";
+        /** @description Sanitized Branch or Cashier RMS database workspace with approved backup metadata and the latest principal-scoped operation. */
+        RmsDatabaseWorkspaceDto: {
+            /** @description Server-owned Branch or Cashier database target. */
+            target: components["schemas"]["RmsDatabaseTarget"];
+            /** @description Safe operator-facing database label. */
+            databaseDisplayName: string;
+            /** @description Exact target-specific confirmation text required for destructive restore. */
+            restoreConfirmationText: string;
+            /** @description Sanitized metadata for backup artifacts registered by this Agent instance and target. */
+            approvedBackups: components["schemas"]["RmsDatabaseArtifactDto"][];
+            /** @description Latest principal-scoped operation state, when retained. */
+            latestOperation: null | components["schemas"]["RmsDatabaseOperationDto"];
+        };
+        /** @description Sanitized read-only RMS installation, connectivity, database, and canonical service diagnostics. Credentials, connection strings, keys, and unrestricted targets are never returned. */
+        RmsDiagnosticsDto: {
+            /** @description Safe installed RMS identity and consistency evidence. */
+            installation: components["schemas"]["RmsInstallationDto"];
+            /** @description Safe main-server and Branch-server reachability evidence. */
+            connectivity: components["schemas"]["RmsConnectivityDto"];
+            /** @description Sanitized Branch database diagnostic for RmsBranchSrv. */
+            branchDatabase: components["schemas"]["RmsDatabaseDiagnosticDto"];
+            /** @description Sanitized Cashier database diagnostic for RmsCashierSrv. */
+            cashierDatabase: components["schemas"]["RmsDatabaseDiagnosticDto"];
+            /** @description Current SCM status for the bounded canonical RMS service catalog. */
+            services: components["schemas"]["ServiceSummaryDto"][];
+        };
+        /** @description Main-server configuration and reachability evidence. */
+        RmsEndpointDiagnosticDto: {
+            /** @description Whether a valid known endpoint was configured. */
+            configured: boolean;
+            /** @description Sanitized endpoint host and port; credentials and paths are omitted. */
+            endpoint: null | string;
+            /** @description TCP reachability evidence only; application health is not inferred. */
+            reachability: components["schemas"]["EvidenceDto"];
+        };
+        /** @description Safe installed RMS identity and consistency evidence. */
+        RmsInstallationDto: {
+            /** @description Whether known RMS installation metadata or component files were detected. */
+            installed: boolean;
+            /** @description Whether the known Branch component was detected. */
+            branchInstalled: boolean;
+            /** @description Whether the known Cashier component was detected. */
+            cashierInstalled: boolean;
+            /** @description Branch code selected from installed RMS metadata. */
+            branchCode: null | string;
+            /** @description POS number selected from installed RMS metadata. */
+            posNumber: null | string;
+            /** @description Safe installation identifier selected from installed RMS metadata. */
+            installationGuid: null | string;
+            /** @description Main-server branch identifier selected from installed RMS metadata. */
+            mainServerBranchId: null | string;
+            /** @description Main-server POS identifier selected from installed RMS metadata. */
+            mainServerPosId: null | string;
+            /** @description Sanitized main-server host and port selected from installed RMS metadata. */
+            mainServerUrl: null | string;
+            /** @description Sanitized Branch-server address selected from installed RMS metadata. */
+            branchServerAddress: null | string;
+            /** @description Detected Branch/Cashier component mode. */
+            installationMode: null | string;
+            /** @description Safe client label selected from installed Cashier UI metadata. */
+            clientName: null | string;
+            /** @description Build metadata for the installed RMS components. */
+            versions: components["schemas"]["RmsVersionDto"];
+            /** @description Cross-file consistency evidence for duplicated RMS values. */
+            consistency: components["schemas"]["RmsConsistencyDto"];
+        };
+        /** @description Build metadata for the installed RMS components. */
+        RmsVersionDto: {
+            /** @description Branch Server BuildNumber selected from its installed appsettings. */
+            branchServerBuildNumber: null | string;
+            /** @description Cashier Server BuildNumber selected from its installed appsettings. */
+            cashierServerBuildNumber: null | string;
+            /** @description Cashier UI BuildNumber selected from its installed appsettings. */
+            cashierUiBuildNumber: null | string;
+        };
         /** @enum {unknown} */
         ServiceActionKind: "start" | "stop" | "restart";
         /**
@@ -379,13 +727,15 @@ export interface components {
          * @description Current Windows service runtime state observed by the Agent.
          * @enum {unknown}
          */
-        ServiceRuntimeState: "unknown" | "running" | "stopped" | "transitioning" | "notFound";
+        ServiceRuntimeState: "unknown" | "running" | "stopped" | "paused" | "transitioning" | "notFound";
         /** @description Allow-listed Windows service visibility, current status evidence, and the typed service actions valid for the observed state. */
         ServiceSummaryDto: {
             /** @description Opaque server-issued service identifier; the raw Windows service name is not accepted from a browser. */
             serviceId: string;
             /** @description Safe display name for the allow-listed Windows service. */
             displayName: string;
+            /** @description Whether SCM found the canonical RMS service on this device. */
+            installed: boolean;
             /** @description Current Windows service runtime state observed by the Agent. */
             state: components["schemas"]["ServiceRuntimeState"];
             /** @description Freshness and check-time evidence for the service state. */
@@ -779,8 +1129,9 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "serviceId": "svc-example-opaque",
-                     *         "displayName": "RMS.BranchService",
+                     *         "serviceId": "svc-0123456789abcdef",
+                     *         "displayName": "RMS Branch Service",
+                     *         "installed": true,
                      *         "state": "running",
                      *         "lastChecked": {
                      *           "freshness": "fresh",
@@ -917,6 +1268,505 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
+            };
+        };
+    };
+    GetRmsDiagnostics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the sanitized RmsDiagnosticsDto dashboard model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "installation": {
+                     *         "installed": true,
+                     *         "branchInstalled": true,
+                     *         "cashierInstalled": true,
+                     *         "branchCode": "BR-001",
+                     *         "posNumber": "POS-01",
+                     *         "installationGuid": "installation-guid-placeholder",
+                     *         "mainServerBranchId": "1",
+                     *         "mainServerPosId": "1",
+                     *         "mainServerUrl": "main-server.example:8080",
+                     *         "branchServerAddress": "localhost:5100",
+                     *         "installationMode": "Branch + Cashier",
+                     *         "clientName": "UPC",
+                     *         "versions": {
+                     *           "branchServerBuildNumber": "5.7.4",
+                     *           "cashierServerBuildNumber": "5.7.4",
+                     *           "cashierUiBuildNumber": "5.7.4"
+                     *         },
+                     *         "consistency": {
+                     *           "branchCode": "consistent",
+                     *           "posIdentity": "consistent",
+                     *           "mainServerBranchId": "consistent",
+                     *           "mainServerPosId": "consistent",
+                     *           "version": "consistent",
+                     *           "warnings": []
+                     *         }
+                     *       },
+                     *       "connectivity": {
+                     *         "mainServer": {
+                     *           "configured": true,
+                     *           "endpoint": "main-server.example:8080",
+                     *           "reachability": {
+                     *             "freshness": "fresh",
+                     *             "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                     *             "detail": "Main-server TCP endpoint is reachable; application health was not queried."
+                     *           }
+                     *         },
+                     *         "branchServer": {
+                     *           "configured": true,
+                     *           "endpoint": "localhost:5100",
+                     *           "reachability": {
+                     *             "freshness": "fresh",
+                     *             "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                     *             "detail": "Branch-server TCP endpoint is reachable; application health was not queried."
+                     *           }
+                     *         }
+                     *       },
+                     *       "branchDatabase": {
+                     *         "expectedDatabase": "RmsBranchSrv",
+                     *         "configuredDatabase": "RmsBranchSrv",
+                     *         "serverDisplay": "sql-server.example",
+                     *         "configured": true,
+                     *         "databaseNameMatches": true,
+                     *         "connectivityStatus": "reachable",
+                     *         "evidence": {
+                     *           "freshness": "fresh",
+                     *           "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                     *           "detail": "The configured RMS database answered the read-only identity probe."
+                     *         }
+                     *       },
+                     *       "cashierDatabase": {
+                     *         "expectedDatabase": "RmsCashierSrv",
+                     *         "configuredDatabase": "RmsCashierSrv",
+                     *         "serverDisplay": "sql-server.example",
+                     *         "configured": true,
+                     *         "databaseNameMatches": true,
+                     *         "connectivityStatus": "reachable",
+                     *         "evidence": {
+                     *           "freshness": "fresh",
+                     *           "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                     *           "detail": "The configured RMS database answered the read-only identity probe."
+                     *         }
+                     *       },
+                     *       "services": [
+                     *         {
+                     *           "serviceId": "svc-0123456789abcdef",
+                     *           "displayName": "RMS Branch Service",
+                     *           "installed": true,
+                     *           "state": "running",
+                     *           "lastChecked": {
+                     *             "freshness": "fresh",
+                     *             "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                     *             "detail": "Windows service is running."
+                     *           },
+                     *           "allowedActions": [
+                     *             "stop",
+                     *             "restart"
+                     *           ],
+                     *           "lastOutcome": null
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsDiagnosticsDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetRmsDatabaseWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the sanitized RmsDatabaseWorkspaceDto workspace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "target": "branch",
+                     *       "databaseDisplayName": "Branch Database",
+                     *       "restoreConfirmationText": "RESTORE BRANCH DATABASE",
+                     *       "approvedBackups": [],
+                     *       "latestOperation": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsDatabaseWorkspaceDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The requested Branch or Cashier target is not a server-owned database target. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BackupRmsDatabase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "idempotencyKey": "support-backup-20260814-001"
+                 *     }
+                 */
+                "application/json": null | components["schemas"]["RmsDatabaseBackupRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The authenticated Agent returned typed RMS database backup operation truth. The result may be NotAttempted, Accepted, Completed, Failed, or OutcomeUnknown; ambiguous outcomes are never retried automatically. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "operation-opaque-id",
+                     *       "target": "branch",
+                     *       "databaseDisplayName": "Branch Database",
+                     *       "operation": "backup",
+                     *       "state": "running",
+                     *       "outcome": "accepted",
+                     *       "progressPercent": 20,
+                     *       "stage": "dispatch",
+                     *       "detail": "The Agent is dispatching the server-owned database operation.",
+                     *       "destructiveAttempted": false,
+                     *       "recoveryRequired": false,
+                     *       "warnings": [],
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsDatabaseOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the target, confirmation, idempotency key, artifact precondition, or transport contract with safe problem details; typed business rejection remains a sanitized operation response where the target is known. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization or the exact-origin/mutation-token boundary rejected the request. Safe codes include windows_sid_unavailable, origin_rejected, and mutation_token_invalid. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned safe generic server-error details without exception, credential, SQL, path, or raw service information. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    RestoreRmsDatabase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "backupArtifactId": "artifact-opaque-id",
+                 *       "confirmationText": "RESTORE BRANCH DATABASE",
+                 *       "idempotencyKey": "support-restore-20260814-001"
+                 *     }
+                 */
+                "application/json": null | components["schemas"]["RmsDatabaseRestoreRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The authenticated Agent returned typed RMS database restore operation truth. The result may be NotAttempted, Accepted, Completed, Failed, or OutcomeUnknown; ambiguous outcomes are never retried automatically. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "operation-opaque-id",
+                     *       "target": "branch",
+                     *       "databaseDisplayName": "Branch Database",
+                     *       "operation": "restore",
+                     *       "state": "running",
+                     *       "outcome": "accepted",
+                     *       "progressPercent": 20,
+                     *       "stage": "dispatch",
+                     *       "detail": "The Agent is dispatching the server-owned database operation.",
+                     *       "destructiveAttempted": true,
+                     *       "recoveryRequired": false,
+                     *       "warnings": [],
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsDatabaseOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the target, confirmation, idempotency key, artifact precondition, or transport contract with safe problem details; typed business rejection remains a sanitized operation response where the target is known. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization or the exact-origin/mutation-token boundary rejected the request. Safe codes include windows_sid_unavailable, origin_rejected, and mutation_token_invalid. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned safe generic server-error details without exception, credential, SQL, path, or raw service information. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetRmsDatabaseOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: string;
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the sanitized RmsDatabaseOperationDto state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "operation-opaque-id",
+                     *       "target": "branch",
+                     *       "databaseDisplayName": "Branch Database",
+                     *       "operation": "backup",
+                     *       "state": "completed",
+                     *       "outcome": "completed",
+                     *       "progressPercent": 100,
+                     *       "stage": "completed",
+                     *       "detail": "The Branch database backup completed.",
+                     *       "artifact": null,
+                     *       "destructiveAttempted": false,
+                     *       "recoveryRequired": false,
+                     *       "warnings": [],
+                     *       "errorCode": null,
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsDatabaseOperationDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The target or principal-scoped operation was not retained. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamRmsDatabaseOperationEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: string;
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A text/event-stream sequence of sanitized RmsDatabaseOperationDto state updates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The exact-origin or administrator authorization boundary rejected the stream request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The target or principal-scoped operation was not retained. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

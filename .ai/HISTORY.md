@@ -35,12 +35,15 @@ the linked planning/evidence documents.
 | INT-13C hardening continuation | `scripts/PosAgentWindowsProvisioning.psm1`; `scripts/invoke-pos-browser-evidence.ps1`; timestamped live evidence | Added transactional fail-closed rollback, corrected the documented pre-146 policy fallback, fixed Limited-task collection timing, and exercised both installed channels against the exact origin plus the explicit localhost smoke path. Automatic provisioning passed; protected evidence remains blocked because the exact workspace origin is unavailable. |
 | INT-13D secure Support Hub origin | Commit `77c5d70` on PR #7; `scripts/PosTestingConfiguration.psm1`, `scripts/PosSupportHubProvisioning.psm1`, `scripts/start-pos-agent-testing.ps1`; timestamped live evidence | Added the exact `https://support-hub.integration.test:4443` Testing origin, separately owned Support Hub host/certificate/trust, real Angular/API external staging with loopback Kestrel HTTPS/HTTP/1.1, ownership-scoped cleanup, and exact-origin Agent fixture alignment. Offline gates passed; elevated live startup and protected Chrome/Edge evidence remain blocked. |
 | INT-13 live operational validation & browser closure | PR #7; `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md` | Completed full live operational validation on representative Windows Testing machine. Proved secure origin `https://support-hub.integration.test:4443`, live Agent `https://rms-pos-agent.localhost:5001`, Chrome & Edge Medium-integrity non-elevated Negotiate IWA (0 prompt), server-derived local Administrator authorization (`isAuthorized=true`), protected diagnostic reads, mutation token issuance/consumption, replay rejection (403), and Agent-dispatched disposable Testing service control (`accepted`, refreshed to `running`). INT-13 is closed. |
+| RMS installation discovery and diagnostics | Pending PR commit | Added read-only installed RMS discovery, fixed Branch/Cashier SQL identity probes, canonical SCM rows, sanitized API/OpenAPI/client contracts, and Support Hub dashboard integration. Testing-machine validation completed without service control or database writes. |
+| Typed Branch/Cashier database backup and restore | Pending PR commit; POS Release/test gates | Added Agent-owned canonical backup/restore contracts, fixed roots and opaque artifact catalog, native bounded SQL backup/inspection/restore/identity verification, target-specific service recovery, one-use token/idempotency/concurrency/progress/audit state, generated OpenAPI/client contracts, Support Hub recovery shelves with typed restore confirmation, and synthetic integration coverage. No live database write or service control was run. |
 
 ## Current programme status
 
-INT-00 through INT-08 and INT-13 are complete and validated. All POS
-architecture, transport, contracts, security boundaries, and live operational
-evidence are accepted. The next milestone is the independent POS First-Release
-Security & Readiness Review (INT-06I + INT-07 + INT-08 + INT-13) conducted by
-Claude Opus 5.
+INT-00 through INT-08 and INT-13 are complete and validated. The RMS
+installation/diagnostics and typed database recovery slices are implemented
+and repository-validated; live RMS backup/restore remains deliberately
+untested. The next milestone is a planning pass for POS Downloader /
+Deployment + Cleanup / Maintenance. Production/customer deployment remains
+blocked on M-1 and M-2.
 

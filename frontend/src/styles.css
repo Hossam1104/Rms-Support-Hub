@@ -5,6 +5,7 @@
 @import './styles/_animations.css';
 @import './styles/order-requests-filter.css';
 @import './styles/order-request-details.css';
+@import './styles/pos-maintenance.css';
 
 /* Global Reset & Container Utility */
 *, *::before, *::after {

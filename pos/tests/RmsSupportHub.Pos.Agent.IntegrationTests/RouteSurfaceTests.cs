@@ -35,11 +35,15 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
         Assert.Contains("/api/v1/configuration", endpoints);
         Assert.Contains("/api/v1/services", endpoints);
         Assert.Contains("/api/v1/services/{serviceId}/actions", endpoints);
-        Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("/api/v1/rms/diagnostics", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/backup", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/restore", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/operations/{operationId}", endpoints);
+        Assert.Contains("/api/v1/rms/databases/{targetId}/operations/{operationId}/events", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("downloader", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(endpoints, path => path!.Contains("artifact", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(endpoints, path => path!.Equals("/api/v1/artifacts", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
