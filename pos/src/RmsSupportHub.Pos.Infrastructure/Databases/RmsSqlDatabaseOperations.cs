@@ -73,18 +73,9 @@ public sealed class RmsSqlDatabaseOperations(
         CancellationToken cancellationToken = default)
     {
         var definition = RmsDatabaseCatalog.For(database);
-        await using var identityConnection = await OpenConnectionAsync(database, useMaster: false, cancellationToken)
-            .ConfigureAwait(false);
-        if (identityConnection is null)
-        {
-            return InspectionFailed("restore_connection_unavailable", "The installed RMS database connection could not be opened.");
-        }
 
-        if (!await HasExpectedIdentityAsync(identityConnection, definition.DatabaseName, cancellationToken).ConfigureAwait(false))
-        {
-            return InspectionFailed("restore_database_identity_mismatch", "The SQL connection did not resolve to the canonical RMS database.");
-        }
-
+        // Restore must remain possible when the target database itself cannot open, so inspection
+        // only requires the SQL Server master connection, never the target database connection.
         await using var connection = await OpenConnectionAsync(database, useMaster: true, cancellationToken)
             .ConfigureAwait(false);
         if (connection is null)
@@ -94,6 +85,27 @@ public sealed class RmsSqlDatabaseOperations(
 
         try
         {
+            await using (var header = connection.CreateCommand())
+            {
+                header.CommandText = "RESTORE HEADERONLY FROM DISK = @backup_path;";
+                header.CommandTimeout = 120;
+                header.Parameters.Add("@backup_path", System.Data.SqlDbType.NVarChar, 4000).Value = backupPath;
+                await using var headerReader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                var headerDatabaseNameOrdinal = headerReader.GetOrdinal("DatabaseName");
+                string? headerDatabaseName = null;
+                if (await headerReader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    headerDatabaseName = headerReader.IsDBNull(headerDatabaseNameOrdinal)
+                        ? null
+                        : headerReader.GetString(headerDatabaseNameOrdinal);
+                }
+
+                if (!string.Equals(headerDatabaseName, definition.DatabaseName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return InspectionFailed("restore_backup_database_mismatch", "The approved backup does not belong to the selected canonical database.");
+                }
+            }
+
             await using (var verify = connection.CreateCommand())
             {
                 verify.CommandText = "RESTORE VERIFYONLY FROM DISK = @backup_path;";

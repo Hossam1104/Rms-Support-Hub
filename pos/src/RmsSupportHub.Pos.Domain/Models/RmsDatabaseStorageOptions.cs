@@ -12,6 +12,16 @@ public sealed class RmsDatabaseStorageOptions
 
     public int MaximumBackupsPerDatabase { get; init; } = 32;
 
+    /// <summary>
+    /// Maximum age of a physical database backup before the durable backup catalog prunes it. This
+    /// is a dedicated policy for physical RMS database backups and is intentionally independent of
+    /// the generic in-memory <see cref="RuntimeRetentionPolicy.ArtifactLifetime"/> browser-download
+    /// lifetime: a backup must never disappear merely because a download capability expired. 30 days
+    /// is a conservative default for local recovery -- long enough to cover a missed maintenance
+    /// window, bounded so local disk usage cannot grow without limit.
+    /// </summary>
+    public TimeSpan BackupRetention { get; init; } = TimeSpan.FromDays(30);
+
     public void Validate()
     {
         ValidateRoot(BackupRootPath, nameof(BackupRootPath));
@@ -19,6 +29,11 @@ public sealed class RmsDatabaseStorageOptions
         if (MaximumBackupsPerDatabase is < 1 or > 256)
         {
             throw new ArgumentOutOfRangeException(nameof(MaximumBackupsPerDatabase));
+        }
+
+        if (BackupRetention <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(BackupRetention));
         }
     }
 

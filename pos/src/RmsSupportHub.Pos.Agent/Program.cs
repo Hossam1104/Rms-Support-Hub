@@ -151,6 +151,10 @@ builder.Services.AddSingleton<IBackupFileSystem, PhysicalBackupFileSystem>();
 builder.Services.AddSingleton<ArtifactCatalog>();
 builder.Services.AddSingleton(new RmsDatabaseStorageOptions());
 builder.Services.AddSingleton<IRmsDatabaseSqlOperations, RmsSqlDatabaseOperations>();
+// RmsDatabaseBackupCatalog is the durable, Agent-owned record of approved database backups: it
+// persists to disk beneath the backup root so backups remain discoverable after an Agent restart,
+// independently of ArtifactCatalog's in-memory browser-download lifetime.
+builder.Services.AddSingleton<RmsDatabaseBackupCatalog>();
 builder.Services.AddSingleton<IRmsDatabaseBackupStorage, RmsDatabaseBackupStorage>();
 builder.Services.AddSingleton<IRmsDatabaseWorkflow, RmsDatabaseWorkflowService>();
 builder.Services.AddSingleton<RmsDatabaseOperationStore>();

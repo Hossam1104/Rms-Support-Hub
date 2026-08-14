@@ -186,6 +186,69 @@ public sealed class RmsDatabaseEndpointTests : IClassFixture<AgentWebApplication
     }
 
     [Fact]
+    public async Task RestoreProceedsWhenTargetDatabaseIsUnavailableOrMissingButServerIsReachable()
+    {
+        ResetFakes();
+        var diagnostics = GetDiagnostics();
+        using var client = factory.CreateAdminClient();
+        var backup = await RunBackupAsync(client, "branch");
+        var artifactId = backup.GetProperty("artifact").GetProperty("artifactId").GetString()!;
+
+        // The target database diagnostic reports the database itself cannot be opened -- exactly
+        // the condition a restore must be able to recover from -- while the server-only diagnostic
+        // used to preflight Restore still reports the SQL Server master connection as reachable.
+        diagnostics.Status = DomainRmsDatabaseDiagnosticStatus.DatabaseUnavailable;
+        diagnostics.DatabaseNameMatches = null;
+        diagnostics.ServerStatus = DomainRmsDatabaseDiagnosticStatus.Reachable;
+        diagnostics.ServerDatabaseNameMatches = true;
+
+        var token = await IssueTokenAsync(client, RmsDatabaseOperation.RestoreOperationId, "branch");
+        var restored = await SendRestoreAsync(
+            client,
+            "branch",
+            token,
+            artifactId,
+            "RESTORE BRANCH DATABASE",
+            UniqueKey());
+        Assert.Equal("completed", restored.GetProperty("outcome").GetString());
+        Assert.Single(GetSql().RestoreCalls);
+    }
+
+    [Fact]
+    public async Task RestoreRejectsWhenServerUnreachableAuthenticationFailsOrNameMismatchesWithoutSqlDispatch()
+    {
+        ResetFakes();
+        var diagnostics = GetDiagnostics();
+        using var client = factory.CreateAdminClient();
+        var backup = await RunBackupAsync(client, "branch");
+        var artifactId = backup.GetProperty("artifact").GetProperty("artifactId").GetString()!;
+
+        diagnostics.ServerStatus = DomainRmsDatabaseDiagnosticStatus.Unreachable;
+        var unreachableToken = await IssueTokenAsync(client, RmsDatabaseOperation.RestoreOperationId, "branch");
+        var unreachable = await SendRestoreAsync(client, "branch", unreachableToken, artifactId, "RESTORE BRANCH DATABASE", UniqueKey());
+        Assert.Equal("restore_server_unreachable", unreachable.GetProperty("errorCode").GetString());
+
+        diagnostics.ServerStatus = DomainRmsDatabaseDiagnosticStatus.AuthenticationFailed;
+        var authToken = await IssueTokenAsync(client, RmsDatabaseOperation.RestoreOperationId, "branch");
+        var auth = await SendRestoreAsync(client, "branch", authToken, artifactId, "RESTORE BRANCH DATABASE", UniqueKey());
+        Assert.Equal("restore_server_authentication_failed", auth.GetProperty("errorCode").GetString());
+
+        diagnostics.ServerStatus = DomainRmsDatabaseDiagnosticStatus.DatabaseNameMismatch;
+        diagnostics.ServerDatabaseNameMatches = false;
+        var mismatchToken = await IssueTokenAsync(client, RmsDatabaseOperation.RestoreOperationId, "branch");
+        var mismatch = await SendRestoreAsync(client, "branch", mismatchToken, artifactId, "RESTORE BRANCH DATABASE", UniqueKey());
+        Assert.Equal("database_name_mismatch", mismatch.GetProperty("errorCode").GetString());
+
+        diagnostics.ServerStatus = DomainRmsDatabaseDiagnosticStatus.ConfigurationInvalid;
+        diagnostics.ServerDatabaseNameMatches = true;
+        var configToken = await IssueTokenAsync(client, RmsDatabaseOperation.RestoreOperationId, "branch");
+        var config = await SendRestoreAsync(client, "branch", configToken, artifactId, "RESTORE BRANCH DATABASE", UniqueKey());
+        Assert.Equal("restore_server_configuration_invalid", config.GetProperty("errorCode").GetString());
+
+        Assert.Empty(GetSql().RestoreCalls);
+    }
+
+    [Fact]
     public async Task RestoreRejectsUnknownWrongTargetAndTraversalArtifactWithoutSqlDispatch()
     {
         ResetFakes();
@@ -366,6 +429,8 @@ public sealed class RmsDatabaseEndpointTests : IClassFixture<AgentWebApplication
         var diagnostics = GetDiagnostics();
         diagnostics.Status = DomainRmsDatabaseDiagnosticStatus.Reachable;
         diagnostics.DatabaseNameMatches = true;
+        diagnostics.ServerStatus = DomainRmsDatabaseDiagnosticStatus.Reachable;
+        diagnostics.ServerDatabaseNameMatches = true;
         var sql = GetSql();
         sql.BackupOutcome = RmsDatabaseSqlOutcome.Completed;
         sql.RestoreOutcome = RmsDatabaseSqlOutcome.Completed;

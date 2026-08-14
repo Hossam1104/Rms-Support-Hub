@@ -16,10 +16,11 @@ public static class RmsDatabaseEndpoints
     {
         app.MapGet(
                 "/api/v1/rms/databases/{targetId}",
-                (HttpContext context,
+                async (HttpContext context,
                     string targetId,
                     RmsDatabaseOperationRuntime runtime,
-                    IAgentPrincipalSidResolver principalSidResolver) =>
+                    IAgentPrincipalSidResolver principalSidResolver,
+                    CancellationToken cancellationToken) =>
                 {
                     if (!principalSidResolver.TryGetSid(context.User, out var principalSid))
                     {
@@ -30,7 +31,7 @@ public static class RmsDatabaseEndpoints
                             AgentProblemCodes.WindowsSidUnavailable);
                     }
 
-                    var workspace = runtime.GetWorkspace(principalSid, targetId);
+                    var workspace = await runtime.GetWorkspaceAsync(principalSid, targetId, cancellationToken);
                     return workspace is null
                         ? Results.NotFound()
                         : Results.Ok(workspace);

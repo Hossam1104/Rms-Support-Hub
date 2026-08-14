@@ -120,7 +120,9 @@ public interface IRmsDatabaseBackupStorage
         string artifactId,
         CancellationToken cancellationToken = default);
 
-    IReadOnlyList<RmsApprovedDatabaseBackup> List(RmsDatabaseKind database);
+    Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record RmsDatabaseProgress(

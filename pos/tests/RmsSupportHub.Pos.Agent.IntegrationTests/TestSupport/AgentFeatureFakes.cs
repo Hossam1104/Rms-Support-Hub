@@ -164,6 +164,11 @@ internal sealed class InMemoryRmsDatabaseDiagnostics : IRmsDatabaseDiagnostics
 
     public bool? DatabaseNameMatches { get; set; } = true;
 
+    /// <summary>Status returned by the master/server-only probe used to preflight Restore.</summary>
+    public RmsDatabaseDiagnosticStatus ServerStatus { get; set; } = RmsDatabaseDiagnosticStatus.Reachable;
+
+    public bool? ServerDatabaseNameMatches { get; set; } = true;
+
     public Task<RmsDatabaseDiagnosticResult> DiagnoseAsync(
         RmsDatabaseKind database,
         CancellationToken cancellationToken = default)
@@ -180,6 +185,24 @@ internal sealed class InMemoryRmsDatabaseDiagnostics : IRmsDatabaseDiagnostics
             Status,
             DateTimeOffset.UtcNow,
             "The configured RMS database answered the read-only identity probe."));
+    }
+
+    public Task<RmsDatabaseDiagnosticResult> DiagnoseServerAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var expected = database == RmsDatabaseKind.Branch ? "RmsBranchSrv" : "RmsCashierSrv";
+        return Task.FromResult(new RmsDatabaseDiagnosticResult(
+            database,
+            expected,
+            expected,
+            "integration-sql:1433",
+            true,
+            ServerDatabaseNameMatches,
+            ServerStatus,
+            DateTimeOffset.UtcNow,
+            "The SQL Server master connection answered the read-only connectivity probe."));
     }
 }
 

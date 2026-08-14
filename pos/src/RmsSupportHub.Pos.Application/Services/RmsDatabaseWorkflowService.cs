@@ -111,7 +111,11 @@ public sealed class RmsDatabaseWorkflowService(
                 "The selected backup is not an approved Agent-owned artifact.");
         }
 
-        var preflight = await CheckDatabaseAsync(database, cancellationToken).ConfigureAwait(false);
+        // Restore must remain possible when the target database does not exist, is offline, or is
+        // damaged enough that a normal connection fails, so this checks only that the installed
+        // configuration names the canonical database and that SQL Server itself can be reached with
+        // the installed credentials -- never that the target database itself can be opened.
+        var preflight = await CheckServerAsync(database, cancellationToken).ConfigureAwait(false);
         if (preflight is not null)
         {
             Report(progress, 100, "not-attempted", preflight.Detail);
@@ -327,6 +331,29 @@ public sealed class RmsDatabaseWorkflowService(
             _ => NotAttempted(
                 "database_unreachable",
                 "The installed RMS database could not be reached; no database operation was attempted.")
+        };
+    }
+
+    private async Task<RmsDatabaseWorkflowResult?> CheckServerAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken)
+    {
+        var result = await diagnostics.DiagnoseServerAsync(database, cancellationToken).ConfigureAwait(false);
+        return result.Status switch
+        {
+            RmsDatabaseDiagnosticStatus.Reachable => null,
+            RmsDatabaseDiagnosticStatus.DatabaseNameMismatch => NotAttempted(
+                "database_name_mismatch",
+                "The installed RMS database identity does not match the canonical target; no database operation was attempted."),
+            RmsDatabaseDiagnosticStatus.AuthenticationFailed => NotAttempted(
+                "restore_server_authentication_failed",
+                "SQL Server authentication failed for the installed RMS database configuration; no database operation was attempted."),
+            RmsDatabaseDiagnosticStatus.NotConfigured or RmsDatabaseDiagnosticStatus.ConfigurationInvalid => NotAttempted(
+                "restore_server_configuration_invalid",
+                "The installed RMS database configuration is unavailable or invalid; no database operation was attempted."),
+            _ => NotAttempted(
+                "restore_server_unreachable",
+                "The SQL Server hosting the installed RMS database could not be reached; no database operation was attempted.")
         };
     }
 

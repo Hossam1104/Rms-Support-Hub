@@ -34,6 +34,17 @@ public interface IRmsDatabaseDiagnostics
     Task<RmsDatabaseDiagnosticResult> DiagnoseAsync(
         RmsDatabaseKind database,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Diagnoses only whether the installed configuration names the canonical database and whether
+    /// the SQL Server hosting it can be reached with the installed credentials via the fixed
+    /// <c>master</c> catalog. Unlike <see cref="DiagnoseAsync"/>, this never requires the target
+    /// database itself to open, so it stays usable when the target database is missing, offline, or
+    /// damaged -- the exact conditions a database restore must be able to recover from.
+    /// </summary>
+    Task<RmsDatabaseDiagnosticResult> DiagnoseServerAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record RmsDatabaseDiagnosticResult(

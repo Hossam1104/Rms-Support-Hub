@@ -101,18 +101,22 @@ public sealed class RmsDatabaseOperationRuntime(
         return operations.TryGet(principalSid, definition.Kind, operationId, out operation);
     }
 
-    public RmsDatabaseWorkspaceDto? GetWorkspace(string principalSid, string? targetId)
+    public async Task<RmsDatabaseWorkspaceDto?> GetWorkspaceAsync(
+        string principalSid,
+        string? targetId,
+        CancellationToken cancellationToken = default)
     {
         if (!RmsDatabaseCatalog.TryResolve(targetId, out var definition))
         {
             return null;
         }
 
+        var backups = await storage.ListAsync(definition.Kind, cancellationToken).ConfigureAwait(false);
         return new(
             ToContractTarget(definition.Kind),
             definition.DisplayName,
             $"RESTORE {definition.DisplayName.ToUpperInvariant()}",
-            storage.List(definition.Kind).Select(ToArtifact).ToArray(),
+            backups.Select(ToArtifact).ToArray(),
             operations.GetLatest(principalSid, definition.Kind));
     }
 
@@ -383,6 +387,25 @@ public sealed class RmsDatabaseOperationRuntime(
             && await storage.ResolveAsync(database, artifactId ?? string.Empty, cancellationToken).ConfigureAwait(false) is null)
         {
             return ("restore_backup_not_approved", "The selected backup is not an approved Agent-owned artifact.");
+        }
+
+        // Restore must remain possible when the target database itself cannot open, so it is
+        // preflighted against SQL Server/master connectivity only, never the target database.
+        if (operation == RmsDatabaseOperationKind.Restore)
+        {
+            var serverDiagnostic = await diagnostics.DiagnoseServerAsync(database, cancellationToken).ConfigureAwait(false);
+            if (serverDiagnostic.Status == RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.Reachable)
+            {
+                return null;
+            }
+
+            return serverDiagnostic.Status switch
+            {
+                RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.DatabaseNameMismatch => ("database_name_mismatch", "The installed RMS database identity does not match the canonical target; no database operation was attempted."),
+                RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.AuthenticationFailed => ("restore_server_authentication_failed", "SQL Server authentication failed for the installed RMS database configuration; no database operation was attempted."),
+                RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.NotConfigured or RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.ConfigurationInvalid => ("restore_server_configuration_invalid", "The installed RMS database configuration is unavailable or invalid; no database operation was attempted."),
+                _ => ("restore_server_unreachable", "The SQL Server hosting the installed RMS database could not be reached; no database operation was attempted.")
+            };
         }
 
         var diagnostic = await diagnostics.DiagnoseAsync(database, cancellationToken).ConfigureAwait(false);

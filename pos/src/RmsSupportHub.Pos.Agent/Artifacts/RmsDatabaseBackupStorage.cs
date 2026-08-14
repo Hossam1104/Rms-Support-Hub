@@ -1,38 +1,35 @@
-using RmsSupportHub.Pos.Contracts.V1.Artifacts;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Artifacts;
 
 /// <summary>
-/// Device-local catalog for RMS database backup artifacts. The catalog accepts only files allocated
-/// beneath the fixed Agent-owned backup root and keeps the server path as an internal capability.
-/// The browser receives only an opaque artifact ID and sanitized metadata.
+/// Device-local capability layer for RMS database backup artifacts. The storage layer accepts only
+/// files allocated beneath the fixed Agent-owned backup root and keeps the server path as an
+/// internal capability -- the browser receives only an opaque artifact ID and sanitized metadata.
+/// Durability, revalidation, and retention live in <see cref="RmsDatabaseBackupCatalog"/>.
 /// </summary>
 public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
 {
-    private const string ArtifactPrincipal = "rms-database-backups";
-    private readonly object _gate = new();
-    private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
     private readonly IBackupFileSystem fileSystem;
-    private readonly ArtifactCatalog artifactCatalog;
+    private readonly RmsDatabaseBackupCatalog catalog;
     private readonly RmsDatabaseStorageOptions options;
 
     public RmsDatabaseBackupStorage(
         IBackupFileSystem fileSystem,
-        ArtifactCatalog artifactCatalog,
-        RmsDatabaseStorageOptions options) : this(fileSystem, artifactCatalog, options, validate: true)
+        RmsDatabaseBackupCatalog catalog,
+        RmsDatabaseStorageOptions options) : this(fileSystem, catalog, options, validate: true)
     {
     }
 
     private RmsDatabaseBackupStorage(
         IBackupFileSystem fileSystem,
-        ArtifactCatalog artifactCatalog,
+        RmsDatabaseBackupCatalog catalog,
         RmsDatabaseStorageOptions options,
         bool validate)
     {
         this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        this.artifactCatalog = artifactCatalog ?? throw new ArgumentNullException(nameof(artifactCatalog));
+        this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         this.options = options ?? throw new ArgumentNullException(nameof(options));
         if (validate)
         {
@@ -52,7 +49,8 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
         var timestamp = createdAtUtc.ToUniversalTime().ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture);
         var displayName = $"{definition.DatabaseName}_{timestamp}_{Guid.NewGuid():N}.bak";
         var path = Path.GetFullPath(Path.Combine(options.BackupRootPath, displayName));
-        if (!IsWithinRoot(options.BackupRootPath, path) || !string.Equals(Path.GetExtension(path), ".bak", StringComparison.OrdinalIgnoreCase))
+        if (!BackupPathSafety.IsWithinRoot(options.BackupRootPath, path)
+            || !string.Equals(Path.GetExtension(path), ".bak", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("The Agent-owned backup destination is invalid.");
         }
@@ -66,9 +64,8 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(allocation);
-        var definition = RmsDatabaseCatalog.For(database);
         var path = Path.GetFullPath(allocation.ServerPath);
-        if (!IsSafePath(path)
+        if (!BackupPathSafety.IsSafePath(fileSystem, options.BackupRootPath, path)
             || !string.Equals(Path.GetExtension(path), ".bak", StringComparison.OrdinalIgnoreCase)
             || !fileSystem.FileExists(path)
             || fileSystem.IsReparsePoint(path))
@@ -97,38 +94,16 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             return null;
         }
 
-        ArtifactMetadataDto metadata;
-        try
-        {
-            metadata = artifactCatalog.Register(
-                ArtifactPrincipal,
-                allocation.DisplayName,
-                path,
-                size,
-                checksum,
-                allocation.CreatedAtUtc);
-        }
-        catch (ArtifactCatalogCapacityException)
-        {
-            return null;
-        }
-
-        var approved = new RmsApprovedDatabaseBackup(
+        var entry = await catalog.RegisterAsync(
             database,
-            metadata.ArtifactId,
-            metadata.DisplayName,
-            metadata.SizeBytes,
-            metadata.Sha256Checksum,
-            metadata.CreatedAtUtc,
-            metadata.ExpiresAtUtc,
-            path);
+            path,
+            SafeDisplayName(allocation.DisplayName),
+            size,
+            checksum,
+            allocation.CreatedAtUtc,
+            cancellationToken).ConfigureAwait(false);
 
-        lock (_gate)
-        {
-            _entries[metadata.ArtifactId] = new(definition.Kind, approved);
-        }
-
-        return approved;
+        return ToApproved(entry);
     }
 
     public async Task<RmsApprovedDatabaseBackup?> ResolveAsync(
@@ -143,109 +118,49 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             return null;
         }
 
-        Entry? entry;
-        lock (_gate)
-        {
-            _entries.TryGetValue(artifactId, out entry);
-        }
-
-        if (entry is null || entry.Database != database || !artifactCatalog.TryGet(ArtifactPrincipal, artifactId, out var metadata) || metadata is null)
-        {
-            return null;
-        }
-
-        var approved = entry.Backup;
-        if (!IsSafePath(approved.ServerPath)
-            || !string.Equals(Path.GetExtension(approved.ServerPath), ".bak", StringComparison.OrdinalIgnoreCase)
-            || !fileSystem.FileExists(approved.ServerPath)
-            || fileSystem.IsReparsePoint(approved.ServerPath))
-        {
-            return null;
-        }
-
-        try
-        {
-            if (fileSystem.GetFileLength(approved.ServerPath) != metadata.SizeBytes)
-            {
-                return null;
-            }
-
-            var checksum = await fileSystem.ComputeSha256Async(approved.ServerPath, cancellationToken).ConfigureAwait(false);
-            return string.Equals(checksum, metadata.Sha256Checksum, StringComparison.OrdinalIgnoreCase)
-                ? approved
-                : null;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return null;
-        }
+        var entry = await catalog.ResolveAsync(database, artifactId, cancellationToken).ConfigureAwait(false);
+        return entry is null ? null : ToApproved(entry);
     }
 
-    public IReadOnlyList<RmsApprovedDatabaseBackup> List(RmsDatabaseKind database)
+    public async Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
     {
-        var metadata = artifactCatalog.List(ArtifactPrincipal)
-            .ToDictionary(item => item.ArtifactId, StringComparer.Ordinal);
-        lock (_gate)
-        {
-            foreach (var artifactId in _entries.Keys.Where(id => !metadata.ContainsKey(id)).ToArray())
-            {
-                _entries.Remove(artifactId);
-            }
-
-            return _entries.Values
-                .Where(entry => entry.Database == database && metadata.ContainsKey(entry.Backup.ArtifactId))
-                .Select(entry => entry.Backup)
-                .OrderByDescending(entry => entry.CreatedAtUtc)
-                .Take(options.MaximumBackupsPerDatabase)
-                .ToArray();
-        }
+        var entries = await catalog.ListAsync(database, cancellationToken).ConfigureAwait(false);
+        return entries.Select(ToApproved).ToArray();
     }
 
-    private bool IsSafePath(string path)
-    {
-        if (!IsWithinRoot(options.BackupRootPath, path))
-        {
-            return false;
-        }
-
-        var current = path;
-        while (!string.IsNullOrWhiteSpace(current))
-        {
-            if ((fileSystem.FileExists(current) || Directory.Exists(current)) && fileSystem.IsReparsePoint(current))
-            {
-                return false;
-            }
-
-            var parent = Directory.GetParent(current)?.FullName;
-            if (string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
-            {
-                break;
-            }
-
-            current = parent ?? string.Empty;
-        }
-
-        return true;
-    }
+    private RmsApprovedDatabaseBackup ToApproved(RmsDatabaseBackupCatalogEntry entry) =>
+        new(
+            entry.Database,
+            entry.ArtifactId,
+            entry.DisplayName,
+            entry.SizeBytes,
+            entry.Sha256Checksum,
+            entry.CreatedAtUtc,
+            null,
+            Path.GetFullPath(Path.Combine(options.BackupRootPath, entry.FileName)));
 
     private void EnsureSafeExistingDirectory(string path)
     {
-        if (!Directory.Exists(path) || !IsSafePath(Path.Combine(path, "placeholder.bak")))
+        if (!Directory.Exists(path)
+            || !BackupPathSafety.IsSafePath(fileSystem, options.BackupRootPath, Path.Combine(path, "placeholder.bak")))
         {
             throw new InvalidOperationException("The Agent-owned backup destination is unavailable.");
         }
     }
 
-    private static bool IsWithinRoot(string root, string target)
+    private static string SafeDisplayName(string value)
     {
-        var canonicalRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var canonicalTarget = Path.GetFullPath(target);
-        return canonicalTarget.StartsWith(canonicalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
-    }
+        var name = Path.GetFileName(value?.Replace('\\', '/') ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(name) || name is "." or ".." || name.Any(char.IsControl))
+        {
+            return "backup.bak";
+        }
 
-    private sealed record Entry(RmsDatabaseKind Database, RmsApprovedDatabaseBackup Backup);
+        var invalidCharacters = Path.GetInvalidFileNameChars();
+        var safe = new string(name.Select(character =>
+            invalidCharacters.Contains(character) ? '_' : character).ToArray());
+        return string.IsNullOrWhiteSpace(safe) ? "backup.bak" : safe[..Math.Min(128, safe.Length)];
+    }
 }
