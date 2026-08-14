@@ -1,5 +1,39 @@
 # POS Maintenance Cross-Project Integration Plan
 
+## Current product rebaseline — 2026-08-15
+
+The runtime/API reconnaissance in
+[`POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`](POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md)
+is the current execution authority layered on this historical architecture
+record. PR #10 completed typed Downloader, Artifact Download, Cleanup, and
+Branch Reset in addition to the previously completed secure Agent,
+Backup/Restore, and service-control surfaces.
+
+Representative UPC evidence established the authoritative Product Release and
+Client sources, the actual `RMSServiceManager` SCM name, bounded native
+log/Windows-event diagnostic feasibility, a complete matching local RMS payload,
+and the Main Server contract boundary. Installed runtime endpoints and the
+owner-provided Swagger base differ; future API access therefore uses
+Agent-owned allow-listed client profiles and discovered local Branch/POS
+binding, never a browser URL or target.
+
+The remaining product is intentionally three large vertical slices rather than
+INT-style micro-milestones:
+
+1. final operator workspace, Health/Failure Analyzer, bounded logs/events,
+   database/capacity evidence, Support Bundle, and Incident Timeline;
+2. typed Main Server profiles/install-state operations, Safety Snapshot, Safe
+   Diagnostic Console Run, Repair/Guided Repair, and the real Agent package;
+3. M-1/M-2, durable Production audit, fleet/representative proof, Whites
+   comparison, and independent Claude Opus 5 High review.
+
+Slices 1 and 2 are not merged because confined process launch, remote
+credentials/mutations, installer rollback, and package ownership require the
+first slice's typed evidence model. Root `TASK.md` is the full Slice A
+implementation prompt. GET-only Main Server reconnaissance remains authorized
+when side-effect-free; every live Main Server mutation requires explicit owner
+approval before invocation.
+
 ## Status and authorization
 
 This is the canonical destination-side architecture record for INT-00 through

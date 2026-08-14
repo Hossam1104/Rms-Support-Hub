@@ -1,43 +1,82 @@
 # Current Project State
 
 - **Updated:** 2026-08-15
-- **Repository:** `Hossam1104/Rms-Support-Hub`; the POS Downloader / Deployment + Cleanup / Maintenance slice is implemented and validated for normal PR delivery.
-- **Programme:** INT-00 through INT-08 and INT-13 are complete/accepted on the representative Testing machine. The completed RMS discovery/diagnostics and typed Branch/Cashier database recovery work remains intact. Production/customer deployment remains blocked on M-1 managed browser policy and M-2 Production certificate lifecycle.
-- **Next executable task:** `TASK.md` is the full `POS Final Functional Integration + UX + Production Packaging` task. Do not execute it as part of the completed Downloader/Maintenance delivery.
+- **Repository baseline:** PR #10 merged at `16fd303`; typed Downloader,
+  Artifact Download, Cleanup, Branch Reset, database Backup/Restore, and
+  service control remain the accepted completed baseline.
+- **Current session outcome:** read-only representative UPC runtime and Main
+  Server OpenAPI reconnaissance completed; no production code, installer,
+  service action, database mutation, or Main Server mutation was run.
+- **Next executable task:** root `TASK.md` is the full large Slice A
+  implementation prompt for the final POS operator workspace and diagnostic
+  evidence. It is implementation, not planning.
 
-## Application and POS architecture
+## Reconciled runtime facts
 
-- Angular 22 SPA and .NET 10 Web API; `/tools/pos-maintenance` is the direct operational workspace.
-- POS privileged traffic is browser -> `RmsSupportHub.Pos.Agent` over direct loopback HTTPS/HTTP/1.1, never through API/Core/Data. Production uses Negotiate, exact-origin CORS, server-resolved local Built-in Administrators authorization, and fail-closed SID handling.
-- INT-05 owns versioned `/pos/openapi`, the generated client, and direct `HttpBackend`; INT-07 owns device/connectivity/configuration/service reads; INT-08 owns typed service control and the later POS operation slices.
-- RMS discovery uses a secret-bearing internal connection-string seam and fixed identity probes. Raw credentials and connection strings never enter transport or UI models.
-- RMS database recovery exposes only typed `branch` and `cashier` routes. The Agent owns canonical names/service mapping, fixed roots, the durable approved backup catalog, opaque database-backup artifacts, native bounded SQL, exact restore confirmation, target-specific service coordination, one-use target/path-bound tokens, bounded idempotency/concurrency, principal-scoped REST/SSE progress, and safe privileged audit events.
-- Downloader routes are typed and server-owned: approved branch catalog, batch trigger, principal-scoped REST/SSE operation state, and `/api/v1/artifacts/{artifactId}` for expiring principal-scoped opaque artifact capabilities. `AgentRuntimeSettingsFactory` projects stored configuration and encrypted secrets into the existing `DbDownloadService` seam; remote SMB/API values never cross to Angular.
-- Maintenance routes are typed and server-owned: cleanup/reset preview and execute, principal-bound expiring preview challenges, exact confirmation, re-evaluated `MaintenanceService` policy, bounded operation state/SSE, and sanitized partial/recovery/unknown outcome evidence. Browser requests never supply service, database, table, or filesystem targets.
-- All new downloader/maintenance operation, challenge, and idempotency stores are bounded and process-local; durable approved RMS database backups remain separate from the generic in-memory artifact catalog.
+- Authoritative RMS Product Release is the fixed
+  `C:\ProgramData\RMS_Plus\ReleaseNumber.txt`; representative value `5.7.4`.
+- Authoritative Client is Cashier UI `Settings:TheClient`; representative
+  value `UPC`. Branch/Cashier/UI BuildNumbers are separate drift evidence.
+- Installed mode is Branch + Cashier. Branch/POS identity sources agree on the
+  representative installation.
+- Actual RMS SCM names are `RMS.BranchService`, `RMS.CashierService`, and
+  `RMSServiceManager`. The current catalog's `RMSServicesManager` spelling is a
+  confirmed defect assigned to Slice A.
+- Branch, Cashier, and Service Manager use fixed Serilog Console/File sources;
+  bounded native logs and Windows SCM/.NET/Application Error/WER events contain
+  useful exception/stack evidence. No raw messages are stored in the repo.
+- `C:\ProgramData\RMS_Plus` contains local installer/uninstaller and complete
+  RMS payload surfaces; the four component apphost hashes matched the installed
+  apphosts. Supported repair switches/rollback remain unproven.
 
-## Security and evidence
+## Main Server findings
 
-- Exact Testing Support Hub origin: `https://support-hub.integration.test:4443`; direct Agent origin: `https://rms-pos-agent.localhost:5001`.
-- No Production calls, customer execution, real Restore, real branch reset, real cleanup, or real downloader trigger/download were performed in this slice. Automated endpoint coverage uses synthetic HTTP/SMB/filesystem/database/service seams and temporary test roots only.
-- The pending representative-device, non-destructive Branch/Cashier Backup proof remains open. The required elevated Administrator session must redeploy the corrected Agent to Testing, run Backup for both targets, verify approved artifact/checksum evidence, restart the Agent, and confirm the opaque backup handle survives the restart. Do not use Restore as part of that proof.
-- Any future live downloader or maintenance verification must remain Testing-only, use approved disposable/synthetic targets, and be separately evidenced. An unavailable elevated session is a recorded live-evidence blocker, not a reason to weaken the implementation boundary.
+- UPC Swagger exposes OpenAPI v1 (523 paths) and v2 (26 paths). The documents
+  define Branch/POS install-state `PUT`s with query-bound identity and empty
+  status responses, but no package body, operation ID, polling, cancellation,
+  idempotency, or rollback contract.
+- The install inventory response schema is credential-bearing and must never
+  be proxied, cached, logged, or bundled.
+- Global Swagger Bearer security is not reliable per-route runtime evidence:
+  two safe POS lookup GETs were anonymously reachable while Branch status GETs
+  returned 401.
+- Installed runtime Main Server and owner-provided Swagger bases use different
+  hosts. Future integration uses Agent-owned allow-listed client profiles and
+  local discovered Branch/POS binding; Angular never supplies a URL or target.
+- Whites is expected to host the same application but could not be reached on
+  the UPC VPN. The owner confirmed UPC-only connectivity; equivalence remains
+  an explicit read-only gate.
+- Main Server GET is pre-authorized only when side-effect-free. Any
+  POST/PUT/PATCH/DELETE or state-changing GET requires explicit owner approval
+  before live invocation.
 
-## Validation baseline
+## Accelerated remaining roadmap
 
-| Gate | Result |
-|---|---|
-| POS Release build (`-warnaserror`) | Passed, 0 warnings/errors |
-| POS tests | Domain 9, Application 76, Infrastructure 80, Agent.IntegrationTests 146 passed (311 total) |
-| Focused Downloader/Maintenance endpoint tests | 5 passed, including artifact download, unauthorized/invalid token, cleanup/reset fake seams, ambiguous trigger, and concurrency paths |
-| Frontend tests | 56 files / 345 tests passed |
-| Frontend production build | Passed; initial bundle 460.78 kB and no component-style budget warnings |
-| OpenAPI/client regeneration | Regenerated from the Agent document; second generation pass byte-stable |
-| `git diff --check` / secret review | Passed; no credential-like literals or credential-bearing URLs; the only UNC-like value is an isolated synthetic downloader fake used to prove it does not cross the response boundary |
+1. **Slice A:** Product Release/Client/drift, service-name correction, Health
+   Check, DB/capacity/backup health, Failure Analyzer, bounded logs/events,
+   Support Bundle, Incident Timeline, final responsive operator UI, and
+   regression preservation of completed operations.
+2. **Slice B:** Agent-owned Main Server profiles and Branch/POS install-state
+   operations, Safety Snapshot, Safe Diagnostic Console Run, Deployment,
+   Repair/Guided Repair, and real Agent package/install/upgrade/uninstall/
+   rollback boundary.
+3. **Slice C:** M-1 managed browser policy, M-2 Production certificate
+   lifecycle, durable Production audit, package/ACL and representative-device
+   proofs, Whites comparison, fleet rollout, and Claude Opus 5 High independent
+   security/readiness review.
 
-## Deferred boundaries
+Slices A and B remain separate because Slice B adds confined process launch,
+remote credentials/mutations, installer rollback, and package ownership; it
+must consume Slice A's stable typed evidence model.
 
-- M-1 managed Chrome/Edge browser policy and Local Network Access/IWA fleet behavior remain open external gates.
-- M-2 Production certificate issuance, trust distribution, renewal/rotation, private-key ACL, hostname, and rollback ownership remain open external gates.
-- The next task prepares final operator UX and the real Agent package/install boundary; it must not close M-1/M-2 or perform Production/customer actions.
-- `ConnectionStrings:UpcEcommerceTest` remains absent locally; unrelated UPC live calls are environment setup, not a POS defect.
+## Validation baseline and open evidence
+
+- PR #10 baseline: POS 311 tests passed; frontend 345 tests passed; Release
+  build passed without warnings; generated client was byte-stable.
+- This planning/reconnaissance change requires documentation diff/memory/secret
+  validation only; it does not change buildable product source.
+- Pending representative-device proof remains non-destructive Branch/Cashier
+  Backup plus approved artifact/checksum retention across Agent restart. No
+  Restore is authorized for that proof.
+- Production/customer deployment remains blocked on M-1, M-2, durable audit,
+  package/ACL ownership, final representative evidence, and independent review.

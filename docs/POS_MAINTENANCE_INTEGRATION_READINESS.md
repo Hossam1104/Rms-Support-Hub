@@ -1,5 +1,29 @@
 # POS Maintenance - Integration Readiness
 
+## Current readiness rebaseline — 2026-08-15
+
+PR #10 and the earlier security/database/service slices are complete inputs.
+The representative UPC runtime and GET-only Main Server discovery are recorded
+in
+[`POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`](POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md).
+That evidence replaces the stale “next INT gate” language below for active
+execution while preserving the historical record.
+
+The next executable work is the large Slice A in root `TASK.md`: authoritative
+Release/Client/drift, correction of the real `RMSServiceManager` service name,
+Health Check, database/capacity/backup health, Service Failure Analyzer,
+bounded RMS logs/Windows events, sanitized Support Bundle, Incident Timeline,
+and the final responsive operator workspace. Slice B then owns Main Server
+profiles/install-state mutations, Safe Diagnostic Console Run, Safety Snapshot,
+Repair/Guided Repair, and Agent packaging. Slice C owns M-1/M-2, durable
+Production audit, fleet/representative evidence, Whites comparison, and final
+independent review.
+
+Only UPC is live-reachable on the current VPN; Whites same-application
+equivalence remains expected but unverified. No live Main Server mutation is
+pre-authorized: any POST/PUT/PATCH/DELETE or state-changing GET requires
+explicit owner approval before invocation.
+
 ## Release approval scope — Testing vs. Production (read this first)
 
 **Testing-environment first release (INT-06I + INT-07 + INT-08 + INT-13) is
@@ -17,8 +41,8 @@ in this document — they are separate gates.
 The full independent review outcome (0 Critical, 0 High, 2 Medium, 6 Low
 resolved, 3 Informational) is recorded in
 [POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md](reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md).
-M-1 and M-2 are the next architecture gate and are handed to the following
-execution session as their own scoped task; see root `TASK.md`.
+M-1 and M-2 remain Production/fleet Slice C gates. They are not part of the
+next Slice A implementation task.
 
 ## Purpose and status
 

@@ -62,6 +62,9 @@ Do not copy facts that can be cheaply discovered from the repository.
  - INT-04 composes the Windows-Service-capable Agent at `https://rms-pos-agent.localhost:5001`; INT-05 adds versioned `/pos/openapi`, generated types, and direct `HttpBackend`; INT-05F isolates `openapi-typescript@7.13.0` with a TypeScript 5 peer-compatible lockfile. INT-07 adds the first production read-only device/connectivity/configuration/service routes and direct workspace, with no mutation route or API relay; runtime OpenAPI remains hidden. INT-CI01 makes Windows maintenance/SMB semantics deterministic and all five POS CI lanes green.
  - The Agent also owns the typed RMS database recovery surface at `/api/v1/rms/databases/{branch|cashier}`. Backup and restore use canonical targets, Agent-owned roots, opaque approved artifacts, bounded native SQL, exact confirmation, target-specific service coordination, one-use mutation tokens, bounded idempotency/concurrency, and principal-scoped REST/SSE operation truth. The browser never supplies or receives a raw SQL/database/path/service capability.
  - The Agent composes the existing typed downloader and maintenance application services at `/api/v1/downloads/**`, `/api/v1/maintenance/**`, and `/api/v1/artifacts/{artifactId}`. Downloader configuration and credentials are projected from Agent-owned stores; branch selection, cleanup/reset policy, bounded operation state, one-use challenges/tokens, and opaque artifact capabilities are server-owned. Browser responses contain only logical branch/target state, stable safe codes, and principal-scoped opaque handles.
+ - Fixed `RMS_Plus/ReleaseNumber.txt` is Product Release; Cashier UI `Settings:TheClient` is Client; component builds are drift evidence; the real manager SCM name is `RMSServiceManager`.
+ - Main Server maintenance uses Agent-owned profiles bound to discovered Branch/POS; Angular supplies no URL/target, and every live mutation requires owner approval.
+ - Device repair is typed local-package work; Main Server install/uninstall are state acknowledgements until evidence proves otherwise.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.
@@ -82,28 +85,11 @@ Do not copy facts that can be cheaply discovered from the repository.
   `npm ci --prefix tools/pos-agent-client-generator` and `npm ci --prefix frontend`,
   then `npm --prefix frontend run generate:pos-agent-client`. Output is under
   `frontend/src/app/core/pos-agent/generated/` and is not edited manually.
-- POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/tests/RmsSupportHub.Pos.Domain.Tests/RmsSupportHub.Pos.Domain.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Application.Tests/RmsSupportHub.Pos.Application.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Infrastructure.Tests/RmsSupportHub.Pos.Infrastructure.Tests.csproj -c Release --no-restore`; `dotnet test pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj -c Release --no-build --no-restore`; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
  - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/RmsSupportHub.Pos.slnx --nologo`; the focused project commands remain available for diagnosis; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - INT-13C Testing provisioning: run `scripts/setup-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false` and `scripts/remove-pos-agent-testing.ps1 -IUnderstandTestingOnly -WhatIf -Confirm:$false` only on the authorized Testing machine. Exact browser/IWA policy logic is in `scripts/PosAgentWindowsProvisioning.psm1`; the task-scoped normal-user browser evidence launcher is `scripts/invoke-pos-browser-evidence.ps1` and uses `tools/pos-browser-evidence`.
-- INT-13D secure Support Hub Testing runtime: use the exact origin
-  `https://support-hub.integration.test:4443` and run
-  `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly`
-  only from an elevated, owner-authorized Testing PowerShell session. The start
-  path builds the real Angular production bundle, publishes the existing API to
-  external machine-local staging, serves it from API `wwwroot` on loopback
-  HTTPS/HTTP/1.1, selects the separately owned LocalMachine certificate, and
-  proves `/` plus `/tools/pos-maintenance`. `scripts/PosTestingConfiguration.psm1`
-  rejects alternate origins; `scripts/PosSupportHubProvisioning.psm1` owns the
-  Support Hub host/certificate lifecycle. Do not claim live protected evidence
-  until the exact endpoint and both Limited interactive-user browser channels
-  respond.
+- INT-13D Testing runtime uses exact `https://support-hub.integration.test:4443` and elevated `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly`; it owns loopback HTTPS/HTTP/1.1 host/certificate staging and must probe real root/POS routes and both normal-user browser channels.
 - Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
-- Manual IIS publish package: `.\scripts\publish-iis.ps1` - Angular production
-  build + .NET Release publish combined into `publish/RmsSupportHub-IIS/`
-  (API + `wwwroot/` Angular build) and `publish/RmsSupportHub-IIS.zip`
-  (contents at ZIP root, no outer folder). See `docs/MANUAL_IIS_DEPLOYMENT.md`.
-  Temporary manual workflow pending a CI/CD pipeline; script never touches
-  IIS or writes secrets into the package.
+- Manual IIS package: `.\scripts\publish-iis.ps1` creates `publish/RmsSupportHub-IIS/` and root-content ZIP without touching IIS or shipping secrets; see `docs/MANUAL_IIS_DEPLOYMENT.md`.
 ## Integrations
 
 - SQL Server supports lookups and request history. Ownership `RmsSupportHub.Data`;
