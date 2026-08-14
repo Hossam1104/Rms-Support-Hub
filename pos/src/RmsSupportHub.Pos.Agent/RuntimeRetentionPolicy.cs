@@ -1,10 +1,6 @@
 namespace RmsSupportHub.Pos.Agent;
 
-/// <summary>
-/// Bounded retention values for short-lived Agent state. Feature sessions may consume these values
-/// when their own operation and artifact stores are composed; INT-04 does not register feature
-/// workers or endpoints.
-/// </summary>
+/// <summary>Bounded retention values for short-lived Agent operation and artifact state.</summary>
 public sealed record RuntimeRetentionPolicy
 {
     public int MaxCompletedOperations { get; init; } = 64;

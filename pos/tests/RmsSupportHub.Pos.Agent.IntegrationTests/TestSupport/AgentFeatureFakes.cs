@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
+using RmsSupportHub.Pos.Application.Maintenance;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
@@ -8,32 +9,48 @@ namespace RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 
 internal sealed class InMemoryAgentConfigurationStore : IAgentConfigurationStore
 {
-    private AgentConfiguration _configuration = new()
+    private AgentConfiguration _configuration;
+
+    public InMemoryAgentConfigurationStore(string storageRoot)
     {
-        SqlInstance = "127.0.0.1,1",
-        SqlUser = "integration-reader",
-        BranchCode = "BR-INT",
-        PosNumber = "POS-07",
-        Release = "2026.08-int07",
-        ClientName = "RMS+ Integration",
-        ApiBaseUrl = "http://127.0.0.1:1",
-        BackupFolder = @"C:\agent-secrets\backups",
-        DbFilesPath = @"C:\agent-secrets\db",
-        BranchConfigPath = @"C:\agent-secrets\branch.json",
-        Databases = ["RmsBranchSrv"],
-        Services = ["RMS.BranchService", "RMS.CashierService", "RMSServicesManager"],
-        Downloader = new AgentDownloaderConfiguration
+        var maintenanceRoot = Path.Combine(storageRoot, "maintenance");
+        _configuration = new AgentConfiguration
         {
-            ApiUrl = "https://downloader.integration.test",
-            RdbServerIp = "192.0.2.10",
-            RdbUsername = "rdb-reader",
-            BackupRootFolder = @"\\rdb\backups",
-            KnownBranchCodes = ["BR-INT"],
-            PollIntervalSeconds = 7,
-            TimeoutSeconds = 90
-        },
-        Version = 7
-    };
+            SqlInstance = "127.0.0.1,1",
+            SqlUser = "integration-reader",
+            BranchCode = "BR-INT",
+            PosNumber = "POS-07",
+            Release = "2026.08-int07",
+            ClientName = "RMS+ Integration",
+            ApiBaseUrl = "http://127.0.0.1:1",
+            BackupFolder = Path.Combine(storageRoot, "backups"),
+            DbFilesPath = Path.Combine(storageRoot, "db"),
+            BranchConfigPath = Path.Combine(storageRoot, "branch.json"),
+            Databases = ["RmsBranchSrv"],
+            Services = ["RMS.BranchService", "RMS.CashierService", "RMSServicesManager"],
+            Downloader = new AgentDownloaderConfiguration
+            {
+                ApiUrl = "https://downloader.integration.test",
+                RdbServerIp = "192.0.2.10",
+                RdbUsername = "rdb-reader",
+                BackupRootFolder = @"\\rdb\backups",
+                KnownBranchCodes = ["BR-INT"],
+                PollIntervalSeconds = 1,
+                TimeoutSeconds = 30,
+                StableSizeObservationAttempts = 2,
+                StableSizeObservationIntervalSeconds = 1
+            },
+            Maintenance = new MaintenanceSettings
+            {
+                CleanupTargets = [Path.Combine(maintenanceRoot, "cache")],
+                ManagedRoots = [maintenanceRoot],
+                DataRoots = [maintenanceRoot],
+                InstallRoots = [Path.Combine(storageRoot, "install")],
+                ProtectedRoots = [Path.Combine(storageRoot, "protected")]
+            },
+            Version = 7
+        };
+    }
 
     public Task<AgentConfiguration> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -79,6 +96,168 @@ internal sealed class InMemoryAgentSecretStore : IAgentSecretStore
         _secrets.Remove(kind);
         return Task.CompletedTask;
     }
+
+    public void EnableDownloaderCredential() => _secrets[AgentSecretKind.RdbPassword] = Guid.NewGuid().ToString("N");
+}
+
+internal sealed class InMemoryBackupApiClient : IBackupApiClient
+{
+    public DownloaderTriggerResult Result { get; set; } = new(DownloaderTriggerState.Accepted);
+
+    public Func<string, IReadOnlyList<string>, CancellationToken, Task<DownloaderTriggerResult>>? TriggerBehavior { get; set; }
+
+    public Task<DownloaderTriggerResult> TriggerBackupAsync(
+        string apiUrl,
+        IReadOnlyList<string> branchCodes,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (TriggerBehavior is not null)
+        {
+            return TriggerBehavior(apiUrl, branchCodes, cancellationToken);
+        }
+
+        return Task.FromResult(Result);
+    }
+}
+
+internal sealed class InMemoryBackupRepository : IBackupRepository
+{
+    private const string BatchName = "batch-001";
+    private const string ArchiveName = "BR-INT_0042.zip";
+
+    public Task<IReadOnlyList<RemoteEntryInfo>> ListDirectoriesAsync(
+        RemoteConnectionInfo connection,
+        string rootFolder,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<RemoteEntryInfo>>([
+            new(BatchName, $"{rootFolder}\\{BatchName}", DateTimeOffset.UtcNow, 0)
+        ]);
+    }
+
+    public Task<IReadOnlyList<RemoteEntryInfo>> ListFilesAsync(
+        RemoteConnectionInfo connection,
+        string folder,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<RemoteEntryInfo>>([
+            new(ArchiveName, $"{folder}\\{ArchiveName}", DateTimeOffset.UtcNow, 32)
+        ]);
+    }
+
+    public async Task DownloadFileAsync(
+        RemoteConnectionInfo connection,
+        string remoteFilePath,
+        string localFilePath,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var directory = Path.GetDirectoryName(localFilePath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        await File.WriteAllBytesAsync(localFilePath, [0x50, 0x4B, 0x03, 0x04, 0x49, 0x4E, 0x54], cancellationToken);
+        progress?.Report(100);
+    }
+}
+
+internal sealed class ImmediateDownloaderDelay : IDownloaderDelay
+{
+    public Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class InMemoryMaintenanceFileSystem : IMaintenanceFileSystem
+{
+    public ConcurrentQueue<(string Path, bool Recursive)> DeleteCalls { get; } = new();
+
+    public string ExpandEnvironmentVariables(string path) => Environment.ExpandEnvironmentVariables(path);
+
+    public string GetFullPath(string path) => Path.GetFullPath(path);
+
+    public MaintenancePathInspection Inspect(string path) =>
+        new(path, true, true, false, null, null, 0);
+
+    public IReadOnlyList<MaintenancePathInspection> InspectAncestors(string path) =>
+        [new(path, true, true, false, null, null, 0)];
+
+    public long? TryGetAvailableFreeSpace(string path) => 1024L * 1024L * 1024L;
+
+    public Task DeleteAsync(string path, bool recursive, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DeleteCalls.Enqueue((path, recursive));
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class InMemoryMaintenanceDatabase : IDatabaseService, IMaintenanceDatabasePreview, IMaintenanceDatabaseReset
+{
+    public ConcurrentQueue<(string DatabaseName, string BranchCode, IReadOnlyList<string> Tables)> ResetCalls { get; } = new();
+
+    public Task TestConnectionAsync(AppSettings settings, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> BranchExistsAsync(AppSettings settings, string branchCode, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(true);
+    }
+
+    public Task ResetBranchDataAsync(AppSettings settings, string branchCode, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+
+    public Task BackupDatabaseAsync(AppSettings settings, string databaseName, string backupFilePath, bool useCompatibilityMode, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    public Task<IReadOnlyList<RestoreFileInfo>> ReadRestoreFileListAsync(AppSettings settings, string backupFilePath, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RestoreFileInfo>>([]);
+
+    public Task RestoreDatabaseAsync(AppSettings settings, string targetDatabase, string backupFilePath, IReadOnlyList<RestoreFileInfo> logicalFiles, string dbFilesPath, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    public Task<bool> BranchExistsInDatabaseAsync(AppSettings settings, string databaseName, string branchCode, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(true);
+    }
+
+    public Task<IReadOnlyList<MaintenanceTableScope>> GetBranchResetScopeAsync(
+        AppSettings settings,
+        string databaseName,
+        string branchCode,
+        IReadOnlyList<string> tableNames,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<MaintenanceTableScope>>(
+            tableNames.Select(table => new MaintenanceTableScope(table, 3)).ToArray());
+    }
+
+    public Task ResetBranchDataAsync(
+        AppSettings settings,
+        string databaseName,
+        string branchCode,
+        IReadOnlyList<string> tableNames,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ResetCalls.Enqueue((databaseName, branchCode, tableNames));
+        return Task.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 
 internal sealed class InMemoryServiceManager : IServiceManager

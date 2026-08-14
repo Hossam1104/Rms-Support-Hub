@@ -12,11 +12,13 @@ using RmsSupportHub.Pos.Agent.Device;
 using RmsSupportHub.Pos.Agent.Endpoints;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.RmsDatabase;
+using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Application.UseCases;
 using RmsSupportHub.Pos.Application.Services;
+using RmsSupportHub.Pos.Application.Maintenance;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
@@ -26,6 +28,8 @@ using RmsSupportHub.Pos.Infrastructure.Backups;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Databases;
 using RmsSupportHub.Pos.Infrastructure.Installation;
+using RmsSupportHub.Pos.Infrastructure.Http;
+using RmsSupportHub.Pos.Infrastructure.Smb;
 using RmsSupportHub.Pos.Infrastructure.Windows;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -108,7 +112,10 @@ builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationR
 [
     ServiceActionOperation.Descriptor,
     RmsDatabaseOperation.BackupDescriptor,
-    RmsDatabaseOperation.RestoreDescriptor
+    RmsDatabaseOperation.RestoreDescriptor,
+    DownloaderOperation.Descriptor,
+    MaintenanceOperation.CleanupDescriptor,
+    MaintenanceOperation.BranchResetDescriptor
 ]));
 
 builder.Services.AddOpenApi("v1", options =>
@@ -125,6 +132,7 @@ builder.Services.AddSingleton(new AgentConfigurationStoreOptions());
 builder.Services.AddSingleton<IAgentConfigurationStore, JsonAgentConfigurationStore>();
 builder.Services.AddSingleton<IAgentSecretStore, DpapiAgentSecretStore>();
 builder.Services.AddSingleton<AgentConfigurationUseCase>();
+builder.Services.AddSingleton<AgentRuntimeSettingsFactory>();
 builder.Services.AddSingleton(new RmsInstallationOptions());
 builder.Services.AddSingleton<RmsInstallationDiscovery>();
 builder.Services.AddSingleton<IRmsInstallationDiscovery>(services =>
@@ -145,8 +153,33 @@ builder.Services.AddSingleton<ServiceActionConcurrencyGate>();
 builder.Services.AddSingleton<IMutationOperationTargetResolver, MutationOperationTargetResolver>();
 builder.Services.AddSingleton<ServiceActionRuntime>();
 
-// ArtifactCatalog is retained as a process-local foundation, but no HTTP artifact endpoint is
-// mapped in this session. Its file capability remains behind the existing Infrastructure port.
+// Downloader and maintenance are composed from the already-tested typed Application and
+// Infrastructure seams. Their configuration and credentials are projected server-side by
+// AgentRuntimeSettingsFactory; no browser request can replace these adapters.
+builder.Services.AddSingleton<IHostAddressResolver, SystemHostAddressResolver>();
+builder.Services.AddSingleton<HttpClient>(services =>
+    new HttpClient(BackupApiHttpMessageHandlerFactory.Create(
+        services.GetRequiredService<IHostAddressResolver>())));
+builder.Services.AddSingleton<SqlCmdExecutor>();
+builder.Services.AddSingleton<IDatabaseService>(services => services.GetRequiredService<SqlCmdExecutor>());
+builder.Services.AddSingleton<IMaintenanceDatabasePreview>(services => services.GetRequiredService<SqlCmdExecutor>());
+builder.Services.AddSingleton<IMaintenanceDatabaseReset>(services => services.GetRequiredService<SqlCmdExecutor>());
+builder.Services.AddSingleton<IMaintenanceFileSystem, PhysicalMaintenanceFileSystem>();
+builder.Services.AddSingleton<IBackupApiClient, BackupApiClient>();
+builder.Services.AddSingleton<IBackupRepository, SmbBackupRepository>();
+builder.Services.AddSingleton<DbDownloadService>();
+builder.Services.AddSingleton<MaintenanceService>();
+builder.Services.AddSingleton<DownloaderOperationStore>();
+builder.Services.AddSingleton<DownloaderIdempotencyStore>();
+builder.Services.AddSingleton<MaintenanceOperationStore>();
+builder.Services.AddSingleton<MaintenanceIdempotencyStore>();
+builder.Services.AddSingleton<MaintenanceChallengeStore>();
+builder.Services.AddSingleton<AgentOperationConcurrencyGate>();
+builder.Services.AddSingleton<DownloaderOperationRuntime>();
+builder.Services.AddSingleton<MaintenanceOperationRuntime>();
+
+// Artifacts are process-local, principal-scoped capabilities. The endpoint exposes only the
+// generated opaque identifier and a sanitized download response.
 builder.Services.AddSingleton<IBackupFileSystem, PhysicalBackupFileSystem>();
 builder.Services.AddSingleton<ArtifactCatalog>();
 builder.Services.AddSingleton(new RmsDatabaseStorageOptions());
@@ -320,6 +353,9 @@ app.MapConfigurationEndpoints();
 app.MapServiceEndpoints();
 app.MapRmsEndpoints();
 app.MapRmsDatabaseEndpoints();
+app.MapDownloaderEndpoints();
+app.MapMaintenanceEndpoints();
+app.MapArtifactEndpoints();
 
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))

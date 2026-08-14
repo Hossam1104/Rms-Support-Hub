@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "RMS+ POS Agent API",
-    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes protected reads and typed Windows-service and RMS database operations, and no Support Hub backend relay is involved. The Agent exposes read-only device/configuration/RMS visibility plus allow-listed service control and server-owned RMS database backup/restore workflows. Mutation tokens are short-lived, one-use, and bound to the authenticated principal, exact Origin, registered operation, target, method, and path.",
+    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes protected reads and typed Windows-service and RMS database operations, and no Support Hub backend relay is involved. The Agent exposes read-only device/configuration/RMS visibility plus allow-listed service control and server-owned RMS database backup/restore workflows. Downloader, maintenance, and artifact capabilities remain typed, principal-scoped, and fail-closed. Mutation tokens are short-lived, one-use, and bound to the authenticated principal, exact Origin, registered operation, target, method, and path.",
     "version": "1.0"
   },
   "servers": [
@@ -1182,6 +1182,706 @@
         ]
       }
     },
+    "/api/v1/downloads/branches": {
+      "get": {
+        "tags": [
+          "Downloader"
+        ],
+        "summary": "Read server-approved downloader branches",
+        "description": "Returns only the logical branch identifiers configured for the server-owned downloader. The response contains no SMB path, credential, endpoint connection detail, or raw host path.",
+        "operationId": "GetDownloaderBranches",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the configured BranchCatalogEntryDto collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BranchCatalogEntryDto"
+                  }
+                },
+                "example": [
+                  {
+                    "branchCode": "BR-001",
+                    "isSelected": false
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/batches": {
+      "post": {
+        "tags": [
+          "Downloader"
+        ],
+        "summary": "Start a typed RMS backup download batch",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "TriggerDownloaderBatch",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TriggerBatchRequestDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent accepted or safely rejected the typed downloader batch request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloaderOperationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/operations/{operationId}": {
+      "get": {
+        "tags": [
+          "Downloader"
+        ],
+        "summary": "Read one principal-scoped downloader operation",
+        "description": "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.",
+        "operationId": "GetDownloaderOperation",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the retained downloader operation state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloaderOperationDto"
+                },
+                "example": {
+                  "operationId": "opaque-operation-id",
+                  "state": "running",
+                  "progressPercent": 50
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/operations/{operationId}/events": {
+      "get": {
+        "tags": [
+          "Downloader"
+        ],
+        "summary": "Stream authenticated downloader operation progress",
+        "description": "Streams principal-scoped, read-only operation state as server-sent events. The stream uses the same Windows authentication, administrator authorization, exact Origin, and opaque operation lookup as REST; mutation tokens never appear in a URL or query string.",
+        "operationId": "StreamDownloaderOperationEvents",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A text/event-stream sequence of sanitized DownloaderOperationDto state updates.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected stream.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The exact-origin, SID, or administrator authorization boundary rejected the stream request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/cleanup/preview": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Preview server-owned maintenance cleanup",
+        "description": "Builds a read-only server-owned impact preview. The browser selects no path, service, database, table, SQL statement, or credential; a one-use principal-bound challenge is issued only when policy verification succeeds.",
+        "operationId": "PreviewMaintenanceCleanup",
+        "responses": {
+          "200": {
+            "description": "The Agent returned a server-owned cleanup impact preview and, when ready, an expiring challenge.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupPreviewDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected preview.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated administrator or exact-origin transport boundary rejected the preview request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/cleanup/execute": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Execute confirmed server-owned maintenance cleanup",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "ExecuteMaintenanceCleanup",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CleanupExecuteRequestDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent accepted or safely rejected the typed cleanup execution request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceOperationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/reset/preview": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Preview server-owned branch reset",
+        "description": "Builds a read-only server-owned impact preview. The browser selects no path, service, database, table, SQL statement, or credential; a one-use principal-bound challenge is issued only when policy verification succeeds.",
+        "operationId": "PreviewMaintenanceBranchReset",
+        "responses": {
+          "200": {
+            "description": "The Agent returned a server-owned branch-reset scope preview and, when ready, an expiring challenge.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchResetPreviewDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected preview.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated administrator or exact-origin transport boundary rejected the preview request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/reset/execute": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Execute confirmed server-owned branch reset",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "ExecuteMaintenanceBranchReset",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BranchResetExecuteRequestDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent accepted or safely rejected the typed branch-reset execution request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceOperationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/operations/{operationId}": {
+      "get": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Read one principal-scoped maintenance operation",
+        "description": "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.",
+        "operationId": "GetMaintenanceOperation",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the retained maintenance operation state and recovery evidence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceOperationDto"
+                },
+                "example": {
+                  "operationId": "opaque-operation-id",
+                  "state": "running",
+                  "progressPercent": 50
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/operations/{operationId}/events": {
+      "get": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Stream authenticated maintenance operation progress",
+        "description": "Streams principal-scoped, read-only operation state as server-sent events. The stream uses the same Windows authentication, administrator authorization, exact Origin, and opaque operation lookup as REST; mutation tokens never appear in a URL or query string.",
+        "operationId": "StreamMaintenanceOperationEvents",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A text/event-stream sequence of sanitized MaintenanceOperationDto state updates.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected stream.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The exact-origin, SID, or administrator authorization boundary rejected the stream request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/artifacts/{artifactId}": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Download one principal-scoped Agent artifact",
+        "description": "Downloads one server-produced artifact through an opaque, principal-scoped, expiring capability. The route accepts no path and returns 404 for malformed, missing, expired, wrong-principal, or externally removed artifacts.",
+        "operationId": "DownloadArtifact",
+        "parameters": [
+          {
+            "name": "artifactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent streamed the retained artifact with a safe content type and attachment name."
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected artifact download.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated administrator or exact-origin transport boundary rejected the artifact request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque artifact identifier is malformed, missing, expired, wrong-principal, or no longer backed by a file."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
     "/api/v1/device/identity": {
       "get": {
         "tags": [
@@ -1457,6 +2157,149 @@
         },
         "description": "Safe application/problem+json error contract. Code is a stable problem code and correlationId may identify the request; sensitive identity and machine details are not included."
       },
+      "BranchCatalogEntryDto": {
+        "required": [
+          "branchCode",
+          "isSelected"
+        ],
+        "type": "object",
+        "properties": {
+          "branchCode": {
+            "type": "string",
+            "description": "Server-approved logical branch code accepted by the typed downloader route."
+          },
+          "isSelected": {
+            "type": "boolean",
+            "description": "Server-owned selection hint; the browser cannot expand the approved branch catalog."
+          }
+        },
+        "description": "Server-approved downloader branch metadata. It contains no SMB path, credential, or endpoint detail."
+      },
+      "BranchResetExecuteRequestDto": {
+        "required": [
+          "challengeId",
+          "typedConfirmation"
+        ],
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "description": "Opaque, principal-bound preview challenge required for this exact maintenance mode."
+          },
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact confirmation phrase returned by the matching server-owned preview."
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Bounded caller-generated key; repeating the same challenge returns the retained operation."
+          }
+        },
+        "description": "Typed branch-reset execution request containing only a preview challenge, exact confirmation, and bounded idempotency key."
+      },
+      "BranchResetPreviewDto": {
+        "required": [
+          "challengeId",
+          "branchCode",
+          "affectedTables",
+          "confirmationPhrase",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "description": "Opaque, principal-bound challenge that expires and can be consumed only once."
+          },
+          "branchCode": {
+            "type": "string",
+            "description": "Server-resolved branch identity used for the approved reset scope."
+          },
+          "affectedTables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Code-owned logical table identifiers approved for the branch reset."
+          },
+          "confirmationPhrase": {
+            "type": "string",
+            "description": "Exact phrase required by the matching execute request."
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC expiry instant enforced for the one-use preview challenge.",
+            "format": "date-time"
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Whether server-owned policy and read-only scope checks produced an executable preview."
+          },
+          "databaseName": {
+            "type": "string",
+            "description": "Server-approved database label for the branch reset; no connection string is returned."
+          },
+          "tableScopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchResetTablePreviewDto"
+            },
+            "description": "Read-only row-count evidence for the approved logical table scope."
+          },
+          "rejections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenancePolicyRejectionDto"
+            },
+            "description": "Sanitized policy rejections keyed by logical target or scope identifier."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded safe preview warnings without raw paths or exception text."
+          },
+          "availableFreeSpaceBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Read-only free-space evidence for the server-owned maintenance root, when available.",
+            "format": "int64"
+          }
+        },
+        "description": "Server-owned branch-reset scope preview with approved logical table scope and an expiring challenge."
+      },
+      "BranchResetTablePreviewDto": {
+        "required": [
+          "tableName",
+          "matchingRows"
+        ],
+        "type": "object",
+        "properties": {
+          "tableName": {
+            "type": "string",
+            "description": "Code-owned logical table identifier in the approved branch reset scope."
+          },
+          "matchingRows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Read-only row-count evidence for the approved table, when available.",
+            "format": "int64"
+          }
+        },
+        "description": "Sanitized branch-reset table evidence from the server-owned read-only scope check."
+      },
       "BrowseRootDto": {
         "required": [
           "rootId",
@@ -1474,6 +2317,164 @@
           }
         },
         "description": "Safe browse-root display metadata. The corresponding host path remains server-owned."
+      },
+      "CleanupExecuteRequestDto": {
+        "required": [
+          "challengeId",
+          "typedConfirmation"
+        ],
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "description": "Opaque, principal-bound preview challenge required for this exact maintenance mode."
+          },
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact confirmation phrase returned by the matching server-owned preview."
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Bounded caller-generated key; repeating the same challenge returns the retained operation."
+          }
+        },
+        "description": "Typed cleanup execution request containing only a preview challenge, exact confirmation, and bounded idempotency key."
+      },
+      "CleanupPreviewDto": {
+        "required": [
+          "challengeId",
+          "servicesToStop",
+          "pathsToDelete",
+          "confirmationPhrase",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "description": "Opaque, principal-bound challenge that expires and can be consumed only once."
+          },
+          "servicesToStop": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Logical server-owned service target identifiers; raw Windows service names are omitted."
+          },
+          "pathsToDelete": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Logical server-owned cleanup target identifiers; host paths are never returned."
+          },
+          "confirmationPhrase": {
+            "type": "string",
+            "description": "Exact phrase required by the matching execute request."
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC expiry instant enforced for the one-use preview challenge.",
+            "format": "date-time"
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Whether server-owned policy and read-only scope checks produced an executable preview."
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CleanupTargetPreviewDto"
+            },
+            "description": "Detailed sanitized cleanup target evidence keyed by logical target ID."
+          },
+          "rejections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenancePolicyRejectionDto"
+            },
+            "description": "Sanitized policy rejections keyed by logical target or scope identifier."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded safe preview warnings without raw paths or exception text."
+          },
+          "availableFreeSpaceBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Read-only free-space evidence for the server-owned maintenance root, when available.",
+            "format": "int64"
+          }
+        },
+        "description": "Server-owned cleanup impact preview with logical target identifiers and an expiring principal-bound challenge."
+      },
+      "CleanupTargetPreviewDto": {
+        "required": [
+          "targetId",
+          "accepted",
+          "exists",
+          "isDirectory",
+          "lengthBytes",
+          "childCount",
+          "rejectionCode"
+        ],
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "description": "Logical server-owned target identifier; it is not a host path or raw service name."
+          },
+          "accepted": {
+            "type": "boolean",
+            "description": "Whether the configured target passed server cleanup policy."
+          },
+          "exists": {
+            "type": "boolean",
+            "description": "Whether the approved target existed at preview time."
+          },
+          "isDirectory": {
+            "type": "boolean",
+            "description": "Whether the approved target is a directory at preview time."
+          },
+          "lengthBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Read-only target size evidence, when the target is a file.",
+            "format": "int64"
+          },
+          "childCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Bounded read-only child count, when the target is a directory.",
+            "format": "int32"
+          },
+          "rejectionCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Stable safe policy rejection code, when the target was rejected."
+          }
+        },
+        "description": "Sanitized cleanup target evidence identified by a logical target ID; host paths never cross the Agent boundary."
       },
       "DeviceCapabilitiesDto": {
         "required": [
@@ -1547,6 +2548,207 @@
         },
         "description": "Safe server-owned branch, POS, release, and client identity. It contains no Windows SID, credential, or unrestricted host path."
       },
+      "DownloaderBranchOutcomeDto": {
+        "required": [
+          "branchCode",
+          "state",
+          "progressPercent"
+        ],
+        "type": "object",
+        "properties": {
+          "branchCode": {
+            "type": "string",
+            "description": "Logical branch code from the server-approved downloader selection."
+          },
+          "state": {
+            "description": "Sanitized branch download lifecycle state.",
+            "$ref": "#/components/schemas/DownloaderBranchState"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported progress percentage for this branch.",
+            "format": "int32"
+          },
+          "failureCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Stable safe branch failure code, when the branch did not complete."
+          },
+          "artifactId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Opaque Agent artifact capability, when the branch archive was published."
+          }
+        },
+        "description": "Sanitized outcome for one requested downloader branch; artifactId is an opaque Agent capability."
+      },
+      "DownloaderBranchState": {
+        "enum": [
+          "pending",
+          "triggered",
+          "waiting",
+          "detected",
+          "validating",
+          "ready",
+          "downloading",
+          "completed",
+          "timedOut",
+          "cancelled",
+          "failed"
+        ],
+        "description": "Sanitized branch download lifecycle state."
+      },
+      "DownloaderOperationDto": {
+        "required": [
+          "operationId",
+          "state",
+          "outcome",
+          "progressPercent",
+          "stage",
+          "detail",
+          "startedAtUtc",
+          "completedAtUtc",
+          "downloaderOutcome",
+          "errorCode",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "description": "Opaque downloader operation handle scoped to the authenticated Windows principal."
+          },
+          "state": {
+            "description": "Current downloader REST/SSE lifecycle state.",
+            "$ref": "#/components/schemas/DownloaderOperationStateDto"
+          },
+          "outcome": {
+            "description": "Downloader outcome truth; OutcomeUnknown requires inspection before retry.",
+            "$ref": "#/components/schemas/DownloaderOperationStateDto"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported downloader progress percentage.",
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Server-owned safe downloader workflow stage."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without SMB paths, credentials, raw exceptions, or transport data."
+          },
+          "startedAtUtc": {
+            "type": "string",
+            "description": "UTC operation start time recorded by the Agent.",
+            "format": "date-time"
+          },
+          "completedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC completion time when the downloader reached a final state.",
+            "format": "date-time"
+          },
+          "downloaderOutcome": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloaderOperationOutcomeDto"
+              }
+            ],
+            "description": "Sanitized branch and trigger outcome evidence, when available."
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Stable safe error code, when the downloader did not complete successfully."
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for diagnostics."
+          }
+        },
+        "description": "Principal-scoped downloader progress and outcome with opaque operation and artifact identifiers."
+      },
+      "DownloaderOperationOutcomeDto": {
+        "required": [
+          "branches",
+          "serial",
+          "triggerState"
+        ],
+        "type": "object",
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloaderBranchOutcomeDto"
+            },
+            "description": "Sanitized outcome for each requested server-approved branch."
+          },
+          "serial": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe downloader serial evidence, when available; remote path details are omitted."
+          },
+          "triggerState": {
+            "description": "Truth about the server-side backup trigger milestone.",
+            "$ref": "#/components/schemas/DownloaderTriggerStateDto"
+          },
+          "operatorGuidance": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe operator guidance for an incomplete or ambiguous downloader outcome."
+          },
+          "triggerAccepted": {
+            "type": "boolean",
+            "description": "Compatibility projection of triggerState; inspect triggerState for unknown outcomes."
+          }
+        },
+        "description": "Sanitized branch and trigger outcome evidence, when available."
+      },
+      "DownloaderOperationStateDto": {
+        "enum": [
+          "notAttempted",
+          "accepted",
+          "running",
+          "completed",
+          "failed",
+          "outcomeUnknown"
+        ],
+        "description": "Current downloader REST/SSE lifecycle state."
+      },
+      "DownloaderTriggerStateDto": {
+        "enum": [
+          "notAttempted",
+          "failed",
+          "accepted",
+          "outcomeUnknown"
+        ],
+        "description": "Truth about the server-side backup trigger milestone."
+      },
       "EvidenceDto": {
         "required": [
           "freshness",
@@ -1594,6 +2796,235 @@
           }
         },
         "description": "Anonymous health response produced by the Agent. Status identifies the foundation check that answered; it contains no machine or credential detail."
+      },
+      "MaintenanceItemOutcomeDto": {
+        "required": [
+          "targetId",
+          "kind",
+          "state",
+          "attempted",
+          "completed",
+          "residueUncertain",
+          "failureCode",
+          "recoveryGuidance"
+        ],
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "description": "Logical server-owned target identifier; it is not a host path or raw service name."
+          },
+          "kind": {
+            "type": "string",
+            "description": "Logical maintenance item kind such as file or database."
+          },
+          "state": {
+            "description": "Sanitized maintenance item lifecycle state.",
+            "$ref": "#/components/schemas/MaintenanceItemState"
+          },
+          "attempted": {
+            "type": "boolean",
+            "description": "Whether the Agent crossed the corresponding typed mutation seam."
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Whether the item operation completed successfully."
+          },
+          "residueUncertain": {
+            "type": "boolean",
+            "description": "Whether remaining state requires recovery verification before retrying."
+          },
+          "failureCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Stable safe item failure code, when present."
+          },
+          "recoveryGuidance": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe recovery guidance without raw paths, SQL, or exception text."
+          }
+        },
+        "description": "Sanitized maintenance item outcome with logical target identity and explicit recovery truth."
+      },
+      "MaintenanceItemState": {
+        "enum": [
+          "notAttempted",
+          "alreadyAbsent",
+          "completed",
+          "rejected",
+          "failed",
+          "recoveryRequired"
+        ],
+        "description": "Sanitized maintenance item lifecycle state."
+      },
+      "MaintenanceOperationDto": {
+        "required": [
+          "operationId",
+          "mode",
+          "state",
+          "outcome",
+          "progressPercent",
+          "stage",
+          "detail",
+          "startedAtUtc",
+          "completedAtUtc",
+          "maintenanceOutcome",
+          "errorCode",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "description": "Opaque maintenance operation handle scoped to the authenticated Windows principal."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Server-owned maintenance mode: cleanup or branch-reset."
+          },
+          "state": {
+            "description": "Current maintenance REST/SSE lifecycle state.",
+            "$ref": "#/components/schemas/MaintenanceOperationStateDto"
+          },
+          "outcome": {
+            "description": "Maintenance outcome truth; OutcomeUnknown requires recovery inspection before retry.",
+            "$ref": "#/components/schemas/MaintenanceOperationStateDto"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported maintenance progress percentage.",
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Server-owned safe maintenance workflow stage."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without paths, service names, SQL, credentials, or exceptions."
+          },
+          "startedAtUtc": {
+            "type": "string",
+            "description": "UTC operation start time recorded by the Agent.",
+            "format": "date-time"
+          },
+          "completedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC completion time when maintenance reached a final state.",
+            "format": "date-time"
+          },
+          "maintenanceOutcome": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MaintenanceOperationOutcomeDto"
+              }
+            ],
+            "description": "Sanitized logical item outcomes and recovery truth, when available."
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Stable safe maintenance error code, when the operation did not complete successfully."
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for diagnostics."
+          }
+        },
+        "description": "Principal-scoped maintenance progress and outcome with logical targets and recovery truth."
+      },
+      "MaintenanceOperationOutcomeDto": {
+        "required": [
+          "destructiveAttempted",
+          "recoveryRequired",
+          "items",
+          "warnings",
+          "recoveryGuidance"
+        ],
+        "type": "object",
+        "properties": {
+          "destructiveAttempted": {
+            "type": "boolean",
+            "description": "Whether the maintenance workflow crossed a destructive typed seam."
+          },
+          "recoveryRequired": {
+            "type": "boolean",
+            "description": "Whether the Agent cannot prove cleanup or reset recovery is complete."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceItemOutcomeDto"
+            },
+            "description": "Sanitized logical item outcomes retained for operator review."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded safe maintenance warnings."
+          },
+          "recoveryGuidance": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Safe recovery guidance for partial or ambiguous maintenance outcomes."
+          }
+        },
+        "description": "Sanitized logical item outcomes and recovery truth, when available."
+      },
+      "MaintenanceOperationStateDto": {
+        "enum": [
+          "notAttempted",
+          "accepted",
+          "running",
+          "completed",
+          "failed",
+          "outcomeUnknown"
+        ],
+        "description": "Current maintenance REST/SSE lifecycle state."
+      },
+      "MaintenancePolicyRejectionDto": {
+        "required": [
+          "targetId",
+          "code",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "description": "Logical server-owned target identifier; it is not a host path or raw service name."
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable safe maintenance policy rejection code."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Safe operator-facing rejection reason without raw implementation detail."
+          }
+        },
+        "description": "Sanitized maintenance policy rejection containing a logical target ID and stable code, never a host path."
       },
       "MutationTokenIssueRequestDto": {
         "required": [
@@ -2534,6 +3965,27 @@
           }
         },
         "description": "Security and API-version diagnostics produced by the Agent for the authenticated Windows account. The raw Windows SID is intentionally omitted."
+      },
+      "TriggerBatchRequestDto": {
+        "required": [
+          "branchCodes",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "branchCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Branch codes selected from the server-approved downloader catalog."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key; repeating the same branch selection returns the retained operation."
+          }
+        },
+        "description": "Typed downloader batch request containing only server-approved logical branch codes and a bounded idempotency key."
       }
     },
     "securitySchemes": {
@@ -2565,6 +4017,15 @@
     },
     {
       "name": "RMS Database Operations"
+    },
+    {
+      "name": "Downloader"
+    },
+    {
+      "name": "Maintenance"
+    },
+    {
+      "name": "Artifacts"
     },
     {
       "name": "Device"

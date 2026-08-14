@@ -69,6 +69,39 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("POST", "/api/v1/services/{serviceId}/actions"):
                 DocumentServiceAction(operation);
                 break;
+            case ("GET", "/api/v1/downloads/branches"):
+                DocumentDownloaderBranches(operation);
+                break;
+            case ("POST", "/api/v1/downloads/batches"):
+                DocumentTypedMutation(operation, "Start a typed RMS backup download batch", "The Agent accepted or safely rejected the typed downloader batch request.");
+                break;
+            case ("GET", "/api/v1/downloads/operations/{operationId}"):
+                DocumentTypedOperation(operation, "Read one principal-scoped downloader operation", "The Agent returned the retained downloader operation state.");
+                break;
+            case ("GET", "/api/v1/downloads/operations/{operationId}/events"):
+                DocumentTypedEvents(operation, "Stream authenticated downloader operation progress", "A text/event-stream sequence of sanitized DownloaderOperationDto state updates.");
+                break;
+            case ("POST", "/api/v1/maintenance/cleanup/preview"):
+                DocumentTypedPreview(operation, "Preview server-owned maintenance cleanup", "The Agent returned a server-owned cleanup impact preview and, when ready, an expiring challenge.");
+                break;
+            case ("POST", "/api/v1/maintenance/cleanup/execute"):
+                DocumentTypedMutation(operation, "Execute confirmed server-owned maintenance cleanup", "The Agent accepted or safely rejected the typed cleanup execution request.");
+                break;
+            case ("POST", "/api/v1/maintenance/reset/preview"):
+                DocumentTypedPreview(operation, "Preview server-owned branch reset", "The Agent returned a server-owned branch-reset scope preview and, when ready, an expiring challenge.");
+                break;
+            case ("POST", "/api/v1/maintenance/reset/execute"):
+                DocumentTypedMutation(operation, "Execute confirmed server-owned branch reset", "The Agent accepted or safely rejected the typed branch-reset execution request.");
+                break;
+            case ("GET", "/api/v1/maintenance/operations/{operationId}"):
+                DocumentTypedOperation(operation, "Read one principal-scoped maintenance operation", "The Agent returned the retained maintenance operation state and recovery evidence.");
+                break;
+            case ("GET", "/api/v1/maintenance/operations/{operationId}/events"):
+                DocumentTypedEvents(operation, "Stream authenticated maintenance operation progress", "A text/event-stream sequence of sanitized MaintenanceOperationDto state updates.");
+                break;
+            case ("GET", "/api/v1/artifacts/{artifactId}"):
+                DocumentArtifact(operation);
+                break;
         }
 
         return Task.CompletedTask;
@@ -633,6 +666,103 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge.");
         SetResponseDescription(operation, "403", "The exact-origin or administrator authorization boundary rejected the stream request.");
         SetResponseDescription(operation, "404", "The target or principal-scoped operation was not retained.");
+        DocumentNegotiateChallenge(operation);
+    }
+
+    private static void DocumentDownloaderBranches(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Read server-approved downloader branches",
+            "Returns only the logical branch identifiers configured for the server-owned downloader. " +
+            "The response contains no SMB path, credential, endpoint connection detail, or raw host path.",
+            "The Agent returned the configured BranchCatalogEntryDto collection.",
+            new JsonArray
+            {
+                new JsonObject { ["branchCode"] = "BR-001", ["isSelected"] = false }
+            });
+    }
+
+    private static void DocumentTypedPreview(OpenApiOperation operation, string summary, string responseDescription)
+    {
+        SetOperation(
+            operation,
+            summary,
+            "Builds a read-only server-owned impact preview. The browser selects no path, service, " +
+            "database, table, SQL statement, or credential; a one-use principal-bound challenge is " +
+            "issued only when policy verification succeeds.");
+        SetResponseDescription(operation, "200", responseDescription);
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge for this protected preview.");
+        SetResponseDescription(operation, "403", "The authenticated administrator or exact-origin transport boundary rejected the preview request.");
+        DocumentNegotiateChallenge(operation);
+    }
+
+    private static void DocumentTypedMutation(OpenApiOperation operation, string summary, string responseDescription)
+    {
+        SetOperation(
+            operation,
+            summary,
+            "Accepts only a bounded typed request after server-owned validation. Destructive or " +
+            "side-effecting dispatch requires the exact-origin, administrator, one-use method/path " +
+            "mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes " +
+            "are retained and never retried automatically.");
+        if (operation.RequestBody is not null)
+        {
+            operation.RequestBody.Description = "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.";
+        }
+        SetResponseDescription(operation, "200", responseDescription);
+        SetResponseDescription(operation, "400", "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.");
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.");
+        SetResponseDescription(operation, "403", "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.");
+        SetResponseDescription(operation, "500", "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.");
+        DocumentNegotiateChallenge(operation);
+    }
+
+    private static void DocumentTypedOperation(OpenApiOperation operation, string summary, string responseDescription)
+    {
+        DocumentProtectedRead(
+            operation,
+            summary,
+            "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. " +
+            "Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service " +
+            "names, and exception text never cross the response boundary.",
+            responseDescription,
+            new JsonObject
+            {
+                ["operationId"] = "opaque-operation-id",
+                ["state"] = "running",
+                ["progressPercent"] = 50
+            });
+        SetResponseDescription(operation, "404", "The opaque operation identifier is not retained for the authenticated principal.");
+    }
+
+    private static void DocumentTypedEvents(OpenApiOperation operation, string summary, string responseDescription)
+    {
+        SetOperation(
+            operation,
+            summary,
+            "Streams principal-scoped, read-only operation state as server-sent events. The stream " +
+            "uses the same Windows authentication, administrator authorization, exact Origin, and " +
+            "opaque operation lookup as REST; mutation tokens never appear in a URL or query string.");
+        SetResponseDescription(operation, "200", responseDescription);
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge for this protected stream.");
+        SetResponseDescription(operation, "403", "The exact-origin, SID, or administrator authorization boundary rejected the stream request.");
+        SetResponseDescription(operation, "404", "The opaque operation identifier is not retained for the authenticated principal.");
+        DocumentNegotiateChallenge(operation);
+    }
+
+    private static void DocumentArtifact(OpenApiOperation operation)
+    {
+        SetOperation(
+            operation,
+            "Download one principal-scoped Agent artifact",
+            "Downloads one server-produced artifact through an opaque, principal-scoped, expiring " +
+            "capability. The route accepts no path and returns 404 for malformed, missing, expired, " +
+            "wrong-principal, or externally removed artifacts.");
+        SetResponseDescription(operation, "200", "The Agent streamed the retained artifact with a safe content type and attachment name.");
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge for this protected artifact download.");
+        SetResponseDescription(operation, "403", "The authenticated administrator or exact-origin transport boundary rejected the artifact request.");
+        SetResponseDescription(operation, "404", "The opaque artifact identifier is malformed, missing, expired, wrong-principal, or no longer backed by a file.");
         DocumentNegotiateChallenge(operation);
     }
 

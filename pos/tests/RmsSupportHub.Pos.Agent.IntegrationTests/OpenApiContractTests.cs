@@ -26,10 +26,21 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
 
         Assert.Equal(
             [
+                "/api/v1/artifacts/{artifactId}",
                 "/api/v1/configuration",
                 "/api/v1/device/capabilities",
                 "/api/v1/device/connectivity",
                 "/api/v1/device/identity",
+                "/api/v1/downloads/batches",
+                "/api/v1/downloads/branches",
+                "/api/v1/downloads/operations/{operationId}",
+                "/api/v1/downloads/operations/{operationId}/events",
+                "/api/v1/maintenance/cleanup/execute",
+                "/api/v1/maintenance/cleanup/preview",
+                "/api/v1/maintenance/operations/{operationId}",
+                "/api/v1/maintenance/operations/{operationId}/events",
+                "/api/v1/maintenance/reset/execute",
+                "/api/v1/maintenance/reset/preview",
                 "/api/v1/rms/databases/{targetId}",
                 "/api/v1/rms/databases/{targetId}/backup",
                 "/api/v1/rms/databases/{targetId}/operations/{operationId}",
@@ -44,13 +55,6 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/health/ready"
             ],
             paths.Select(entry => entry.Key).OrderBy(path => path, StringComparer.Ordinal));
-
-        foreach (var forbidden in new[] { "maintenance", "downloader" })
-        {
-            Assert.DoesNotContain(
-                paths.Select(entry => entry.Key),
-                path => path.Contains(forbidden, StringComparison.OrdinalIgnoreCase));
-        }
     }
 
     [Fact]
@@ -75,6 +79,17 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("RestoreRmsDatabase", Operation(document, "/api/v1/rms/databases/{targetId}/restore", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("GetRmsDatabaseOperation", Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("StreamRmsDatabaseOperationEvents", Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}/events", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetDownloaderBranches", Operation(document, "/api/v1/downloads/branches", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("TriggerDownloaderBatch", Operation(document, "/api/v1/downloads/batches", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetDownloaderOperation", Operation(document, "/api/v1/downloads/operations/{operationId}", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("StreamDownloaderOperationEvents", Operation(document, "/api/v1/downloads/operations/{operationId}/events", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewMaintenanceCleanup", Operation(document, "/api/v1/maintenance/cleanup/preview", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("ExecuteMaintenanceCleanup", Operation(document, "/api/v1/maintenance/cleanup/execute", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewMaintenanceBranchReset", Operation(document, "/api/v1/maintenance/reset/preview", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("ExecuteMaintenanceBranchReset", Operation(document, "/api/v1/maintenance/reset/execute", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetMaintenanceOperation", Operation(document, "/api/v1/maintenance/operations/{operationId}", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("StreamMaintenanceOperationEvents", Operation(document, "/api/v1/maintenance/operations/{operationId}/events", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("DownloadArtifact", Operation(document, "/api/v1/artifacts/{artifactId}", "get")["operationId"]!.GetValue<string>());
 
         var servers = document["servers"]!.AsArray();
         Assert.Single(servers);
@@ -101,6 +116,17 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/restore", "post").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}/events", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/downloads/branches", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/downloads/batches", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/downloads/operations/{operationId}", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/downloads/operations/{operationId}/events", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/maintenance/cleanup/preview", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/maintenance/cleanup/execute", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/maintenance/reset/preview", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/maintenance/reset/execute", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/maintenance/operations/{operationId}", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/maintenance/operations/{operationId}/events", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/artifacts/{artifactId}", "get").ContainsKey("security"));
 
         var serialized = document.ToJsonString();
         Assert.DoesNotContain("bearer", serialized, StringComparison.OrdinalIgnoreCase);
@@ -344,6 +370,21 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             ,"RmsDatabaseRestoreRequestDto"
             ,"RmsDatabaseOperationDto"
             ,"RmsDatabaseWorkspaceDto"
+            ,"BranchCatalogEntryDto"
+            ,"TriggerBatchRequestDto"
+            ,"DownloaderBranchOutcomeDto"
+            ,"DownloaderOperationOutcomeDto"
+            ,"DownloaderOperationDto"
+            ,"CleanupExecuteRequestDto"
+            ,"BranchResetExecuteRequestDto"
+            ,"CleanupPreviewDto"
+            ,"CleanupTargetPreviewDto"
+            ,"BranchResetPreviewDto"
+            ,"BranchResetTablePreviewDto"
+            ,"MaintenancePolicyRejectionDto"
+            ,"MaintenanceItemOutcomeDto"
+            ,"MaintenanceOperationOutcomeDto"
+            ,"MaintenanceOperationDto"
         })
         {
             var schema = schemas[schemaName]!.AsObject();

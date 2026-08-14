@@ -264,6 +264,226 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/downloads/branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read server-approved downloader branches
+         * @description Returns only the logical branch identifiers configured for the server-owned downloader. The response contains no SMB path, credential, endpoint connection detail, or raw host path.
+         */
+        get: operations["GetDownloaderBranches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/downloads/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a typed RMS backup download batch
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["TriggerDownloaderBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/downloads/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped downloader operation
+         * @description Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.
+         */
+        get: operations["GetDownloaderOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/downloads/operations/{operationId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream authenticated downloader operation progress
+         * @description Streams principal-scoped, read-only operation state as server-sent events. The stream uses the same Windows authentication, administrator authorization, exact Origin, and opaque operation lookup as REST; mutation tokens never appear in a URL or query string.
+         */
+        get: operations["StreamDownloaderOperationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/cleanup/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview server-owned maintenance cleanup
+         * @description Builds a read-only server-owned impact preview. The browser selects no path, service, database, table, SQL statement, or credential; a one-use principal-bound challenge is issued only when policy verification succeeds.
+         */
+        post: operations["PreviewMaintenanceCleanup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/cleanup/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute confirmed server-owned maintenance cleanup
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["ExecuteMaintenanceCleanup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/reset/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview server-owned branch reset
+         * @description Builds a read-only server-owned impact preview. The browser selects no path, service, database, table, SQL statement, or credential; a one-use principal-bound challenge is issued only when policy verification succeeds.
+         */
+        post: operations["PreviewMaintenanceBranchReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/reset/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute confirmed server-owned branch reset
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["ExecuteMaintenanceBranchReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped maintenance operation
+         * @description Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.
+         */
+        get: operations["GetMaintenanceOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/operations/{operationId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream authenticated maintenance operation progress
+         * @description Streams principal-scoped, read-only operation state as server-sent events. The stream uses the same Windows authentication, administrator authorization, exact Origin, and opaque operation lookup as REST; mutation tokens never appear in a URL or query string.
+         */
+        get: operations["StreamMaintenanceOperationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/artifacts/{artifactId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download one principal-scoped Agent artifact
+         * @description Downloads one server-produced artifact through an opaque, principal-scoped, expiring capability. The route accepts no path and returns 404 for malformed, missing, expired, wrong-principal, or externally removed artifacts.
+         */
+        get: operations["DownloadArtifact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/identity": {
         parameters: {
             query?: never;
@@ -344,12 +564,130 @@ export interface components {
             /** @description Optional request correlation identifier echoed by the Agent for diagnostics. */
             correlationId?: null | string;
         };
+        /** @description Server-approved downloader branch metadata. It contains no SMB path, credential, or endpoint detail. */
+        BranchCatalogEntryDto: {
+            /** @description Server-approved logical branch code accepted by the typed downloader route. */
+            branchCode: string;
+            /** @description Server-owned selection hint; the browser cannot expand the approved branch catalog. */
+            isSelected: boolean;
+        };
+        /** @description Typed branch-reset execution request containing only a preview challenge, exact confirmation, and bounded idempotency key. */
+        BranchResetExecuteRequestDto: {
+            /** @description Opaque, principal-bound preview challenge required for this exact maintenance mode. */
+            challengeId: string;
+            /** @description Exact confirmation phrase returned by the matching server-owned preview. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key; repeating the same challenge returns the retained operation. */
+            idempotencyKey?: null | string;
+        };
+        /** @description Server-owned branch-reset scope preview with approved logical table scope and an expiring challenge. */
+        BranchResetPreviewDto: {
+            /** @description Opaque, principal-bound challenge that expires and can be consumed only once. */
+            challengeId: string;
+            /** @description Server-resolved branch identity used for the approved reset scope. */
+            branchCode: string;
+            /** @description Code-owned logical table identifiers approved for the branch reset. */
+            affectedTables: string[];
+            /** @description Exact phrase required by the matching execute request. */
+            confirmationPhrase: string;
+            /**
+             * Format: date-time
+             * @description UTC expiry instant enforced for the one-use preview challenge.
+             */
+            expiresAtUtc: string;
+            /** @description Whether server-owned policy and read-only scope checks produced an executable preview. */
+            ready?: boolean;
+            /** @description Server-approved database label for the branch reset; no connection string is returned. */
+            databaseName?: string;
+            /** @description Read-only row-count evidence for the approved logical table scope. */
+            tableScopes?: components["schemas"]["BranchResetTablePreviewDto"][];
+            /** @description Sanitized policy rejections keyed by logical target or scope identifier. */
+            rejections?: components["schemas"]["MaintenancePolicyRejectionDto"][];
+            /** @description Bounded safe preview warnings without raw paths or exception text. */
+            warnings?: string[];
+            /**
+             * Format: int64
+             * @description Read-only free-space evidence for the server-owned maintenance root, when available.
+             */
+            availableFreeSpaceBytes?: null | number | string;
+        };
+        /** @description Sanitized branch-reset table evidence from the server-owned read-only scope check. */
+        BranchResetTablePreviewDto: {
+            /** @description Code-owned logical table identifier in the approved branch reset scope. */
+            tableName: string;
+            /**
+             * Format: int64
+             * @description Read-only row-count evidence for the approved table, when available.
+             */
+            matchingRows: null | number | string;
+        };
         /** @description Safe browse-root display metadata. The corresponding host path remains server-owned. */
         BrowseRootDto: {
             /** @description Opaque server-owned browse-root identifier. */
             rootId: string;
             /** @description User-facing browse-root label; it is not a host path. */
             displayName: string;
+        };
+        /** @description Typed cleanup execution request containing only a preview challenge, exact confirmation, and bounded idempotency key. */
+        CleanupExecuteRequestDto: {
+            /** @description Opaque, principal-bound preview challenge required for this exact maintenance mode. */
+            challengeId: string;
+            /** @description Exact confirmation phrase returned by the matching server-owned preview. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key; repeating the same challenge returns the retained operation. */
+            idempotencyKey?: null | string;
+        };
+        /** @description Server-owned cleanup impact preview with logical target identifiers and an expiring principal-bound challenge. */
+        CleanupPreviewDto: {
+            /** @description Opaque, principal-bound challenge that expires and can be consumed only once. */
+            challengeId: string;
+            /** @description Logical server-owned service target identifiers; raw Windows service names are omitted. */
+            servicesToStop: string[];
+            /** @description Logical server-owned cleanup target identifiers; host paths are never returned. */
+            pathsToDelete: string[];
+            /** @description Exact phrase required by the matching execute request. */
+            confirmationPhrase: string;
+            /**
+             * Format: date-time
+             * @description UTC expiry instant enforced for the one-use preview challenge.
+             */
+            expiresAtUtc: string;
+            /** @description Whether server-owned policy and read-only scope checks produced an executable preview. */
+            ready?: boolean;
+            /** @description Detailed sanitized cleanup target evidence keyed by logical target ID. */
+            targets?: components["schemas"]["CleanupTargetPreviewDto"][];
+            /** @description Sanitized policy rejections keyed by logical target or scope identifier. */
+            rejections?: components["schemas"]["MaintenancePolicyRejectionDto"][];
+            /** @description Bounded safe preview warnings without raw paths or exception text. */
+            warnings?: string[];
+            /**
+             * Format: int64
+             * @description Read-only free-space evidence for the server-owned maintenance root, when available.
+             */
+            availableFreeSpaceBytes?: null | number | string;
+        };
+        /** @description Sanitized cleanup target evidence identified by a logical target ID; host paths never cross the Agent boundary. */
+        CleanupTargetPreviewDto: {
+            /** @description Logical server-owned target identifier; it is not a host path or raw service name. */
+            targetId: string;
+            /** @description Whether the configured target passed server cleanup policy. */
+            accepted: boolean;
+            /** @description Whether the approved target existed at preview time. */
+            exists: boolean;
+            /** @description Whether the approved target is a directory at preview time. */
+            isDirectory: boolean;
+            /**
+             * Format: int64
+             * @description Read-only target size evidence, when the target is a file.
+             */
+            lengthBytes: null | number | string;
+            /**
+             * Format: int32
+             * @description Bounded read-only child count, when the target is a directory.
+             */
+            childCount: null | number | string;
+            /** @description Stable safe policy rejection code, when the target was rejected. */
+            rejectionCode: null | string;
         };
         /** @description Non-secret capability metadata for the installed Agent. Browse roots expose display metadata only and do not expose host paths. */
         DeviceCapabilitiesDto: {
@@ -378,6 +716,84 @@ export interface components {
             /** @description Configured client/product label for the local device. */
             clientName: string;
         };
+        /** @description Sanitized outcome for one requested downloader branch; artifactId is an opaque Agent capability. */
+        DownloaderBranchOutcomeDto: {
+            /** @description Logical branch code from the server-approved downloader selection. */
+            branchCode: string;
+            /** @description Sanitized branch download lifecycle state. */
+            state: components["schemas"]["DownloaderBranchState"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported progress percentage for this branch.
+             */
+            progressPercent: number | string;
+            /** @description Stable safe branch failure code, when the branch did not complete. */
+            failureCode?: null | string;
+            /** @description Opaque Agent artifact capability, when the branch archive was published. */
+            artifactId?: null | string;
+        };
+        /**
+         * @description Sanitized branch download lifecycle state.
+         * @enum {unknown}
+         */
+        DownloaderBranchState: "pending" | "triggered" | "waiting" | "detected" | "validating" | "ready" | "downloading" | "completed" | "timedOut" | "cancelled" | "failed";
+        /** @description Principal-scoped downloader progress and outcome with opaque operation and artifact identifiers. */
+        DownloaderOperationDto: {
+            /** @description Opaque downloader operation handle scoped to the authenticated Windows principal. */
+            operationId: string;
+            /** @description Current downloader REST/SSE lifecycle state. */
+            state: components["schemas"]["DownloaderOperationStateDto"];
+            /** @description Downloader outcome truth; OutcomeUnknown requires inspection before retry. */
+            outcome: components["schemas"]["DownloaderOperationStateDto"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported downloader progress percentage.
+             */
+            progressPercent: number | string;
+            /** @description Server-owned safe downloader workflow stage. */
+            stage: string;
+            /** @description Safe operator detail without SMB paths, credentials, raw exceptions, or transport data. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC operation start time recorded by the Agent.
+             */
+            startedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC completion time when the downloader reached a final state.
+             */
+            completedAtUtc: null | string;
+            /** @description Sanitized branch and trigger outcome evidence, when available. */
+            downloaderOutcome: null | components["schemas"]["DownloaderOperationOutcomeDto"];
+            /** @description Stable safe error code, when the downloader did not complete successfully. */
+            errorCode: null | string;
+            /** @description Safe request correlation identifier for diagnostics. */
+            correlationId: string;
+        };
+        /** @description Sanitized branch and trigger outcome evidence, when available. */
+        DownloaderOperationOutcomeDto: {
+            /** @description Sanitized outcome for each requested server-approved branch. */
+            branches: components["schemas"]["DownloaderBranchOutcomeDto"][];
+            /** @description Safe downloader serial evidence, when available; remote path details are omitted. */
+            serial: null | string;
+            /** @description Truth about the server-side backup trigger milestone. */
+            triggerState: components["schemas"]["DownloaderTriggerStateDto"];
+            /** @description Safe operator guidance for an incomplete or ambiguous downloader outcome. */
+            operatorGuidance?: null | string;
+            /** @description Compatibility projection of triggerState; inspect triggerState for unknown outcomes. */
+            triggerAccepted?: boolean;
+        };
+        /**
+         * @description Current downloader REST/SSE lifecycle state.
+         * @enum {unknown}
+         */
+        DownloaderOperationStateDto: "notAttempted" | "accepted" | "running" | "completed" | "failed" | "outcomeUnknown";
+        /**
+         * @description Truth about the server-side backup trigger milestone.
+         * @enum {unknown}
+         */
+        DownloaderTriggerStateDto: "notAttempted" | "failed" | "accepted" | "outcomeUnknown";
         /** @description Freshness and check-time evidence for the service state. */
         EvidenceDto: {
             /** @description Freshness classification for this observation; it is never collapsed into a bare online boolean. */
@@ -399,6 +815,93 @@ export interface components {
         HealthStatusDto: {
             /** @description Identifies which anonymous foundation health check produced the response (live or ready). */
             status: string;
+        };
+        /** @description Sanitized maintenance item outcome with logical target identity and explicit recovery truth. */
+        MaintenanceItemOutcomeDto: {
+            /** @description Logical server-owned target identifier; it is not a host path or raw service name. */
+            targetId: string;
+            /** @description Logical maintenance item kind such as file or database. */
+            kind: string;
+            /** @description Sanitized maintenance item lifecycle state. */
+            state: components["schemas"]["MaintenanceItemState"];
+            /** @description Whether the Agent crossed the corresponding typed mutation seam. */
+            attempted: boolean;
+            /** @description Whether the item operation completed successfully. */
+            completed: boolean;
+            /** @description Whether remaining state requires recovery verification before retrying. */
+            residueUncertain: boolean;
+            /** @description Stable safe item failure code, when present. */
+            failureCode: null | string;
+            /** @description Safe recovery guidance without raw paths, SQL, or exception text. */
+            recoveryGuidance: null | string;
+        };
+        /**
+         * @description Sanitized maintenance item lifecycle state.
+         * @enum {unknown}
+         */
+        MaintenanceItemState: "notAttempted" | "alreadyAbsent" | "completed" | "rejected" | "failed" | "recoveryRequired";
+        /** @description Principal-scoped maintenance progress and outcome with logical targets and recovery truth. */
+        MaintenanceOperationDto: {
+            /** @description Opaque maintenance operation handle scoped to the authenticated Windows principal. */
+            operationId: string;
+            /** @description Server-owned maintenance mode: cleanup or branch-reset. */
+            mode: string;
+            /** @description Current maintenance REST/SSE lifecycle state. */
+            state: components["schemas"]["MaintenanceOperationStateDto"];
+            /** @description Maintenance outcome truth; OutcomeUnknown requires recovery inspection before retry. */
+            outcome: components["schemas"]["MaintenanceOperationStateDto"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported maintenance progress percentage.
+             */
+            progressPercent: number | string;
+            /** @description Server-owned safe maintenance workflow stage. */
+            stage: string;
+            /** @description Safe operator detail without paths, service names, SQL, credentials, or exceptions. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC operation start time recorded by the Agent.
+             */
+            startedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC completion time when maintenance reached a final state.
+             */
+            completedAtUtc: null | string;
+            /** @description Sanitized logical item outcomes and recovery truth, when available. */
+            maintenanceOutcome: null | components["schemas"]["MaintenanceOperationOutcomeDto"];
+            /** @description Stable safe maintenance error code, when the operation did not complete successfully. */
+            errorCode: null | string;
+            /** @description Safe request correlation identifier for diagnostics. */
+            correlationId: string;
+        };
+        /** @description Sanitized logical item outcomes and recovery truth, when available. */
+        MaintenanceOperationOutcomeDto: {
+            /** @description Whether the maintenance workflow crossed a destructive typed seam. */
+            destructiveAttempted: boolean;
+            /** @description Whether the Agent cannot prove cleanup or reset recovery is complete. */
+            recoveryRequired: boolean;
+            /** @description Sanitized logical item outcomes retained for operator review. */
+            items: components["schemas"]["MaintenanceItemOutcomeDto"][];
+            /** @description Bounded safe maintenance warnings. */
+            warnings: string[];
+            /** @description Safe recovery guidance for partial or ambiguous maintenance outcomes. */
+            recoveryGuidance: string[];
+        };
+        /**
+         * @description Current maintenance REST/SSE lifecycle state.
+         * @enum {unknown}
+         */
+        MaintenanceOperationStateDto: "notAttempted" | "accepted" | "running" | "completed" | "failed" | "outcomeUnknown";
+        /** @description Sanitized maintenance policy rejection containing a logical target ID and stable code, never a host path. */
+        MaintenancePolicyRejectionDto: {
+            /** @description Logical server-owned target identifier; it is not a host path or raw service name. */
+            targetId: string;
+            /** @description Stable safe maintenance policy rejection code. */
+            code: string;
+            /** @description Safe operator-facing rejection reason without raw implementation detail. */
+            reason: string;
         };
         /** @description Browser request for a token for one logical operation known to the server. For a target-bound operation, targetId is an opaque server-issued identifier; the browser cannot supply the target HTTP method or path. */
         MutationTokenIssueRequestDto: {
@@ -757,6 +1260,13 @@ export interface components {
             apiVersion: string;
             /** @description Contract versions the installed Agent can serve, produced by the Agent rather than accepted from the browser. */
             supportedApiVersions: string[];
+        };
+        /** @description Typed downloader batch request containing only server-approved logical branch codes and a bounded idempotency key. */
+        TriggerBatchRequestDto: {
+            /** @description Branch codes selected from the server-approved downloader catalog. */
+            branchCodes: string[];
+            /** @description Bounded caller-generated key; repeating the same branch selection returns the retained operation. */
+            idempotencyKey: string;
         };
     };
     responses: never;
@@ -1762,6 +2272,538 @@ export interface operations {
                 };
             };
             /** @description The target or principal-scoped operation was not retained. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetDownloaderBranches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the configured BranchCatalogEntryDto collection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "branchCode": "BR-001",
+                     *         "isSelected": false
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["BranchCatalogEntryDto"][];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TriggerDownloaderBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["TriggerBatchRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent accepted or safely rejected the typed downloader batch request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloaderOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetDownloaderOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the retained downloader operation state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "opaque-operation-id",
+                     *       "state": "running",
+                     *       "progressPercent": 50
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DownloaderOperationDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamDownloaderOperationEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A text/event-stream sequence of sanitized DownloaderOperationDto state updates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected stream. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The exact-origin, SID, or administrator authorization boundary rejected the stream request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewMaintenanceCleanup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned a server-owned cleanup impact preview and, when ready, an expiring challenge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleanupPreviewDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected preview. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The authenticated administrator or exact-origin transport boundary rejected the preview request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExecuteMaintenanceCleanup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["CleanupExecuteRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent accepted or safely rejected the typed cleanup execution request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewMaintenanceBranchReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned a server-owned branch-reset scope preview and, when ready, an expiring challenge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchResetPreviewDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected preview. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The authenticated administrator or exact-origin transport boundary rejected the preview request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExecuteMaintenanceBranchReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["BranchResetExecuteRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent accepted or safely rejected the typed branch-reset execution request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetMaintenanceOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the retained maintenance operation state and recovery evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "opaque-operation-id",
+                     *       "state": "running",
+                     *       "progressPercent": 50
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MaintenanceOperationDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamMaintenanceOperationEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A text/event-stream sequence of sanitized MaintenanceOperationDto state updates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected stream. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The exact-origin, SID, or administrator authorization boundary rejected the stream request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DownloadArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                artifactId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent streamed the retained artifact with a safe content type and attachment name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected artifact download. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The authenticated administrator or exact-origin transport boundary rejected the artifact request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque artifact identifier is malformed, missing, expired, wrong-principal, or no longer backed by a file. */
             404: {
                 headers: {
                     [name: string]: unknown;

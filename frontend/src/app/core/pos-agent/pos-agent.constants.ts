@@ -11,13 +11,25 @@ export const POS_AGENT_PATHS = {
   configuration: '/api/v1/configuration',
   services: '/api/v1/services',
   rmsDiagnostics: '/api/v1/rms/diagnostics',
-  rmsDatabases: '/api/v1/rms/databases'
+  rmsDatabases: '/api/v1/rms/databases',
+  downloaderBranches: '/api/v1/downloads/branches',
+  downloaderBatches: '/api/v1/downloads/batches',
+  downloaderOperations: '/api/v1/downloads/operations',
+  maintenanceCleanupPreview: '/api/v1/maintenance/cleanup/preview',
+  maintenanceCleanupExecute: '/api/v1/maintenance/cleanup/execute',
+  maintenanceBranchResetPreview: '/api/v1/maintenance/reset/preview',
+  maintenanceBranchResetExecute: '/api/v1/maintenance/reset/execute',
+  maintenanceOperations: '/api/v1/maintenance/operations',
+  artifacts: '/api/v1/artifacts'
 } as const;
 
 export const POS_AGENT_OPERATION_IDS = {
   serviceControl: 'services.control',
   rmsDatabaseBackup: 'rms.database.backup',
-  rmsDatabaseRestore: 'rms.database.restore'
+  rmsDatabaseRestore: 'rms.database.restore',
+  downloaderBatchTrigger: 'downloader.batch.trigger',
+  maintenanceCleanup: 'maintenance.cleanup.execute',
+  maintenanceBranchReset: 'maintenance.branch-reset.execute'
 } as const;
 
 export const POS_AGENT_MUTATION_TOKEN_HEADER = 'X-RMS-Mutation-Token' as const;
