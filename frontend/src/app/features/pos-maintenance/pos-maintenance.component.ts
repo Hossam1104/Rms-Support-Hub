@@ -31,10 +31,20 @@ type Evidence = components['schemas']['EvidenceDto'];
 type RmsDiagnostics = components['schemas']['RmsDiagnosticsDto'];
 type RmsDatabaseDiagnostic = components['schemas']['RmsDatabaseDiagnosticDto'];
 type RmsEndpointDiagnostic = components['schemas']['RmsEndpointDiagnosticDto'];
+type RmsDatabaseTarget = components['schemas']['RmsDatabaseTarget'];
+type RmsDatabaseWorkspace = components['schemas']['RmsDatabaseWorkspaceDto'];
+type RmsDatabaseOperation = components['schemas']['RmsDatabaseOperationDto'];
+type RmsDatabaseArtifact = components['schemas']['RmsDatabaseArtifactDto'];
 type AgentState = 'loading' | 'reachable' | 'unreachable';
 type AuthState = 'loading' | 'authenticated' | 'authentication-required' | 'unavailable';
 type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: PosAgentTransportError };
 type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceActionKind }>;
+type PendingDatabaseRestore = Readonly<{
+  target: RmsDatabaseTarget;
+  artifactId: string;
+  displayName: string;
+  confirmationText: string;
+}>;
 
 @Component({
   selector: 'app-pos-maintenance',
@@ -141,7 +151,7 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
             <p class="eyebrow">Installed RMS+ suite</p>
             <h2>Support dashboard</h2>
           </div>
-          <p class="dashboard-heading__copy">Read-only discovery from the installed RMS files, with sanitized database probes and SCM evidence.</p>
+          <p class="dashboard-heading__copy">Discovery from the installed RMS files, with sanitized database probes and tightly bounded backup/restore actions.</p>
         </div>
         @if (loading()) {
           <div class="dashboard-grid">
@@ -190,6 +200,40 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
               <div class="database-summary"><app-status-badge [label]="databaseStatusLabel(rms.branchDatabase)" [variant]="databaseStatusVariant(rms.branchDatabase)" role="status"></app-status-badge><strong>{{ rms.branchDatabase.configuredDatabase || 'Not detected' }}</strong></div>
               <dl class="data-list data-list--compact"><div><dt>Detected automatically</dt><dd>Yes</dd></div><div><dt>Server</dt><dd>{{ rms.branchDatabase.serverDisplay || 'Unavailable' }}</dd></div></dl>
               <p class="evidence-detail">{{ rms.branchDatabase.evidence.detail }}</p>
+              @if (databaseWorkspace('branch'); as workspace) {
+                <div class="database-ops" aria-label="Branch database backup and restore">
+                  <div class="database-ops__header"><span class="eyebrow">Recovery shelf</span><span class="database-ops__scope">Agent-owned artifacts</span></div>
+                  @if (workspace.latestOperation; as operation) {
+                    <div class="database-operation" [class.database-operation--danger]="operation.outcome === 'outcomeUnknown' || operation.outcome === 'failed'" role="status">
+                      <div class="database-operation__heading"><strong>{{ databaseOperationLabel(operation) }}</strong><span>{{ operation.progressPercent }}%</span></div>
+                      <div class="progress-track" role="progressbar" [attr.aria-valuenow]="operation.progressPercent" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="operation.stage"><span [style.width.%]="operation.progressPercent"></span></div>
+                      <p>{{ operation.detail }}</p>
+                    </div>
+                  }
+                  <div class="database-ops__actions" role="group" aria-label="Branch database actions">
+                    @if (canControlDatabases()) {
+                      <ui-button variant="secondary" size="sm" icon="bi-archive" [loading]="isDatabaseSubmitting('branch') && pendingDatabaseKind() === 'backup'" [disabled]="submittingDatabaseAction() !== null" (pressed)="requestDatabaseBackup('branch')">Backup</ui-button>
+                    }
+                    <span class="database-ops__hint">Restore uses an approved artifact and an exact confirmation.</span>
+                  </div>
+                  @if (workspace.approvedBackups.length) {
+                    <div class="backup-list" role="list" aria-label="Approved Branch backups">
+                      @for (backup of workspace.approvedBackups; track backup.artifactId) {
+                        <div class="backup-row" role="listitem">
+                          <div><strong>{{ backup.displayName }}</strong><small>{{ formatArtifactSize(backup) }} · {{ formatArtifactDate(backup) }}</small></div>
+                          @if (canControlDatabases()) {
+                            <ui-button variant="danger" size="sm" icon="bi-arrow-counterclockwise" [disabled]="submittingDatabaseAction() !== null" (pressed)="requestDatabaseRestore('branch', backup)">Restore</ui-button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="database-empty">No approved Branch backup is available yet.</p>
+                  }
+                </div>
+              } @else {
+                <p class="database-empty">Backup and restore controls are unavailable until the Agent workspace read succeeds.</p>
+              }
             </ui-card>
 
             <ui-card variant="raised" class="workspace-card dashboard-card">
@@ -197,6 +241,40 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
               <div class="database-summary"><app-status-badge [label]="databaseStatusLabel(rms.cashierDatabase)" [variant]="databaseStatusVariant(rms.cashierDatabase)" role="status"></app-status-badge><strong>{{ rms.cashierDatabase.configuredDatabase || 'Not detected' }}</strong></div>
               <dl class="data-list data-list--compact"><div><dt>Detected automatically</dt><dd>Yes</dd></div><div><dt>Server</dt><dd>{{ rms.cashierDatabase.serverDisplay || 'Unavailable' }}</dd></div></dl>
               <p class="evidence-detail">{{ rms.cashierDatabase.evidence.detail }}</p>
+              @if (databaseWorkspace('cashier'); as workspace) {
+                <div class="database-ops" aria-label="Cashier database backup and restore">
+                  <div class="database-ops__header"><span class="eyebrow">Recovery shelf</span><span class="database-ops__scope">Agent-owned artifacts</span></div>
+                  @if (workspace.latestOperation; as operation) {
+                    <div class="database-operation" [class.database-operation--danger]="operation.outcome === 'outcomeUnknown' || operation.outcome === 'failed'" role="status">
+                      <div class="database-operation__heading"><strong>{{ databaseOperationLabel(operation) }}</strong><span>{{ operation.progressPercent }}%</span></div>
+                      <div class="progress-track" role="progressbar" [attr.aria-valuenow]="operation.progressPercent" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="operation.stage"><span [style.width.%]="operation.progressPercent"></span></div>
+                      <p>{{ operation.detail }}</p>
+                    </div>
+                  }
+                  <div class="database-ops__actions" role="group" aria-label="Cashier database actions">
+                    @if (canControlDatabases()) {
+                      <ui-button variant="secondary" size="sm" icon="bi-archive" [loading]="isDatabaseSubmitting('cashier') && pendingDatabaseKind() === 'backup'" [disabled]="submittingDatabaseAction() !== null" (pressed)="requestDatabaseBackup('cashier')">Backup</ui-button>
+                    }
+                    <span class="database-ops__hint">Restore uses an approved artifact and an exact confirmation.</span>
+                  </div>
+                  @if (workspace.approvedBackups.length) {
+                    <div class="backup-list" role="list" aria-label="Approved Cashier backups">
+                      @for (backup of workspace.approvedBackups; track backup.artifactId) {
+                        <div class="backup-row" role="listitem">
+                          <div><strong>{{ backup.displayName }}</strong><small>{{ formatArtifactSize(backup) }} · {{ formatArtifactDate(backup) }}</small></div>
+                          @if (canControlDatabases()) {
+                            <ui-button variant="danger" size="sm" icon="bi-arrow-counterclockwise" [disabled]="submittingDatabaseAction() !== null" (pressed)="requestDatabaseRestore('cashier', backup)">Restore</ui-button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="database-empty">No approved Cashier backup is available yet.</p>
+                  }
+                </div>
+              } @else {
+                <p class="database-empty">Backup and restore controls are unavailable until the Agent workspace read succeeds.</p>
+              }
             </ui-card>
           </div>
         } @else {
@@ -359,7 +437,7 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
         <div>
           <p class="eyebrow">INT-08 boundary</p>
           <h2>Typed service controls with safe outcome truth</h2>
-          <p>Start, stop, and restart use an explicit confirmation, a short-lived one-use Agent token, and a bounded idempotency key. Configuration writes, backup/restore, file browsing, SQL execution, and generic command execution remain outside this surface. An unknown action outcome is never retried automatically.</p>
+          <p>Service actions and database backup/restore use typed server-owned targets, exact-origin Windows authorization, short-lived one-use Agent tokens, and bounded idempotency keys. The database cards expose only approved artifact handles; paths, credentials, arbitrary SQL, and generic command execution remain outside this surface. An unknown outcome is never retried automatically.</p>
         </div>
       </section>
     </main>
@@ -373,6 +451,21 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
         cancelLabel="Cancel"
         (cancel)="cancelPendingAction()"
         (confirm)="executePendingAction()">
+      </app-confirm-dialog>
+    }
+    @if (pendingDatabaseAction(); as pending) {
+      <app-confirm-dialog
+        variant="danger"
+        [title]="'Restore ' + pending.displayName.toLowerCase() + '?'"
+        [message]="databaseConfirmationMessage(pending)"
+        [requireReason]="true"
+        [requiredTypedValue]="pending.confirmationText"
+        reasonLabel="Type the exact confirmation phrase"
+        [reasonPlaceholder]="pending.confirmationText"
+        confirmLabel="Restore database"
+        cancelLabel="Cancel"
+        (cancel)="cancelPendingDatabaseAction()"
+        (confirm)="executePendingDatabaseRestore($event)">
       </app-confirm-dialog>
     }
   `,
@@ -443,9 +536,14 @@ export class PosMaintenanceComponent {
   readonly configuration = signal<RedactedConfiguration | null>(null);
   readonly services = signal<ServiceSummary[] | null>(null);
   readonly rmsDiagnostics = signal<RmsDiagnostics | null>(null);
+  readonly branchDatabaseWorkspace = signal<RmsDatabaseWorkspace | null>(null);
+  readonly cashierDatabaseWorkspace = signal<RmsDatabaseWorkspace | null>(null);
   readonly globalError = signal<string | null>(null);
   readonly pendingAction = signal<PendingServiceAction | null>(null);
+  readonly pendingDatabaseAction = signal<PendingDatabaseRestore | null>(null);
   readonly submittingAction = signal<string | null>(null);
+  readonly submittingDatabaseAction = signal<RmsDatabaseTarget | null>(null);
+  readonly databaseOperationKind = signal<'backup' | 'restore' | null>(null);
 
   private readonly errors = signal<Record<string, string>>({});
   private readonly actionOutcomes = signal<Record<string, ServiceActionResponse>>({});
@@ -461,6 +559,70 @@ export class PosMaintenanceComponent {
 
   canControlServices(): boolean {
     return this.session()?.isAuthorized === true;
+  }
+
+  canControlDatabases(): boolean {
+    return this.session()?.isAuthorized === true;
+  }
+
+  databaseWorkspace(target: RmsDatabaseTarget): RmsDatabaseWorkspace | null {
+    return target === 'branch' ? this.branchDatabaseWorkspace() : this.cashierDatabaseWorkspace();
+  }
+
+  requestDatabaseBackup(target: RmsDatabaseTarget): void {
+    if (!this.canControlDatabases() || this.submittingDatabaseAction() !== null) return;
+    void this.executeDatabaseBackup(target);
+  }
+
+  requestDatabaseRestore(target: RmsDatabaseTarget, artifact: RmsDatabaseArtifact): void {
+    if (!this.canControlDatabases() || this.submittingDatabaseAction() !== null) return;
+    const workspace = this.databaseWorkspace(target);
+    if (!workspace) return;
+    this.pendingDatabaseAction.set({
+      target,
+      artifactId: artifact.artifactId,
+      displayName: workspace.databaseDisplayName,
+      confirmationText: workspace.restoreConfirmationText
+    });
+  }
+
+  cancelPendingDatabaseAction(): void {
+    this.pendingDatabaseAction.set(null);
+  }
+
+  pendingDatabaseKind(): 'backup' | 'restore' | null {
+    return this.databaseOperationKind();
+  }
+
+  isDatabaseSubmitting(target: RmsDatabaseTarget): boolean {
+    return this.submittingDatabaseAction() === target;
+  }
+
+  databaseConfirmationMessage(pending: PendingDatabaseRestore): string {
+    return `This will replace the live ${pending.displayName} with the selected Agent-approved backup. Only the corresponding RMS service will be coordinated. Type ${pending.confirmationText} below to continue; the Agent will enforce the exact confirmation and will report if recovery remains required.`;
+  }
+
+  databaseOperationLabel(operation: RmsDatabaseOperation): string {
+    const action = operation.operation === 'backup' ? 'Backup' : 'Restore';
+    switch (operation.outcome) {
+      case 'completed': return `${action} completed`;
+      case 'failed': return `${action} failed`;
+      case 'outcomeUnknown': return `${action} outcome unknown`;
+      case 'accepted': return `${action} accepted`;
+      default: return `${action} not attempted`;
+    }
+  }
+
+  formatArtifactSize(artifact: RmsDatabaseArtifact): string {
+    const size = typeof artifact.sizeBytes === 'number' ? artifact.sizeBytes : Number(artifact.sizeBytes);
+    if (!Number.isFinite(size) || size < 0) return 'Size unavailable';
+    if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  formatArtifactDate(artifact: RmsDatabaseArtifact): string {
+    const date = new Date(artifact.createdAtUtc);
+    return Number.isNaN(date.getTime()) ? 'date unavailable' : date.toLocaleString();
   }
 
   requestServiceAction(service: ServiceSummary, action: ServiceActionKind): void {
@@ -634,6 +796,142 @@ export class PosMaintenanceComponent {
     }
   }
 
+  async executePendingDatabaseRestore(confirmationText: string): Promise<void> {
+    const pending = this.pendingDatabaseAction();
+    if (!pending || !this.canControlDatabases() || this.submittingDatabaseAction() !== null) {
+      this.pendingDatabaseAction.set(null);
+      return;
+    }
+
+    if (confirmationText !== pending.confirmationText) {
+      this.toast.showError('Type the exact restore confirmation phrase before continuing.');
+      return;
+    }
+
+    this.pendingDatabaseAction.set(null);
+    this.submittingDatabaseAction.set(pending.target);
+    this.databaseOperationKind.set('restore');
+    try {
+      const issued = await firstValueFrom(
+        this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.rmsDatabaseRestore, pending.target)
+      );
+      const accepted = await firstValueFrom(
+        this.transport.restoreRmsDatabase(
+          pending.target,
+          pending.artifactId,
+          confirmationText,
+          this.createIdempotencyKey(),
+          issued.token
+        )
+      );
+      const operation = await this.followDatabaseOperation(pending.target, accepted);
+      this.applyDatabaseOperation(pending.target, operation);
+      this.notifyDatabaseOutcome(operation);
+      await this.refreshDatabaseWorkspace(pending.target);
+    } catch (error) {
+      this.toast.showError(this.databaseActionErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      if (this.submittingDatabaseAction() === pending.target) {
+        this.submittingDatabaseAction.set(null);
+      }
+      this.databaseOperationKind.set(null);
+    }
+  }
+
+  private async executeDatabaseBackup(target: RmsDatabaseTarget): Promise<void> {
+    this.submittingDatabaseAction.set(target);
+    this.databaseOperationKind.set('backup');
+    try {
+      const issued = await firstValueFrom(
+        this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.rmsDatabaseBackup, target)
+      );
+      const accepted = await firstValueFrom(
+        this.transport.backupRmsDatabase(target, this.createIdempotencyKey(), issued.token)
+      );
+      const operation = await this.followDatabaseOperation(target, accepted);
+      this.applyDatabaseOperation(target, operation);
+      this.notifyDatabaseOutcome(operation);
+      await this.refreshDatabaseWorkspace(target);
+    } catch (error) {
+      this.toast.showError(this.databaseActionErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      if (this.submittingDatabaseAction() === target) {
+        this.submittingDatabaseAction.set(null);
+      }
+      this.databaseOperationKind.set(null);
+    }
+  }
+
+  private async followDatabaseOperation(
+    target: RmsDatabaseTarget,
+    accepted: RmsDatabaseOperation
+  ): Promise<RmsDatabaseOperation> {
+    let current = accepted;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (!['accepted', 'running'].includes(current.state)) return current;
+      await this.delay(250);
+      current = await firstValueFrom(
+        this.transport.getRmsDatabaseOperation(target, current.operationId)
+      );
+    }
+    return current;
+  }
+
+  private applyDatabaseOperation(target: RmsDatabaseTarget, operation: RmsDatabaseOperation): void {
+    const current = this.databaseWorkspace(target);
+    if (!current) return;
+    this.setDatabaseWorkspace(target, { ...current, latestOperation: operation });
+  }
+
+  private async refreshDatabaseWorkspace(target: RmsDatabaseTarget): Promise<void> {
+    try {
+      const workspace = await firstValueFrom(this.transport.getRmsDatabaseWorkspace(target));
+      this.setDatabaseWorkspace(target, workspace);
+    } catch (error) {
+      this.errors.update(errors => ({
+        ...errors,
+        [target === 'branch' ? 'branchDatabase' : 'cashierDatabase']: this.userFacingError(classifyPosAgentError(error))
+      }));
+    }
+  }
+
+  private setDatabaseWorkspace(target: RmsDatabaseTarget, workspace: RmsDatabaseWorkspace | null): void {
+    if (target === 'branch') this.branchDatabaseWorkspace.set(workspace);
+    else this.cashierDatabaseWorkspace.set(workspace);
+  }
+
+  private notifyDatabaseOutcome(operation: RmsDatabaseOperation): void {
+    switch (operation.outcome) {
+      case 'completed':
+        this.toast.showSuccess(`${operation.databaseDisplayName} ${operation.operation} completed.`);
+        return;
+      case 'failed':
+        this.toast.showError(`${operation.databaseDisplayName} ${operation.operation} failed.`);
+        return;
+      case 'outcomeUnknown':
+        this.toast.showWarning(`${operation.databaseDisplayName} ${operation.operation} outcome is unknown. Inspect the database and service state before retrying.`);
+        return;
+      default:
+        this.toast.showInfo(`${operation.databaseDisplayName} ${operation.operation} was not attempted.`);
+    }
+  }
+
+  private databaseActionErrorMessage(error: PosAgentTransportError): string {
+    switch (error.kind) {
+      case 'authenticationRequired': return 'Windows authentication is required for database backup or restore.';
+      case 'originRejected': return 'The Support Hub origin is not accepted by the POS Agent.';
+      case 'notAuthorized': return 'The signed-in Windows account is not authorized for database backup or restore.';
+      case 'transportUnavailableOrBlocked': return 'The fixed POS Agent endpoint could not be reached or the browser blocked the database action.';
+      case 'agentServerError': return 'The POS Agent reported a database-operation error without exposing implementation details.';
+      case 'contractMismatch': return 'The POS Agent rejected the typed database-operation contract.';
+      default: return 'The POS Agent did not complete the database action.';
+    }
+  }
+
+  private delay(milliseconds: number): Promise<void> {
+    return new Promise(resolve => globalThis.setTimeout(resolve, milliseconds));
+  }
+
   componentInstallLabel(rms: RmsDiagnostics): string {
     const installed = [
       rms.installation.branchInstalled ? 'Branch' : null,
@@ -699,7 +997,7 @@ export class PosMaintenanceComponent {
     this.refreshing.set(true);
     if (firstLoad) this.loading.set(true);
 
-    const [live, session, identity, connectivity, capabilities, configuration, services, rms] = await Promise.all([
+    const [live, session, identity, connectivity, capabilities, configuration, services, rms, branchDatabase, cashierDatabase] = await Promise.all([
       this.settle(this.transport.getLive()),
       this.settle(this.transport.getSession()),
       this.settle(this.transport.getDeviceIdentity()),
@@ -707,7 +1005,9 @@ export class PosMaintenanceComponent {
       this.settle(this.transport.getDeviceCapabilities()),
       this.settle(this.transport.getConfiguration()),
       this.settle(this.transport.getServices()),
-      this.settle(this.transport.getRmsDiagnostics())
+      this.settle(this.transport.getRmsDiagnostics()),
+      this.settle(this.transport.getRmsDatabaseWorkspace('branch')),
+      this.settle(this.transport.getRmsDatabaseWorkspace('cashier'))
     ]);
 
     const nextErrors: Record<string, string> = {};
@@ -719,6 +1019,8 @@ export class PosMaintenanceComponent {
     this.applyValue('configuration', configuration, this.configuration, nextErrors);
     this.applyValue('services', services, this.services, nextErrors);
     this.applyValue('rms', rms, this.rmsDiagnostics, nextErrors);
+    this.applyValue('branchDatabase', branchDatabase, this.branchDatabaseWorkspace, nextErrors);
+    this.applyValue('cashierDatabase', cashierDatabase, this.cashierDatabaseWorkspace, nextErrors);
     this.errors.set(nextErrors);
 
     const failedReads = Object.keys(nextErrors).filter(key => key !== 'agent' && key !== 'session');

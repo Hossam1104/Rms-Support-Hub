@@ -5,11 +5,14 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RmsSupportHub.Pos.Agent;
+using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.MutationTokens;
+using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
@@ -18,6 +21,10 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
     public const string SupportHubOrigin = "https://support-hub.integration.test:4443";
 
     private readonly string _environment;
+    private readonly string _databaseStorageRoot = Path.Combine(
+        Path.GetTempPath(),
+        "RmsSupportHub-Agent-Integration",
+        Guid.NewGuid().ToString("N"));
 
     public AgentWebApplicationFactory()
         : this(AgentHostConstants.IntegrationTestEnvironment)
@@ -68,11 +75,21 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IRmsDatabaseConnectionStringSource>();
             services.RemoveAll<IRmsDatabaseDiagnostics>();
             services.AddSingleton<IRmsDatabaseDiagnostics>(new InMemoryRmsDatabaseDiagnostics());
+            services.RemoveAll<RmsDatabaseStorageOptions>();
+            services.AddSingleton(new RmsDatabaseStorageOptions
+            {
+                BackupRootPath = Path.Combine(_databaseStorageRoot, "backups"),
+                DatabaseFilesRootPath = Path.Combine(_databaseStorageRoot, "database-files")
+            });
+            services.RemoveAll<IRmsDatabaseSqlOperations>();
+            services.AddSingleton<IRmsDatabaseSqlOperations, InMemoryRmsDatabaseSqlOperations>();
 
             services.RemoveAll<IMutationOperationRegistry>();
             services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(
             [
                 ServiceActionOperation.Descriptor,
+                RmsDatabaseOperation.BackupDescriptor,
+                RmsDatabaseOperation.RestoreDescriptor,
                 new MutationOperationDescriptor("integration.test-mutation", "PUT")
             ]));
         });

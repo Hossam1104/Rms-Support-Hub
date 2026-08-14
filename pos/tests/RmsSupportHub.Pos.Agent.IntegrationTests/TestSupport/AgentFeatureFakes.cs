@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
@@ -159,6 +160,10 @@ internal sealed class InMemoryRmsInstallationDiscovery : IRmsInstallationDiscove
 
 internal sealed class InMemoryRmsDatabaseDiagnostics : IRmsDatabaseDiagnostics
 {
+    public RmsDatabaseDiagnosticStatus Status { get; set; } = RmsDatabaseDiagnosticStatus.Reachable;
+
+    public bool? DatabaseNameMatches { get; set; } = true;
+
     public Task<RmsDatabaseDiagnosticResult> DiagnoseAsync(
         RmsDatabaseKind database,
         CancellationToken cancellationToken = default)
@@ -171,9 +176,127 @@ internal sealed class InMemoryRmsDatabaseDiagnostics : IRmsDatabaseDiagnostics
             expected,
             "integration-sql:1433",
             true,
-            true,
-            RmsDatabaseDiagnosticStatus.Reachable,
+            DatabaseNameMatches,
+            Status,
             DateTimeOffset.UtcNow,
             "The configured RMS database answered the read-only identity probe."));
+    }
+}
+
+internal sealed class InMemoryRmsDatabaseSqlOperations : IRmsDatabaseSqlOperations
+{
+    public ConcurrentQueue<(RmsDatabaseKind Database, string BackupPath)> BackupCalls { get; } = new();
+
+    public ConcurrentQueue<(RmsDatabaseKind Database, string BackupPath)> RestoreCalls { get; } = new();
+
+    public Func<RmsDatabaseKind, CancellationToken, Task>? BackupBehavior { get; set; }
+
+    public Func<RmsDatabaseKind, CancellationToken, Task>? RestoreBehavior { get; set; }
+
+    public RmsDatabaseSqlOutcome BackupOutcome { get; set; } = RmsDatabaseSqlOutcome.Completed;
+
+    public RmsDatabaseSqlOutcome RestoreOutcome { get; set; } = RmsDatabaseSqlOutcome.Completed;
+
+    public bool VerifyResult { get; set; } = true;
+
+    public async Task<RmsDatabaseSqlBackupResult> BackupAsync(
+        RmsDatabaseKind database,
+        string backupPath,
+        CancellationToken cancellationToken = default)
+    {
+        BackupCalls.Enqueue((database, backupPath));
+        if (BackupBehavior is not null)
+        {
+            await BackupBehavior(database, cancellationToken);
+        }
+
+        if (BackupOutcome != RmsDatabaseSqlOutcome.Completed)
+        {
+            return BackupOutcome switch
+            {
+                RmsDatabaseSqlOutcome.OutcomeUnknown => new(
+                    BackupOutcome,
+                    "backup_sql_outcome_unknown",
+                    "The synthetic SQL backup dispatch outcome is unknown."),
+                _ => new(
+                    BackupOutcome,
+                    "backup_sql_failed",
+                    "The synthetic SQL backup was rejected before completion.")
+            };
+        }
+
+        var directory = Path.GetDirectoryName(backupPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllTextAsync(
+            backupPath,
+            $"synthetic-{database}-{Guid.NewGuid():N}",
+            Encoding.UTF8,
+            cancellationToken);
+        return new(
+            RmsDatabaseSqlOutcome.Completed,
+            "backup_sql_completed",
+            "The synthetic SQL backup completed.");
+    }
+
+    public Task<RmsDatabaseSqlInspectionResult> InspectBackupAsync(
+        RmsDatabaseKind database,
+        string backupPath,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(
+            new RmsDatabaseSqlInspectionResult(
+                RmsDatabaseSqlOutcome.Completed,
+                "restore_sql_inspection_completed",
+                "The synthetic backup passed inspection.",
+                [new RestoreFileInfo($"{database}-data", "D"), new RestoreFileInfo($"{database}-log", "L")]));
+    }
+
+    public async Task<RmsDatabaseSqlRestoreResult> RestoreAsync(
+        RmsDatabaseKind database,
+        string backupPath,
+        IReadOnlyList<RestoreFileInfo> logicalFiles,
+        string databaseFilesRoot,
+        CancellationToken cancellationToken = default)
+    {
+        RestoreCalls.Enqueue((database, backupPath));
+        if (RestoreBehavior is not null)
+        {
+            await RestoreBehavior(database, cancellationToken);
+        }
+
+        return RestoreOutcome switch
+        {
+            RmsDatabaseSqlOutcome.Completed => new(
+                RestoreOutcome,
+                "restore_sql_completed",
+                "The synthetic SQL restore completed.",
+                false,
+                []),
+            RmsDatabaseSqlOutcome.OutcomeUnknown => new(
+                RestoreOutcome,
+                "restore_sql_outcome_unknown",
+                "The synthetic SQL restore dispatch outcome is unknown.",
+                true,
+                ["Synthetic restore recovery was attempted."]),
+            _ => new(
+                RestoreOutcome,
+                "restore_sql_failed",
+                "The synthetic SQL restore was rejected.",
+                false,
+                [])
+        };
+    }
+
+    public Task<bool> VerifyDatabaseAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(VerifyResult);
     }
 }

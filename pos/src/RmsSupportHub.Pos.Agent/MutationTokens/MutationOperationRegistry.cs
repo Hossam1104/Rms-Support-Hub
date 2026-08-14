@@ -3,7 +3,8 @@ namespace RmsSupportHub.Pos.Agent.MutationTokens;
 public enum MutationTargetKind
 {
     None,
-    AllowListedService
+    AllowListedService,
+    AllowListedRmsDatabase
 }
 
 /// <summary>

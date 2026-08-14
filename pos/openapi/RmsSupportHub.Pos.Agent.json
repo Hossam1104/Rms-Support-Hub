@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "RMS+ POS Agent API",
-    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes protected reads and the typed Windows-service control operation, and no Support Hub backend relay is involved. INT-08 exposes read-only device/configuration/service visibility plus one allow-listed Start/Stop/Restart service mutation. Mutation tokens are short-lived, one-use, and bound to the authenticated principal, exact Origin, registered operation, target, method, and path.",
+    "description": "Destination-owned foundation contract for the per-device Windows POS Agent. The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser access. Windows Negotiate supplies the authenticated identity, local Built-in Administrators membership authorizes protected reads and typed Windows-service and RMS database operations, and no Support Hub backend relay is involved. The Agent exposes read-only device/configuration/RMS visibility plus allow-listed service control and server-owned RMS database backup/restore workflows. Mutation tokens are short-lived, one-use, and bound to the authenticated principal, exact Origin, registered operation, target, method, and path.",
     "version": "1.0"
   },
   "servers": [
@@ -728,6 +728,460 @@
         ]
       }
     },
+    "/api/v1/rms/databases/{targetId}": {
+      "get": {
+        "tags": [
+          "RMS Database Operations"
+        ],
+        "summary": "Read the typed RMS database workspace",
+        "description": "Returns the sanitized workspace for exactly one server-owned Branch or Cashier RMS database target, including approved artifact metadata and the latest principal-scoped operation. No connection string, credential, SQL, unrestricted path, or raw service target is returned, and no mutation token is required for this read.",
+        "operationId": "GetRmsDatabaseWorkspace",
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the sanitized RmsDatabaseWorkspaceDto workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmsDatabaseWorkspaceDto"
+                },
+                "example": {
+                  "target": "branch",
+                  "databaseDisplayName": "Branch Database",
+                  "restoreConfirmationText": "RESTORE BRANCH DATABASE",
+                  "approvedBackups": [ ],
+                  "latestOperation": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested Branch or Cashier target is not a server-owned database target."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/rms/databases/{targetId}/backup": {
+      "post": {
+        "tags": [
+          "RMS Database Operations"
+        ],
+        "summary": "Start a typed RMS database backup",
+        "description": "Starts a server-owned backup of exactly the canonical Branch or Cashier database. The request contains only a bounded idempotency key and the header-only one-use mutation token for this exact route; the Agent owns connection discovery, database identity, destination, and SQL.",
+        "operationId": "BackupRmsDatabase",
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RmsDatabaseBackupRequestDto"
+                  }
+                ]
+              },
+              "example": {
+                "idempotencyKey": "support-backup-20260814-001"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The authenticated Agent returned typed RMS database backup operation truth. The result may be NotAttempted, Accepted, Completed, Failed, or OutcomeUnknown; ambiguous outcomes are never retried automatically.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmsDatabaseOperationDto"
+                },
+                "example": {
+                  "operationId": "operation-opaque-id",
+                  "target": "branch",
+                  "databaseDisplayName": "Branch Database",
+                  "operation": "backup",
+                  "state": "running",
+                  "outcome": "accepted",
+                  "progressPercent": 20,
+                  "stage": "dispatch",
+                  "detail": "The Agent is dispatching the server-owned database operation.",
+                  "destructiveAttempted": false,
+                  "recoveryRequired": false,
+                  "warnings": [ ],
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the target, confirmation, idempotency key, artifact precondition, or transport contract with safe problem details; typed business rejection remains a sanitized operation response where the target is known.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization or the exact-origin/mutation-token boundary rejected the request. Safe codes include windows_sid_unavailable, origin_rejected, and mutation_token_invalid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned safe generic server-error details without exception, credential, SQL, path, or raw service information.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/rms/databases/{targetId}/restore": {
+      "post": {
+        "tags": [
+          "RMS Database Operations"
+        ],
+        "summary": "Start a confirmed typed RMS database restore",
+        "description": "Starts a destructive restore only from an approved Agent-owned backup artifact for the selected canonical Branch or Cashier database. The request contains only the logical target route, opaque artifact ID, exact confirmation text, bounded idempotency key, and header-only one-use mutation token. The Agent owns artifact validation, service coordination, bounded SQL, verification, and recovery truth.",
+        "operationId": "RestoreRmsDatabase",
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RmsDatabaseRestoreRequestDto"
+                  }
+                ]
+              },
+              "example": {
+                "backupArtifactId": "artifact-opaque-id",
+                "confirmationText": "RESTORE BRANCH DATABASE",
+                "idempotencyKey": "support-restore-20260814-001"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The authenticated Agent returned typed RMS database restore operation truth. The result may be NotAttempted, Accepted, Completed, Failed, or OutcomeUnknown; ambiguous outcomes are never retried automatically.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmsDatabaseOperationDto"
+                },
+                "example": {
+                  "operationId": "operation-opaque-id",
+                  "target": "branch",
+                  "databaseDisplayName": "Branch Database",
+                  "operation": "restore",
+                  "state": "running",
+                  "outcome": "accepted",
+                  "progressPercent": 20,
+                  "stage": "dispatch",
+                  "detail": "The Agent is dispatching the server-owned database operation.",
+                  "destructiveAttempted": true,
+                  "recoveryRequired": false,
+                  "warnings": [ ],
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the target, confirmation, idempotency key, artifact precondition, or transport contract with safe problem details; typed business rejection remains a sanitized operation response where the target is known.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization or the exact-origin/mutation-token boundary rejected the request. Safe codes include windows_sid_unavailable, origin_rejected, and mutation_token_invalid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned safe generic server-error details without exception, credential, SQL, path, or raw service information.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/rms/databases/{targetId}/operations/{operationId}": {
+      "get": {
+        "tags": [
+          "RMS Database Operations"
+        ],
+        "summary": "Read one principal-scoped RMS database operation",
+        "description": "Returns sanitized REST state truth for one authenticated administrator's RMS database operation. The opaque operation ID is scoped to the authenticated Windows principal; mutation tokens are not accepted or needed.",
+        "operationId": "GetRmsDatabaseOperation",
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the sanitized RmsDatabaseOperationDto state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmsDatabaseOperationDto"
+                },
+                "example": {
+                  "operationId": "operation-opaque-id",
+                  "target": "branch",
+                  "databaseDisplayName": "Branch Database",
+                  "operation": "backup",
+                  "state": "completed",
+                  "outcome": "completed",
+                  "progressPercent": 100,
+                  "stage": "completed",
+                  "detail": "The Branch database backup completed.",
+                  "artifact": null,
+                  "destructiveAttempted": false,
+                  "recoveryRequired": false,
+                  "warnings": [ ],
+                  "errorCode": null,
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The target or principal-scoped operation was not retained."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/rms/databases/{targetId}/operations/{operationId}/events": {
+      "get": {
+        "tags": [
+          "RMS Database Operations"
+        ],
+        "summary": "Stream authenticated RMS database operation progress",
+        "description": "Streams principal-scoped, read-only RMS database operation progress as authenticated server-sent events. The stream uses Windows authentication, administrator authorization, and exact Origin protection; mutation tokens never appear in URLs or query strings.",
+        "operationId": "StreamRmsDatabaseOperationEvents",
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A text/event-stream sequence of sanitized RmsDatabaseOperationDto state updates.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The exact-origin or administrator authorization boundary rejected the stream request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The target or principal-scoped operation was not retained."
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
     "/api/v1/device/identity": {
       "get": {
         "tags": [
@@ -1382,6 +1836,67 @@
         ],
         "description": "Comparison status for duplicated BranchCode values."
       },
+      "RmsDatabaseArtifactDto": {
+        "required": [
+          "artifactId",
+          "displayName",
+          "sizeBytes",
+          "sha256Checksum",
+          "createdAtUtc",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "description": "Opaque Agent-owned backup handle; it is not a filesystem path or download URL."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Server-generated safe backup display name without a physical path."
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Size of the approved backup artifact in bytes, when safely known.",
+            "format": "int64"
+          },
+          "sha256Checksum": {
+            "type": "string",
+            "description": "Checksum of the approved artifact used for server-side integrity validation."
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "description": "UTC creation time recorded by the Agent.",
+            "format": "date-time"
+          },
+          "expiresAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC retention expiry, when the Agent assigns one.",
+            "format": "date-time"
+          }
+        },
+        "description": "Sanitized metadata for an approved Agent-owned RMS database backup; the physical filesystem path and download URL are intentionally absent."
+      },
+      "RmsDatabaseBackupRequestDto": {
+        "required": [
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key scoped to the canonical database and backup operation."
+          }
+        },
+        "description": "Typed RMS database backup request containing only a bounded idempotency key."
+      },
       "RmsDatabaseDiagnosticDto": {
         "required": [
           "expectedDatabase",
@@ -1445,6 +1960,223 @@
           "unreachable"
         ],
         "description": "Sanitized result of configuration validation and the fixed read-only SQL probe."
+      },
+      "RmsDatabaseOperationDto": {
+        "required": [
+          "operationId",
+          "target",
+          "databaseDisplayName",
+          "operation",
+          "state",
+          "outcome",
+          "progressPercent",
+          "stage",
+          "detail",
+          "startedAtUtc",
+          "completedAtUtc",
+          "artifact",
+          "destructiveAttempted",
+          "recoveryRequired",
+          "warnings",
+          "errorCode",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "description": "Opaque Agent operation handle scoped to the authenticated Windows principal."
+          },
+          "target": {
+            "description": "Server-owned Branch or Cashier database target.",
+            "$ref": "#/components/schemas/RmsDatabaseTarget"
+          },
+          "databaseDisplayName": {
+            "type": "string",
+            "description": "Safe operator-facing database label."
+          },
+          "operation": {
+            "description": "Typed Backup or Restore operation selected by the server route.",
+            "$ref": "#/components/schemas/RmsDatabaseOperationKind"
+          },
+          "state": {
+            "description": "Current REST/SSE lifecycle state.",
+            "$ref": "#/components/schemas/RmsDatabaseOperationState"
+          },
+          "outcome": {
+            "description": "Typed operation outcome truth; OutcomeUnknown requires inspection before retry.",
+            "$ref": "#/components/schemas/RmsDatabaseOperationOutcome"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported progress percentage.",
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Server-owned safe workflow stage label."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, connection strings, SQL, unrestricted paths, or raw service targets."
+          },
+          "startedAtUtc": {
+            "type": "string",
+            "description": "UTC operation start time recorded by the Agent.",
+            "format": "date-time"
+          },
+          "completedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC completion time when the operation reached a final state.",
+            "format": "date-time"
+          },
+          "artifact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RmsDatabaseArtifactDto"
+              }
+            ],
+            "description": "Sanitized approved artifact metadata, when the workflow produced or used one."
+          },
+          "destructiveAttempted": {
+            "type": "boolean",
+            "description": "Whether destructive database work was attempted."
+          },
+          "recoveryRequired": {
+            "type": "boolean",
+            "description": "Whether the Agent cannot prove that database/service recovery is complete and inspection is required before retrying."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded safe recovery or operator warnings."
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Stable safe error code, when the operation did not complete successfully."
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for diagnostics."
+          }
+        },
+        "description": "Latest principal-scoped operation state, when retained."
+      },
+      "RmsDatabaseOperationKind": {
+        "enum": [
+          "backup",
+          "restore"
+        ],
+        "description": "Typed Backup or Restore operation selected by the server route."
+      },
+      "RmsDatabaseOperationOutcome": {
+        "enum": [
+          "notAttempted",
+          "accepted",
+          "completed",
+          "failed",
+          "outcomeUnknown"
+        ],
+        "description": "Typed operation outcome truth; OutcomeUnknown requires inspection before retry."
+      },
+      "RmsDatabaseOperationState": {
+        "enum": [
+          "notAttempted",
+          "accepted",
+          "running",
+          "completed",
+          "failed",
+          "outcomeUnknown"
+        ],
+        "description": "Current REST/SSE lifecycle state."
+      },
+      "RmsDatabaseRestoreRequestDto": {
+        "required": [
+          "backupArtifactId",
+          "confirmationText",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "backupArtifactId": {
+            "type": "string",
+            "description": "Opaque approved backup handle returned by the Agent workspace; it is not a path."
+          },
+          "confirmationText": {
+            "type": "string",
+            "description": "Exact target-specific destructive confirmation, for example RESTORE BRANCH DATABASE."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key scoped to the canonical database and restore operation."
+          }
+        },
+        "description": "Typed destructive RMS database restore request containing only an opaque approved artifact ID, exact target confirmation, and bounded idempotency key."
+      },
+      "RmsDatabaseTarget": {
+        "enum": [
+          "branch",
+          "cashier"
+        ],
+        "description": "Server-owned Branch or Cashier database target."
+      },
+      "RmsDatabaseWorkspaceDto": {
+        "required": [
+          "target",
+          "databaseDisplayName",
+          "restoreConfirmationText",
+          "approvedBackups",
+          "latestOperation"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "Server-owned Branch or Cashier database target.",
+            "$ref": "#/components/schemas/RmsDatabaseTarget"
+          },
+          "databaseDisplayName": {
+            "type": "string",
+            "description": "Safe operator-facing database label."
+          },
+          "restoreConfirmationText": {
+            "type": "string",
+            "description": "Exact target-specific confirmation text required for destructive restore."
+          },
+          "approvedBackups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RmsDatabaseArtifactDto"
+            },
+            "description": "Sanitized metadata for backup artifacts registered by this Agent instance and target."
+          },
+          "latestOperation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RmsDatabaseOperationDto"
+              }
+            ],
+            "description": "Latest principal-scoped operation state, when retained."
+          }
+        },
+        "description": "Sanitized Branch or Cashier RMS database workspace with approved backup metadata and the latest principal-scoped operation."
       },
       "RmsDiagnosticsDto": {
         "required": [
@@ -1830,6 +2562,9 @@
     },
     {
       "name": "RMS Diagnostics"
+    },
+    {
+      "name": "RMS Database Operations"
     },
     {
       "name": "Device"

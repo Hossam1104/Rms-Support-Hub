@@ -1,4 +1,5 @@
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.MutationTokens;
 
@@ -29,7 +30,19 @@ public sealed class MutationOperationTargetResolver(ServiceAllowList services)
             MutationTargetKind.None => string.IsNullOrEmpty(targetId),
             MutationTargetKind.AllowListedService =>
                 await services.ResolveAsync(targetId, cancellationToken).ConfigureAwait(false) is not null,
+            MutationTargetKind.AllowListedRmsDatabase =>
+                await ResolveDatabaseAsync(targetId, cancellationToken).ConfigureAwait(false),
             _ => false
         };
+    }
+
+    private static Task<bool> ResolveDatabaseAsync(
+        string? targetId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(
+            RmsDatabaseCatalog.TryResolve(targetId, out var definition)
+            && string.Equals(targetId, definition.TargetId, StringComparison.Ordinal));
     }
 }

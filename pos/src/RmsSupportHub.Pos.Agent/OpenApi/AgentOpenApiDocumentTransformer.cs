@@ -23,11 +23,12 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "Destination-owned foundation contract for the per-device Windows POS Agent. " +
             "The Agent exposes a fixed HTTPS loopback endpoint for direct Support Hub browser " +
             "access. Windows Negotiate supplies the authenticated identity, local Built-in " +
-            "Administrators membership authorizes protected reads and the typed Windows-service " +
-            "control operation, and no Support Hub backend relay is involved. INT-08 exposes read-only " +
-            "device/configuration/service visibility plus one allow-listed Start/Stop/Restart service " +
-            "mutation. Mutation tokens are short-lived, one-use, and bound to the authenticated " +
-            "principal, exact Origin, registered operation, target, method, and path.";
+            "Administrators membership authorizes protected reads and typed Windows-service and RMS " +
+            "database operations, and no Support Hub backend relay is involved. The Agent exposes " +
+            "read-only device/configuration/RMS visibility plus allow-listed service control and " +
+            "server-owned RMS database backup/restore workflows. Mutation tokens are short-lived, " +
+            "one-use, and bound to the authenticated principal, exact Origin, registered operation, " +
+            "target, method, and path.";
         document.Servers = [new OpenApiServer
         {
             Url = AgentHostConstants.CanonicalOrigin,
@@ -56,6 +57,11 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         AddWindowsSecurityRequirement(document, "/api/v1/services", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/services/{serviceId}/actions", HttpMethod.Post);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/diagnostics", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/backup", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/restore", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}/events", HttpMethod.Get);
         AddReferencePropertyDescriptions(document);
 
         return Task.CompletedTask;
@@ -174,6 +180,18 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "databaseNameMatches", "Whether the configured/queried database identity matches the canonical expected database.");
         SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "connectivityStatus", "Sanitized result of configuration validation and the fixed read-only SQL probe.");
         SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "evidence", "Freshness and safe detail for the database diagnostic.");
+        SetPropertyDescription(document, "RmsDatabaseArtifactDto", "artifactId", "Opaque Agent-owned backup handle; it is not a filesystem path or download URL.");
+        SetPropertyDescription(document, "RmsDatabaseArtifactDto", "displayName", "Server-generated safe backup display name without a physical path.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "detail", "Safe operator detail without credentials, connection strings, SQL, unrestricted paths, or raw service targets.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "recoveryRequired", "Whether the Agent cannot prove that database/service recovery is complete and inspection is required before retrying.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "target", "Server-owned Branch or Cashier database target.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "operation", "Typed Backup or Restore operation selected by the server route.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "state", "Current REST/SSE lifecycle state.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "outcome", "Typed operation outcome truth; OutcomeUnknown requires inspection before retry.");
+        SetPropertyDescription(document, "RmsDatabaseOperationDto", "artifact", "Sanitized approved artifact metadata, when the workflow produced or used one.");
+        SetPropertyDescription(document, "RmsDatabaseWorkspaceDto", "approvedBackups", "Sanitized metadata for backup artifacts registered by this Agent instance and target.");
+        SetPropertyDescription(document, "RmsDatabaseWorkspaceDto", "target", "Server-owned Branch or Cashier database target.");
+        SetPropertyDescription(document, "RmsDatabaseWorkspaceDto", "latestOperation", "Latest principal-scoped operation state, when retained.");
     }
 
     private static void SetPropertyDescription(

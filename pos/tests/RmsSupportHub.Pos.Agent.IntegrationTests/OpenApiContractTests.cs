@@ -30,6 +30,11 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/device/capabilities",
                 "/api/v1/device/connectivity",
                 "/api/v1/device/identity",
+                "/api/v1/rms/databases/{targetId}",
+                "/api/v1/rms/databases/{targetId}/backup",
+                "/api/v1/rms/databases/{targetId}/operations/{operationId}",
+                "/api/v1/rms/databases/{targetId}/operations/{operationId}/events",
+                "/api/v1/rms/databases/{targetId}/restore",
                 "/api/v1/rms/diagnostics",
                 "/api/v1/security/mutation-token",
                 "/api/v1/services",
@@ -40,7 +45,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             ],
             paths.Select(entry => entry.Key).OrderBy(path => path, StringComparer.Ordinal));
 
-        foreach (var forbidden in new[] { "backup", "restore", "maintenance", "downloader" })
+        foreach (var forbidden in new[] { "maintenance", "downloader" })
         {
             Assert.DoesNotContain(
                 paths.Select(entry => entry.Key),
@@ -65,6 +70,11 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetServices", Operation(document, "/api/v1/services", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("ControlService", Operation(document, "/api/v1/services/{serviceId}/actions", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("GetRmsDiagnostics", Operation(document, "/api/v1/rms/diagnostics", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetRmsDatabaseWorkspace", Operation(document, "/api/v1/rms/databases/{targetId}", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("BackupRmsDatabase", Operation(document, "/api/v1/rms/databases/{targetId}/backup", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("RestoreRmsDatabase", Operation(document, "/api/v1/rms/databases/{targetId}/restore", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetRmsDatabaseOperation", Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("StreamRmsDatabaseOperationEvents", Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}/events", "get")["operationId"]!.GetValue<string>());
 
         var servers = document["servers"]!.AsArray();
         Assert.Single(servers);
@@ -86,6 +96,11 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.True(Operation(document, "/api/v1/services", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/services/{serviceId}/actions", "post").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/diagnostics", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/backup", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/restore", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/operations/{operationId}/events", "get").ContainsKey("security"));
 
         var serialized = document.ToJsonString();
         Assert.DoesNotContain("bearer", serialized, StringComparison.OrdinalIgnoreCase);
@@ -324,6 +339,11 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "RmsEndpointDiagnosticDto",
             "RmsConnectivityDto",
             "RmsDatabaseDiagnosticDto"
+            ,"RmsDatabaseArtifactDto"
+            ,"RmsDatabaseBackupRequestDto"
+            ,"RmsDatabaseRestoreRequestDto"
+            ,"RmsDatabaseOperationDto"
+            ,"RmsDatabaseWorkspaceDto"
         })
         {
             var schema = schemas[schemaName]!.AsObject();

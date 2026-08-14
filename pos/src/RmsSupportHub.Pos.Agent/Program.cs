@@ -11,14 +11,17 @@ using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Device;
 using RmsSupportHub.Pos.Agent.Endpoints;
 using RmsSupportHub.Pos.Agent.MutationTokens;
+using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Application.UseCases;
+using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
 using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Infrastructure.Backups;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Databases;
@@ -103,7 +106,9 @@ builder.Services.AddSingleton<IMutationTokenStore>(services =>
 builder.Services.AddSingleton<MutationTokenService>();
 builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(
 [
-    ServiceActionOperation.Descriptor
+    ServiceActionOperation.Descriptor,
+    RmsDatabaseOperation.BackupDescriptor,
+    RmsDatabaseOperation.RestoreDescriptor
 ]));
 
 builder.Services.AddOpenApi("v1", options =>
@@ -113,9 +118,9 @@ builder.Services.AddOpenApi("v1", options =>
     options.AddDocumentTransformer<AgentOpenApiDocumentTransformer>();
 });
 
-// INT-08 composes only the safe storage ports, diagnostics, and the typed allow-listed service
-// control runtime. It deliberately does not register legacy WinUI configuration importers,
-// configuration mutation services, operation workers, or unrelated state-changing features.
+// The Agent composes only typed, server-owned capabilities. Legacy WinUI configuration importers,
+// generic SQL/command surfaces, and caller-selected filesystem workflows remain outside this
+// process boundary.
 builder.Services.AddSingleton(new AgentConfigurationStoreOptions());
 builder.Services.AddSingleton<IAgentConfigurationStore, JsonAgentConfigurationStore>();
 builder.Services.AddSingleton<IAgentSecretStore, DpapiAgentSecretStore>();
@@ -144,6 +149,15 @@ builder.Services.AddSingleton<ServiceActionRuntime>();
 // mapped in this session. Its file capability remains behind the existing Infrastructure port.
 builder.Services.AddSingleton<IBackupFileSystem, PhysicalBackupFileSystem>();
 builder.Services.AddSingleton<ArtifactCatalog>();
+builder.Services.AddSingleton(new RmsDatabaseStorageOptions());
+builder.Services.AddSingleton<IRmsDatabaseSqlOperations, RmsSqlDatabaseOperations>();
+builder.Services.AddSingleton<IRmsDatabaseBackupStorage, RmsDatabaseBackupStorage>();
+builder.Services.AddSingleton<IRmsDatabaseWorkflow, RmsDatabaseWorkflowService>();
+builder.Services.AddSingleton<RmsDatabaseOperationStore>();
+builder.Services.AddSingleton<RmsDatabaseIdempotencyStore>();
+builder.Services.AddSingleton<RmsDatabaseConcurrencyGate>();
+builder.Services.AddSingleton<IRmsPrivilegedAuditSink, InMemoryRmsAuditSink>();
+builder.Services.AddSingleton<RmsDatabaseOperationRuntime>();
 
 var app = builder.Build();
 
@@ -301,6 +315,7 @@ app.MapDeviceEndpoints();
 app.MapConfigurationEndpoints();
 app.MapServiceEndpoints();
 app.MapRmsEndpoints();
+app.MapRmsDatabaseEndpoints();
 
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))

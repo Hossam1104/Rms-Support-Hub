@@ -51,6 +51,21 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/rms/diagnostics"):
                 DocumentRmsDiagnostics(operation);
                 break;
+            case ("GET", "/api/v1/rms/databases/{targetId}"):
+                DocumentRmsDatabaseWorkspace(operation);
+                break;
+            case ("POST", "/api/v1/rms/databases/{targetId}/backup"):
+                DocumentRmsDatabaseMutation(operation, restore: false);
+                break;
+            case ("POST", "/api/v1/rms/databases/{targetId}/restore"):
+                DocumentRmsDatabaseMutation(operation, restore: true);
+                break;
+            case ("GET", "/api/v1/rms/databases/{targetId}/operations/{operationId}"):
+                DocumentRmsDatabaseOperation(operation);
+                break;
+            case ("GET", "/api/v1/rms/databases/{targetId}/operations/{operationId}/events"):
+                DocumentRmsDatabaseEvents(operation);
+                break;
             case ("POST", "/api/v1/services/{serviceId}/actions"):
                 DocumentServiceAction(operation);
                 break;
@@ -478,6 +493,147 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             ["detail"] = "The Agent acknowledged the service action.",
             ["correlationId"] = "example-correlation-id"
         });
+    }
+
+    private static void DocumentRmsDatabaseWorkspace(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Read the typed RMS database workspace",
+            "Returns the sanitized workspace for exactly one server-owned Branch or Cashier RMS " +
+            "database target, including approved artifact metadata and the latest principal-scoped " +
+            "operation. No connection string, credential, SQL, unrestricted path, or raw service " +
+            "target is returned, and no mutation token is required for this read.",
+            "The Agent returned the sanitized RmsDatabaseWorkspaceDto workspace.",
+            new JsonObject
+            {
+                ["target"] = "branch",
+                ["databaseDisplayName"] = "Branch Database",
+                ["restoreConfirmationText"] = "RESTORE BRANCH DATABASE",
+                ["approvedBackups"] = new JsonArray(),
+                ["latestOperation"] = null
+            });
+        SetResponseDescription(operation, "404", "The requested Branch or Cashier target is not a server-owned database target.");
+    }
+
+    private static void DocumentRmsDatabaseMutation(OpenApiOperation operation, bool restore)
+    {
+        var action = restore ? "restore" : "backup";
+        SetOperation(
+            operation,
+            restore ? "Start a confirmed typed RMS database restore" : "Start a typed RMS database backup",
+            restore
+                ? "Starts a destructive restore only from an approved Agent-owned backup artifact " +
+                  "for the selected canonical Branch or Cashier database. The request contains only " +
+                  "the logical target route, opaque artifact ID, exact confirmation text, bounded " +
+                  "idempotency key, and header-only one-use mutation token. The Agent owns artifact " +
+                  "validation, service coordination, bounded SQL, verification, and recovery truth."
+                : "Starts a server-owned backup of exactly the canonical Branch or Cashier database. " +
+                  "The request contains only a bounded idempotency key and the header-only one-use " +
+                  "mutation token for this exact route; the Agent owns connection discovery, database " +
+                  "identity, destination, and SQL.");
+
+        if (operation.RequestBody?.Content?.TryGetValue("application/json", out var content) == true
+            && content is not null)
+        {
+            content.Example = restore
+                ? new JsonObject
+                {
+                    ["backupArtifactId"] = "artifact-opaque-id",
+                    ["confirmationText"] = "RESTORE BRANCH DATABASE",
+                    ["idempotencyKey"] = "support-restore-20260814-001"
+                }
+                : new JsonObject
+                {
+                    ["idempotencyKey"] = "support-backup-20260814-001"
+                };
+        }
+
+        SetResponseDescription(
+            operation,
+            "200",
+            $"The authenticated Agent returned typed RMS database {action} operation truth. " +
+            "The result may be NotAttempted, Accepted, Completed, Failed, or OutcomeUnknown; " +
+            "ambiguous outcomes are never retried automatically.");
+        SetResponseDescription(
+            operation,
+            "400",
+            "The Agent rejected the target, confirmation, idempotency key, artifact precondition, " +
+            "or transport contract with safe problem details; typed business rejection remains a " +
+            "sanitized operation response where the target is known.");
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge.");
+        SetResponseDescription(
+            operation,
+            "403",
+            "Authorization or the exact-origin/mutation-token boundary rejected the request. Safe " +
+            "codes include windows_sid_unavailable, origin_rejected, and mutation_token_invalid.");
+        SetResponseDescription(
+            operation,
+            "500",
+            "The Agent returned safe generic server-error details without exception, credential, SQL, " +
+            "path, or raw service information.");
+        DocumentNegotiateChallenge(operation);
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["operationId"] = "operation-opaque-id",
+            ["target"] = "branch",
+            ["databaseDisplayName"] = "Branch Database",
+            ["operation"] = action,
+            ["state"] = "running",
+            ["outcome"] = "accepted",
+            ["progressPercent"] = 20,
+            ["stage"] = "dispatch",
+            ["detail"] = "The Agent is dispatching the server-owned database operation.",
+            ["destructiveAttempted"] = restore,
+            ["recoveryRequired"] = false,
+            ["warnings"] = new JsonArray(),
+            ["correlationId"] = "example-correlation-id"
+        });
+    }
+
+    private static void DocumentRmsDatabaseOperation(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Read one principal-scoped RMS database operation",
+            "Returns sanitized REST state truth for one authenticated administrator's RMS database " +
+            "operation. The opaque operation ID is scoped to the authenticated Windows principal; " +
+            "mutation tokens are not accepted or needed.",
+            "The Agent returned the sanitized RmsDatabaseOperationDto state.",
+            new JsonObject
+            {
+                ["operationId"] = "operation-opaque-id",
+                ["target"] = "branch",
+                ["databaseDisplayName"] = "Branch Database",
+                ["operation"] = "backup",
+                ["state"] = "completed",
+                ["outcome"] = "completed",
+                ["progressPercent"] = 100,
+                ["stage"] = "completed",
+                ["detail"] = "The Branch database backup completed.",
+                ["artifact"] = null,
+                ["destructiveAttempted"] = false,
+                ["recoveryRequired"] = false,
+                ["warnings"] = new JsonArray(),
+                ["errorCode"] = null,
+                ["correlationId"] = "example-correlation-id"
+            });
+        SetResponseDescription(operation, "404", "The target or principal-scoped operation was not retained.");
+    }
+
+    private static void DocumentRmsDatabaseEvents(OpenApiOperation operation)
+    {
+        SetOperation(
+            operation,
+            "Stream authenticated RMS database operation progress",
+            "Streams principal-scoped, read-only RMS database operation progress as authenticated " +
+            "server-sent events. The stream uses Windows authentication, administrator authorization, " +
+            "and exact Origin protection; mutation tokens never appear in URLs or query strings.");
+        SetResponseDescription(operation, "200", "A text/event-stream sequence of sanitized RmsDatabaseOperationDto state updates.");
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge.");
+        SetResponseDescription(operation, "403", "The exact-origin or administrator authorization boundary rejected the stream request.");
+        SetResponseDescription(operation, "404", "The target or principal-scoped operation was not retained.");
+        DocumentNegotiateChallenge(operation);
     }
 
     private static void DocumentProtectedRead(

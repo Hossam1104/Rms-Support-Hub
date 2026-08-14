@@ -22,6 +22,11 @@ type ServiceActionKind = components['schemas']['ServiceActionKind'];
 type ServiceActionRequest = components['schemas']['ServiceActionRequestDto'];
 type ServiceActionResponse = components['schemas']['ServiceActionResponseDto'];
 type RmsDiagnostics = components['schemas']['RmsDiagnosticsDto'];
+type RmsDatabaseTarget = components['schemas']['RmsDatabaseTarget'];
+type RmsDatabaseWorkspace = components['schemas']['RmsDatabaseWorkspaceDto'];
+type RmsDatabaseOperation = components['schemas']['RmsDatabaseOperationDto'];
+type RmsDatabaseBackupRequest = components['schemas']['RmsDatabaseBackupRequestDto'];
+type RmsDatabaseRestoreRequest = components['schemas']['RmsDatabaseRestoreRequestDto'];
 
 @Injectable({ providedIn: 'root' })
 export class PosAgentTransportService {
@@ -103,6 +108,58 @@ export class PosAgentTransportService {
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 
+  getRmsDatabaseWorkspace(target: RmsDatabaseTarget): Observable<RmsDatabaseWorkspace> {
+    return this.http
+      .get<RmsDatabaseWorkspace>(this.rmsDatabasePath(target), {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  backupRmsDatabase(
+    target: RmsDatabaseTarget,
+    idempotencyKey: string,
+    mutationToken: string
+  ): Observable<RmsDatabaseOperation> {
+    const body: RmsDatabaseBackupRequest = { idempotencyKey };
+    return this.http
+      .post<RmsDatabaseOperation>(`${this.rmsDatabasePath(target)}/backup`, body, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  restoreRmsDatabase(
+    target: RmsDatabaseTarget,
+    backupArtifactId: string,
+    confirmationText: string,
+    idempotencyKey: string,
+    mutationToken: string
+  ): Observable<RmsDatabaseOperation> {
+    const body: RmsDatabaseRestoreRequest = {
+      backupArtifactId,
+      confirmationText,
+      idempotencyKey
+    };
+    return this.http
+      .post<RmsDatabaseOperation>(`${this.rmsDatabasePath(target)}/restore`, body, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getRmsDatabaseOperation(target: RmsDatabaseTarget, operationId: string): Observable<RmsDatabaseOperation> {
+    return this.http
+      .get<RmsDatabaseOperation>(
+        `${this.rmsDatabasePath(target)}/operations/${encodeURIComponent(operationId)}`,
+        { headers: this.jsonHeaders, withCredentials: true }
+      )
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
   issueMutationToken(operationId: string, targetId?: string): Observable<MutationTokenIssueResponse> {
     const body: MutationTokenIssueRequest = targetId ? { operationId, targetId } : { operationId };
     return this.http
@@ -131,5 +188,15 @@ export class PosAgentTransportService {
         { headers, withCredentials: true }
       )
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  private rmsDatabasePath(target: RmsDatabaseTarget): string {
+    return `${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.rmsDatabases}/${encodeURIComponent(target)}`;
+  }
+
+  private mutationHeaders(mutationToken: string): HttpHeaders {
+    return this.jsonHeaders
+      .set('Content-Type', 'application/json')
+      .set(POS_AGENT_MUTATION_TOKEN_HEADER, mutationToken);
   }
 }

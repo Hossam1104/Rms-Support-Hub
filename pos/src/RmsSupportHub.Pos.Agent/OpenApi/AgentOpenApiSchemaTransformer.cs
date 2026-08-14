@@ -86,6 +86,29 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Independent main-server and Branch-server endpoint reachability evidence.",
             (var value, null) when value == typeof(RmsDatabaseDiagnosticDto) =>
                 "Sanitized read-only RMS database configuration and identity-probe result.",
+            (var value, null) when value == typeof(RmsDatabaseArtifactDto) =>
+                "Sanitized metadata for an approved Agent-owned RMS database backup; the physical " +
+                "filesystem path and download URL are intentionally absent.",
+            (var value, null) when value == typeof(RmsDatabaseBackupRequestDto) =>
+                "Typed RMS database backup request containing only a bounded idempotency key.",
+            (var value, null) when value == typeof(RmsDatabaseRestoreRequestDto) =>
+                "Typed destructive RMS database restore request containing only an opaque approved " +
+                "artifact ID, exact target confirmation, and bounded idempotency key.",
+            (var value, null) when value == typeof(RmsDatabaseOperationDto) =>
+                "Sanitized REST/SSE truth for one principal-scoped RMS database operation, including " +
+                "progress, result, artifact metadata, and recovery status without credentials, SQL, " +
+                "or unrestricted paths.",
+            (var value, null) when value == typeof(RmsDatabaseWorkspaceDto) =>
+                "Sanitized Branch or Cashier RMS database workspace with approved backup metadata and " +
+                "the latest principal-scoped operation.",
+            (var value, null) when value == typeof(RmsDatabaseTarget) =>
+                "Server-owned RMS database target: Branch or Cashier.",
+            (var value, null) when value == typeof(RmsDatabaseOperationKind) =>
+                "Typed RMS database operation kind: Backup or Restore.",
+            (var value, null) when value == typeof(RmsDatabaseOperationState) =>
+                "Lifecycle state for a typed RMS database operation.",
+            (var value, null) when value == typeof(RmsDatabaseOperationOutcome) =>
+                "Outcome truth for a typed RMS database operation; ambiguous outcomes are never retried automatically.",
             (var value, null) when value == typeof(ServiceActionOutcome) =>
                 "Typed service-action outcome: NotAttempted, Failed, Accepted, or OutcomeUnknown.",
             (var value, null) when value == typeof(EvidenceDto) =>
@@ -311,6 +334,70 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Sanitized result of configuration validation and the fixed read-only SQL probe.",
             (var value, "evidence") when value == typeof(RmsDatabaseDiagnosticDto) =>
                 "Freshness and safe detail for the database diagnostic.",
+            (var value, "artifactId") when value == typeof(RmsDatabaseArtifactDto) =>
+                "Opaque Agent-owned backup handle; it is not a filesystem path or download URL.",
+            (var value, "displayName") when value == typeof(RmsDatabaseArtifactDto) =>
+                "Server-generated safe backup display name without a physical path.",
+            (var value, "sizeBytes") when value == typeof(RmsDatabaseArtifactDto) =>
+                "Size of the approved backup artifact in bytes, when safely known.",
+            (var value, "sha256Checksum") when value == typeof(RmsDatabaseArtifactDto) =>
+                "Checksum of the approved artifact used for server-side integrity validation.",
+            (var value, "createdAtUtc") when value == typeof(RmsDatabaseArtifactDto) =>
+                "UTC creation time recorded by the Agent.",
+            (var value, "expiresAtUtc") when value == typeof(RmsDatabaseArtifactDto) =>
+                "UTC retention expiry, when the Agent assigns one.",
+            (var value, "idempotencyKey") when value == typeof(RmsDatabaseBackupRequestDto) =>
+                "Bounded caller-generated key scoped to the canonical database and backup operation.",
+            (var value, "backupArtifactId") when value == typeof(RmsDatabaseRestoreRequestDto) =>
+                "Opaque approved backup handle returned by the Agent workspace; it is not a path.",
+            (var value, "confirmationText") when value == typeof(RmsDatabaseRestoreRequestDto) =>
+                "Exact target-specific destructive confirmation, for example RESTORE BRANCH DATABASE.",
+            (var value, "idempotencyKey") when value == typeof(RmsDatabaseRestoreRequestDto) =>
+                "Bounded caller-generated key scoped to the canonical database and restore operation.",
+            (var value, "operationId") when value == typeof(RmsDatabaseOperationDto) =>
+                "Opaque Agent operation handle scoped to the authenticated Windows principal.",
+            (var value, "target") when value == typeof(RmsDatabaseOperationDto) =>
+                "Server-owned Branch or Cashier database target.",
+            (var value, "databaseDisplayName") when value == typeof(RmsDatabaseOperationDto) =>
+                "Safe operator-facing database label.",
+            (var value, "operation") when value == typeof(RmsDatabaseOperationDto) =>
+                "Typed Backup or Restore operation selected by the server route.",
+            (var value, "state") when value == typeof(RmsDatabaseOperationDto) =>
+                "Current REST/SSE lifecycle state.",
+            (var value, "outcome") when value == typeof(RmsDatabaseOperationDto) =>
+                "Typed operation outcome truth; OutcomeUnknown requires inspection before retry.",
+            (var value, "progressPercent") when value == typeof(RmsDatabaseOperationDto) =>
+                "Bounded server-reported progress percentage.",
+            (var value, "stage") when value == typeof(RmsDatabaseOperationDto) =>
+                "Server-owned safe workflow stage label.",
+            (var value, "detail") when value == typeof(RmsDatabaseOperationDto) =>
+                "Safe operator detail without credentials, connection strings, SQL, paths, raw service targets, or exception text.",
+            (var value, "startedAtUtc") when value == typeof(RmsDatabaseOperationDto) =>
+                "UTC operation start time recorded by the Agent.",
+            (var value, "completedAtUtc") when value == typeof(RmsDatabaseOperationDto) =>
+                "UTC completion time when the operation reached a final state.",
+            (var value, "artifact") when value == typeof(RmsDatabaseOperationDto) =>
+                "Sanitized approved artifact metadata, when the workflow produced or used one.",
+            (var value, "destructiveAttempted") when value == typeof(RmsDatabaseOperationDto) =>
+                "Whether destructive database work was attempted.",
+            (var value, "recoveryRequired") when value == typeof(RmsDatabaseOperationDto) =>
+                "Whether the Agent cannot prove database/service recovery is complete.",
+            (var value, "warnings") when value == typeof(RmsDatabaseOperationDto) =>
+                "Bounded safe recovery or operator warnings.",
+            (var value, "errorCode") when value == typeof(RmsDatabaseOperationDto) =>
+                "Stable safe error code, when the operation did not complete successfully.",
+            (var value, "correlationId") when value == typeof(RmsDatabaseOperationDto) =>
+                "Safe request correlation identifier for diagnostics.",
+            (var value, "target") when value == typeof(RmsDatabaseWorkspaceDto) =>
+                "Server-owned Branch or Cashier database target.",
+            (var value, "databaseDisplayName") when value == typeof(RmsDatabaseWorkspaceDto) =>
+                "Safe operator-facing database label.",
+            (var value, "restoreConfirmationText") when value == typeof(RmsDatabaseWorkspaceDto) =>
+                "Exact target-specific confirmation text required for destructive restore.",
+            (var value, "approvedBackups") when value == typeof(RmsDatabaseWorkspaceDto) =>
+                "Approved Agent-owned backup metadata for this canonical target.",
+            (var value, "latestOperation") when value == typeof(RmsDatabaseWorkspaceDto) =>
+                "Latest principal-scoped operation state, when retained.",
             (var value, "services") when value == typeof(RmsDiagnosticsDto) =>
                 "Current SCM status for the bounded canonical RMS service catalog.",
             (var value, "installation") when value == typeof(RmsDiagnosticsDto) =>

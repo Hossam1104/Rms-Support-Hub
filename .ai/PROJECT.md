@@ -54,20 +54,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   exported through `frontend/src/app/shared/ui/index.ts`. Toast state is
   capped/queued/deduplicated in `ToastService`, and sidebar collapse is
   persisted by `SidebarStateService` and published to the module shell.
-- U6 flat-order authoring is organized into collapsible `ui-section` blocks
-  with capability-aware section navigation, a server-value-only summary rail,
-  dense product/payment tables, real loading/empty/error states, and a
-  responsive bottom action bar. Product/payment edits use their existing PUT
-  endpoints; order-data edits retain U2 serialized batching. The current API
-  has no standalone validation endpoint, so the U6 Validate action is a
-  non-sending draft/preview/totals refresh and `send-request` remains the
-  server-authoritative validation/send path.
 - No background workers, queues, repository migrations, E2E framework, or
   Support Hub application auth scheme exists. INT-03 imported the isolated POS
   solution; INT-03R set Agent provenance to `010abc52dc110cfde3dc2c53e057890ff6edaf97`.
   Historical INT-01/02/03 imports remain attributed to
   `25922b499d33bd73f241ffc26c212dd000e81433`.
-- INT-04 composes the Windows-Service-capable Agent at `https://rms-pos-agent.localhost:5001`; INT-05 adds versioned `/pos/openapi`, generated types, and direct `HttpBackend`; INT-05F isolates `openapi-typescript@7.13.0` with a TypeScript 5 peer-compatible lockfile. INT-07 adds the first production read-only device/connectivity/configuration/service routes and direct workspace, with no mutation route or API relay; runtime OpenAPI remains hidden. INT-CI01 makes Windows maintenance/SMB semantics deterministic and all five POS CI lanes green.
+ - INT-04 composes the Windows-Service-capable Agent at `https://rms-pos-agent.localhost:5001`; INT-05 adds versioned `/pos/openapi`, generated types, and direct `HttpBackend`; INT-05F isolates `openapi-typescript@7.13.0` with a TypeScript 5 peer-compatible lockfile. INT-07 adds the first production read-only device/connectivity/configuration/service routes and direct workspace, with no mutation route or API relay; runtime OpenAPI remains hidden. INT-CI01 makes Windows maintenance/SMB semantics deterministic and all five POS CI lanes green.
+ - The Agent also owns the typed RMS database recovery surface at `/api/v1/rms/databases/{branch|cashier}`. Backup and restore use canonical targets, Agent-owned roots, opaque approved artifacts, bounded native SQL, exact confirmation, target-specific service coordination, one-use mutation tokens, bounded idempotency/concurrency, and principal-scoped REST/SSE operation truth. The browser never supplies or receives a raw SQL/database/path/service capability.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.

@@ -139,11 +139,57 @@ describe('PosMaintenanceComponent', () => {
         },
         services: []
       })),
+      getRmsDatabaseWorkspace: vi.fn((target: 'branch' | 'cashier') => of({
+        target,
+        databaseDisplayName: target === 'branch' ? 'Branch Database' : 'Cashier Database',
+        restoreConfirmationText: target === 'branch' ? 'RESTORE BRANCH DATABASE' : 'RESTORE CASHIER DATABASE',
+        approvedBackups: [],
+        latestOperation: null
+      })),
       issueMutationToken: vi.fn(() => of({ token: 'opaque-token', expiresAtUtc: '2026-08-13T10:05:00Z' })),
       controlService: vi.fn(() => of({
         outcome: 'accepted',
         code: 'service_action_accepted',
         detail: 'The Agent acknowledged the service action.',
+        correlationId: 'test-correlation'
+      })),
+      backupRmsDatabase: vi.fn(() => of({
+        operationId: 'database-operation',
+        target: 'branch',
+        databaseDisplayName: 'Branch Database',
+        operation: 'backup',
+        state: 'completed',
+        outcome: 'completed',
+        progressPercent: 100,
+        stage: 'completed',
+        detail: 'The Branch database backup completed.',
+        startedAtUtc: '2026-08-13T10:00:00Z',
+        completedAtUtc: '2026-08-13T10:00:02Z',
+        artifact: null,
+        destructiveAttempted: false,
+        recoveryRequired: false,
+        warnings: [],
+        errorCode: null,
+        correlationId: 'test-correlation'
+      })),
+      restoreRmsDatabase: vi.fn(),
+      getRmsDatabaseOperation: vi.fn(() => of({
+        operationId: 'database-operation',
+        target: 'branch',
+        databaseDisplayName: 'Branch Database',
+        operation: 'backup',
+        state: 'completed',
+        outcome: 'completed',
+        progressPercent: 100,
+        stage: 'completed',
+        detail: 'The Branch database backup completed.',
+        startedAtUtc: '2026-08-13T10:00:00Z',
+        completedAtUtc: '2026-08-13T10:00:02Z',
+        artifact: null,
+        destructiveAttempted: false,
+        recoveryRequired: false,
+        warnings: [],
+        errorCode: null,
         correlationId: 'test-correlation'
       }))
     };
@@ -196,7 +242,7 @@ describe('PosMaintenanceComponent', () => {
     expect(page.textContent).toContain('Stop');
     expect(page.textContent).toContain('Restart');
     expect(Array.from(page.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Start')).toBe(false);
-    expect(page.querySelectorAll('button')).toHaveLength(3);
+    expect(page.querySelectorAll('button')).toHaveLength(5);
   });
 
   it('requires confirmation before issuing a one-use token and submitting a service action', async () => {
@@ -257,6 +303,7 @@ describe('PosMaintenanceComponent', () => {
     transport['getConfiguration'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     transport['getServices'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     transport['getRmsDiagnostics'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    transport['getRmsDatabaseWorkspace'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     const fixture = TestBed.createComponent(PosMaintenanceComponent);
     await fixture.whenStable();
