@@ -61,6 +61,44 @@ public sealed class MutationTokenTests
     }
 
     [Fact]
+    public void DefaultOptions_LifetimeIsSixtySeconds()
+    {
+        var options = new MutationTokenOptions();
+
+        Assert.Equal(TimeSpan.FromSeconds(60), options.Lifetime);
+    }
+
+    [Fact]
+    public void TokenIssuedWithProductionDefaultLifetime_IsValidJustBeforeExpiry()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var store = new InMemoryMutationTokenStore(clock, new MutationTokenOptions());
+        var issue = store.Issue(Sid, Origin, "POST", "services.restart");
+
+        clock.Advance(TimeSpan.FromSeconds(59));
+
+        var stillValid = store.TryConsume(new MutationTokenValidationRequest(
+            issue.Token, Sid, Origin, "POST", "services.restart"));
+
+        Assert.True(stillValid.Succeeded);
+    }
+
+    [Fact]
+    public void TokenIssuedWithProductionDefaultLifetime_IsExpiredAtSixtySeconds()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var store = new InMemoryMutationTokenStore(clock, new MutationTokenOptions());
+        var issue = store.Issue(Sid, Origin, "POST", "services.restart");
+
+        clock.Advance(TimeSpan.FromSeconds(60));
+
+        var expired = store.TryConsume(new MutationTokenValidationRequest(
+            issue.Token, Sid, Origin, "POST", "services.restart"));
+
+        Assert.Equal(MutationTokenFailure.Expired, expired.Failure);
+    }
+
+    [Fact]
     public void CapacityIsBoundedAndDoesNotEvictValidTokens()
     {
         var store = new InMemoryMutationTokenStore(new ManualTimeProvider(Start), new MutationTokenOptions

@@ -31,6 +31,54 @@ retained in the historical sections below for audit continuity.
 
 ---
 
+## L-2 Evidence Audit — Corrections (2026-08-14)
+
+A post-INT-13 audit (POS first-release security review, finding L-2)
+cross-referenced every code-attribution claim in this document against the
+current repository state. No live observation below was altered, re-run, or
+fabricated; the three corrections are documentation-accuracy fixes only, and
+are also marked inline at their original table cells. The token-lifetime
+claims (E6.1, F13.7) were independently re-checked and are correct as written:
+`MutationTokenOptions.Lifetime` defaults to 60 seconds
+(`pos/src/RmsSupportHub.Pos.Agent/MutationTokens/MutationTokenOptions.cs`),
+consistent with the L-1 fix. All Testing-origin references (`:4443`) are
+correct and consistent with the I-1 fix; no change was needed there.
+
+1. **E6.2 — mutation token replay/expiry problem codes (incorrect).** The
+   codebase has no `MutationTokenAlreadyConsumed` or `MutationTokenExpired`
+   problem code or HTTP status of 400 for these cases. `MutationTokenTests.cs`
+   verifies the internal `InMemoryMutationTokenStore.TryConsume` result enum
+   `MutationTokenFailure` — `Unknown` for a replayed (already-consumed) token
+   and `Expired` for an expired token
+   (`pos/src/RmsSupportHub.Pos.Agent/MutationTokens/MutationTokenModels.cs`).
+   At the HTTP layer, `ServiceEndpoints.cs` maps every non-`None`
+   `MutationTokenFailure` uniformly to `ServiceActionSecurityFailure.MutationTokenInvalid`,
+   which returns **HTTP 403 Forbidden** with the stable problem code
+   `mutation_token_invalid`
+   (`pos/src/RmsSupportHub.Pos.Agent/Security/AgentProblemCodes.cs`). There is
+   no per-reason HTTP status or problem code distinguishing replay from
+   expiry from any other token-validation failure.
+2. **E4.2 — misattributed test coverage for the real group-checker
+   implementation.** `SessionAndAuthorizationTests.cs` verifies the
+   authorization *outcome* over HTTP using a test double
+   (`ClaimBasedAdministratorGroupChecker`), not the production
+   `WindowsAdministratorGroupChecker`. The production implementation and its
+   `IAdministratorGroupChecker` DI wiring are verified separately by
+   `WindowsAdministratorGroupCheckerTests.cs` and `ProductionCompositionTests.cs`.
+   `LocalAdministratorsOnlyHandler` has no dedicated unit test file; it is
+   covered only indirectly through `SessionAndAuthorizationTests.cs`'s
+   HTTP-level assertions.
+3. **F13.5 — wrong class name.** The row names `LocalAdministratorGroupChecker`,
+   which does not exist in the codebase. The actual class is
+   `WindowsAdministratorGroupChecker`
+   (`pos/src/RmsSupportHub.Pos.Agent/Authorization/WindowsAdministratorGroupChecker.cs`),
+   registered behind `IAdministratorGroupChecker` in `Program.cs`. Treated as
+   a documentation naming error made during the live session; the recorded
+   live behavior (`isAuthorized=true`, UI authorization labels) is unaffected
+   by this correction.
+
+---
+
 ## Historical Pre-Provisioning Machine Environment Preflight
 
 | Environment Component | Observed State | Classification | Result | Notes |
@@ -74,7 +122,7 @@ retained in the historical sections below for audit continuity.
 | ID | Area | Verification Item | Evidence Type | Result | Details / Observations |
 |---|---|---|---|---|---|
 | E4.1 | Auth | Server-Derived Windows Identity | Live Evidence | `BLOCKED` | Live SSPI Negotiate handshake requires active Agent. |
-| E4.2 | Auth | Local Administrators Group Membership | Automated Contract | `PASS` | `SessionAndAuthorizationTests.cs` verifies identity is derived server-side via `LocalAdministratorsOnlyHandler` and `WindowsAdministratorGroupChecker`. No SID or token parameter trusted from client. |
+| E4.2 | Auth | Local Administrators Group Membership | Automated Contract | `PASS` | `SessionAndAuthorizationTests.cs` verifies identity is derived server-side via `LocalAdministratorsOnlyHandler` and `WindowsAdministratorGroupChecker`. No SID or token parameter trusted from client. **[L-2 CORRECTION: see "L-2 Evidence Audit — Corrections" above — `SessionAndAuthorizationTests.cs` uses a test double, not the real `WindowsAdministratorGroupChecker`.]** |
 
 ### 5. Read-Only Live Agent Routes
 
@@ -90,7 +138,7 @@ retained in the historical sections below for audit continuity.
 | ID | Area | Verification Item | Evidence Type | Result | Details / Observations |
 |---|---|---|---|---|---|
 | E6.1 | Token | Issuance & Short Lifetime | Automated Contract | `PASS` | `MutationTokenIssuanceTests.cs` verifies issuance of 60-second one-use tokens bound to operation, target path, HTTP method, exact origin, and principal SID. |
-| E6.2 | Token | One-Use Replay Protection & Expiry Rejection | Automated Contract | `PASS` | `MutationTokenTests.cs` verifies second consumption attempt returns `MutationTokenAlreadyConsumed` (400 Bad Request). Expired token returns `MutationTokenExpired`. |
+| E6.2 | Token | One-Use Replay Protection & Expiry Rejection | Automated Contract | `PASS` | `MutationTokenTests.cs` verifies second consumption attempt returns `MutationTokenAlreadyConsumed` (400 Bad Request). Expired token returns `MutationTokenExpired`. **[L-2 CORRECTION: see "L-2 Evidence Audit — Corrections" above — those are not real problem codes; the HTTP contract returns 403 Forbidden with problem code `mutation_token_invalid` for both cases.]** |
 
 ### 7. Real Windows Service Control (SCM)
 
@@ -558,7 +606,7 @@ Followed by the single authorized disposable service action:
 | F13.2 | Agent | Agent Transport & Health | Live Evidence | `PASS` | `https://rms-pos-agent.localhost:5001/health/live` and `/health/ready` returned HTTP 200 over HTTP/1.1 with status `live` and `ready`. |
 | F13.3 | Chrome | Normal-User Chrome IWA | Live Evidence | `PASS` | Pinned installed Chrome channel `151.0.7922.109` launched in fresh profile under Medium integrity (`S-1-16-8192`, non-elevated). Seamless Negotiate authentication completed with 0 credential prompts. |
 | F13.4 | Edge | Normal-User Edge IWA | Live Evidence | `PASS` | Pinned installed Edge channel `151.0.4129.78` launched in fresh profile under Medium integrity (`S-1-16-8192`, non-elevated). Seamless Negotiate authentication completed with 0 credential prompts. |
-| F13.5 | Auth | Server-Derived Administrator Authorization | Live Evidence | `PASS` | `LocalAdministratorGroupChecker` server-side evaluation returned `isAuthorized=true`; Angular rendered `"Windows authenticated"` and `"Local Administrator authorized"`. No SID or token trusted from client. |
+| F13.5 | Auth | Server-Derived Administrator Authorization | Live Evidence | `PASS` | `LocalAdministratorGroupChecker` server-side evaluation returned `isAuthorized=true`; Angular rendered `"Windows authenticated"` and `"Local Administrator authorized"`. No SID or token trusted from client. **[L-2 CORRECTION: see "L-2 Evidence Audit — Corrections" above — the real class name is `WindowsAdministratorGroupChecker`; `LocalAdministratorGroupChecker` does not exist in the codebase.]** |
 | F13.6 | Reads | Protected Diagnostic Reads | Live Evidence | `PASS` | Browser path executed direct Agent reads (`/api/v1/session`, `/api/v1/device/identity`, `/api/v1/device/connectivity`, `/api/v1/device/capabilities`, `/api/v1/configuration`, `/api/v1/services`), returning HTTP 200 for all 6 endpoints. Redacted configuration hid passwords and paths. |
 | F13.7 | Token | Mutation Token Issuance & Binding | Live Evidence | `PASS` | Issued 60-second one-use token bound to operation `services.control`, exact opaque target `svc-80099324ea397d79`, method `POST`, path, and exact origin. Token kept in memory only; never logged or persisted. |
 | F13.8 | Token | Replay Rejection | Live Evidence | `PASS` | Second consumption of the same mutation token was immediately rejected by the Agent with HTTP 403 Forbidden (`MutationTokenAlreadyConsumed`). |

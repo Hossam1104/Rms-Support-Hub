@@ -263,4 +263,126 @@ Describe 'POS Windows browser and IWA provisioning contract' {
             $script:setCallCount | Should Be 2
         }
     }
+
+    Context 'browser block policy pattern matching (L-4)' {
+        It 'matches an exact bare hostname pattern' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                Test-PosPolicyPatternMatchesOrigin 'support-hub.integration.test' $origin | Should Be $true
+            }
+        }
+
+        It 'matches a wildcard hostname pattern' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                Test-PosPolicyPatternMatchesOrigin '[*.]integration.test' $origin | Should Be $true
+                Test-PosPolicyPatternMatchesOrigin '*.integration.test' $origin | Should Be $true
+            }
+        }
+
+        It 'does not match an unrelated hostname' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                Test-PosPolicyPatternMatchesOrigin 'other.example.com' $origin | Should Be $false
+            }
+        }
+
+        It 'matches an exact HTTPS origin pattern' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                Test-PosPolicyPatternMatchesOrigin 'https://support-hub.integration.test:4443' $origin | Should Be $true
+            }
+        }
+
+        It 'honors port on scheme-qualified and bare host patterns' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                Test-PosPolicyPatternMatchesOrigin 'https://support-hub.integration.test:4443' $origin | Should Be $true
+                Test-PosPolicyPatternMatchesOrigin 'https://support-hub.integration.test:9999' $origin | Should Be $false
+                Test-PosPolicyPatternMatchesOrigin 'support-hub.integration.test:4443' $origin | Should Be $true
+                Test-PosPolicyPatternMatchesOrigin 'support-hub.integration.test:9999' $origin | Should Be $false
+            }
+        }
+
+        It 'fails closed on a malformed or unsupported pattern' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                Test-PosPolicyPatternMatchesOrigin 'not a valid pattern with spaces' $origin | Should Be $true
+            }
+        }
+    }
+
+    Context 'URLBlocklist / URLAllowlist precedence (L-4)' {
+        # Mocks Get-PosListPolicyEntries (not Get-PosRegistryKeySnapshot) because an
+        # earlier It in this Describe ('rolls back an earlier policy write...') mocks
+        # Get-PosListPolicyEntries unconditionally at the Describe scope; Pester 3
+        # mock resolution falls back to that parent-scope mock for any function this
+        # Context does not itself mock, so a Get-PosRegistryKeySnapshot-level mock
+        # here would silently never be reached.
+        It 'throws when URLBlocklist matches the exact Support Hub origin' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                $contract = [pscustomobject]@{
+                    Browser = 'Chrome'
+                    PolicyRoot = 'SOFTWARE\Policies\Google\Chrome'
+                    BlockPolicyNames = @()
+                }
+
+                Mock Get-PosListPolicyEntries {
+                    param([string]$SubKey)
+                    if ($SubKey -eq 'SOFTWARE\Policies\Google\Chrome\URLBlocklist') {
+                        return @([pscustomobject]@{ Name = '1'; Kind = [Microsoft.Win32.RegistryValueKind]::String; Value = 'support-hub.integration.test' })
+                    }
+                    @()
+                }
+
+                { Assert-PosNoBlockingPolicyMatch $contract $origin } | Should Throw
+            }
+        }
+
+        It 'does not throw when a URLAllowlist entry exempts the URLBlocklist match' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                $contract = [pscustomobject]@{
+                    Browser = 'Chrome'
+                    PolicyRoot = 'SOFTWARE\Policies\Google\Chrome'
+                    BlockPolicyNames = @()
+                }
+
+                Mock Get-PosListPolicyEntries {
+                    param([string]$SubKey)
+                    if ($SubKey -eq 'SOFTWARE\Policies\Google\Chrome\URLBlocklist') {
+                        return @([pscustomobject]@{ Name = '1'; Kind = [Microsoft.Win32.RegistryValueKind]::String; Value = 'support-hub.integration.test' })
+                    }
+                    if ($SubKey -eq 'SOFTWARE\Policies\Google\Chrome\URLAllowlist') {
+                        return @([pscustomobject]@{ Name = '1'; Kind = [Microsoft.Win32.RegistryValueKind]::String; Value = 'https://support-hub.integration.test:4443' })
+                    }
+                    @()
+                }
+
+                { Assert-PosNoBlockingPolicyMatch $contract $origin } | Should Not Throw
+            }
+        }
+
+        It 'does not throw for an existing non-conflicting enterprise policy' {
+            InModuleScope PosAgentWindowsProvisioning {
+                $origin = 'https://support-hub.integration.test:4443'
+                $contract = [pscustomobject]@{
+                    Browser = 'Chrome'
+                    PolicyRoot = 'SOFTWARE\Policies\Google\Chrome'
+                    BlockPolicyNames = @('LoopbackNetworkBlockedForUrls')
+                }
+
+                Mock Get-PosListPolicyEntries {
+                    param([string]$SubKey)
+                    if ($SubKey -eq 'SOFTWARE\Policies\Google\Chrome\LoopbackNetworkBlockedForUrls') {
+                        return @([pscustomobject]@{ Name = '1'; Kind = [Microsoft.Win32.RegistryValueKind]::String; Value = 'other.example.com' })
+                    }
+                    @()
+                }
+
+                { Assert-PosNoBlockingPolicyMatch $contract $origin } | Should Not Throw
+            }
+        }
+    }
 }

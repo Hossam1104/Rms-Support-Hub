@@ -51,8 +51,13 @@ function Read-State {
         return $null
     }
 
-    $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
-    if ($state.OwnershipMarker -ne $ownershipMarker -or $state.SchemaVersion -ne 1) {
+    try {
+        $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+    } catch {
+        throw "Provisioning state is unreadable or corrupt; refusing to guess at ownership and delete resources: $statePath"
+    }
+
+    if ($null -eq $state -or $state.OwnershipMarker -ne $ownershipMarker -or $state.SchemaVersion -ne 1) {
         throw "Provisioning state is not owned by INT-13P: $statePath"
     }
     return $state
@@ -297,46 +302,58 @@ function Remove-OwnedSupportHubRuntime($state) {
     }
 }
 
-Assert-Administrator
-Assert-TestingAuthorization
-$state = Read-State
-if ($null -eq $state) {
-    Write-Host 'No INT-13P ownership state exists; no machine resources were changed.' -ForegroundColor Yellow
-    return
+function Invoke-Int13PCleanup {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    param()
+
+    Assert-Administrator
+    Assert-TestingAuthorization
+    $state = Read-State
+    if ($null -eq $state) {
+        Write-Host 'No INT-13P ownership state exists; no machine resources were changed.' -ForegroundColor Yellow
+        return
+    }
+
+    $agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
+    $testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
+    Stop-OwnedSupportHubRuntime $state
+    Remove-OwnedSupportHubRuntime $state
+    Stop-AndRemoveOwnedService $state.AgentServiceName $agentExecutable ([bool]$state.AgentServiceCreated)
+    Stop-AndRemoveOwnedService $state.TestServiceName $testExecutable ([bool]$state.TestServiceCreated)
+    Remove-ManifestFiles $agentInstallRoot @($state.AgentPublishedFiles)
+    Remove-ManifestFiles $testInstallRoot @($state.TestPublishedFiles)
+    Remove-PosAgentBrowserProvisioning $state -WhatIf:$WhatIfPreference
+    Remove-OwnedConfiguration $state
+    Remove-PosSupportHubCertificate `
+        -Hostname $supportHubHost `
+        -FriendlyName $supportHubCertificateFriendlyName `
+        -State $state `
+        -WhatIf:$WhatIfPreference
+    Remove-OwnedCertificate $state
+    if ($state.HostEntryCreated) {
+        Remove-ManagedHostEntry
+    }
+    Remove-PosSupportHubHostEntry `
+        -Hostname $supportHubHost `
+        -HostsPath $hostsPath `
+        -Marker $hostsMarker `
+        -State $state `
+        -WhatIf:$WhatIfPreference
+
+    if ((Test-Path -LiteralPath $statePath -PathType Leaf) -and $PSCmdlet.ShouldProcess($statePath, 'Remove the INT-13P ownership state')) {
+        Remove-Item -LiteralPath $statePath -Force
+    }
+    $stateDirectoryEmpty = (Test-Path -LiteralPath $programDataRoot -PathType Container) -and (@(Get-ChildItem -LiteralPath $programDataRoot -Force).Count -eq 0)
+    if ($state.StateDirectoryCreated -and $stateDirectoryEmpty -and $PSCmdlet.ShouldProcess($programDataRoot, 'Remove the empty INT-13P state directory')) {
+        Remove-Item -LiteralPath $programDataRoot -Force
+    }
+
+    Write-Host 'INT-13P cleanup completed for resources owned by this provisioning state.' -ForegroundColor Green
 }
 
-$agentExecutable = Join-Path $agentInstallRoot 'RmsSupportHub.Pos.Agent.exe'
-$testExecutable = Join-Path $testInstallRoot 'RmsSupportHub.Pos.Int13.TestService.exe'
-Stop-OwnedSupportHubRuntime $state
-Remove-OwnedSupportHubRuntime $state
-Stop-AndRemoveOwnedService $state.AgentServiceName $agentExecutable ([bool]$state.AgentServiceCreated)
-Stop-AndRemoveOwnedService $state.TestServiceName $testExecutable ([bool]$state.TestServiceCreated)
-Remove-ManifestFiles $agentInstallRoot @($state.AgentPublishedFiles)
-Remove-ManifestFiles $testInstallRoot @($state.TestPublishedFiles)
-Remove-PosAgentBrowserProvisioning $state -WhatIf:$WhatIfPreference
-Remove-OwnedConfiguration $state
-Remove-PosSupportHubCertificate `
-    -Hostname $supportHubHost `
-    -FriendlyName $supportHubCertificateFriendlyName `
-    -State $state `
-    -WhatIf:$WhatIfPreference
-Remove-OwnedCertificate $state
-if ($state.HostEntryCreated) {
-    Remove-ManagedHostEntry
+# Dot-sourcing this file (as Pester tests do, to reach the functions above in
+# isolation) must never trigger the real cleanup sequence; only a direct
+# script invocation does.
+if ($MyInvocation.InvocationName -ne '.') {
+    Invoke-Int13PCleanup
 }
-Remove-PosSupportHubHostEntry `
-    -Hostname $supportHubHost `
-    -HostsPath $hostsPath `
-    -Marker $hostsMarker `
-    -State $state `
-    -WhatIf:$WhatIfPreference
-
-if ((Test-Path -LiteralPath $statePath -PathType Leaf) -and $PSCmdlet.ShouldProcess($statePath, 'Remove the INT-13P ownership state')) {
-    Remove-Item -LiteralPath $statePath -Force
-}
-$stateDirectoryEmpty = (Test-Path -LiteralPath $programDataRoot -PathType Container) -and (@(Get-ChildItem -LiteralPath $programDataRoot -Force).Count -eq 0)
-if ($state.StateDirectoryCreated -and $stateDirectoryEmpty -and $PSCmdlet.ShouldProcess($programDataRoot, 'Remove the empty INT-13P state directory')) {
-    Remove-Item -LiteralPath $programDataRoot -Force
-}
-
-Write-Host 'INT-13P cleanup completed for resources owned by this provisioning state.' -ForegroundColor Green

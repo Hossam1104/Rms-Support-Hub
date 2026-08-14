@@ -1,10 +1,13 @@
 # Current Project State
 
 - **Updated:** 2026-08-14
-- **Branch:** `int-13p-testing-agent-provisioning` (INT-13 closure on PR #7)
+- **Branch:** `pos-first-release-review-remediation` (remediating the independent POS first-release review findings; base `242fcd7` on `main`)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
-- **Programme:** INT-00 through INT-08 complete/accepted; INT-13 complete and validated live on representative Testing machine; next milestone is the independent POS First-Release Security & Readiness Review.
-- **Current gate:** INT-06I independent security review PASS (PR #3 merged); INT-07 PR #4 merged; INT-08 PR #5 merged; INT-13 PR #7 complete with live operational evidence (Chrome/Edge Medium-integrity Negotiate IWA, protected reads, mutation-token binding/replay rejection, Agent-dispatched disposable service control).
+- **Programme:** INT-00 through INT-08 and INT-13 complete/accepted/validated live on representative Testing machine. The independent POS First-Release Security & Readiness Review (Claude Opus 5) is complete: 0 Critical, 0 High, 2 Medium (M-1, M-2), 6 Low, 3 Informational. All Low/applicable-Informational findings are remediated on the current branch; see `docs/reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md`.
+- **Release approval scope — do not conflate these:**
+  - **Testing-environment first release: APPROVED.**
+  - **Production/customer deployment: NOT APPROVED.** Blocked on M-1 (managed-endpoint browser policy — needs fleet delivery, e.g. GPO/Intune, replacing the single-device provisioning script) and M-2 (production certificate lifecycle — needs issuance/renewal/distribution/revocation across a fleet, replacing the single-device self-managed certificate). Neither is started; both are explicitly out of scope for the current remediation branch and are handed to the next execution session as their own task via root `TASK.md`.
+- **Current gate:** INT-06I independent security review PASS (PR #3 merged); INT-07 PR #4 merged; INT-08 PR #5 merged; INT-13 PR #7 complete with live operational evidence (Chrome/Edge Medium-integrity Negotiate IWA, protected reads, mutation-token binding/replay rejection, Agent-dispatched disposable service control). First-release security review remediation (L-1–L-6, I-1–I-2) is complete on `pos-first-release-review-remediation`, pending validation and PR.
 
 ## Application
 
@@ -50,6 +53,12 @@
   evidence passed; no SID/token exposure. PR #3 is merged normally.
 - INT-13 live operational evidence recorded in `docs/evidence/POS_INT13_LIVE_OPERATIONAL_EVIDENCE.md`
   with zero credential prompts, server-derived authorization, token binding, and replay rejection.
+  An L-2 audit (2026-08-14) corrected three inaccurate code-attribution claims in that document
+  without altering any historical live observation; see the document's own "L-2 Evidence Audit —
+  Corrections" section.
+- POS First-Release Security & Readiness Review (Claude Opus 5, 2026-08-14):
+  `docs/reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md`. Testing-scoped first release
+  approved; Production/customer deployment remains blocked on M-1 and M-2 (see above).
 
 ## Compatibility contracts
 

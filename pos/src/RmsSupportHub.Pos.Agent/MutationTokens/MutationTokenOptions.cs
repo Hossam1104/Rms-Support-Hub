@@ -4,7 +4,7 @@ public sealed class MutationTokenOptions
 {
     public int MaxTokens { get; init; } = 256;
 
-    public TimeSpan Lifetime { get; init; } = TimeSpan.FromMinutes(5);
+    public TimeSpan Lifetime { get; init; } = TimeSpan.FromSeconds(60);
 
     public void Validate()
     {
