@@ -48,6 +48,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/services"):
                 DocumentServices(operation);
                 break;
+            case ("GET", "/api/v1/rms/diagnostics"):
+                DocumentRmsDiagnostics(operation);
+                break;
             case ("POST", "/api/v1/services/{serviceId}/actions"):
                 DocumentServiceAction(operation);
                 break;
@@ -291,8 +294,8 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         DocumentProtectedRead(
             operation,
             "Read allow-listed Windows service visibility",
-            "Returns current status evidence for the server-owned, allow-listed Windows services " +
-            "configured on the local Agent. Service identifiers are opaque and the response contains " +
+            "Returns current status evidence for the server-owned, canonical RMS Windows service " +
+            "catalog on the local machine. Service identifiers are opaque and the response contains " +
             "visibility/status plus only the typed actions valid for the observed state. No raw " +
             "service name is accepted from the browser and the GET has no side effects.",
             "The Agent returned allow-listed service status summaries and state-valid action metadata.",
@@ -300,12 +303,106 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             {
                 new JsonObject
                 {
-                    ["serviceId"] = "svc-example-opaque",
-                    ["displayName"] = "RMS.BranchService",
+                    ["serviceId"] = "svc-0123456789abcdef",
+                    ["displayName"] = "RMS Branch Service",
+                    ["installed"] = true,
                     ["state"] = "running",
                     ["lastChecked"] = EvidenceExample("Windows service is running."),
                     ["allowedActions"] = new JsonArray("stop", "restart"),
                     ["lastOutcome"] = null
+                }
+            });
+    }
+
+    private static void DocumentRmsDiagnostics(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Discover the installed RMS suite and read safe diagnostics",
+            "Reads known RMS+ installation metadata, performs fixed read-only database identity " +
+            "probes, checks bounded endpoint reachability, and reads the canonical RMS Windows " +
+            "service catalog. No connection string, credential, arbitrary query, raw filesystem " +
+            "path, or caller-selected service name is returned.",
+            "The Agent returned the sanitized RmsDiagnosticsDto dashboard model.",
+            new JsonObject
+            {
+                ["installation"] = new JsonObject
+                {
+                    ["installed"] = true,
+                    ["branchInstalled"] = true,
+                    ["cashierInstalled"] = true,
+                    ["branchCode"] = "BR-001",
+                    ["posNumber"] = "POS-01",
+                    ["installationGuid"] = "installation-guid-placeholder",
+                    ["mainServerBranchId"] = "1",
+                    ["mainServerPosId"] = "1",
+                    ["mainServerUrl"] = "main-server.example:8080",
+                    ["branchServerAddress"] = "localhost:5100",
+                    ["installationMode"] = "Branch + Cashier",
+                    ["clientName"] = "UPC",
+                    ["versions"] = new JsonObject
+                    {
+                        ["branchServerBuildNumber"] = "5.7.4",
+                        ["cashierServerBuildNumber"] = "5.7.4",
+                        ["cashierUiBuildNumber"] = "5.7.4"
+                    },
+                    ["consistency"] = new JsonObject
+                    {
+                        ["branchCode"] = "consistent",
+                        ["posIdentity"] = "consistent",
+                        ["mainServerBranchId"] = "consistent",
+                        ["mainServerPosId"] = "consistent",
+                        ["version"] = "consistent",
+                        ["warnings"] = new JsonArray()
+                    }
+                },
+                ["connectivity"] = new JsonObject
+                {
+                    ["mainServer"] = new JsonObject
+                    {
+                        ["configured"] = true,
+                        ["endpoint"] = "main-server.example:8080",
+                        ["reachability"] = EvidenceExample("Main-server TCP endpoint is reachable; application health was not queried.")
+                    },
+                    ["branchServer"] = new JsonObject
+                    {
+                        ["configured"] = true,
+                        ["endpoint"] = "localhost:5100",
+                        ["reachability"] = EvidenceExample("Branch-server TCP endpoint is reachable; application health was not queried.")
+                    }
+                },
+                ["branchDatabase"] = new JsonObject
+                {
+                    ["expectedDatabase"] = "RmsBranchSrv",
+                    ["configuredDatabase"] = "RmsBranchSrv",
+                    ["serverDisplay"] = "sql-server.example",
+                    ["configured"] = true,
+                    ["databaseNameMatches"] = true,
+                    ["connectivityStatus"] = "reachable",
+                    ["evidence"] = EvidenceExample("The configured RMS database answered the read-only identity probe.")
+                },
+                ["cashierDatabase"] = new JsonObject
+                {
+                    ["expectedDatabase"] = "RmsCashierSrv",
+                    ["configuredDatabase"] = "RmsCashierSrv",
+                    ["serverDisplay"] = "sql-server.example",
+                    ["configured"] = true,
+                    ["databaseNameMatches"] = true,
+                    ["connectivityStatus"] = "reachable",
+                    ["evidence"] = EvidenceExample("The configured RMS database answered the read-only identity probe.")
+                },
+                ["services"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["serviceId"] = "svc-0123456789abcdef",
+                        ["displayName"] = "RMS Branch Service",
+                        ["installed"] = true,
+                        ["state"] = "running",
+                        ["lastChecked"] = EvidenceExample("Windows service is running."),
+                        ["allowedActions"] = new JsonArray("stop", "restart"),
+                        ["lastOutcome"] = null
+                    }
                 }
             });
     }

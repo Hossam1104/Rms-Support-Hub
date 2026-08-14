@@ -55,6 +55,7 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         AddWindowsSecurityRequirement(document, "/api/v1/configuration", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/services", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/services/{serviceId}/actions", HttpMethod.Post);
+        AddWindowsSecurityRequirement(document, "/api/v1/rms/diagnostics", HttpMethod.Get);
         AddReferencePropertyDescriptions(document);
 
         return Task.CompletedTask;
@@ -117,6 +118,62 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "ServiceActionResponseDto",
             "detail",
             "Safe operator-facing detail without exception, identity, credential, path, command, or raw target disclosure.");
+        SetPropertyDescription(
+            document,
+            "RmsDiagnosticsDto",
+            "installation",
+            "Safe installed RMS identity and consistency evidence.");
+        SetPropertyDescription(
+            document,
+            "RmsDiagnosticsDto",
+            "connectivity",
+            "Safe main-server and Branch-server reachability evidence.");
+        SetPropertyDescription(
+            document,
+            "RmsDiagnosticsDto",
+            "branchDatabase",
+            "Sanitized Branch database diagnostic for RmsBranchSrv.");
+        SetPropertyDescription(
+            document,
+            "RmsDiagnosticsDto",
+            "cashierDatabase",
+            "Sanitized Cashier database diagnostic for RmsCashierSrv.");
+        SetPropertyDescription(
+            document,
+            "RmsDiagnosticsDto",
+            "services",
+            "Current SCM status for the bounded canonical RMS service catalog.");
+        SetPropertyDescription(
+            document,
+            "RmsInstallationDto",
+            "versions",
+            "Build metadata for the installed RMS components.");
+        SetPropertyDescription(
+            document,
+            "RmsInstallationDto",
+            "consistency",
+            "Cross-file consistency evidence for duplicated RMS values.");
+        SetPropertyDescription(document, "RmsConsistencyDto", "branchCode", "Comparison status for duplicated BranchCode values.");
+        SetPropertyDescription(document, "RmsConsistencyDto", "posIdentity", "Comparison status for duplicated POS identity values.");
+        SetPropertyDescription(document, "RmsConsistencyDto", "mainServerBranchId", "Comparison status for duplicated main-server branch identifiers.");
+        SetPropertyDescription(document, "RmsConsistencyDto", "mainServerPosId", "Comparison status for duplicated main-server POS identifiers.");
+        SetPropertyDescription(document, "RmsConsistencyDto", "version", "Comparison status for installed component build numbers.");
+        SetPropertyDescription(document, "RmsConsistencyDto", "warnings", "Safe operator warnings for mismatched or unavailable installed metadata.");
+        SetPropertyDescription(document, "RmsVersionDto", "branchServerBuildNumber", "Branch Server BuildNumber selected from its installed appsettings.");
+        SetPropertyDescription(document, "RmsVersionDto", "cashierServerBuildNumber", "Cashier Server BuildNumber selected from its installed appsettings.");
+        SetPropertyDescription(document, "RmsVersionDto", "cashierUiBuildNumber", "Cashier UI BuildNumber selected from its installed appsettings.");
+        SetPropertyDescription(document, "RmsEndpointDiagnosticDto", "configured", "Whether a valid known endpoint was configured.");
+        SetPropertyDescription(document, "RmsEndpointDiagnosticDto", "endpoint", "Sanitized endpoint host and port; credentials and paths are omitted.");
+        SetPropertyDescription(document, "RmsEndpointDiagnosticDto", "reachability", "TCP reachability evidence only; application health is not inferred.");
+        SetPropertyDescription(document, "RmsConnectivityDto", "mainServer", "Main-server configuration and reachability evidence.");
+        SetPropertyDescription(document, "RmsConnectivityDto", "branchServer", "Branch-server configuration and reachability evidence.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "expectedDatabase", "Canonical database name expected for this RMS component.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "configuredDatabase", "Database name parsed from the installed RMS connection string, without returning the string itself.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "serverDisplay", "Safe SQL data-source label parsed from the installed RMS connection string.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "configured", "Whether the known RMS connection-string setting is present.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "databaseNameMatches", "Whether the configured/queried database identity matches the canonical expected database.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "connectivityStatus", "Sanitized result of configuration validation and the fixed read-only SQL probe.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "evidence", "Freshness and safe detail for the database diagnostic.");
     }
 
     private static void SetPropertyDescription(

@@ -42,13 +42,16 @@ public sealed class ReadOnlyServiceStatusService(
         {
             ServiceStatus.Running => (ServiceRuntimeState.Running, "Windows service is running.", FreshnessState.Fresh),
             ServiceStatus.Stopped => (ServiceRuntimeState.Stopped, "Windows service is stopped.", FreshnessState.Fresh),
+            ServiceStatus.Paused => (ServiceRuntimeState.Paused, "Windows service is paused.", FreshnessState.Fresh),
+            ServiceStatus.Transitioning => (ServiceRuntimeState.Transitioning, "Windows service is changing state.", FreshnessState.Stale),
             ServiceStatus.NotFound => (ServiceRuntimeState.NotFound, "Configured Windows service was not found.", FreshnessState.Stale),
             _ => (ServiceRuntimeState.Unknown, "Windows service state is unavailable.", FreshnessState.Stale)
         };
 
         return new(
             service.ServiceId,
-            service.ServiceName,
+            service.DisplayName,
+            status != ServiceStatus.NotFound,
             state,
             new EvidenceDto(freshness, checkedAt, detail),
             AllowedActionsFor(status),

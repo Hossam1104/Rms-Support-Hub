@@ -21,6 +21,7 @@ type ServiceSummary = components['schemas']['ServiceSummaryDto'];
 type ServiceActionKind = components['schemas']['ServiceActionKind'];
 type ServiceActionRequest = components['schemas']['ServiceActionRequestDto'];
 type ServiceActionResponse = components['schemas']['ServiceActionResponseDto'];
+type RmsDiagnostics = components['schemas']['RmsDiagnosticsDto'];
 
 @Injectable({ providedIn: 'root' })
 export class PosAgentTransportService {
@@ -87,6 +88,15 @@ export class PosAgentTransportService {
   getServices(): Observable<ServiceSummary[]> {
     return this.http
       .get<ServiceSummary[]>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.services}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getRmsDiagnostics(): Observable<RmsDiagnostics> {
+    return this.http
+      .get<RmsDiagnostics>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.rmsDiagnostics}`, {
         headers: this.jsonHeaders,
         withCredentials: true
       })

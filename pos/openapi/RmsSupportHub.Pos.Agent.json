@@ -376,7 +376,7 @@
           "Windows Services"
         ],
         "summary": "Read allow-listed Windows service visibility",
-        "description": "Returns current status evidence for the server-owned, allow-listed Windows services configured on the local Agent. Service identifiers are opaque and the response contains visibility/status plus only the typed actions valid for the observed state. No raw service name is accepted from the browser and the GET has no side effects.",
+        "description": "Returns current status evidence for the server-owned, canonical RMS Windows service catalog on the local machine. Service identifiers are opaque and the response contains visibility/status plus only the typed actions valid for the observed state. No raw service name is accepted from the browser and the GET has no side effects.",
         "operationId": "GetServices",
         "responses": {
           "200": {
@@ -391,8 +391,9 @@
                 },
                 "example": [
                   {
-                    "serviceId": "svc-example-opaque",
-                    "displayName": "RMS.BranchService",
+                    "serviceId": "svc-0123456789abcdef",
+                    "displayName": "RMS Branch Service",
+                    "installed": true,
                     "state": "running",
                     "lastChecked": {
                       "freshness": "fresh",
@@ -549,6 +550,168 @@
           },
           "500": {
             "description": "The Agent returned a safe generic server-error response without exception or machine detail.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/rms/diagnostics": {
+      "get": {
+        "tags": [
+          "RMS Diagnostics"
+        ],
+        "summary": "Discover the installed RMS suite and read safe diagnostics",
+        "description": "Reads known RMS+ installation metadata, performs fixed read-only database identity probes, checks bounded endpoint reachability, and reads the canonical RMS Windows service catalog. No connection string, credential, arbitrary query, raw filesystem path, or caller-selected service name is returned.",
+        "operationId": "GetRmsDiagnostics",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the sanitized RmsDiagnosticsDto dashboard model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmsDiagnosticsDto"
+                },
+                "example": {
+                  "installation": {
+                    "installed": true,
+                    "branchInstalled": true,
+                    "cashierInstalled": true,
+                    "branchCode": "BR-001",
+                    "posNumber": "POS-01",
+                    "installationGuid": "installation-guid-placeholder",
+                    "mainServerBranchId": "1",
+                    "mainServerPosId": "1",
+                    "mainServerUrl": "main-server.example:8080",
+                    "branchServerAddress": "localhost:5100",
+                    "installationMode": "Branch + Cashier",
+                    "clientName": "UPC",
+                    "versions": {
+                      "branchServerBuildNumber": "5.7.4",
+                      "cashierServerBuildNumber": "5.7.4",
+                      "cashierUiBuildNumber": "5.7.4"
+                    },
+                    "consistency": {
+                      "branchCode": "consistent",
+                      "posIdentity": "consistent",
+                      "mainServerBranchId": "consistent",
+                      "mainServerPosId": "consistent",
+                      "version": "consistent",
+                      "warnings": [ ]
+                    }
+                  },
+                  "connectivity": {
+                    "mainServer": {
+                      "configured": true,
+                      "endpoint": "main-server.example:8080",
+                      "reachability": {
+                        "freshness": "fresh",
+                        "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                        "detail": "Main-server TCP endpoint is reachable; application health was not queried."
+                      }
+                    },
+                    "branchServer": {
+                      "configured": true,
+                      "endpoint": "localhost:5100",
+                      "reachability": {
+                        "freshness": "fresh",
+                        "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                        "detail": "Branch-server TCP endpoint is reachable; application health was not queried."
+                      }
+                    }
+                  },
+                  "branchDatabase": {
+                    "expectedDatabase": "RmsBranchSrv",
+                    "configuredDatabase": "RmsBranchSrv",
+                    "serverDisplay": "sql-server.example",
+                    "configured": true,
+                    "databaseNameMatches": true,
+                    "connectivityStatus": "reachable",
+                    "evidence": {
+                      "freshness": "fresh",
+                      "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                      "detail": "The configured RMS database answered the read-only identity probe."
+                    }
+                  },
+                  "cashierDatabase": {
+                    "expectedDatabase": "RmsCashierSrv",
+                    "configuredDatabase": "RmsCashierSrv",
+                    "serverDisplay": "sql-server.example",
+                    "configured": true,
+                    "databaseNameMatches": true,
+                    "connectivityStatus": "reachable",
+                    "evidence": {
+                      "freshness": "fresh",
+                      "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                      "detail": "The configured RMS database answered the read-only identity probe."
+                    }
+                  },
+                  "services": [
+                    {
+                      "serviceId": "svc-0123456789abcdef",
+                      "displayName": "RMS Branch Service",
+                      "installed": true,
+                      "state": "running",
+                      "lastChecked": {
+                        "freshness": "fresh",
+                        "lastCheckedUtc": "2030-01-01T00:00:00Z",
+                        "detail": "Windows service is running."
+                      },
+                      "allowedActions": [
+                        "stop",
+                        "restart"
+                      ],
+                      "lastOutcome": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1152,6 +1315,336 @@
         },
         "description": "Redacted DB Downloader settings with secret-presence metadata only."
       },
+      "RmsConnectivityDto": {
+        "required": [
+          "mainServer",
+          "branchServer"
+        ],
+        "type": "object",
+        "properties": {
+          "mainServer": {
+            "description": "Main-server configuration and reachability evidence.",
+            "$ref": "#/components/schemas/RmsEndpointDiagnosticDto"
+          },
+          "branchServer": {
+            "description": "Branch-server configuration and reachability evidence.",
+            "$ref": "#/components/schemas/RmsEndpointDiagnosticDto"
+          }
+        },
+        "description": "Safe main-server and Branch-server reachability evidence."
+      },
+      "RmsConsistencyDto": {
+        "required": [
+          "branchCode",
+          "posIdentity",
+          "mainServerBranchId",
+          "mainServerPosId",
+          "version",
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "branchCode": {
+            "description": "Comparison status for duplicated BranchCode values.",
+            "$ref": "#/components/schemas/RmsConsistencyState"
+          },
+          "posIdentity": {
+            "description": "Comparison status for duplicated POS identity values.",
+            "$ref": "#/components/schemas/RmsConsistencyState"
+          },
+          "mainServerBranchId": {
+            "description": "Comparison status for duplicated main-server branch identifiers.",
+            "$ref": "#/components/schemas/RmsConsistencyState"
+          },
+          "mainServerPosId": {
+            "description": "Comparison status for duplicated main-server POS identifiers.",
+            "$ref": "#/components/schemas/RmsConsistencyState"
+          },
+          "version": {
+            "description": "Comparison status for installed component build numbers.",
+            "$ref": "#/components/schemas/RmsConsistencyState"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Safe operator warnings for mismatched or unavailable installed metadata."
+          }
+        },
+        "description": "Cross-file consistency evidence for duplicated RMS values."
+      },
+      "RmsConsistencyState": {
+        "enum": [
+          "consistent",
+          "mismatch",
+          "unavailable"
+        ],
+        "description": "Comparison status for duplicated BranchCode values."
+      },
+      "RmsDatabaseDiagnosticDto": {
+        "required": [
+          "expectedDatabase",
+          "configuredDatabase",
+          "serverDisplay",
+          "configured",
+          "databaseNameMatches",
+          "connectivityStatus",
+          "evidence"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedDatabase": {
+            "type": "string",
+            "description": "Canonical database name expected for this RMS component."
+          },
+          "configuredDatabase": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Database name parsed from the installed RMS connection string, without returning the string itself."
+          },
+          "serverDisplay": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe SQL data-source label parsed from the installed RMS connection string."
+          },
+          "configured": {
+            "type": "boolean",
+            "description": "Whether the known RMS connection-string setting is present."
+          },
+          "databaseNameMatches": {
+            "type": [
+              "null",
+              "boolean"
+            ],
+            "description": "Whether the configured/queried database identity matches the canonical expected database."
+          },
+          "connectivityStatus": {
+            "description": "Sanitized result of configuration validation and the fixed read-only SQL probe.",
+            "$ref": "#/components/schemas/RmsDatabaseDiagnosticStatus"
+          },
+          "evidence": {
+            "description": "Freshness and safe detail for the database diagnostic.",
+            "$ref": "#/components/schemas/EvidenceDto"
+          }
+        },
+        "description": "Sanitized Branch database diagnostic for RmsBranchSrv."
+      },
+      "RmsDatabaseDiagnosticStatus": {
+        "enum": [
+          "notConfigured",
+          "configurationInvalid",
+          "databaseNameMismatch",
+          "reachable",
+          "authenticationFailed",
+          "databaseUnavailable",
+          "unreachable"
+        ],
+        "description": "Sanitized result of configuration validation and the fixed read-only SQL probe."
+      },
+      "RmsDiagnosticsDto": {
+        "required": [
+          "installation",
+          "connectivity",
+          "branchDatabase",
+          "cashierDatabase",
+          "services"
+        ],
+        "type": "object",
+        "properties": {
+          "installation": {
+            "description": "Safe installed RMS identity and consistency evidence.",
+            "$ref": "#/components/schemas/RmsInstallationDto"
+          },
+          "connectivity": {
+            "description": "Safe main-server and Branch-server reachability evidence.",
+            "$ref": "#/components/schemas/RmsConnectivityDto"
+          },
+          "branchDatabase": {
+            "description": "Sanitized Branch database diagnostic for RmsBranchSrv.",
+            "$ref": "#/components/schemas/RmsDatabaseDiagnosticDto"
+          },
+          "cashierDatabase": {
+            "description": "Sanitized Cashier database diagnostic for RmsCashierSrv.",
+            "$ref": "#/components/schemas/RmsDatabaseDiagnosticDto"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceSummaryDto"
+            },
+            "description": "Current SCM status for the bounded canonical RMS service catalog."
+          }
+        },
+        "description": "Sanitized read-only RMS installation, connectivity, database, and canonical service diagnostics. Credentials, connection strings, keys, and unrestricted targets are never returned."
+      },
+      "RmsEndpointDiagnosticDto": {
+        "required": [
+          "configured",
+          "endpoint",
+          "reachability"
+        ],
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "description": "Whether a valid known endpoint was configured."
+          },
+          "endpoint": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Sanitized endpoint host and port; credentials and paths are omitted."
+          },
+          "reachability": {
+            "description": "TCP reachability evidence only; application health is not inferred.",
+            "$ref": "#/components/schemas/EvidenceDto"
+          }
+        },
+        "description": "Main-server configuration and reachability evidence."
+      },
+      "RmsInstallationDto": {
+        "required": [
+          "installed",
+          "branchInstalled",
+          "cashierInstalled",
+          "branchCode",
+          "posNumber",
+          "installationGuid",
+          "mainServerBranchId",
+          "mainServerPosId",
+          "mainServerUrl",
+          "branchServerAddress",
+          "installationMode",
+          "clientName",
+          "versions",
+          "consistency"
+        ],
+        "type": "object",
+        "properties": {
+          "installed": {
+            "type": "boolean",
+            "description": "Whether known RMS installation metadata or component files were detected."
+          },
+          "branchInstalled": {
+            "type": "boolean",
+            "description": "Whether the known Branch component was detected."
+          },
+          "cashierInstalled": {
+            "type": "boolean",
+            "description": "Whether the known Cashier component was detected."
+          },
+          "branchCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Branch code selected from installed RMS metadata."
+          },
+          "posNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "POS number selected from installed RMS metadata."
+          },
+          "installationGuid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe installation identifier selected from installed RMS metadata."
+          },
+          "mainServerBranchId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Main-server branch identifier selected from installed RMS metadata."
+          },
+          "mainServerPosId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Main-server POS identifier selected from installed RMS metadata."
+          },
+          "mainServerUrl": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Sanitized main-server host and port selected from installed RMS metadata."
+          },
+          "branchServerAddress": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Sanitized Branch-server address selected from installed RMS metadata."
+          },
+          "installationMode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Detected Branch/Cashier component mode."
+          },
+          "clientName": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe client label selected from installed Cashier UI metadata."
+          },
+          "versions": {
+            "description": "Build metadata for the installed RMS components.",
+            "$ref": "#/components/schemas/RmsVersionDto"
+          },
+          "consistency": {
+            "description": "Cross-file consistency evidence for duplicated RMS values.",
+            "$ref": "#/components/schemas/RmsConsistencyDto"
+          }
+        },
+        "description": "Safe installed RMS identity and consistency evidence."
+      },
+      "RmsVersionDto": {
+        "required": [
+          "branchServerBuildNumber",
+          "cashierServerBuildNumber",
+          "cashierUiBuildNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "branchServerBuildNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Branch Server BuildNumber selected from its installed appsettings."
+          },
+          "cashierServerBuildNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cashier Server BuildNumber selected from its installed appsettings."
+          },
+          "cashierUiBuildNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cashier UI BuildNumber selected from its installed appsettings."
+          }
+        },
+        "description": "Build metadata for the installed RMS components."
+      },
       "ServiceActionKind": {
         "enum": [
           "start",
@@ -1219,6 +1712,7 @@
           "unknown",
           "running",
           "stopped",
+          "paused",
           "transitioning",
           "notFound"
         ],
@@ -1228,6 +1722,7 @@
         "required": [
           "serviceId",
           "displayName",
+          "installed",
           "state",
           "lastChecked",
           "allowedActions",
@@ -1242,6 +1737,10 @@
           "displayName": {
             "type": "string",
             "description": "Safe display name for the allow-listed Windows service."
+          },
+          "installed": {
+            "type": "boolean",
+            "description": "Whether SCM found the canonical RMS service on this device."
           },
           "state": {
             "description": "Current Windows service runtime state observed by the Agent.",
@@ -1328,6 +1827,9 @@
     },
     {
       "name": "Windows Services"
+    },
+    {
+      "name": "RMS Diagnostics"
     },
     {
       "name": "Device"

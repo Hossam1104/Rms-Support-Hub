@@ -25,6 +25,11 @@ public sealed class WindowsServiceManager : IServiceManager
                 {
                     ServiceControllerStatus.Running => ServiceStatus.Running,
                     ServiceControllerStatus.Stopped => ServiceStatus.Stopped,
+                    ServiceControllerStatus.Paused => ServiceStatus.Paused,
+                    ServiceControllerStatus.StartPending
+                        or ServiceControllerStatus.StopPending
+                        or ServiceControllerStatus.ContinuePending
+                        or ServiceControllerStatus.PausePending => ServiceStatus.Transitioning,
                     _ => ServiceStatus.Unknown
                 };
             }

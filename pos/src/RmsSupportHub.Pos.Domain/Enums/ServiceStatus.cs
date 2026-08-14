@@ -4,6 +4,8 @@ public enum ServiceStatus
 {
     Running,
     Stopped,
+    Paused,
+    Transitioning,
     NotFound,
     Unknown
 }

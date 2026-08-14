@@ -5,6 +5,7 @@ public enum ServiceRuntimeState
     Unknown,
     Running,
     Stopped,
+    Paused,
     Transitioning,
     NotFound,
 }

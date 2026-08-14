@@ -1,13 +1,14 @@
 # Current Project State
 
 - **Updated:** 2026-08-14
-- **Branch:** `pos-first-release-review-remediation` (remediating the independent POS first-release review findings; base `242fcd7` on `main`)
+- **Branch:** `agent/rms-installation-diagnostics` (RMS installation discovery and database diagnostics slice; based on synchronized `main` `8349ef4`)
 - **Repository:** `Hossam1104/Rms-Support-Hub`; local path `D:\AI Tools\DBS\Rms-Support-Hub`
 - **Programme:** INT-00 through INT-08 and INT-13 complete/accepted/validated live on representative Testing machine. The independent POS First-Release Security & Readiness Review (Claude Opus 5) is complete: 0 Critical, 0 High, 2 Medium (M-1, M-2), 6 Low, 3 Informational. All Low/applicable-Informational findings are remediated on the current branch; see `docs/reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md`.
 - **Release approval scope — do not conflate these:**
   - **Testing-environment first release: APPROVED.**
   - **Production/customer deployment: NOT APPROVED.** Blocked on M-1 (managed-endpoint browser policy — needs fleet delivery, e.g. GPO/Intune, replacing the single-device provisioning script) and M-2 (production certificate lifecycle — needs issuance/renewal/distribution/revocation across a fleet, replacing the single-device self-managed certificate). Neither is started; both are explicitly out of scope for the current remediation branch and are handed to the next execution session as their own task via root `TASK.md`.
 - **Current gate:** INT-06I independent security review PASS (PR #3 merged); INT-07 PR #4 merged; INT-08 PR #5 merged; INT-13 PR #7 complete with live operational evidence (Chrome/Edge Medium-integrity Negotiate IWA, protected reads, mutation-token binding/replay rejection, Agent-dispatched disposable service control). First-release security review remediation (L-1–L-6, I-1–I-2) is complete on `pos-first-release-review-remediation`, pending validation and PR.
+- **Current feature slice:** RMS installation discovery, sanitized Branch/Cashier database diagnostics, bounded endpoint reachability, canonical RMS SCM visibility, and Support Hub dashboard integration are implemented on `agent/rms-installation-diagnostics`. M-1/M-2 remain open and untouched.
 
 ## Application
 
@@ -35,6 +36,11 @@
 - INT-08 owns only typed `services.control`: opaque allow-listed service IDs,
   target/method/path-bound one-use tokens, bounded idempotency/concurrency, and
   truthful typed outcomes. Production runtime OpenAPI remains hidden.
+- The RMS discovery slice adds a server-owned `IRmsInstallationDiscovery`, a
+  dedicated secret-bearing database diagnostic seam, fixed `DB_NAME()` probes,
+  and the canonical RMS service catalog (`RMS.BranchService`,
+  `RMS.CashierService`, `RMSServicesManager`). Raw connection strings and
+  credentials never enter discovery, API, or UI models.
 - INT-13 owns certificate/hostname/representative-device/live operational evidence:
   - Exact Support Hub origin `https://support-hub.integration.test:4443`
   - Direct Agent origin `https://rms-pos-agent.localhost:5001`
@@ -83,9 +89,11 @@ degrades; all current UI feature styles consume design tokens.
 | Gate | Result |
 |---|---|
 | POS Release build | Passed, 0 warnings/errors with Testing origin set |
-| POS tests | Domain 7, Application 76, Infrastructure 60, Agent 114 passed |
+| POS tests | Domain 9, Application 76, Infrastructure 71, Agent 119 passed |
 | Frontend tests | 56 files / 345 tests passed |
-| Frontend production build | Passed; 454.73 kB initial, 26.70 kB POS lazy; no budget warnings |
+| Frontend production build | Passed; 456.48 kB initial, 40.72 kB POS lazy; no budget warnings |
+| OpenAPI/client drift | OpenAPI regenerated during POS Release build; openapi-typescript client generation deterministic |
+| Real RMS read-only validation | Five installed files parsed; Branch/Cashier databases reached with fixed `SELECT DB_NAME()`; metadata consistent; Branch/Cashier SCM running; Services Manager absent |
 | Pester tests | 22/22 passed (`scripts/tests/*.Tests.ps1`) |
 | POS Agent live | `https://rms-pos-agent.localhost:5001/health/live` and `/health/ready` returned 200 (HTTP/1.1) |
 | Secure Support Hub live | `https://support-hub.integration.test:4443/` and `/tools/pos-maintenance` returned 200 |
@@ -98,6 +106,8 @@ degrades; all current UI feature styles consume design tokens.
 ## Deferred boundaries
 
 - Testing is default; no Production calls, SQL changes, or deployment were performed.
+- RMS validation performed no service control and no database write; the fixed
+  SQL probe only queried `DB_NAME()`.
 - UPC live/fixture acceptance and deployment/Production acceptance remain deferred.
 - `ConnectionStrings:UpcEcommerceTest` is absent locally; related live calls
   are environment setup, not an INT-07 defect.

@@ -1,21 +1,27 @@
 using System.Security.Cryptography;
 using System.Text;
-using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Services;
 
 /// <summary>
-/// Projects the service names owned by Agent configuration into opaque IDs. Browser input is
+/// Projects the server-owned canonical RMS service catalog into opaque IDs. Browser input is
 /// accepted only as one of those IDs; the Windows service name never crosses the HTTP boundary as
 /// a caller-selected target.
 /// </summary>
-public sealed class ServiceAllowList(IAgentConfigurationStore configurations)
+public sealed class ServiceAllowList
 {
     public async Task<IReadOnlyList<AllowListedService>> GetAsync(
         CancellationToken cancellationToken = default)
     {
-        var configuration = await configurations.LoadAsync(cancellationToken).ConfigureAwait(false);
-        return Build(configuration.Services);
+        await Task.CompletedTask.ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return RmsServiceCatalog.Definitions
+            .Select(definition => new AllowListedService(
+                ToServiceId(definition.ServiceName),
+                definition.ServiceName,
+                definition.DisplayName))
+            .ToArray();
     }
 
     public async Task<AllowListedService?> ResolveAsync(
@@ -41,27 +47,6 @@ public sealed class ServiceAllowList(IAgentConfigurationStore configurations)
         && serviceId.StartsWith("svc-", StringComparison.Ordinal)
         && serviceId[4..].All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
-    private static IReadOnlyList<AllowListedService> Build(IEnumerable<string>? configuredNames)
-    {
-        var names = (configuredNames ?? [])
-            .Where(IsSafeConfiguredServiceName)
-            .Select(name => name.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
-
-        return names
-            .Select(name => new AllowListedService(ToServiceId(name), name))
-            .ToArray();
-    }
-
-    private static bool IsSafeConfiguredServiceName(string? name) =>
-        !string.IsNullOrWhiteSpace(name)
-        && name.Length <= 256
-        && name.All(character => !char.IsControl(character))
-        && !name.Contains('/', StringComparison.Ordinal)
-        && !name.Contains('\\', StringComparison.Ordinal)
-        && !name.Contains('?', StringComparison.Ordinal)
-        && !name.Contains('#', StringComparison.Ordinal);
 }
 
-public sealed record AllowListedService(string ServiceId, string ServiceName);
+public sealed record AllowListedService(string ServiceId, string ServiceName, string DisplayName);

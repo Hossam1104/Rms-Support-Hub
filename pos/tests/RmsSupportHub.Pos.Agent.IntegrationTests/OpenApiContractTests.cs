@@ -30,6 +30,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/device/capabilities",
                 "/api/v1/device/connectivity",
                 "/api/v1/device/identity",
+                "/api/v1/rms/diagnostics",
                 "/api/v1/security/mutation-token",
                 "/api/v1/services",
                 "/api/v1/services/{serviceId}/actions",
@@ -63,6 +64,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetConfiguration", Operation(document, "/api/v1/configuration", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetServices", Operation(document, "/api/v1/services", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("ControlService", Operation(document, "/api/v1/services/{serviceId}/actions", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetRmsDiagnostics", Operation(document, "/api/v1/rms/diagnostics", "get")["operationId"]!.GetValue<string>());
 
         var servers = document["servers"]!.AsArray();
         Assert.Single(servers);
@@ -83,6 +85,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.True(Operation(document, "/api/v1/configuration", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/services", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/services/{serviceId}/actions", "post").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/rms/diagnostics", "get").ContainsKey("security"));
 
         var serialized = document.ToJsonString();
         Assert.DoesNotContain("bearer", serialized, StringComparison.OrdinalIgnoreCase);
@@ -233,6 +236,13 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 .Select(value => value!.GetValue<string>()).ToArray());
         AssertProtectedReadResponses(services);
 
+        var rmsDiagnostics = Operation(document, "/api/v1/rms/diagnostics", "get");
+        AssertResponseSchema(rmsDiagnostics, "200", "application/json", "RmsDiagnosticsDto");
+        Assert.Equal(
+            "RmsBranchSrv",
+            ResponseExample(rmsDiagnostics, "200", "application/json")["branchDatabase"]!["expectedDatabase"]!.GetValue<string>());
+        AssertProtectedReadResponses(rmsDiagnostics);
+
         var serviceAction = Operation(document, "/api/v1/services/{serviceId}/actions", "post");
         AssertResponseSchema(serviceAction, "200", "application/json", "ServiceActionResponseDto");
         var actionRequestExample = serviceAction["requestBody"]!["content"]!["application/json"]!["example"]!.AsObject();
@@ -306,7 +316,14 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "RedactedDownloaderConfigurationDto",
             "ServiceSummaryDto",
             "ServiceActionRequestDto",
-            "ServiceActionResponseDto"
+            "ServiceActionResponseDto",
+            "RmsDiagnosticsDto",
+            "RmsInstallationDto",
+            "RmsVersionDto",
+            "RmsConsistencyDto",
+            "RmsEndpointDiagnosticDto",
+            "RmsConnectivityDto",
+            "RmsDatabaseDiagnosticDto"
         })
         {
             var schema = schemas[schemaName]!.AsObject();

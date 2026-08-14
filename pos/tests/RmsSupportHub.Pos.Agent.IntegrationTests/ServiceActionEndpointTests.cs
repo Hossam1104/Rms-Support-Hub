@@ -30,7 +30,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         manager.ControlCalls.Clear();
         manager.ControlBehavior = null;
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var token = await IssueServiceTokenAsync(client, serviceId);
 
         using var response = await SendActionAsync(client, serviceId, ServiceActionKind.Start, token);
@@ -41,8 +41,8 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         Assert.Equal(ServiceActionCodes.Accepted, body.GetProperty("code").GetString());
         Assert.Contains(
             manager.ControlCalls,
-            call => call.ServiceName == "RMS.Downloader" && call.Action == ServiceControlAction.Start);
-        Assert.DoesNotContain("RMS.Downloader", body.GetRawText(), StringComparison.Ordinal);
+            call => call.ServiceName == "RMS.CashierService" && call.Action == ServiceControlAction.Start);
+        Assert.DoesNotContain("RMS.CashierService", body.GetRawText(), StringComparison.Ordinal);
         Assert.DoesNotContain("secret", body.GetRawText(), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("path", body.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }
@@ -53,7 +53,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         var manager = GetManager();
         manager.ControlCalls.Clear();
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var token = await IssueServiceTokenAsync(client, serviceId);
         var store = _factory.Services.GetRequiredService<IMutationTokenStore>();
         MutationTokenConsumeResult? replayAtDispatch = null;
@@ -110,7 +110,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         using var nonAdmin = _factory.CreateNonAdminClient();
         using var nonAdminResponse = await SendActionAsync(
             nonAdmin,
-            ServiceAllowList.ToServiceId("RMS.Downloader"),
+            ServiceAllowList.ToServiceId("RMS.CashierService"),
             ServiceActionKind.Start,
             token: null);
         Assert.Equal(HttpStatusCode.Forbidden, nonAdminResponse.StatusCode);
@@ -119,7 +119,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         unauthenticated.DefaultRequestHeaders.Add("Origin", AgentWebApplicationFactory.SupportHubOrigin);
         using var unauthenticatedResponse = await SendActionAsync(
             unauthenticated,
-            ServiceAllowList.ToServiceId("RMS.Downloader"),
+            ServiceAllowList.ToServiceId("RMS.CashierService"),
             ServiceActionKind.Start,
             token: null);
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticatedResponse.StatusCode);
@@ -132,7 +132,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         var manager = GetManager();
         manager.ControlCalls.Clear();
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
 
         using var missingToken = await SendActionAsync(client, serviceId, ServiceActionKind.Start, token: null);
         var missingTokenBody = await ReadJsonAsync(missingToken);
@@ -157,7 +157,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         var manager = GetManager();
         manager.ControlCalls.Clear();
         using var issuer = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var token = await IssueServiceTokenAsync(issuer, serviceId);
 
         using var differentPrincipal = _factory.CreateClientWithSid(
@@ -191,7 +191,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
 
         using var rawToken = await client.PostAsJsonAsync(
             "/api/v1/security/mutation-token",
-            new { operationId = ServiceActionOperation.OperationId, targetId = "RMS.Downloader" });
+            new { operationId = ServiceActionOperation.OperationId, targetId = "RMS.CashierService" });
         var rawTokenBody = await ReadJsonAsync(rawToken);
         Assert.Equal(HttpStatusCode.BadRequest, rawToken.StatusCode);
         Assert.Equal(AgentProblemCodes.MutationTargetInvalid, rawTokenBody.GetProperty("code").GetString());
@@ -213,9 +213,9 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         var manager = GetManager();
         manager.ControlCalls.Clear();
         using var client = _factory.CreateAdminClient();
-        var downloaderId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var cashierId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var branchId = ServiceAllowList.ToServiceId("RMS.BranchService");
-        var token = await IssueServiceTokenAsync(client, downloaderId);
+        var token = await IssueServiceTokenAsync(client, cashierId);
 
         using var wrongTarget = await SendActionAsync(client, branchId, ServiceActionKind.Stop, token);
         var wrongTargetBody = await ReadJsonAsync(wrongTarget);
@@ -223,7 +223,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         Assert.Equal(AgentProblemCodes.MutationTokenInvalid, wrongTargetBody.GetProperty("code").GetString());
         Assert.Empty(manager.ControlCalls);
 
-        using var replay = await SendActionAsync(client, downloaderId, ServiceActionKind.Start, token);
+        using var replay = await SendActionAsync(client, cashierId, ServiceActionKind.Start, token);
         var replayBody = await ReadJsonAsync(replay);
         Assert.Equal(HttpStatusCode.Forbidden, replay.StatusCode);
         Assert.Equal(AgentProblemCodes.MutationTokenInvalid, replayBody.GetProperty("code").GetString());
@@ -237,7 +237,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         manager.ControlCalls.Clear();
         manager.ControlBehavior = null;
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var key = UniqueKey();
         var token = await IssueServiceTokenAsync(client, serviceId);
 
@@ -259,7 +259,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         manager.ControlCalls.Clear();
         manager.ControlBehavior = null;
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var key = UniqueKey();
 
         var firstToken = await IssueServiceTokenAsync(client, serviceId);
@@ -291,7 +291,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         try
         {
             using var client = _factory.CreateAdminClient();
-            var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+            var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
             var firstToken = await IssueServiceTokenAsync(client, serviceId);
             var firstTask = SendActionAsync(client, serviceId, ServiceActionKind.Start, firstToken, UniqueKey());
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -321,7 +321,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         var manager = GetManager();
         manager.ControlCalls.Clear();
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
 
         manager.ControlBehavior = (_, _, _) =>
             Task.FromException(new ServiceControlRejectedException("service_control_rejected"));
@@ -352,7 +352,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         manager.ControlCalls.Clear();
         manager.ControlBehavior = null;
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var token = await IssueServiceTokenAsync(client, serviceId);
 
         using var response = await SendActionAsync(client, serviceId, ServiceActionKind.Start, token, "bad key");
@@ -369,7 +369,7 @@ public sealed class ServiceActionEndpointTests : IClassFixture<AgentWebApplicati
         var manager = GetManager();
         manager.ControlCalls.Clear();
         using var client = _factory.CreateAdminClient();
-        var serviceId = ServiceAllowList.ToServiceId("RMS.Downloader");
+        var serviceId = ServiceAllowList.ToServiceId("RMS.CashierService");
         var token = await IssueServiceTokenAsync(client, serviceId);
         using var request = new HttpRequestMessage(
             HttpMethod.Post,

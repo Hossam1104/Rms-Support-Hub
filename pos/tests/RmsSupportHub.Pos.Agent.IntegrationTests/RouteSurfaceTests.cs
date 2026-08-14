@@ -35,6 +35,7 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
         Assert.Contains("/api/v1/configuration", endpoints);
         Assert.Contains("/api/v1/services", endpoints);
         Assert.Contains("/api/v1/services/{serviceId}/actions", endpoints);
+        Assert.Contains("/api/v1/rms/diagnostics", endpoints);
         Assert.DoesNotContain(endpoints, path => path!.Contains("backup", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("restore", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(endpoints, path => path!.Contains("maintenance", StringComparison.OrdinalIgnoreCase));

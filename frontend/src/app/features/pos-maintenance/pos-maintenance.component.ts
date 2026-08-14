@@ -28,6 +28,9 @@ type ServiceActionKind = components['schemas']['ServiceActionKind'];
 type ServiceActionOutcome = components['schemas']['ServiceActionOutcome'];
 type ServiceActionResponse = components['schemas']['ServiceActionResponseDto'];
 type Evidence = components['schemas']['EvidenceDto'];
+type RmsDiagnostics = components['schemas']['RmsDiagnosticsDto'];
+type RmsDatabaseDiagnostic = components['schemas']['RmsDatabaseDiagnosticDto'];
+type RmsEndpointDiagnostic = components['schemas']['RmsEndpointDiagnosticDto'];
 type AgentState = 'loading' | 'reachable' | 'unreachable';
 type AuthState = 'loading' | 'authenticated' | 'authentication-required' | 'unavailable';
 type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: PosAgentTransportError };
@@ -132,6 +135,75 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
         </ui-card>
       </section>
 
+      <section class="rms-dashboard" aria-label="RMS support dashboard">
+        <div class="dashboard-heading">
+          <div>
+            <p class="eyebrow">Installed RMS+ suite</p>
+            <h2>Support dashboard</h2>
+          </div>
+          <p class="dashboard-heading__copy">Read-only discovery from the installed RMS files, with sanitized database probes and SCM evidence.</p>
+        </div>
+        @if (loading()) {
+          <div class="dashboard-grid">
+            <ui-card variant="raised" class="workspace-card"><div class="skeleton-stack"><app-skeleton></app-skeleton><app-skeleton></app-skeleton><app-skeleton></app-skeleton></div></ui-card>
+            <ui-card variant="raised" class="workspace-card"><div class="skeleton-stack"><app-skeleton></app-skeleton><app-skeleton></app-skeleton><app-skeleton></app-skeleton></div></ui-card>
+            <ui-card variant="raised" class="workspace-card"><div class="skeleton-stack"><app-skeleton></app-skeleton><app-skeleton></app-skeleton><app-skeleton></app-skeleton></div></ui-card>
+          </div>
+        } @else if (rmsDiagnostics(); as rms) {
+          <div class="dashboard-grid">
+            <ui-card variant="raised" class="workspace-card dashboard-card dashboard-card--wide">
+              <div uiCardHeader class="card-heading card-heading--split">
+                <div class="card-heading__copy"><p class="eyebrow">RMS installation</p><h2>Detected automatically</h2></div>
+                <i class="bi bi-box-seam card-heading__mark" aria-hidden="true"></i>
+              </div>
+              <dl class="data-list">
+                <div><dt>Branch Code</dt><dd>{{ rms.installation.branchCode || 'Unavailable' }}</dd></div>
+                <div><dt>POS Number</dt><dd>{{ rms.installation.posNumber || 'Unavailable' }}</dd></div>
+                <div><dt>Installation mode</dt><dd>{{ rms.installation.installationMode || 'Unavailable' }}</dd></div>
+                <div><dt>Installation GUID</dt><dd>{{ rms.installation.installationGuid || 'Unavailable' }}</dd></div>
+                <div><dt>Components</dt><dd>{{ componentInstallLabel(rms) }}</dd></div>
+                <div><dt>Version consistency</dt><dd><app-status-badge [label]="consistencyLabel(rms.installation.consistency.version)" [variant]="consistencyVariant(rms.installation.consistency.version)" role="status"></app-status-badge></dd></div>
+              </dl>
+              @if (rms.installation.consistency.warnings.length) {
+                <div class="consistency-warning" role="alert"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><div><strong>Configuration consistency warning</strong><ul>@for (warning of rms.installation.consistency.warnings; track warning) {<li>{{ warning }}</li>}</ul></div></div>
+              } @else {
+                <p class="boundary-copy"><i class="bi bi-check2-circle" aria-hidden="true"></i> Duplicated RMS identity and version metadata agrees.</p>
+              }
+            </ui-card>
+
+            <ui-card variant="raised" class="workspace-card dashboard-card">
+              <div uiCardHeader class="card-heading card-heading--split"><div class="card-heading__copy"><p class="eyebrow">Main server</p><h2>Configured endpoint</h2></div><i class="bi bi-cloud-check card-heading__mark" aria-hidden="true"></i></div>
+              <div class="endpoint-summary"><app-status-badge [label]="endpointConfiguredLabel(rms.connectivity.mainServer)" [variant]="endpointConfiguredVariant(rms.connectivity.mainServer)" role="status"></app-status-badge><strong>{{ rms.connectivity.mainServer.endpoint || rms.installation.mainServerUrl || 'Unavailable' }}</strong></div>
+              <p class="evidence-detail">{{ rms.connectivity.mainServer.reachability.detail }}</p>
+              <small>Checked {{ checkedAt(rms.connectivity.mainServer.reachability) }}</small>
+            </ui-card>
+
+            <ui-card variant="raised" class="workspace-card dashboard-card">
+              <div uiCardHeader class="card-heading card-heading--split"><div class="card-heading__copy"><p class="eyebrow">Branch server</p><h2>Local endpoint</h2></div><i class="bi bi-diagram-3 card-heading__mark" aria-hidden="true"></i></div>
+              <div class="endpoint-summary"><app-status-badge [label]="endpointConfiguredLabel(rms.connectivity.branchServer)" [variant]="endpointConfiguredVariant(rms.connectivity.branchServer)" role="status"></app-status-badge><strong>{{ rms.connectivity.branchServer.endpoint || rms.installation.branchServerAddress || 'Unavailable' }}</strong></div>
+              <p class="evidence-detail">{{ rms.connectivity.branchServer.reachability.detail }}</p>
+              <small>Checked {{ checkedAt(rms.connectivity.branchServer.reachability) }}</small>
+            </ui-card>
+
+            <ui-card variant="raised" class="workspace-card dashboard-card">
+              <div uiCardHeader class="card-heading card-heading--split"><div class="card-heading__copy"><p class="eyebrow">Branch database</p><h2>{{ rms.branchDatabase.expectedDatabase }}</h2></div><i class="bi bi-database-check card-heading__mark" aria-hidden="true"></i></div>
+              <div class="database-summary"><app-status-badge [label]="databaseStatusLabel(rms.branchDatabase)" [variant]="databaseStatusVariant(rms.branchDatabase)" role="status"></app-status-badge><strong>{{ rms.branchDatabase.configuredDatabase || 'Not detected' }}</strong></div>
+              <dl class="data-list data-list--compact"><div><dt>Detected automatically</dt><dd>Yes</dd></div><div><dt>Server</dt><dd>{{ rms.branchDatabase.serverDisplay || 'Unavailable' }}</dd></div></dl>
+              <p class="evidence-detail">{{ rms.branchDatabase.evidence.detail }}</p>
+            </ui-card>
+
+            <ui-card variant="raised" class="workspace-card dashboard-card">
+              <div uiCardHeader class="card-heading card-heading--split"><div class="card-heading__copy"><p class="eyebrow">Cashier database</p><h2>{{ rms.cashierDatabase.expectedDatabase }}</h2></div><i class="bi bi-database-check card-heading__mark" aria-hidden="true"></i></div>
+              <div class="database-summary"><app-status-badge [label]="databaseStatusLabel(rms.cashierDatabase)" [variant]="databaseStatusVariant(rms.cashierDatabase)" role="status"></app-status-badge><strong>{{ rms.cashierDatabase.configuredDatabase || 'Not detected' }}</strong></div>
+              <dl class="data-list data-list--compact"><div><dt>Detected automatically</dt><dd>Yes</dd></div><div><dt>Server</dt><dd>{{ rms.cashierDatabase.serverDisplay || 'Unavailable' }}</dd></div></dl>
+              <p class="evidence-detail">{{ rms.cashierDatabase.evidence.detail }}</p>
+            </ui-card>
+          </div>
+        } @else {
+          <app-empty-state icon="bi-box-seam" title="RMS discovery is unavailable" [description]="readError('rms')"></app-empty-state>
+        }
+      </section>
+
       <section class="workspace-grid" aria-label="POS Agent evidence and service-control workspace">
         <ui-card variant="raised" class="workspace-card identity-card">
           <div uiCardHeader class="card-heading card-heading--split">
@@ -233,8 +305,8 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
         <ui-card variant="raised" class="workspace-card services-card">
           <div uiCardHeader class="card-heading card-heading--split">
             <div class="card-heading__copy">
-              <p class="eyebrow">Windows services</p>
-              <h2>Status and controls</h2>
+              <p class="eyebrow">RMS services</p>
+              <h2>SCM status and controls</h2>
             </div>
             <i class="bi bi-gear-wide-connected card-heading__mark" aria-hidden="true"></i>
           </div>
@@ -242,10 +314,10 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
             <div class="skeleton-stack"><app-skeleton height="44px"></app-skeleton><app-skeleton height="44px"></app-skeleton></div>
           } @else if (services(); as values) {
             @if (values.length) {
-              <div class="service-list" role="list" aria-label="Configured Windows services">
+              <div class="service-list" role="list" aria-label="Canonical RMS Windows services">
                 @for (service of values; track service.serviceId) {
                   <div class="service-row" role="listitem">
-                    <div class="service-row__copy"><strong>{{ service.displayName }}</strong><small>{{ service.lastChecked.detail }}</small></div>
+                    <div class="service-row__copy"><strong>{{ service.displayName }}</strong><small>{{ service.installed ? 'Installed' : 'Not installed' }} · {{ service.lastChecked.detail }}</small></div>
                     <div class="service-row__actions">
                       <app-status-badge [label]="serviceStateLabel(service.state)" [variant]="serviceStateVariant(service.state)" role="status"></app-status-badge>
                       @if (canControlServices() && service.allowedActions.length) {
@@ -273,7 +345,7 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
                 }
               </div>
             } @else {
-              <app-empty-state icon="bi-gear-wide-connected" title="No services are configured" description="The Agent returned an empty allow-list."></app-empty-state>
+              <app-empty-state icon="bi-gear-wide-connected" title="No RMS services were found" description="The Agent returned no canonical RMS service rows."></app-empty-state>
             }
             <p class="boundary-copy"><i class="bi bi-shield-check" aria-hidden="true"></i> Controls appear only for an authorized local Administrator and only for the state-valid actions returned by the Agent.</p>
           } @else {
@@ -352,7 +424,7 @@ type PendingServiceAction = Readonly<{ service: ServiceSummary; action: ServiceA
     .boundary-banner__icon { display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center; border-radius: var(--radius-md); background: var(--surface-raised); color: var(--state-info-fg); }
     .boundary-banner h2 { margin-bottom: var(--space-2); }
     .boundary-banner p:last-child { max-width: 78ch; margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-normal); }
-    @media (max-width: 1000px) { .status-grid { grid-template-columns: 1fr; } .workspace-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1000px) { .status-grid, .workspace-grid { grid-template-columns: 1fr; } }
     @media (max-width: 680px) { .pos-page { padding-inline: var(--space-4); } .evidence-grid { grid-template-columns: 1fr; } .service-row { grid-template-columns: 1fr; align-items: flex-start; } .service-row__actions { justify-content: flex-start; } }
   `]
 })
@@ -370,6 +442,7 @@ export class PosMaintenanceComponent {
   readonly capabilities = signal<DeviceCapabilities | null>(null);
   readonly configuration = signal<RedactedConfiguration | null>(null);
   readonly services = signal<ServiceSummary[] | null>(null);
+  readonly rmsDiagnostics = signal<RmsDiagnostics | null>(null);
   readonly globalError = signal<string | null>(null);
   readonly pendingAction = signal<PendingServiceAction | null>(null);
   readonly submittingAction = signal<string | null>(null);
@@ -545,6 +618,7 @@ export class PosMaintenanceComponent {
     switch (state) {
       case 'running': return 'Running';
       case 'stopped': return 'Stopped';
+      case 'paused': return 'Paused';
       case 'transitioning': return 'Transitioning';
       case 'notFound': return 'Not found';
       default: return 'Unknown';
@@ -556,6 +630,58 @@ export class PosMaintenanceComponent {
       case 'running': return 'success';
       case 'stopped': return 'warning';
       case 'notFound': return 'danger';
+      default: return 'info';
+    }
+  }
+
+  componentInstallLabel(rms: RmsDiagnostics): string {
+    const installed = [
+      rms.installation.branchInstalled ? 'Branch' : null,
+      rms.installation.cashierInstalled ? 'Cashier' : null
+    ].filter((value): value is string => value !== null);
+    return installed.length ? installed.join(' + ') : 'Not detected';
+  }
+
+  consistencyLabel(state: components['schemas']['RmsConsistencyState']): string {
+    switch (state) {
+      case 'consistent': return 'Consistent';
+      case 'mismatch': return 'Mismatch';
+      default: return 'Unavailable';
+    }
+  }
+
+  consistencyVariant(state: components['schemas']['RmsConsistencyState']): 'success' | 'warning' | 'info' {
+    return state === 'consistent' ? 'success' : state === 'mismatch' ? 'warning' : 'info';
+  }
+
+  endpointConfiguredLabel(endpoint: RmsEndpointDiagnostic): string {
+    return endpoint.configured ? this.freshnessLabel(endpoint.reachability) : 'Not configured';
+  }
+
+  endpointConfiguredVariant(endpoint: RmsEndpointDiagnostic): 'success' | 'warning' | 'info' {
+    return endpoint.configured ? this.freshnessVariant(endpoint.reachability) : 'info';
+  }
+
+  databaseStatusLabel(database: RmsDatabaseDiagnostic): string {
+    switch (database.connectivityStatus) {
+      case 'reachable': return 'Reachable';
+      case 'authenticationFailed': return 'Authentication failed';
+      case 'databaseUnavailable': return 'Database unavailable';
+      case 'databaseNameMismatch': return 'Name mismatch';
+      case 'configurationInvalid': return 'Configuration invalid';
+      case 'unreachable': return 'Unreachable';
+      default: return 'Not configured';
+    }
+  }
+
+  databaseStatusVariant(database: RmsDatabaseDiagnostic): 'success' | 'warning' | 'danger' | 'info' {
+    switch (database.connectivityStatus) {
+      case 'reachable': return 'success';
+      case 'databaseNameMismatch':
+      case 'configurationInvalid':
+      case 'authenticationFailed':
+      case 'databaseUnavailable': return 'warning';
+      case 'unreachable': return 'danger';
       default: return 'info';
     }
   }
@@ -573,14 +699,15 @@ export class PosMaintenanceComponent {
     this.refreshing.set(true);
     if (firstLoad) this.loading.set(true);
 
-    const [live, session, identity, connectivity, capabilities, configuration, services] = await Promise.all([
+    const [live, session, identity, connectivity, capabilities, configuration, services, rms] = await Promise.all([
       this.settle(this.transport.getLive()),
       this.settle(this.transport.getSession()),
       this.settle(this.transport.getDeviceIdentity()),
       this.settle(this.transport.getDeviceConnectivity()),
       this.settle(this.transport.getDeviceCapabilities()),
       this.settle(this.transport.getConfiguration()),
-      this.settle(this.transport.getServices())
+      this.settle(this.transport.getServices()),
+      this.settle(this.transport.getRmsDiagnostics())
     ]);
 
     const nextErrors: Record<string, string> = {};
@@ -591,6 +718,7 @@ export class PosMaintenanceComponent {
     this.applyValue('capabilities', capabilities, this.capabilities, nextErrors);
     this.applyValue('configuration', configuration, this.configuration, nextErrors);
     this.applyValue('services', services, this.services, nextErrors);
+    this.applyValue('rms', rms, this.rmsDiagnostics, nextErrors);
     this.errors.set(nextErrors);
 
     const failedReads = Object.keys(nextErrors).filter(key => key !== 'agent' && key !== 'session');

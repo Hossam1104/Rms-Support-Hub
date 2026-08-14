@@ -63,6 +63,12 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IServiceManager>();
             services.AddSingleton<IServiceManager>(new InMemoryServiceManager());
 
+            services.RemoveAll<IRmsInstallationDiscovery>();
+            services.AddSingleton<IRmsInstallationDiscovery>(new InMemoryRmsInstallationDiscovery());
+            services.RemoveAll<IRmsDatabaseConnectionStringSource>();
+            services.RemoveAll<IRmsDatabaseDiagnostics>();
+            services.AddSingleton<IRmsDatabaseDiagnostics>(new InMemoryRmsDatabaseDiagnostics());
+
             services.RemoveAll<IMutationOperationRegistry>();
             services.AddSingleton<IMutationOperationRegistry>(new MutationOperationRegistry(
             [

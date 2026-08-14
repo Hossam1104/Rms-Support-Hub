@@ -20,7 +20,7 @@ internal sealed class InMemoryAgentConfigurationStore : IAgentConfigurationStore
         DbFilesPath = @"C:\agent-secrets\db",
         BranchConfigPath = @"C:\agent-secrets\branch.json",
         Databases = ["RmsBranchSrv"],
-        Services = ["RMS.Downloader", "RMS.BranchService", "RMS.BranchService"],
+        Services = ["RMS.BranchService", "RMS.CashierService", "RMSServicesManager"],
         Downloader = new AgentDownloaderConfiguration
         {
             ApiUrl = "https://downloader.integration.test",
@@ -86,7 +86,8 @@ internal sealed class InMemoryServiceManager : IServiceManager
         new Dictionary<string, ServiceStatus>(StringComparer.OrdinalIgnoreCase)
         {
             ["RMS.BranchService"] = ServiceStatus.Running,
-            ["RMS.Downloader"] = ServiceStatus.Stopped
+            ["RMS.CashierService"] = ServiceStatus.Stopped,
+            ["RMSServicesManager"] = ServiceStatus.Stopped
         };
 
     public ConcurrentQueue<(string ServiceName, ServiceControlAction Action)> ControlCalls { get; } = new();
@@ -119,5 +120,60 @@ internal sealed class InMemoryServiceManager : IServiceManager
         cancellationToken.ThrowIfCancellationRequested();
         ControlCalls.Enqueue((serviceName, action));
         return ControlBehavior?.Invoke(serviceName, action, cancellationToken) ?? Task.CompletedTask;
+    }
+}
+
+internal sealed class InMemoryRmsInstallationDiscovery : IRmsInstallationDiscovery
+{
+    public Task<RmsInstallationSnapshot> DiscoverAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new RmsInstallationSnapshot(
+            true,
+            true,
+            true,
+            "BR-INT",
+            "POS-07",
+            "1",
+            "1",
+            "integration-installation-guid",
+            "https://main.integration.test:8443",
+            "localhost",
+            "RMS+ Integration",
+            "2026.08-int07",
+            new("2026.08", "2026.08", "2026.08"),
+            new(
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                RmsConsistencyState.Consistent,
+                []),
+            new(true, RmsConnectionStringState.Valid, "127.0.0.1,1", "RmsBranchSrv", false),
+            new(true, RmsConnectionStringState.Valid, "127.0.0.1,1", "RmsCashierSrv", false),
+            new(RmsEndpointConfigurationState.Unavailable, null, null, null),
+            new(RmsEndpointConfigurationState.Unavailable, null, null, null),
+            new(true, true, true, true)));
+    }
+}
+
+internal sealed class InMemoryRmsDatabaseDiagnostics : IRmsDatabaseDiagnostics
+{
+    public Task<RmsDatabaseDiagnosticResult> DiagnoseAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var expected = database == RmsDatabaseKind.Branch ? "RmsBranchSrv" : "RmsCashierSrv";
+        return Task.FromResult(new RmsDatabaseDiagnosticResult(
+            database,
+            expected,
+            expected,
+            "integration-sql:1433",
+            true,
+            true,
+            RmsDatabaseDiagnosticStatus.Reachable,
+            DateTimeOffset.UtcNow,
+            "The configured RMS database answered the read-only identity probe."));
     }
 }

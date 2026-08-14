@@ -4,6 +4,7 @@ using Microsoft.OpenApi;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Configuration;
 using RmsSupportHub.Pos.Contracts.V1.Device;
+using RmsSupportHub.Pos.Contracts.V1.Rms;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Services;
 using RmsSupportHub.Pos.Contracts.V1.Session;
@@ -69,6 +70,22 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
             (var value, null) when value == typeof(ServiceActionResponseDto) =>
                 "Safe result for one service action. Outcome truth is separate from HTTP status and " +
                 "contains no exception, SID, credential, path, command, or raw service target.",
+            (var value, null) when value == typeof(RmsDiagnosticsDto) =>
+                "Sanitized read-only RMS installation, connectivity, database, and canonical service " +
+                "diagnostics. Credentials, connection strings, keys, and unrestricted targets are " +
+                "never returned.",
+            (var value, null) when value == typeof(RmsInstallationDto) =>
+                "Safe identity and consistency evidence selected from the installed RMS+ files.",
+            (var value, null) when value == typeof(RmsVersionDto) =>
+                "Build metadata selected from the installed RMS server and UI configuration files.",
+            (var value, null) when value == typeof(RmsConsistencyDto) =>
+                "Typed comparison results for duplicated installed RMS metadata.",
+            (var value, null) when value == typeof(RmsEndpointDiagnosticDto) =>
+                "Safe endpoint configuration and TCP reachability evidence; it does not claim application health.",
+            (var value, null) when value == typeof(RmsConnectivityDto) =>
+                "Independent main-server and Branch-server endpoint reachability evidence.",
+            (var value, null) when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Sanitized read-only RMS database configuration and identity-probe result.",
             (var value, null) when value == typeof(ServiceActionOutcome) =>
                 "Typed service-action outcome: NotAttempted, Failed, Accepted, or OutcomeUnknown.",
             (var value, null) when value == typeof(EvidenceDto) =>
@@ -197,6 +214,8 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Opaque server-issued service identifier; the raw Windows service name is not accepted from a browser.",
             (var value, "displayName") when value == typeof(ServiceSummaryDto) =>
                 "Safe display name for the allow-listed Windows service.",
+            (var value, "installed") when value == typeof(ServiceSummaryDto) =>
+                "Whether SCM found the canonical RMS service on this device.",
             (var value, "state") when value == typeof(ServiceSummaryDto) =>
                 "Current Windows service runtime state observed by the Agent.",
             (var value, "lastChecked") when value == typeof(ServiceSummaryDto) =>
@@ -222,6 +241,86 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "service names, or exception text.",
             (var value, "correlationId") when value == typeof(ServiceActionResponseDto) =>
                 "Safe Agent/request correlation identifier for diagnostics.",
+            (var value, "installed") when value == typeof(RmsInstallationDto) =>
+                "Whether known RMS installation metadata or component files were detected.",
+            (var value, "branchInstalled") when value == typeof(RmsInstallationDto) =>
+                "Whether the known Branch component was detected.",
+            (var value, "cashierInstalled") when value == typeof(RmsInstallationDto) =>
+                "Whether the known Cashier component was detected.",
+            (var value, "branchCode") when value == typeof(RmsInstallationDto) =>
+                "Branch code selected from installed RMS metadata.",
+            (var value, "posNumber") when value == typeof(RmsInstallationDto) =>
+                "POS number selected from installed RMS metadata.",
+            (var value, "installationGuid") when value == typeof(RmsInstallationDto) =>
+                "Safe installation identifier selected from installed RMS metadata.",
+            (var value, "mainServerBranchId") when value == typeof(RmsInstallationDto) =>
+                "Main-server branch identifier selected from installed RMS metadata.",
+            (var value, "mainServerPosId") when value == typeof(RmsInstallationDto) =>
+                "Main-server POS identifier selected from installed RMS metadata.",
+            (var value, "mainServerUrl") when value == typeof(RmsInstallationDto) =>
+                "Sanitized main-server host and port selected from installed RMS metadata.",
+            (var value, "branchServerAddress") when value == typeof(RmsInstallationDto) =>
+                "Sanitized Branch-server address selected from installed RMS metadata.",
+            (var value, "installationMode") when value == typeof(RmsInstallationDto) =>
+                "Detected Branch/Cashier component mode.",
+            (var value, "clientName") when value == typeof(RmsInstallationDto) =>
+                "Safe client label selected from installed Cashier UI metadata.",
+            (var value, "versions") when value == typeof(RmsInstallationDto) =>
+                "Build metadata for the installed RMS components.",
+            (var value, "consistency") when value == typeof(RmsInstallationDto) =>
+                "Cross-file consistency evidence for duplicated RMS values.",
+            (var value, "branchServerBuildNumber") when value == typeof(RmsVersionDto) =>
+                "Branch Server BuildNumber selected from its installed appsettings.",
+            (var value, "cashierServerBuildNumber") when value == typeof(RmsVersionDto) =>
+                "Cashier Server BuildNumber selected from its installed appsettings.",
+            (var value, "cashierUiBuildNumber") when value == typeof(RmsVersionDto) =>
+                "Cashier UI BuildNumber selected from its installed appsettings.",
+            (var value, "branchCode") when value == typeof(RmsConsistencyDto) =>
+                "Comparison status for duplicated BranchCode values.",
+            (var value, "posIdentity") when value == typeof(RmsConsistencyDto) =>
+                "Comparison status for duplicated POS identity values.",
+            (var value, "mainServerBranchId") when value == typeof(RmsConsistencyDto) =>
+                "Comparison status for duplicated main-server branch identifiers.",
+            (var value, "mainServerPosId") when value == typeof(RmsConsistencyDto) =>
+                "Comparison status for duplicated main-server POS identifiers.",
+            (var value, "version") when value == typeof(RmsConsistencyDto) =>
+                "Comparison status for installed component build numbers.",
+            (var value, "warnings") when value == typeof(RmsConsistencyDto) =>
+                "Safe operator warnings for mismatched or unavailable installed metadata.",
+            (var value, "configured") when value == typeof(RmsEndpointDiagnosticDto) =>
+                "Whether a valid known endpoint was configured.",
+            (var value, "endpoint") when value == typeof(RmsEndpointDiagnosticDto) =>
+                "Sanitized endpoint host and port; credentials and paths are omitted.",
+            (var value, "reachability") when value == typeof(RmsEndpointDiagnosticDto) =>
+                "TCP reachability evidence only; application health is not inferred.",
+            (var value, "mainServer") when value == typeof(RmsConnectivityDto) =>
+                "Main-server configuration and reachability evidence.",
+            (var value, "branchServer") when value == typeof(RmsConnectivityDto) =>
+                "Branch-server configuration and reachability evidence.",
+            (var value, "expectedDatabase") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Canonical database name expected for this RMS component.",
+            (var value, "configuredDatabase") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Database name parsed from the installed RMS connection string, without returning the string itself.",
+            (var value, "serverDisplay") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Safe SQL data-source label parsed from the installed RMS connection string.",
+            (var value, "configured") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Whether the known RMS connection-string setting is present.",
+            (var value, "databaseNameMatches") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Whether the configured/queried database identity matches the canonical expected database.",
+            (var value, "connectivityStatus") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Sanitized result of configuration validation and the fixed read-only SQL probe.",
+            (var value, "evidence") when value == typeof(RmsDatabaseDiagnosticDto) =>
+                "Freshness and safe detail for the database diagnostic.",
+            (var value, "services") when value == typeof(RmsDiagnosticsDto) =>
+                "Current SCM status for the bounded canonical RMS service catalog.",
+            (var value, "installation") when value == typeof(RmsDiagnosticsDto) =>
+                "Safe installed RMS identity and consistency evidence.",
+            (var value, "connectivity") when value == typeof(RmsDiagnosticsDto) =>
+                "Safe main-server and Branch-server reachability evidence.",
+            (var value, "branchDatabase") when value == typeof(RmsDiagnosticsDto) =>
+                "Sanitized Branch database diagnostic for RmsBranchSrv.",
+            (var value, "cashierDatabase") when value == typeof(RmsDiagnosticsDto) =>
+                "Sanitized Cashier database diagnostic for RmsCashierSrv.",
             _ => null
         };
 }

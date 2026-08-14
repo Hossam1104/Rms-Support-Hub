@@ -13,6 +13,7 @@ using RmsSupportHub.Pos.Agent.Endpoints;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Application.UseCases;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Security;
@@ -20,6 +21,8 @@ using RmsSupportHub.Pos.Contracts.V1.Session;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Infrastructure.Backups;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
+using RmsSupportHub.Pos.Infrastructure.Databases;
+using RmsSupportHub.Pos.Infrastructure.Installation;
 using RmsSupportHub.Pos.Infrastructure.Windows;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -117,6 +120,16 @@ builder.Services.AddSingleton(new AgentConfigurationStoreOptions());
 builder.Services.AddSingleton<IAgentConfigurationStore, JsonAgentConfigurationStore>();
 builder.Services.AddSingleton<IAgentSecretStore, DpapiAgentSecretStore>();
 builder.Services.AddSingleton<AgentConfigurationUseCase>();
+builder.Services.AddSingleton(new RmsInstallationOptions());
+builder.Services.AddSingleton<RmsInstallationDiscovery>();
+builder.Services.AddSingleton<IRmsInstallationDiscovery>(services =>
+    services.GetRequiredService<RmsInstallationDiscovery>());
+builder.Services.AddSingleton<IRmsDatabaseConnectionStringSource>(services =>
+    services.GetRequiredService<RmsInstallationDiscovery>());
+builder.Services.AddSingleton<IRmsSqlReadOnlyProbe, SqlClientReadOnlyProbe>();
+builder.Services.AddSingleton<IRmsDatabaseDiagnostics, RmsDatabaseDiagnostics>();
+builder.Services.AddSingleton<RmsConnectivityDiagnostics>();
+builder.Services.AddSingleton<RmsDiagnosticsService>();
 builder.Services.AddSingleton<DeviceDiagnosticsService>();
 builder.Services.AddSingleton<IServiceManager, WindowsServiceManager>();
 builder.Services.AddSingleton<ServiceAllowList>();
@@ -287,6 +300,7 @@ app.MapPost(
 app.MapDeviceEndpoints();
 app.MapConfigurationEndpoints();
 app.MapServiceEndpoints();
+app.MapRmsEndpoints();
 
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))

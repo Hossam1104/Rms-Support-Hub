@@ -9,7 +9,8 @@ export const POS_AGENT_PATHS = {
   deviceConnectivity: '/api/v1/device/connectivity',
   deviceCapabilities: '/api/v1/device/capabilities',
   configuration: '/api/v1/configuration',
-  services: '/api/v1/services'
+  services: '/api/v1/services',
+  rmsDiagnostics: '/api/v1/rms/diagnostics'
 } as const;
 
 export const POS_AGENT_OPERATION_IDS = {
