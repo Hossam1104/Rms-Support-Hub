@@ -62,7 +62,7 @@ jobs:
     name: POS Windows build and Infrastructure tests
     runs-on: windows-latest
     env:
-      PosAgentSecurity__SupportHubOrigin: https://support-hub.integration.test
+      PosAgentSecurity__SupportHubOrigin: https://support-hub.integration.test:4443
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -85,7 +85,7 @@ jobs:
     name: Windows Agent security foundation
     runs-on: windows-latest
     env:
-      PosAgentSecurity__SupportHubOrigin: https://support-hub.integration.test
+      PosAgentSecurity__SupportHubOrigin: https://support-hub.integration.test:4443
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -110,7 +110,7 @@ jobs:
     name: POS OpenAPI and Angular contract generation
     runs-on: windows-latest
     env:
-      PosAgentSecurity__SupportHubOrigin: https://support-hub.integration.test
+      PosAgentSecurity__SupportHubOrigin: https://support-hub.integration.test:4443
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

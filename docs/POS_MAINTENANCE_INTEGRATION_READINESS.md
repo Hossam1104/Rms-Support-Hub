@@ -1,5 +1,25 @@
 # POS Maintenance - Integration Readiness
 
+## Release approval scope — Testing vs. Production (read this first)
+
+**Testing-environment first release (INT-06I + INT-07 + INT-08 + INT-13) is
+APPROVED.** This approval does **not** extend to Production or customer
+deployment. Production/customer deployment remains **NOT APPROVED** until both
+open Medium findings below are independently implemented and reviewed. Do not
+infer Production readiness from Testing-environment PASS results anywhere else
+in this document — they are separate gates.
+
+| Open blocker | What it requires | Status |
+| --- | --- | --- |
+| M-1 — Managed-endpoint browser policy | A managed-fleet delivery mechanism (e.g., GPO/Intune) for Chrome/Edge policy, replacing the current single-device, locally-run `scripts/PosAgentWindowsProvisioning.psm1` provisioning model. | OPEN |
+| M-2 — Production certificate lifecycle | A defined issuance, renewal, distribution, and revocation lifecycle for the Agent/Support Hub TLS certificates across a fleet, replacing the current single-device self-managed certificate design. | OPEN |
+
+The full independent review outcome (0 Critical, 0 High, 2 Medium, 6 Low
+resolved, 3 Informational) is recorded in
+[POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md](reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md).
+M-1 and M-2 are the next architecture gate and are handed to the following
+execution session as their own scoped task; see root `TASK.md`.
+
 ## Purpose and status
 
 This document describes **RMS+ Support Hub's side** of the future POS
@@ -472,13 +492,19 @@ converted into architecture claims:
 - Live Agent/browser transport: open.
 - Managed-browser policy provisioning: automatic exact-value provisioning,
   version selection, conflict/type rejection, WhatIf, and cleanup preview
-  passed; live browser LNA/permission behavior remains open.
+  passed on a single representative Testing device; live browser LNA/
+  permission behavior remains open. Fleet-scale managed delivery (M-1, the
+  first open Production blocker above) is a separate, larger gate not
+  satisfied by the single-device script.
 - Negotiate browser policy, Kerberos/NTLM, custom-hostname loopback/back-
   connection, and any SPN registration: open; live evidence required. SPN
   behavior is not guessed, and `DisableLoopbackCheck = 1` is prohibited.
 - Support Hub HTTPS secure context and trusted Agent machine certificate
-  provisioning/lifecycle: implementation present; live elevated Testing
-  evidence remains open and mandatory.
+  provisioning/lifecycle: implementation present and live-verified on a
+  single representative Testing device (INT-13). A fleet-scale Production
+  certificate lifecycle — issuance, renewal, distribution, revocation (M-2,
+  the second open Production blocker above) — is a separate, larger gate not
+  satisfied by the single-device design.
 - Anonymous exact-origin CORS preflight, HTTP/1.1-only transport, read-only
   SSE, authenticated artifact fetch/opaque handles, and single-use
   server-operation-bound mutation tokens: open; implementation evidence

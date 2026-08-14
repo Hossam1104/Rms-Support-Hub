@@ -667,6 +667,16 @@ function Get-PosInstalledBrowser {
 }
 
 function Test-PosPolicyPatternMatchesOrigin {
+    <#
+    .SYNOPSIS
+    Matches a single Chrome/Edge URL-pattern policy value against the exact
+    Support Hub origin, following the vendor URL Blocklist Filter Format
+    (scheme://host:port/path, all components except host optional) plus the
+    documented Local/Loopback Network Access and AuthServerAllowlist host
+    forms. Any pattern this parser cannot confidently classify is treated as
+    a match (fail closed) so an ambiguous enterprise rule is never silently
+    treated as non-blocking.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -690,25 +700,35 @@ function Test-PosPolicyPatternMatchesOrigin {
     }
 
     $originUri = [Uri]$normalizedOrigin
+    $targetHost = $originUri.Host.ToLowerInvariant().TrimEnd('.')
+    $targetPort = $originUri.Port
+
     $scheme = $null
     $hostPattern = $null
-    $pathPattern = $null
-    if ($candidate -match '^(?<scheme>https?)://(?<host>[^/]+)(?<path>/.*)?$') {
+    $portPattern = $null
+    $pathPattern = ''
+
+    if ($candidate -match '^(?<scheme>https?)://(?<host>[^/:]+)(:(?<port>[0-9]+))?(?<path>/.*)?$') {
+        # scheme://host[:port][/path] — the full vendor pattern grammar.
         $scheme = $Matches.scheme.ToLowerInvariant()
         $hostPattern = $Matches.host.ToLowerInvariant()
-        $pathPattern = if ($Matches.ContainsKey('path')) { [string]$Matches.path } else { '/' }
-    } elseif ($candidate.IndexOf('*', [StringComparison]::Ordinal) -ge 0) {
-        return $true
+        $portPattern = if ($Matches.ContainsKey('port') -and $Matches.port) { [int]$Matches.port } else { $null }
+        $pathPattern = if ($Matches.ContainsKey('path')) { [string]$Matches.path } else { '' }
+    } elseif ($candidate -match '^(?<host>[^/:\s]+)(:(?<port>[0-9]+))?$') {
+        # Scheme-less bare host[:port]. Chrome/Edge treat this as matching the
+        # host on any scheme, e.g. an AuthServerAllowlist/LNA-style entry.
+        $hostPattern = $Matches.host.ToLowerInvariant()
+        $portPattern = if ($Matches.ContainsKey('port') -and $Matches.port) { [int]$Matches.port } else { $null }
     } else {
-        return $false
+        # Unrecognized/malformed pattern: fail closed rather than assume no conflict.
+        return $true
     }
 
-    if ($scheme -ne $originUri.Scheme.ToLowerInvariant()) {
+    if ($null -ne $scheme -and $scheme -ne $originUri.Scheme.ToLowerInvariant()) {
         return $false
     }
 
     $hostPattern = $hostPattern.TrimEnd('.')
-    $targetHost = $originUri.Host.ToLowerInvariant().TrimEnd('.')
     $hostMatches = if ($hostPattern -eq '*') {
         $true
     } elseif ($hostPattern.StartsWith('[*.]', [StringComparison]::Ordinal)) {
@@ -721,23 +741,26 @@ function Test-PosPolicyPatternMatchesOrigin {
     } elseif ($hostPattern.IndexOf('*', [StringComparison]::Ordinal) -ge 0) {
         $true
     } else {
-        [string]::Equals($targetHost, $hostPattern.Split(':')[0], [StringComparison]::OrdinalIgnoreCase)
+        [string]::Equals($targetHost, $hostPattern, [StringComparison]::OrdinalIgnoreCase)
     }
 
     if (-not $hostMatches) {
         return $false
     }
 
+    if ($null -ne $portPattern -and $portPattern -ne $targetPort) {
+        return $false
+    }
+
+    if ([string]::IsNullOrEmpty($pathPattern) -or $pathPattern -eq '/') {
+        return $true
+    }
+
     if ($pathPattern.IndexOf('*', [StringComparison]::Ordinal) -ge 0) {
         return $true
     }
 
-    $candidateOrigin = Normalize-PosExactOrigin $candidate
-    if ($null -ne $candidateOrigin) {
-        return [string]::Equals($candidateOrigin, $normalizedOrigin, [StringComparison]::OrdinalIgnoreCase)
-    }
-
-    return $pathPattern -eq '/' -or $pathPattern -eq ''
+    return $false
 }
 
 function Get-PosListPolicyEntries {
@@ -762,7 +785,40 @@ function Get-PosListPolicyEntries {
     )
 }
 
+function Test-PosUrlListPolicyMatchesOrigin {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$SubKey,
+        [Parameter(Mandatory)]
+        [string]$SupportHubOrigin,
+        [Parameter(Mandatory)]
+        [string]$PolicyDisplayName
+    )
+
+    foreach ($entry in @(Get-PosListPolicyEntries $SubKey)) {
+        if ([string]$entry.Kind -ne [string]$script:RegistryValueKindString -and [string]$entry.Kind -ne 'String') {
+            throw "$PolicyDisplayName contains an incompatible registry type at value '$($entry.Name)'."
+        }
+
+        if (Test-PosPolicyPatternMatchesOrigin ([string]$entry.Value) $SupportHubOrigin) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Assert-PosNoBlockingPolicyMatch {
+    <#
+    .SYNOPSIS
+    Fails closed when any higher-precedence Chrome/Edge policy would block
+    the exact Support Hub origin, covering both the Local/Loopback Network
+    Access block-policy family and the generic navigation-level
+    URLBlocklist/URLAllowlist pair. URLAllowlist takes precedence over
+    URLBlocklist per vendor documentation, so a URLBlocklist match is only a
+    conflict when no URLAllowlist entry also matches the exact origin.
+    #>
     param(
         [Parameter(Mandatory)]
         [object]$Contract,
@@ -772,15 +828,21 @@ function Assert-PosNoBlockingPolicyMatch {
 
     foreach ($policyName in @($Contract.BlockPolicyNames)) {
         $subKey = "$($Contract.PolicyRoot)\$policyName"
-        foreach ($entry in @(Get-PosListPolicyEntries $subKey)) {
-            if ([string]$entry.Kind -ne [string]$script:RegistryValueKindString -and [string]$entry.Kind -ne 'String') {
-                throw "$($Contract.Browser) $policyName contains an incompatible registry type at value '$($entry.Name)'."
-            }
-
-            if (Test-PosPolicyPatternMatchesOrigin ([string]$entry.Value) $SupportHubOrigin) {
-                throw "$($Contract.Browser) policy $policyName blocks the exact Support Hub origin. RMS+ will not override a higher-precedence browser block policy."
-            }
+        if (Test-PosUrlListPolicyMatchesOrigin $subKey $SupportHubOrigin "$($Contract.Browser) $policyName") {
+            throw "$($Contract.Browser) policy $policyName blocks the exact Support Hub origin. RMS+ will not override a higher-precedence browser block policy."
         }
+    }
+
+    $blocklistKey = "$($Contract.PolicyRoot)\URLBlocklist"
+    $blockedByUrlList = Test-PosUrlListPolicyMatchesOrigin $blocklistKey $SupportHubOrigin "$($Contract.Browser) URLBlocklist"
+    if (-not $blockedByUrlList) {
+        return
+    }
+
+    $allowlistKey = "$($Contract.PolicyRoot)\URLAllowlist"
+    $allowedByUrlList = Test-PosUrlListPolicyMatchesOrigin $allowlistKey $SupportHubOrigin "$($Contract.Browser) URLAllowlist"
+    if (-not $allowedByUrlList) {
+        throw "$($Contract.Browser) policy URLBlocklist blocks the exact Support Hub origin and no URLAllowlist entry exempts it. RMS+ will not override a higher-precedence browser block policy."
     }
 }
 

@@ -23,6 +23,23 @@ npm run generate:pos-agent-client --prefix frontend
 The generator is build-only tooling and is not part of the Angular
 application dependency graph.
 
+## Build prerequisite
+
+`PosAgentSecurity__SupportHubOrigin` is required for every build or test
+command that composes the Agent host, not only the single-project build shown
+above. This includes the canonical full-solution command:
+
+```powershell
+$env:PosAgentSecurity__SupportHubOrigin = 'https://support-hub.integration.test:4443'
+dotnet build pos/RmsSupportHub.Pos.slnx -c Release --nologo --warnaserror
+```
+
+Without it, `AgentSecurityOptions.Validate()` throws during the build-time
+OpenAPI document generation step, which composes the Agent host. This is the
+same exact Testing origin the provisioning scripts and Agent integration
+tests use; CI configures the same value for its Windows/Agent/contract-
+generation lanes.
+
 ## Scalar documentation boundary
 
 The Agent uses the exact stable `Scalar.AspNetCore` package version `2.16.18`.

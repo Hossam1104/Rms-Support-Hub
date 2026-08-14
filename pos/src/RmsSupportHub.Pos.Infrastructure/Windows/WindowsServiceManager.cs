@@ -1,5 +1,4 @@
 using System.ServiceProcess;
-using System.Diagnostics;
 using RmsSupportHub.Pos.Domain.Exceptions;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
@@ -76,9 +75,6 @@ public sealed class WindowsServiceManager : IServiceManager
                         Stop(controller, cancellationToken);
                         Start(controller, cancellationToken);
                         break;
-                    case ServiceControlAction.Delete:
-                        Delete(serviceName);
-                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported service action.");
                 }
@@ -123,22 +119,5 @@ public sealed class WindowsServiceManager : IServiceManager
         controller.Stop();
         controller.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
         cancellationToken.ThrowIfCancellationRequested();
-    }
-
-    private static void Delete(string serviceName)
-    {
-        using var process = Process.Start(new ProcessStartInfo
-        {
-            FileName = "sc.exe",
-            ArgumentList = { "delete", serviceName },
-            UseShellExecute = false,
-            CreateNoWindow = true
-        });
-
-        process?.WaitForExit(30_000);
-        if (process is { ExitCode: not 0 })
-        {
-            throw new InvalidOperationException($"Failed to delete service {serviceName}.");
-        }
     }
 }
