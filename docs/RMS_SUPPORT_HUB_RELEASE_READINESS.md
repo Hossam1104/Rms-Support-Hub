@@ -1,6 +1,6 @@
 # RMS+ Support Hub — Release Readiness
 
-Date: 2026-08-09
+Date: 2026-08-16
 
 ## 1. Release scope
 
@@ -9,26 +9,32 @@ Available:
 - QA Prompt Studio
 - Online Order Tool
 
-Coming Soon:
+Available with an evidence gate:
 
-- POS Maintenance Tool
+- POS Maintenance Tool — secure Testing Agent foundation
 
-POS remains informational and non-operational while the independent POS project
-is developed outside this repository. See
-[POS_MAINTENANCE_INTEGRATION_READINESS.md](POS_MAINTENANCE_INTEGRATION_READINESS.md).
+The POS route is an operations console backed by the separate permanent
+`RmsSupportAgent` service. Repository contracts and local validation do not
+prove elevated Testing runtime, fleet enrollment, Production signer/PKI,
+customer approval, or Production readiness. See
+[POS_SLICE_C_IMPLEMENTATION.md](POS_SLICE_C_IMPLEMENTATION.md).
 
 ## 2. Validation summary
 
-Measured on the final cleanup session, 2026-08-09.
+Measured on the Slice C implementation validation session, 2026-08-16. The
+older release-candidate values below are retained only where a check was not
+rerun; current Slice C evidence is summarized in
+[POS_SLICE_C_IMPLEMENTATION.md](POS_SLICE_C_IMPLEMENTATION.md).
 
 | Gate | Result |
 | --- | --- |
-| Frontend tests | 262 passed across 51 files; 0 skipped |
-| Backend tests | 161 passed; 0 failed; 0 skipped |
+| Frontend tests | 363 passed across 58 files in two consecutive runs; 0 skipped |
+| Backend tests | 190 passed, 2 unchanged legacy route-test failures (`NotFound` expected, `MethodNotAllowed` actual) |
 | Backend Release build | Passed; 0 warnings; 0 errors |
-| Standard production build | Passed; 441.43 kB raw / 101.85 kB estimated transfer initial bundle; no budget warnings |
+| POS Release build | Passed; 0 warnings; 0 errors |
+| Standard production build | Passed; 483.64 kB raw / 107.52 kB estimated transfer initial bundle; no budget warnings |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.78 kB estimated transfer; Hub-only, dynamically imported |
-| Offline production build | Passed; 427.11 kB raw / 101.30 kB estimated transfer initial bundle |
+| Offline production build | Not rerun in Slice C validation |
 | Riyal asset verification | Passed; SHA-1 `02b0fe79…`, 924 bytes, 2 paths, no text or external references |
 | Security review | No credential, token, or connection-string value in the release diff |
 | Rendered browser matrix | Not re-run this session — see below |
@@ -70,16 +76,18 @@ canonical `/tools/online-orders/...` mount.
   modules are available. It is presentation only: no API change, no service
   contract change, no retry behavior, and no claimed reason, because
   `ModuleService` cannot distinguish an empty response from a failed load.
-- POS remains Coming Soon with informational capabilities only. No SQL,
-  PowerShell, command, backup/restore, service-control, or operational surface
-  is implemented or exposed; negative tests assert that boundary.
+- POS Slice C exposes the typed Agent-backed operational surface and plan-first
+  deployment contracts. No Production, Main Server, RMS database/folder,
+  registry, SCM, certificate, or customer mutation was executed; live/fleet
+  evidence remains a separate gate.
 - All eight persisted storage keys remain byte-exact. They are listed in
   `.ai/STATE.md` and must not be "cleaned" because their prefixes reflect
   earlier product names.
 
 ## 5. Release blockers
 
-None identified in local validation.
+Two pre-existing backend legacy-route test failures remain as noted above; no
+new Slice C-specific blocker was identified by the targeted validation.
 
 This is a release-candidate recommendation only. It is not Production approval,
 WCAG certification, or a global security certification.

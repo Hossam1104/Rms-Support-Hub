@@ -61,6 +61,13 @@ output and must not be edited manually. The dedicated POS Agent transport uses
 `HttpBackend` so the Support Hub API interceptor chain cannot rewrite its
 credentialed direct-Agent requests.
 
+The current typed read-side addition is
+`GET /api/v1/rms/operational-health`, which supplies bounded fixed-root,
+update, and insurance-attachment summaries to `/tools/pos-maintenance`. The
+route is available only after the exact secure Testing-origin handoff; local
+HTTP development is not an Agent CORS origin. Authentication, antiforgery,
+package trust, and privileged mutations remain owned by the Agent boundary.
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:

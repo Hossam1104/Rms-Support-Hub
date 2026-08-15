@@ -8,6 +8,7 @@ using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Support;
 
@@ -17,11 +18,13 @@ namespace RmsSupportHub.Pos.Agent.Support;
 /// </summary>
 public sealed class SupportBundleService(
     RmsDiagnosticsService diagnostics,
+    RmsOperationalHealthService operationalHealth,
     PosHealthService health,
     ServiceFailureAnalyzer failureAnalyzer,
     IncidentTimelineService timeline,
     ArtifactCatalog artifacts,
     IBackupFileSystem fileSystem,
+    IAgentAuditReader auditReader,
     SupportBundleOptions options,
     TimeProvider timeProvider)
 {
@@ -32,7 +35,7 @@ public sealed class SupportBundleService(
     };
 
     private static readonly string[] Sections =
-    ["health", "installation", "connectivity", "database", "services", "failure-analysis", "incident-timeline"];
+    ["manifest", "health", "installation", "connectivity", "database", "services", "failure-analysis", "incident-timeline", "rms-storage", "updates", "insurance-attachment-aggregate", "audit-summary"];
 
     public async Task<SupportBundleDto> GenerateAsync(
         string principalSid,
@@ -42,7 +45,11 @@ public sealed class SupportBundleService(
         options.Validate();
         var createdAtUtc = timeProvider.GetUtcNow();
         var diagnostic = await diagnostics.GetAsync(cancellationToken).ConfigureAwait(false);
+        var operational = await operationalHealth.GetAsync(cancellationToken).ConfigureAwait(false);
         var healthReport = await health.GetAsync(cancellationToken).ConfigureAwait(false);
+        var audit = (await auditReader.ReadRecentAsync(64, cancellationToken).ConfigureAwait(false))
+            .Select(ToSafeAudit)
+            .ToArray();
         timeline.Record(
             principalSid,
             "HealthCheck",
@@ -59,13 +66,16 @@ public sealed class SupportBundleService(
 
         var incidentTimeline = timeline.Get(principalSid);
         var payload = new SupportBundlePayload(
-            "RMS+ Support Hub Slice A",
+            "RMS+ Support Hub Support Bundle v2",
             createdAtUtc,
             correlationId,
+            Sections,
             healthReport,
             diagnostic,
+            operational,
             serviceAnalyses,
-            incidentTimeline);
+            incidentTimeline,
+            audit);
 
         await fileSystem.EnsureDirectoryAsync(options.BundleRootPath, cancellationToken).ConfigureAwait(false);
         var fileName = $"rms-support-bundle-{createdAtUtc:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.zip";
@@ -115,10 +125,29 @@ public sealed class SupportBundleService(
         string Format,
         DateTimeOffset CreatedAtUtc,
         string CorrelationId,
+        IReadOnlyList<string> IncludedSections,
         object Health,
         object Diagnostics,
+        object OperationalHealth,
         IReadOnlyList<ServiceFailureAnalysisDto> FailureAnalysis,
-        object IncidentTimeline);
+        object IncidentTimeline,
+        IReadOnlyList<SafeAuditRecord> Audit);
+
+    private sealed record SafeAuditRecord(
+        DateTimeOffset AtUtc,
+        string Operation,
+        string? Target,
+        string Outcome,
+        string? FailureCode,
+        string ProductVersion);
+
+    private static SafeAuditRecord ToSafeAudit(RmsSupportHub.Pos.Domain.Models.AgentAuditEvent item) => new(
+        item.AtUtc,
+        item.Operation,
+        item.Target,
+        item.Outcome,
+        item.FailureCode,
+        item.ProductVersion);
 }
 
 public sealed class SupportBundleSizeException()

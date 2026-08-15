@@ -1,7 +1,16 @@
 # POS Slice C Requirements
 
-Status: requirements only. Slice C is not implemented by the Slice B security
-remediation.
+Status: implementation foundation delivered 2026-08-16. This document remains
+the acceptance checklist; current delivered behavior and evidence classification
+are summarized in [`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md).
+
+The repository contains the permanent service/deployment contract, bounded
+legacy migration policy, one-UAC onboarding bootstrap, silent lifecycle
+boundary, package trust policy, managed browser/certificate plans, durable
+audit, fixed RMS aggregate health, safe Support Bundle, and redesigned POS
+Maintenance workspace. It does not claim that unavailable Production signing,
+enterprise PKI, fleet policy rollout, elevated representative-machine proof, or
+customer approval has been completed.
 
 Slice C is the Production/fleet deployment and evidence gate for the POS Agent.
 It must preserve the direct browser-to-Agent boundary, the exact secure Support
@@ -109,9 +118,10 @@ authorization.
 
 ## 6. POS workspace visual redesign (owner-approved direction)
 
-The owner has approved a substantial modern visual redesign of the POS
-Maintenance workspace **for Slice C**. It is deliberately not implemented in the
-Testing provisioning remediation, and it must not be dropped from this plan.
+The owner-approved substantial modern visual redesign of the POS Maintenance
+workspace is implemented in the Slice C operations-console foundation. The
+remaining review scope is accessibility, performance, responsive evidence, and
+secure Testing runtime proof; it is not a Production-readiness claim.
 
 Direction:
 

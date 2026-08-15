@@ -7,7 +7,7 @@ hosting the QA tools used day to day.
 | --- | --- | --- |
 | **QA Prompt Studio** | `/tools/prompt-studio` | Available |
 | **Online Order Tool** | `/tools/online-orders` | Available |
-| **POS Maintenance Tool** | `/tools/pos-maintenance` | Coming Soon |
+| **POS Maintenance Tool** | `/tools/pos-maintenance` | Available (secure Testing Agent) |
 
 **QA Prompt Studio** turns rough notes into structured, paste-ready QA prompts —
 Bug Refinement, Story Refinement, and Test Case Generation — with deterministic
@@ -20,10 +20,14 @@ client RMS APIs (GHC E-Commerce, UPC E-Commerce, GHC Uni-Commerce), and
 inspects, cancels, and resends what was actually sent, straight from the real
 `OrderRequests` table. OMS and Call Center are registered placeholder modules.
 
-**POS Maintenance Tool** is developed in a separate project. Its page here is
-informational only — status and planned capability areas, no operations. The
-security boundary a future integration must satisfy is recorded in
-[docs/POS_MAINTENANCE_MIGRATION_INTAKE.md](docs/POS_MAINTENANCE_MIGRATION_INTAKE.md).
+**POS Maintenance Tool** is a Support Hub-owned operations console backed by
+the separate Windows `RmsSupportAgent` service. The browser uses the exact
+secure Testing origin and the Agent owns privileged POS work; the Hub API is
+not a privileged relay. The current implementation boundary, migration plan,
+and evidence gates are recorded in
+[docs/POS_SLICE_C_IMPLEMENTATION.md](docs/POS_SLICE_C_IMPLEMENTATION.md).
+Historical `RmsSupportHub.Pos.Agent` and `RmsSupportHub.Pos.Int13.TestService`
+names remain migration inputs only.
 
 ---
 

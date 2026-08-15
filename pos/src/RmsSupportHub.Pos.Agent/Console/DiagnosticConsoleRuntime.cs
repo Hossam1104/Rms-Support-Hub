@@ -201,7 +201,8 @@ public sealed class DiagnosticConsoleRuntime(
     DiagnosticConsoleRunStore runs,
     AgentScopedIdempotencyStore idempotency,
     IncidentTimelineService timeline,
-    TimeProvider clock)
+    TimeProvider clock,
+    IAgentAuditSink audit)
 {
     private const string IdempotencyScope = "diagnostic-console.run";
     private const string PreviewIdempotencyScope = "diagnostic-console.preview";
@@ -481,6 +482,16 @@ public sealed class DiagnosticConsoleRuntime(
             SafeDetail(processResult.Detail),
             operationId: DiagnosticConsoleOperation.OperationId,
             correlationId: correlationId);
+        AgentAuditRecorder.Record(
+            audit,
+            principalSid,
+            "diagnostic-console.run",
+            operationId,
+            correlationId,
+            outcome.ToString(),
+            outcome is DiagnosticConsoleRunStateDto.Succeeded or DiagnosticConsoleRunStateDto.Partial
+                ? null
+                : outcome.ToString().ToLowerInvariant());
     }
 
     private async Task<string?> WriteArtifactAsync(

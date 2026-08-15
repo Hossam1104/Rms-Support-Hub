@@ -4,6 +4,8 @@ using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Support;
+using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Support;
 
@@ -34,7 +36,8 @@ public sealed class SupportBundleRuntime(
     IncidentTimelineService timeline,
     IMutationTokenStore mutationTokens,
     IAgentPrincipalSidResolver principalSidResolver,
-    AgentSecurityOptions securityOptions)
+    AgentSecurityOptions securityOptions,
+    IAgentAuditSink audit)
 {
     public async Task<SupportBundleExecutionResult> ExecuteAsync(
         HttpContext context,
@@ -82,6 +85,16 @@ public sealed class SupportBundleRuntime(
             "A redacted Support Bundle was generated.",
             operationId: SupportBundleOperation.OperationId,
             correlationId: correlationId);
+        audit.Record(new AgentAuditEvent(
+            DateTimeOffset.UtcNow,
+            principalSid,
+            "support-bundle.generate",
+            SupportBundleOperation.OperationId,
+            correlationId,
+            "completed",
+            null,
+            typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+            null));
         return new(response);
     }
 }

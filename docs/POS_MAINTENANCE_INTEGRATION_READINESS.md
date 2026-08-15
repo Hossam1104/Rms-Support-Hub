@@ -1,5 +1,15 @@
 # POS Maintenance - Integration Readiness
 
+## Slice C implementation rebaseline — 2026-08-16
+
+The Slice C foundation is now implemented in the destination repository. See
+[`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md) for the
+current service identity, deployment/package/certificate/browser contracts,
+fixed RMS health and audit boundaries, Support Bundle scope, and UI delivery.
+The remainder of this document preserves the earlier readiness and review
+evidence; statements that describe Slice C as absent are historical context,
+not the current code state.
+
 ## Current readiness rebaseline — 2026-08-15
 
 PR #10 and the earlier security/database/service slices are complete inputs.
@@ -33,16 +43,13 @@ server-owned typed Agent boundary and synthetic/read-only Testing evidence:
 
 No RMS executable, installer, uninstaller, repair, rollback, package
 activation, Main Server mutation, registry mutation, or RMS folder mutation was
-performed. The durable future-work contract is
-[`POS_SLICE_C_REQUIREMENTS.md`](POS_SLICE_C_REQUIREMENTS.md); Slice C is not
-implemented by this remediation.
+performed by the implementation session. The Slice C deployment and health
+foundations are repository-validated, while machine-owned trust provisioning
+and representative Production execution remain separate gates.
 
-The next executable work is the bounded Slice C gate described in that
-document: permanent Agent deployment/onboarding, lifecycle and legacy-service
-migration proof, folder-aware update/download/asset health, safe Support Bundle
-evidence, fleet/Production audit, Whites comparison, and the independent
-Claude Opus 5 High review. The prior Slice A/Slice B planning language below
-is retained as historical context only.
+The next executable work is the independent Production/Fleet Security and
+Release-Readiness Review described in the root `TASK.md`. The prior Slice A/
+Slice B planning language below is retained as historical context only.
 
 Only UPC is live-reachable on the current VPN; Whites same-application
 equivalence remains expected but unverified. No live Main Server mutation is
@@ -60,14 +67,15 @@ in this document — they are separate gates.
 
 | Open blocker | What it requires | Status |
 | --- | --- | --- |
-| M-1 — Managed-endpoint browser policy | A managed-fleet delivery mechanism (e.g., GPO/Intune) for Chrome/Edge policy, replacing the current single-device, locally-run `scripts/PosAgentWindowsProvisioning.psm1` provisioning model. | OPEN |
-| M-2 — Production certificate lifecycle | A defined issuance, renewal, distribution, and revocation lifecycle for the Agent/Support Hub TLS certificates across a fleet, replacing the current single-device self-managed certificate design. | OPEN |
+| M-1 — Managed-endpoint browser policy | The repository contract is implemented in `scripts/PosSupportAgentDeployment.psm1`; managed-fleet publication, device application, conflict handling, and representative browser evidence remain open. | FOUNDATION IMPLEMENTED / EVIDENCE OPEN |
+| M-2 — Production certificate lifecycle | The repository policy is implemented with enterprise ownership and renewal/removal rules; enterprise issuance, distribution, revocation, and representative LocalSystem/PKI evidence remain open. | FOUNDATION IMPLEMENTED / EVIDENCE OPEN |
 
 The full independent review outcome (0 Critical, 0 High, 2 Medium, 6 Low
 resolved, 3 Informational) is recorded in
 [POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md](reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md).
-M-1 and M-2 remain Production/fleet Slice C gates. They are not part of the
-current Slice B remediation or the focused security re-review in `TASK.md`.
+M-1 and M-2 remain Production/fleet Slice C evidence gates. Their repository
+foundations are implemented; they are not evidence of a completed fleet rollout
+and are not the final independent review in `TASK.md`.
 
 ## Purpose and status
 
@@ -161,8 +169,8 @@ One Angular 22 SPA and one .NET 10 Web API.
 | Component | `frontend/src/app/features/pos-maintenance/pos-maintenance.component.ts` |
 | Model | `frontend/src/app/core/models/pos-capability.model.ts` |
 | Hub entry | `pos-maintenance` in `frontend/src/app/features/hub/tool-registry.ts`, accent `amber`, status `available` for the bounded INT-08 surface |
-| Agent routes | `/api/v1/device/identity`, `/api/v1/device/connectivity`, `/api/v1/device/capabilities`, `/api/v1/configuration`, `/api/v1/services`, `/api/v1/services/{serviceId}/actions` |
-| Backend ownership | Destination-owned `RmsSupportHub.Pos.Agent`; no `RmsSupportHub.Api` relay |
+| Agent routes | Existing typed device/configuration/service routes plus authenticated `/api/v1/rms/operational-health` for bounded fixed-root/update/insurance summaries |
+| Backend ownership | Destination-owned `RmsSupportAgent`; no `RmsSupportHub.Api` relay |
 
 The page performs direct, credentialed Agent calls for liveness, session
 diagnostics, device identity/connectivity/capabilities, redacted configuration,
@@ -289,7 +297,7 @@ Chrome/Edge protected browse was claimed. See the timestamped
 
 ## Canonical architecture seam
 
-The future path is:
+The current direct-Agent path is:
 
 ```text
 Support Hub Angular
@@ -300,7 +308,7 @@ Support Hub Angular
     | authenticated/authorized application request
     | server-operation-bound single-use mutation token
     v
-Separate Windows RmsSupportHub.Pos.Agent
+Separate Windows RmsSupportAgent
     |
     +--> POS domain/application/contracts
     +--> SQL, SCM, SMB/filesystem, backup trigger HTTP

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Contracts.V1.Common;
@@ -23,7 +24,8 @@ public sealed class SafetySnapshotService(
     ISafetySnapshotStore store,
     AgentScopedIdempotencyStore idempotency,
     TimeProvider clock,
-    RmsSupportHub.Pos.Infrastructure.Snapshots.SafetySnapshotOptions options)
+    RmsSupportHub.Pos.Infrastructure.Snapshots.SafetySnapshotOptions options,
+    IAgentAuditSink audit)
 {
     public const string ConfirmationPhrase = "CAPTURE SAFETY SNAPSHOT";
     private const string IdempotencyScope = "safety-snapshot.capture";
@@ -118,10 +120,18 @@ public sealed class SafetySnapshotService(
                 }
             }
             idempotency.Bind(principalSid, IdempotencyScope, idempotencyKey, snapshot.SnapshotId);
+            AgentAuditRecorder.Record(audit, principalSid, "safety-snapshot.capture", snapshot.SnapshotId, correlationId, SafetySnapshotState.Captured.ToString());
             return response;
+        }
+        catch (SafetySnapshotRejectedException exception)
+        {
+            AgentAuditRecorder.Record(audit, principalSid, "safety-snapshot.capture", null, correlationId, "Rejected", exception.Message);
+            idempotency.Release(principalSid, IdempotencyScope, idempotencyKey);
+            throw;
         }
         catch
         {
+            AgentAuditRecorder.Record(audit, principalSid, "safety-snapshot.capture", null, correlationId, "OutcomeUnknown", "safety_snapshot_failed");
             idempotency.Release(principalSid, IdempotencyScope, idempotencyKey);
             throw;
         }

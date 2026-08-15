@@ -2,30 +2,16 @@
 Read this file only when the task requires stable, non-obvious project knowledge.
 Do not copy facts that can be cheaply discovered from the repository.
 ## Product and Business Boundaries
-- RMS+ Support Hub is an internal browser application hosting QA support tools;
-  Online Orders compose/validate/send/inspect/cancel/resend pharmacy orders;
-  Prompt Studio generates locally; POS Maintenance is a typed Agent-backed
-  operational workspace.
-- Implemented user-facing domains are UPC E-Commerce, GHC E-Commerce,
-  GHC Uni-Commerce, and SQL-backed Order Requests. OMS and Call Center are
-  registered unavailable stubs.
-- UPC item pricing is branch-specific. A valid branch code is required before
-  item lookup, and 6-digit UPC material numbers normalize to the stored
-  18-digit form.
-- Flat orders require identity/address fields and at least one product. A
-  payment is optional: an empty payment list is the verified Cash on Delivery
-  state, not an error. Payment-status and full-settlement rules are enforced in
-  `FlatOrderValidator` and apply only to payments that are actually present.
-- The Saudi country code lives in its own payload key
-  (`client_country_code`/`order_country_code`); the number fields carry the
-  bare local subscriber number. `Normalizers.NormalizeLocalPhone` is the
-  authoritative split and runs inside `FlatOrderPayloadBuilder`.
-- Order status controls cancel/resend eligibility through
-  `OrderRequestStatus`; controllers re-check these rules server-side.
+- RMS+ Support Hub is an internal QA browser app: Online Orders, local Prompt
+  Studio, SQL-backed Order Requests, and the typed Agent-backed POS workspace.
+  OMS and Call Center remain registered unavailable stubs.
+- UPC pricing is branch-specific; valid branch selection and 6-to-18-digit
+  material normalization are required. Flat orders require identity/address and
+  one product; empty payments mean verified Cash on Delivery. The Saudi country
+  code is a separate payload key, and `OrderRequestStatus` gates cancel/resend.
 ## Architecture Invariants
-- Backend layering is Core (domain, capabilities, builders, validators) -> Data
-  (Dapper repositories) -> API (controllers, middleware, DI); Core has no
-  external package dependency.
+- Backend layering is Core (domain/capabilities/builders/validators) -> Data
+  (Dapper) -> API (controllers/middleware/DI); Core has no external dependency.
 - `ModuleRegistry` and `IOrderModule.Capabilities` own availability, environment,
   lookup, history, cancel, and resend; frontend routing consumes these flags.
 - Payload construction, validation, totals, and draft persistence are
@@ -59,6 +45,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
   credentials, and operation capabilities server-owned.
+- Slice C establishes the permanent product/service identity
+  `RmsSupportAgent`, safe migration inputs for the two historical Testing
+  service names, fail-closed package/certificate/browser-policy contracts,
+  bounded durable JSONL audit, fixed RMS-root health, update state, and
+  insurance-attachment aggregate contracts. The installer/bootstrap scripts
+  are plan-first and do not claim live SCM, registry, certificate, RMS, or
+  Production mutation when trust/elevation evidence is unavailable.
 - POS Slice B adds fixed Main Server profiles/read-only state, manifest-bound
   diagnostics, atomic principal-scoped snapshots, and typed package/repair/
   Guided Repair boundaries. State-changing workflows require fresh snapshots,
@@ -71,12 +64,13 @@ Do not copy facts that can be cheaply discovered from the repository.
  - The canonical Testing POS entry is the exact external route
   `https://support-hub.integration.test:4443/tools/pos-maintenance`; the Hub
   card opens it and the route guard rejects wrong-origin direct loads.
- - Slice B security remediation uses fixed provisioned service-owned roots, a
+- Slice B security remediation uses fixed provisioned service-owned roots, a
   machine-wide privileged mutation lease, bounded fail-closed redaction, and
   typed POST previews. The fixed RMS source catalog and sanitized registry
   allow-list are documented in
   `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`; Slice C requirements
-  are in `docs/POS_SLICE_C_REQUIREMENTS.md`.
+  are in `docs/POS_SLICE_C_REQUIREMENTS.md`; the implemented foundation and
+  remaining evidence gates are in `docs/POS_SLICE_C_IMPLEMENTATION.md`.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.
@@ -97,6 +91,10 @@ Do not copy facts that can be cheaply discovered from the repository.
   `npm ci --prefix tools/pos-agent-client-generator` and `npm ci --prefix frontend`,
   then `npm --prefix frontend run generate:pos-agent-client`. Output is under
   `frontend/src/app/core/pos-agent/generated/` and is not edited manually.
+- POS deployment planning: `scripts/bootstrap-rms-support-agent.ps1
+  -Status` is read-only and `-PlanOnly -Channel Testing` prints the bounded
+  package, migration, browser, certificate, and lifecycle plan. Production
+  trust, fleet enrollment, and elevated Testing evidence are separate gates.
  - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/RmsSupportHub.Pos.slnx --nologo`; the focused project commands remain available for diagnosis; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - INT-13C Testing provisioning: run `scripts/setup-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false` and `scripts/remove-pos-agent-testing.ps1 -IUnderstandTestingOnly -WhatIf -Confirm:$false` only on the authorized Testing machine. Exact browser/IWA policy logic is in `scripts/PosAgentWindowsProvisioning.psm1`; the task-scoped normal-user browser evidence launcher is `scripts/invoke-pos-browser-evidence.ps1` and uses `tools/pos-browser-evidence`.
 - INT-13D Testing runtime uses exact `https://support-hub.integration.test:4443` and `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly` (self-elevates through UAC unless `-NoSelfElevate`); it rebuilds and stages the current Angular/API runtime, binds owned PID, listener, content root, certificate, and build identity in state, refuses an unowned :4443 listener, and verifies the served build identity, index, and main bundle before reporting success. Runtime ownership and build-identity helpers are in `scripts/PosSupportHubRuntime.psm1`; the served identity document is produced by `frontend/scripts/build-identity.mjs`.

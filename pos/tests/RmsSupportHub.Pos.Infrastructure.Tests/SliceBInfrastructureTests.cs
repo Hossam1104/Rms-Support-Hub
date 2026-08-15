@@ -120,6 +120,38 @@ public sealed class SliceBInfrastructureTests
     }
 
     [Fact]
+    public void PackagePolicyAcceptsOnlyTheCompletePermanentProductIdentity()
+    {
+        var manifest = new AgentPackageManifest(
+            "rms-support-agent",
+            "1.0.0",
+            "Windows",
+            "net10.0-windows",
+            AgentProductIdentity.ServiceDisplayName,
+            "LocalSystem",
+            AgentProductIdentity.PermanentServiceName,
+            "SHA256withRSA",
+            "DBS test signer",
+            new string('a', 64),
+            "signature-placeholder",
+            [new AgentPackageFileManifest("agent", "RmsSupportAgent.exe", 0, new string('b', 64), true)],
+            [],
+            [],
+            null,
+            false,
+            1,
+            1,
+            AgentProductIdentity.ProductId,
+            "x64",
+            AgentProductIdentity.ReleaseChannelTesting,
+            AgentProductIdentity.EnvironmentTesting);
+
+        var result = new AgentPackagePolicy().ValidateManifest(manifest);
+
+        Assert.Equal(AgentPackageVerificationState.Verified, result.State);
+    }
+
+    [Fact]
     public async Task SafetySnapshotsVerifyIntegrityAndPrincipalScope()
     {
         var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub-SliceB", Guid.NewGuid().ToString("N"));

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Correlation;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Application.Services;
@@ -51,7 +52,8 @@ public sealed class DownloaderOperationRuntime(
     DownloaderIdempotencyStore idempotency,
     AgentOperationConcurrencyGate concurrency,
     IMutationTokenStore mutationTokens,
-    IAgentPrincipalSidResolver principalSidResolver)
+    IAgentPrincipalSidResolver principalSidResolver,
+    IAgentAuditSink audit)
 {
     public async Task<IReadOnlyList<BranchCatalogEntryDto>> GetBranchesAsync(
         CancellationToken cancellationToken = default)
@@ -356,6 +358,7 @@ public sealed class DownloaderOperationRuntime(
                         ? "The requested branch archives were downloaded and published."
                         : "The downloader operation completed with one or more branch failures.",
                 finalOutcome);
+            AgentAuditRecorder.Record(audit, principalSid, "downloader.batch", operationId, "unavailable", state.ToString(), code);
         }
         catch (OperationCanceledException)
         {
@@ -374,6 +377,7 @@ public sealed class DownloaderOperationRuntime(
                 DownloaderFailureCodes.DownloadCancelled,
                 "The downloader operation was cancelled before completion.",
                 outcome);
+            AgentAuditRecorder.Record(audit, principalSid, "downloader.batch", operationId, "unavailable", DownloaderOperationStateDto.Failed.ToString(), DownloaderFailureCodes.DownloadCancelled);
         }
         catch
         {
@@ -392,6 +396,7 @@ public sealed class DownloaderOperationRuntime(
                 DownloaderFailureCodes.TriggerOutcomeUnknown,
                 DownloaderOperatorGuidance.TriggerOutcomeUnknown,
                 outcome);
+            AgentAuditRecorder.Record(audit, principalSid, "downloader.batch", operationId, "unavailable", DownloaderOperationStateDto.OutcomeUnknown.ToString(), DownloaderFailureCodes.TriggerOutcomeUnknown);
         }
         finally
         {

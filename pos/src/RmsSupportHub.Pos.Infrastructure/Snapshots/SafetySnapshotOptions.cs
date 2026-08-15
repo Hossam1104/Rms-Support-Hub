@@ -1,5 +1,7 @@
 namespace RmsSupportHub.Pos.Infrastructure.Snapshots;
 
+using RmsSupportHub.Pos.Domain.Models;
+
 public sealed class SafetySnapshotOptions
 {
     public string EnvironmentName { get; init; } = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Unknown";
@@ -9,7 +11,7 @@ public sealed class SafetySnapshotOptions
     public string RootDirectory { get; init; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "DBS",
-        "RmsSupportHub.Pos.Agent",
+        AgentProductIdentity.ProductId,
         "snapshots");
 
     public int MaxSnapshots { get; init; } = 32;

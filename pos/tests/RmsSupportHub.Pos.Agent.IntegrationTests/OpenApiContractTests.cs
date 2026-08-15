@@ -67,6 +67,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/rms/databases/{targetId}/operations/{operationId}/events",
                 "/api/v1/rms/databases/{targetId}/restore",
                 "/api/v1/rms/diagnostics",
+                "/api/v1/rms/operational-health",
                 "/api/v1/safety-snapshots/capture",
                 "/api/v1/safety-snapshots/preview",
                 "/api/v1/safety-snapshots/{snapshotId}",

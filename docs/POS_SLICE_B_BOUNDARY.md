@@ -1,5 +1,12 @@
 # POS Slice B Boundary
 
+Slice C extends this boundary with the permanent `RmsSupportAgent` identity,
+safe legacy-service migration planning, package/certificate/browser policy
+contracts, durable audit, fixed RMS-root health summaries, insurance
+attachment aggregation, and the operations-console consumer. The controls
+below remain the baseline; Slice C does not relax the direct-Agent boundary or
+turn the Support Hub API into a privileged relay.
+
 This document records the server-owned boundary delivered by POS Slice B. The
 Support Hub remains a direct browser client of the installed Windows POS Agent;
 the browser does not become an installer, process launcher, Main Server proxy, or

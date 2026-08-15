@@ -48,7 +48,7 @@ Rms-Support-Hub/
 │   │       ├── flat-order/    # GHC/UPC order builder
 │   │       ├── unicommerce/   # GHC Uni-Commerce invoice builder
 │   │       ├── order-requests/# Request history, detail, cancel, resend
-│   │       ├── pos-maintenance/ # Coming Soon informational page
+│   │       ├── pos-maintenance/ # Secure Testing operations console
 │   │       └── kitchen-sink/  # Dev-only /_kitchen-sink primitive showcase
 │   ├── styles/                # _tokens.css, _gradients.css, _typography.css, _animations.css
 │   └── environments/
@@ -86,12 +86,15 @@ Infrastructure, Infrastructure tests, and WinUI contain the namespace-reconciled
 source from historical import provenance `25922b499d33bd73f241ffc26c212dd000e81433`, and all four
 POS test projects are destination-owned. The corrected Agent provenance for
 INT-04 is `010abc52dc110cfde3dc2c53e057890ff6edaf97`. The Agent is now a
-destination-owned headless ASP.NET Core host with fixed origin
+destination-owned headless ASP.NET Core host with permanent Windows Service
+identity `RmsSupportAgent` and fixed origin
 `https://rms-pos-agent.localhost:5001`, Windows Service hosting, and only
-health/live, health/ready, authenticated session, and mutation-token foundation
-routes. Its versioned OpenAPI document is generated into `/pos/openapi`; runtime
-OpenAPI is non-Production only. Support Hub owns the generated TypeScript types
-and isolated `HttpBackend` transport under `frontend/src/app/core/pos-agent/`.
+health/live, health/ready, authenticated session, mutation-token foundation,
+and operational-health routes. Its versioned OpenAPI document is generated into
+`/pos/openapi`; runtime OpenAPI is non-Production only. Support Hub owns the
+generated TypeScript types and isolated `HttpBackend` transport under
+`frontend/src/app/core/pos-agent/`. Historical service names are migration
+inputs, never alternate permanent identities.
 The standalone POS Angular workspace remains reference-only. Existing Support
 Hub `Core`, `Data`, and `Api` remain portable; the Agent owns privileged POS
 operations and the Support Hub general API is not their proxy or execution path.
@@ -113,7 +116,7 @@ Every tool is a lazy route with typed `ToolRouteData`, declared in
 /tools/online-orders/modules/:key/order-requests        Request history
 /tools/online-orders/modules/:key/order-requests/:orderId   Request detail
 /modules/:key/...                                       Pre-hub Online Order compatibility mount
-/tools/pos-maintenance                                  POS Coming Soon (informational)
+/tools/pos-maintenance                                  POS secure Testing operations console
 /_kitchen-sink                                          Dev-only; tree-shaken from production
 ```
 

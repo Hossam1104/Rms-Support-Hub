@@ -34,7 +34,8 @@ because they identify the reasoning behind specific lines.
 | [MANUAL_IIS_DEPLOYMENT.md](MANUAL_IIS_DEPLOYMENT.md) | The temporary manual `scripts/publish-iis.ps1` build/package workflow and direct-to-IIS extraction procedure, pending a CI/CD pipeline. |
 | [POS_MAINTENANCE_INTEGRATION_PLAN.md](POS_MAINTENANCE_INTEGRATION_PLAN.md) | The canonical INT-00 cross-project architecture, security boundary, destination layout, ownership, and evidence gates. |
 | [POS_MAINTENANCE_INTEGRATION_READINESS.md](POS_MAINTENANCE_INTEGRATION_READINESS.md) | RMS+'s side of the POS integration seam: entry points, primitives to reuse, collision areas, and required post-merge validation. |
-| [POS_MAINTENANCE_MIGRATION_INTAKE.md](POS_MAINTENANCE_MIGRATION_INTAKE.md) | The security boundary and source inputs any future POS integration must satisfy. POS stays Coming Soon until then. |
+| [POS_MAINTENANCE_MIGRATION_INTAKE.md](POS_MAINTENANCE_MIGRATION_INTAKE.md) | The POS Agent security boundary, historical migration inputs, and evidence gates. |
+| [POS_SLICE_C_IMPLEMENTATION.md](POS_SLICE_C_IMPLEMENTATION.md) | Current Slice C implementation, evidence classification, and remaining Production/fleet gates. |
 
 ## Agent context
 

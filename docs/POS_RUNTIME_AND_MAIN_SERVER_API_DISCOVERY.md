@@ -1,5 +1,14 @@
 # POS Runtime and Main Server API Discovery
 
+## Slice C implementation status — 2026-08-16
+
+Slice C now consumes the fixed RMS roots and service catalog documented here.
+The destination Agent exposes bounded aggregate operational health and a safe
+Support Bundle; it does not turn this discovery record into a generic registry,
+filesystem, service, or Main Server control surface. Deployment foundations and
+remaining Production evidence gates are tracked in
+[`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md).
+
 ## Scope and safety
 
 This is the sanitized 2026-08-15 reconnaissance record for the representative

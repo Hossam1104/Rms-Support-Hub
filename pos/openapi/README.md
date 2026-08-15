@@ -1,7 +1,10 @@
 # POS Agent OpenAPI
 
 `RmsSupportHub.Pos.Agent.json` is generated from the destination-owned Agent
-endpoint composition during the Agent build. Do not edit it manually.
+endpoint composition during the Agent build. Do not edit it manually. The
+permanent product and Windows Service identity is `RmsSupportAgent`; historical
+`RmsSupportHub.Pos.Agent` and `RmsSupportHub.Pos.Int13.TestService` names are
+migration inputs only.
 
 To regenerate locally, provide the deployment-owned exact Support Hub origin
 configuration and build the Agent:
@@ -22,6 +25,11 @@ npm run generate:pos-agent-client --prefix frontend
 
 The generator is build-only tooling and is not part of the Angular
 application dependency graph.
+
+Slice C adds the authenticated `GET /api/v1/rms/operational-health` route for
+bounded fixed-root, update, and insurance-attachment summaries. It is included
+in this generated document and in the destination-owned Angular client; the
+route never returns raw paths, filenames, log contents, or attachment bytes.
 
 ## Build prerequisite
 

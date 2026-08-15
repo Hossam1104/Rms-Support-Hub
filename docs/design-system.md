@@ -359,3 +359,30 @@ production navigation and is tree-shaken from the production route graph.
   local Edge route evidence at the required desktop/tablet/mobile viewports;
   connected interactive-browser and safe live Testing evidence remain external
   gates.
+
+## POS operations console
+
+The POS Maintenance route is an operations console, not a generic dashboard.
+Its visual hierarchy should make the sequence from signal to safe action clear:
+
+- Use layered token-owned surfaces and the named `--grad-ops-*` gradients for
+  command bands, panels, grids, and status rings. Feature CSS must not add raw
+  color literals, one-off shadows, or arbitrary card geometry.
+- Prefer compact metric tiles, ring/gauge summaries, severity-coded status
+  labels, and bounded tables for operational evidence. Never display a raw
+  machine path, log line, attachment, credential, or unredacted identity in a
+  support-facing surface.
+- Keep action hierarchy explicit: inspect/read-only first, then a single
+  clearly identified maintenance action, with Testing/Production environment
+  state visible at the point of action. Product/service ownership and safe
+  scope must be visible without exposing privileged implementation details.
+- Honor `prefers-reduced-motion` and the application motion setting. Decorative
+  orbit/ring motion is optional and must never carry meaning that is unavailable
+  in its static state.
+- Preserve keyboard focus visibility, semantic headings, labelled progress and
+  status regions, sufficient contrast in both themes, and accessible names for
+  icon-only controls. Responsive layouts must remain usable at narrow widths.
+- Keep the route lazy and avoid a new charting dependency for simple bounded
+  summaries. Use existing primitives/tokens before adding feature-local
+  components; test loading, empty, error, reduced-motion, and secure-origin
+  handoff states.

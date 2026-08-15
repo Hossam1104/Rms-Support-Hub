@@ -1,4 +1,5 @@
 using RmsSupportHub.Pos.Infrastructure.Configuration;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
@@ -7,15 +8,19 @@ public sealed class AgentPackageOptions
     public string PackageRoot { get; init; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "DBS",
-        "RmsSupportHub.Pos.Agent",
+        AgentProductIdentity.ProductId,
         "packages");
 
     public string InstallationRoot { get; init; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
         "DBS",
-        "RmsSupportHub.Pos.Agent");
+        AgentProductIdentity.ProductId);
 
-    public string ServiceName { get; init; } = "RmsSupportHub.Pos.Agent";
+    public string ServiceName { get; init; } = AgentProductIdentity.PermanentServiceName;
+
+    public string ProductId { get; init; } = AgentProductIdentity.ProductId;
+
+    public string ReleaseChannel { get; init; } = AgentProductIdentity.ReleaseChannelProduction;
 
     public long MaxPackageBytes { get; init; } = 256L * 1024 * 1024;
 
@@ -29,7 +34,9 @@ public sealed class AgentPackageOptions
     {
         ValidateFixedPath(PackageRoot, "A fixed package root is required.");
         ValidateFixedPath(InstallationRoot, "A fixed installation root is required.");
-        if (!string.Equals(ServiceName, "RmsSupportHub.Pos.Agent", StringComparison.Ordinal)) throw new ArgumentException("The Agent service identity is fixed.");
+        if (!string.Equals(ServiceName, AgentProductIdentity.PermanentServiceName, StringComparison.Ordinal)) throw new ArgumentException("The Agent service identity is fixed.");
+        if (!string.Equals(ProductId, AgentProductIdentity.ProductId, StringComparison.Ordinal)) throw new ArgumentException("The Agent product identity is fixed.");
+        if (ReleaseChannel is not (AgentProductIdentity.ReleaseChannelTesting or AgentProductIdentity.ReleaseChannelProduction)) throw new ArgumentException("The Agent release channel is invalid.");
         if (MaxPackageBytes < 1 || MaxPackageBytes > 512L * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxPackageBytes));
     }
 

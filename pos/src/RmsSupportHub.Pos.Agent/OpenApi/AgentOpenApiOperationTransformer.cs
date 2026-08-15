@@ -54,6 +54,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/rms/diagnostics"):
                 DocumentRmsDiagnostics(operation);
                 break;
+            case ("GET", "/api/v1/rms/operational-health"):
+                DocumentRmsOperationalHealth(operation);
+                break;
             case ("GET", "/api/v1/diagnostics/services/{serviceId}/failure"):
                 DocumentFailureAnalysis(operation);
                 break;
@@ -1158,6 +1161,48 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         {
             response.Description = description;
         }
+    }
+
+    private static void DocumentRmsOperationalHealth(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Read fixed-root RMS storage and update health",
+            "Reads only the server-owned RMS setup, download, release-repository, data, log, and " +
+            "sensitive attachment roots. The response contains bounded aggregate counts, sizes, " +
+            "ages, capacity, Product Release, and package health. It never returns a path, filename, " +
+            "attachment content, patient identity, insurance identity, raw log, registry export, or " +
+            "browser-selected filesystem scope.",
+            "The Agent returned the sanitized RmsOperationalHealthDto aggregate model.",
+            new JsonObject
+            {
+                ["fixedRoots"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["rootId"] = "rms-setup",
+                        ["state"] = "healthy",
+                        ["fileCount"] = 12,
+                        ["totalBytes"] = 4096,
+                        ["lastWriteUtc"] = "2030-01-01T00:00:00Z",
+                        ["detail"] = "The fixed RMS setup root is readable within bounded limits."
+                    }
+                },
+                ["update"] = new JsonObject
+                {
+                    ["productRelease"] = "5.7.4",
+                    ["packageState"] = "notInstalled",
+                    ["available"] = false,
+                    ["detail"] = "No server-approved update package is staged."
+                },
+                ["insuranceAttachments"] = new JsonObject
+                {
+                    ["state"] = "healthy",
+                    ["fileCount"] = 0,
+                    ["totalBytes"] = 0,
+                    ["detail"] = "No attachment content or identity was returned."
+                }
+            });
     }
 
     private static void SetRequestExample(OpenApiOperation operation)

@@ -263,6 +263,7 @@ public sealed class RepairService(
     IAgentPackageLifecycle lifecycle,
     IPrivilegedMutationLease privilegedLease,
     IncidentTimelineService timeline,
+    IAgentAuditSink audit,
     TimeProvider clock)
 {
     private const string IdempotencyScope = "repair.installation";
@@ -398,6 +399,16 @@ public sealed class RepairService(
 
         var accepted = operations.Add(principalSid, preview.Operation, clock.GetUtcNow(), correlationId);
         idempotency.Bind(principalSid, IdempotencyScope, request.IdempotencyKey, accepted.OperationId);
+        audit.Record(new AgentAuditEvent(
+            clock.GetUtcNow(),
+            principalSid,
+            "repair.execute",
+            RepairOperation.OperationId,
+            correlationId,
+            "accepted",
+            null,
+            typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+            null));
         _ = Task.Run(() => ExecuteLifecycleAsync(principalSid, accepted.OperationId, preview, snapshotId, correlationId), CancellationToken.None);
         return accepted;
     }
@@ -566,6 +577,16 @@ public sealed class RepairService(
             };
             guided.Update(principalSid, request.GuidedRepairId, _ => nextState);
             idempotency.Bind(principalSid, GuidedIdempotencyScope, request.IdempotencyKey, request.GuidedRepairId);
+            audit.Record(new AgentAuditEvent(
+                clock.GetUtcNow(),
+                principalSid,
+                "repair.guided.checkpoint",
+                GuidedRepairOperation.OperationId,
+                "unavailable",
+                outcome.Completed ? "completed" : "blocked",
+                outcome.FailureCode,
+                typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+                null));
             return ToDto(request.GuidedRepairId, nextState);
         }
         finally
@@ -664,6 +685,16 @@ public sealed class RepairService(
                 CompletedAtUtc = clock.GetUtcNow()
             });
             timeline.Record(principalSid, "Repair", result.RecoveryRequired ? FailureSeverity.ActionRequired : FailureSeverity.Informational, SafeDetail(result.Detail), operationId: RepairOperation.OperationId, correlationId: correlationId);
+            audit.Record(new AgentAuditEvent(
+                clock.GetUtcNow(),
+                principalSid,
+                "repair.execute",
+                RepairOperation.OperationId,
+                correlationId,
+                outcome.ToString(),
+                result.RecoveryRequired ? "recovery_required" : null,
+                typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+                null));
         }
         finally
         {

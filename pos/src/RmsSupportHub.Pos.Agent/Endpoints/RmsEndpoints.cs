@@ -1,6 +1,7 @@
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Contracts.V1.Common;
+using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
 
 namespace RmsSupportHub.Pos.Agent.Endpoints;
@@ -45,6 +46,26 @@ public static class RmsEndpoints
                 "path, arbitrary service target, or generic SQL/query surface. Service controls " +
                 "continue to use the existing opaque-ID and mutation-token boundary.")
             .Produces<RmsDiagnosticsDto>(StatusCodes.Status200OK, "application/json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
+
+        app.MapGet(
+                "/api/v1/rms/operational-health",
+                async (RmsOperationalHealthService health, CancellationToken cancellationToken) =>
+                    Results.Ok(await health.GetAsync(cancellationToken).ConfigureAwait(false)))
+            .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
+            .WithName("GetRmsOperationalHealth")
+            .WithTags("RMS Diagnostics")
+            .WithSummary("Read fixed-root RMS storage and update health")
+            .WithDescription(
+                "Reads only the server-owned RMS setup, download, release-repository, data, log, " +
+                "and sensitive attachment roots. The response contains bounded aggregate counts, " +
+                "sizes, ages, capacity, Product Release, and package health. It never returns a " +
+                "path, filename, attachment content, patient identity, insurance identity, raw log, " +
+                "registry export, or browser-selected filesystem scope.")
+            .Produces<RmsOperationalHealthDto>(StatusCodes.Status200OK, "application/json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)

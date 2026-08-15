@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using RmsSupportHub.Pos.Agent.Correlation;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Application.Maintenance;
@@ -7,6 +8,7 @@ using RmsSupportHub.Pos.Contracts.V1.Maintenance;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Runtime;
 
@@ -60,7 +62,8 @@ public sealed class MaintenanceOperationRuntime(
     MaintenanceIdempotencyStore idempotency,
     AgentOperationConcurrencyGate concurrency,
     IMutationTokenStore mutationTokens,
-    IAgentPrincipalSidResolver principalSidResolver)
+    IAgentPrincipalSidResolver principalSidResolver,
+    IAgentAuditSink audit)
 {
     public async Task<MaintenancePreviewResult<CleanupPreviewDto>> PreviewCleanupAsync(
         HttpContext context,
@@ -298,6 +301,7 @@ public sealed class MaintenanceOperationRuntime(
                 mode,
                 challenge.Intent.Fingerprint,
                 lease,
+                correlationId,
                 CancellationToken.None);
             lease = null;
             return new(handle.InitialState with
@@ -325,6 +329,7 @@ public sealed class MaintenanceOperationRuntime(
         string mode,
         string expectedFingerprint,
         AgentOperationLease lease,
+        string correlationId,
         CancellationToken cancellationToken)
     {
         try
@@ -349,6 +354,7 @@ public sealed class MaintenanceOperationRuntime(
                 _ => (MaintenanceOperationStateDto.Failed, result.FailureCode ?? MaintenanceFailureCodes.PartialFailure, "The maintenance operation completed with a failure or recovery condition.")
             };
             operations.Complete(operationId, state, code, detail, evidence);
+            AgentAuditRecorder.Record(audit, principalSid, "maintenance." + mode, operationId, correlationId, state.ToString(), code);
         }
         catch (OperationCanceledException)
         {
@@ -358,6 +364,7 @@ public sealed class MaintenanceOperationRuntime(
                 MaintenanceFailureCodes.RecoveryRequired,
                 "The maintenance operation was cancelled; verify the affected installation before retrying.",
                 new(true, true, [], [], [MaintenanceFailureCodes.RecoveryGuidance]));
+            AgentAuditRecorder.Record(audit, principalSid, "maintenance." + mode, operationId, correlationId, MaintenanceOperationStateDto.Failed.ToString(), MaintenanceFailureCodes.RecoveryRequired);
         }
         catch
         {
@@ -367,6 +374,7 @@ public sealed class MaintenanceOperationRuntime(
                 "maintenance.outcome_unknown",
                 "The maintenance operation outcome is unknown. Verify the affected installation before retrying.",
                 new(true, true, [], [], [MaintenanceFailureCodes.RecoveryGuidance]));
+            AgentAuditRecorder.Record(audit, principalSid, "maintenance." + mode, operationId, correlationId, MaintenanceOperationStateDto.OutcomeUnknown.ToString(), "maintenance.outcome_unknown");
         }
         finally
         {

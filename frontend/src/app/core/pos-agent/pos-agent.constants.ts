@@ -29,6 +29,7 @@ export const POS_AGENT_PATHS = {
   configuration: '/api/v1/configuration',
   services: '/api/v1/services',
   rmsDiagnostics: '/api/v1/rms/diagnostics',
+  rmsOperationalHealth: '/api/v1/rms/operational-health',
   serviceFailureAnalysis: '/api/v1/diagnostics/services',
   incidentTimeline: '/api/v1/diagnostics/timeline',
   supportBundles: '/api/v1/support-bundles',

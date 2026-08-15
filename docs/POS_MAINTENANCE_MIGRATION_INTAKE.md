@@ -1,4 +1,14 @@
-# POS Maintenance Tool - Future Integration Reference
+# POS Maintenance Tool - Migration and Evidence Reference
+
+## Current destination status — 2026-08-16
+
+The destination now contains the implemented POS Agent and Slice C operations
+console. This intake remains the historical provenance and boundary reference;
+it is not an instruction to recreate the old standalone tool. The permanent
+service is `RmsSupportAgent` / `RMS Support Agent`; `RmsSupportHub.Pos.Agent`
+and `RmsSupportHub.Pos.Int13.TestService` are historical Testing-only names.
+See [`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md) for the
+delivered deployment, package, audit, RMS-health, and UI foundation.
 
 ## Purpose and current intake status
 
@@ -6,12 +16,11 @@ This document preserves the source, security, and architecture questions for
 the staged POS integration. INT-02 imported the portable
 Domain/Application/Contracts boundary and its existing portable tests; INT-03
 has now imported the approved Windows Infrastructure, Infrastructure tests, and
-retained WinUI boundary. The POS Maintenance Tool is developed independently;
-RMS+ Support Hub does not implement, connect to, or infer privileged POS
-operations today. INT-05 now supplies only the destination-owned Agent
-contract/type/transport foundation; INT-05F isolates its generator toolchain
-from Angular's TypeScript 6 graph. Neither gate activates POS UI or feature
-operations.
+retained WinUI boundary. Slice C now supplies the destination-owned permanent
+Agent contract, deployment foundation, fixed-root read summaries, durable audit,
+and POS operations console; privileged work remains direct Agent-owned and
+current live/fleet evidence is separately gated. INT-05F keeps its generator
+toolchain isolated from Angular's TypeScript graph.
 
 INT-00 closed the destination-side architecture only. INT-00R kept the POS
 repository read-only and performed only the required provenance spot checks.
