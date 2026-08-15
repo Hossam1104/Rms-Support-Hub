@@ -74,8 +74,8 @@
 ## Delivery/runtime gates
 
 - PR #17 is merged non-draft with all six CI checks green. Local `main` equals
-  `origin/main` at the merge SHA and the worktree was clean before runtime
-  restart.
+  `origin/main` after the follow-up durable-state commit, and the worktree was
+  clean before runtime restart.
 - Fresh `scripts/dev.ps1` processes are left running: `http://localhost:4200/`
   returned HTTP 200 and `http://localhost:5200/api/modules/health` returned
   HTTP 200. `/tools/pos-maintenance` returned the Angular shell at HTTP 200;
