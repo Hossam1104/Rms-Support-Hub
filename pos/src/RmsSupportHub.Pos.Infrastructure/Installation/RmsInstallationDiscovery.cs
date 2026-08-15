@@ -22,6 +22,7 @@ public sealed class RmsInstallationDiscovery(RmsInstallationOptions options) :
             ReadJsonAsync(options.CashierServerSettingsPath, cancellationToken),
             ReadJsonAsync(options.CashierUiSettingsPath, cancellationToken),
             ReadJsonAsync(options.ServicesManagerSettingsPath, cancellationToken)).ConfigureAwait(false);
+        var productRelease = await ReadReleaseAsync(options.ReleaseNumberPath, cancellationToken).ConfigureAwait(false);
 
         var info = documents[0];
         var branch = documents[1];
@@ -102,14 +103,15 @@ public sealed class RmsInstallationDiscovery(RmsInstallationOptions options) :
                 mainEndpoint.DisplayAddress,
                 SafeAddressLabel(branchServerAddress),
                 GetString(cashierUi.Document, "Settings", "TheClient"),
-                FirstNonEmpty(cashierUiBuild, cashierBuild, branchBuild),
+                productRelease,
                 new(branchBuild, cashierBuild, cashierUiBuild),
                 consistency,
                 branchDatabase,
                 cashierDatabase,
                 mainEndpoint,
                 branchEndpoint,
-                services);
+                services,
+                BuildComponentDrift(productRelease, branchBuild, cashierBuild, cashierUiBuild));
         }
         finally
         {
@@ -169,6 +171,65 @@ public sealed class RmsInstallationDiscovery(RmsInstallationOptions options) :
         {
             return new(true, false, null);
         }
+    }
+
+    private static async Task<string?> ReadReleaseAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            var value = (await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false)).Trim();
+            return value.Length is 0 or > 128 || value.Any(char.IsControl) ? null : value;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static IReadOnlyList<RmsComponentDriftSnapshot> BuildComponentDrift(
+        string? productRelease,
+        string? branchBuild,
+        string? cashierBuild,
+        string? cashierUiBuild)
+    {
+        return
+        [
+            CreateDrift("Branch Server", branchBuild, productRelease),
+            CreateDrift("Cashier Server", cashierBuild, productRelease),
+            CreateDrift("Cashier UI", cashierUiBuild, productRelease)
+        ];
+    }
+
+    private static RmsComponentDriftSnapshot CreateDrift(
+        string component,
+        string? buildNumber,
+        string? productRelease)
+    {
+        if (string.IsNullOrWhiteSpace(productRelease) || string.IsNullOrWhiteSpace(buildNumber))
+        {
+            return new(component, buildNumber, productRelease, RmsComponentDriftState.Unavailable,
+                "Product release or component build evidence is unavailable.");
+        }
+
+        var aligned = string.Equals(buildNumber, productRelease, StringComparison.OrdinalIgnoreCase);
+        return new(
+            component,
+            buildNumber,
+            productRelease,
+            aligned ? RmsComponentDriftState.Aligned : RmsComponentDriftState.Drifted,
+            aligned ? "Component build matches the installed product release." :
+                "Component build differs from the installed product release.");
     }
 
     private static RmsDatabaseConfiguration ParseDatabaseConfiguration(

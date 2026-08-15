@@ -1,5 +1,11 @@
 using System.Net;
 using System.Text.Json;
+using System.IO.Compression;
+using System.Net.Http.Json;
+using RmsSupportHub.Pos.Agent.MutationTokens;
+using RmsSupportHub.Pos.Agent.Security;
+using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
@@ -13,7 +19,10 @@ public sealed class ReadOnlyFirstReleaseEndpointTests : IClassFixture<AgentWebAp
         "/api/v1/device/capabilities",
         "/api/v1/configuration",
         "/api/v1/services",
-        "/api/v1/rms/diagnostics"
+        "/api/v1/rms/diagnostics",
+        "/api/v1/health/check",
+        $"/api/v1/diagnostics/services/{ServiceAllowList.ToServiceId("RMS.BranchService")}/failure",
+        "/api/v1/diagnostics/timeline"
     ];
 
     private readonly AgentWebApplicationFactory _factory;
@@ -160,6 +169,85 @@ public sealed class ReadOnlyFirstReleaseEndpointTests : IClassFixture<AgentWebAp
         Assert.DoesNotContain("secret", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("127.0.0.1", json, StringComparison.Ordinal);
         Assert.DoesNotContain(FakeAuthenticationHandler.DefaultSid, json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HealthCheckReturnsExplicitAuthAndBoundedEvidenceStates()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        using var document = await GetDocumentAsync(client, "/api/v1/health/check");
+        var checks = document.RootElement.GetProperty("checks").EnumerateArray().ToArray();
+
+        Assert.Contains(checks, check => check.GetProperty("code").GetString() == "agent");
+        Assert.Contains(checks, check => check.GetProperty("code").GetString() == "authorization");
+        Assert.Contains(checks, check => check.GetProperty("code").GetString() == "recent-critical-errors");
+        Assert.DoesNotContain("connectionString", document.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(FakeAuthenticationHandler.DefaultSid, document.RootElement.GetRawText(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HealthAndFailureReadsDoNotUseAStateChangingGet()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        using var health = await client.GetAsync("/api/v1/health/check");
+        Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+
+        var serviceId = ServiceAllowList.ToServiceId("RMS.BranchService");
+        using var failure = await client.GetAsync($"/api/v1/diagnostics/services/{serviceId}/failure");
+        Assert.Equal(HttpStatusCode.OK, failure.StatusCode);
+
+        using var timeline = await GetDocumentAsync(client, "/api/v1/diagnostics/timeline");
+        Assert.True(timeline.RootElement.GetProperty("events").GetArrayLength() <= 256);
+    }
+
+    [Fact]
+    public async Task SupportBundleUsesOneUseTokenAndReturnsOnlyAnOpaqueArtifact()
+    {
+        using var client = _factory.CreateAdminClient();
+        using var tokenResponse = await client.PostAsJsonAsync(
+            "/api/v1/security/mutation-token",
+            new { operationId = SupportBundleOperation.OperationId });
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
+        using var tokenDocument = JsonDocument.Parse(await tokenResponse.Content.ReadAsStringAsync());
+        var token = tokenDocument.RootElement.GetProperty("token").GetString();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/support-bundles");
+        request.Headers.Add(MutationTokenContract.HeaderName, token);
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var bundle = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var artifactId = bundle.RootElement.GetProperty("artifact").GetProperty("artifactId").GetString();
+        Assert.Matches("^[0-9a-f]{32}$", artifactId!);
+        Assert.DoesNotContain("path", bundle.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secret", bundle.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+
+        using var replay = new HttpRequestMessage(HttpMethod.Post, "/api/v1/support-bundles");
+        replay.Headers.Add(MutationTokenContract.HeaderName, token);
+        using var replayResponse = await client.SendAsync(replay);
+        Assert.Equal(HttpStatusCode.Forbidden, replayResponse.StatusCode);
+
+        using var download = await client.GetAsync($"/api/v1/artifacts/{artifactId}");
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+        Assert.Equal("application/zip", download.Content.Headers.ContentType?.MediaType);
+        await using var archiveStream = await download.Content.ReadAsStreamAsync();
+        using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
+        var entry = archive.GetEntry("support-bundle.json");
+        Assert.NotNull(entry);
+        using var reader = new StreamReader(entry!.Open());
+        var payload = await reader.ReadToEndAsync();
+        Assert.DoesNotContain("integration-reader", payload, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connectionString", payload, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("agent-secrets", payload, StringComparison.OrdinalIgnoreCase);
+
+        using var timeline = await GetDocumentAsync(client, "/api/v1/diagnostics/timeline");
+        var kinds = timeline.RootElement.GetProperty("events")
+            .EnumerateArray()
+            .Select(item => item.GetProperty("kind").GetString())
+            .ToArray();
+        Assert.Contains("HealthCheck", kinds);
+        Assert.Contains("SupportBundle", kinds);
     }
 
     private static async Task<JsonDocument> GetDocumentAsync(HttpClient client, string path)

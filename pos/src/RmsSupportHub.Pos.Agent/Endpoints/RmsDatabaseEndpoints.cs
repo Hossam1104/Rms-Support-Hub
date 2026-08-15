@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Contracts.V1.Common;
@@ -58,6 +59,8 @@ public static class RmsDatabaseEndpoints
                     string targetId,
                     RmsDatabaseBackupRequestDto? request,
                     RmsDatabaseOperationRuntime runtime,
+                    IncidentTimelineService timeline,
+                    IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteBackupAsync(
@@ -65,6 +68,7 @@ public static class RmsDatabaseEndpoints
                         targetId,
                         request,
                         cancellationToken).ConfigureAwait(false);
+                    RecordOperation(context, result.Operation, timeline, principalSidResolver);
                     return ToMutationResult(context, result);
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
@@ -92,6 +96,8 @@ public static class RmsDatabaseEndpoints
                     string targetId,
                     RmsDatabaseRestoreRequestDto? request,
                     RmsDatabaseOperationRuntime runtime,
+                    IncidentTimelineService timeline,
+                    IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteRestoreAsync(
@@ -99,6 +105,7 @@ public static class RmsDatabaseEndpoints
                         targetId,
                         request,
                         cancellationToken).ConfigureAwait(false);
+                    RecordOperation(context, result.Operation, timeline, principalSidResolver);
                     return ToMutationResult(context, result);
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
@@ -235,6 +242,23 @@ public static class RmsDatabaseEndpoints
                 "The RMS database operation request was rejected.",
                 AgentProblemCodes.MutationTargetInvalid)
         };
+    }
+
+    private static void RecordOperation(
+        HttpContext context,
+        RmsDatabaseOperationDto? operation,
+        IncidentTimelineService timeline,
+        IAgentPrincipalSidResolver principalSidResolver)
+    {
+        if (operation is null) return;
+        IncidentTimelineRecorder.Record(
+            context,
+            timeline,
+            principalSidResolver,
+            "DatabaseOperation",
+            operation.Outcome.ToString(),
+            $"{operation.DatabaseDisplayName}: {operation.Detail}",
+            operationId: operation.OperationId);
     }
 
     private static JsonSerializerOptions CreateSseJsonOptions() => new(JsonSerializerDefaults.Web)

@@ -566,6 +566,89 @@
         ]
       }
     },
+    "/api/v1/health/check": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Run the bounded POS health check",
+        "description": "Runs read-only health checks for the installed identity, Product Release, component drift, endpoint reachability, databases, backup capacity, storage, and canonical RMS services. No process, installer, Main Server mutation, raw path, secret, log, or SQL surface is exposed.",
+        "operationId": "GetHealthCheck",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed HealthReportDto health model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReportDto"
+                },
+                "example": {
+                  "overallState": "warning",
+                  "summary": "POS health checks found conditions to monitor.",
+                  "checkedAtUtc": "2030-01-01T00:00:00Z",
+                  "checks": [
+                    {
+                      "code": "main-server",
+                      "state": "healthy",
+                      "summary": "Main Server endpoint is reachable.",
+                      "checkedAtUtc": "2030-01-01T00:00:00Z",
+                      "remediation": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
     "/api/v1/rms/diagnostics": {
       "get": {
         "tags": [
@@ -712,6 +795,274 @@
           },
           "500": {
             "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/diagnostics/services/{serviceId}/failure": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Analyze bounded evidence for an RMS service",
+        "description": "Reads one opaque allow-listed RMS service identifier and correlates its current state with bounded fixed-root logs and allow-listed Windows event identifiers. Only redacted exception, stack, and event evidence is returned; no command, path, query, process, or state-changing action is accepted.",
+        "operationId": "GetServiceFailureAnalysis",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed ServiceFailureAnalysisDto analysis model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceFailureAnalysisDto"
+                },
+                "example": {
+                  "serviceId": "svc-0123456789abcdef",
+                  "serviceDisplayName": "RMS Branch Service",
+                  "category": "serviceStopped",
+                  "severity": "warning",
+                  "confidence": "high",
+                  "summary": "The allow-listed Windows service is stopped.",
+                  "checkedAtUtc": "2030-01-01T00:00:00Z",
+                  "evidence": [ ],
+                  "unknownReasons": [ ],
+                  "recommendations": [
+                    {
+                      "code": "start-service",
+                      "label": "Review Start",
+                      "summary": "Confirm the local state before using the typed Start action."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque service identifier is not present in the server-owned RMS service catalog."
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/diagnostics/timeline": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Read the bounded incident timeline",
+        "description": "Returns newest-first principal-scoped events retained by this Agent for health, service, database, recovery, download, and maintenance correlation. Events contain safe summaries and opaque identifiers only; raw logs, secrets, arbitrary history, and filters are not exposed.",
+        "operationId": "GetIncidentTimeline",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed IncidentTimelineDto timeline model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentTimelineDto"
+                },
+                "example": {
+                  "generatedAtUtc": "2030-01-01T00:00:00Z",
+                  "events": [ ],
+                  "unknownReasons": [ ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WindowsNegotiate": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/support-bundles": {
+      "post": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Generate a redacted Support Bundle",
+        "description": "Generates one bounded local ZIP containing typed, redacted Slice A evidence and returns only an opaque principal-scoped artifact capability. The exact Support Hub Origin and a one-use mutation token are required; raw configuration, credentials, paths, arbitrary logs, executable content, repair, console execution, and Main Server mutation are not included.",
+        "operationId": "GenerateSupportBundle",
+        "responses": {
+          "200": {
+            "description": "The Agent generated a bounded SupportBundleDto with an opaque artifact capability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportBundleDto"
+                },
+                "example": {
+                  "artifact": {
+                    "artifactId": "0123456789abcdef0123456789abcdef",
+                    "displayName": "rms-support-bundle.zip",
+                    "sizeBytes": 4096,
+                    "sha256Checksum": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "createdAtUtc": "2030-01-01T00:00:00Z",
+                    "expiresAtUtc": "2030-01-02T00:00:00Z"
+                  },
+                  "createdAtUtc": "2030-01-01T00:00:00Z",
+                  "correlationId": "corr-placeholder",
+                  "includedSections": [
+                    "health",
+                    "installation",
+                    "database",
+                    "services"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the canonical transport boundary or request with safe problem details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin, SID, or the one-use mutation-token boundary rejected the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent could not generate the bundle and returned a safe generic error.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2157,6 +2508,46 @@
         },
         "description": "Safe application/problem+json error contract. Code is a stable problem code and correlationId may identify the request; sensitive identity and machine details are not included."
       },
+      "ArtifactMetadataDto": {
+        "required": [
+          "artifactId",
+          "displayName",
+          "sizeBytes",
+          "sha256Checksum",
+          "createdAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256Checksum": {
+            "type": "string"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "BranchCatalogEntryDto": {
         "required": [
           "branchCode",
@@ -2524,7 +2915,7 @@
         "required": [
           "branchCode",
           "posNumber",
-          "release",
+          "productRelease",
           "clientName"
         ],
         "type": "object",
@@ -2537,9 +2928,9 @@
             "type": "string",
             "description": "Server-owned POS number for the local device."
           },
-          "release": {
+          "productRelease": {
             "type": "string",
-            "description": "Configured RMS+ release label for the local device."
+            "description": "Product Release read from the fixed release file."
           },
           "clientName": {
             "type": "string",
@@ -2776,6 +3167,109 @@
         },
         "description": "Freshness and check-time evidence for the service state."
       },
+      "FailureCategory": {
+        "enum": [
+          "none",
+          "serviceStopped",
+          "serviceStartFailure",
+          "crash",
+          "database",
+          "network",
+          "configuration",
+          "versionDrift",
+          "unknown"
+        ]
+      },
+      "FailureConfidence": {
+        "enum": [
+          "high",
+          "medium",
+          "low",
+          "unknown"
+        ]
+      },
+      "FailureEvidenceDto": {
+        "required": [
+          "source",
+          "atUtc",
+          "summary",
+          "exceptionType",
+          "stackFrames",
+          "eventId"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Safe evidence source label."
+          },
+          "atUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC evidence time, when supplied by the source.",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Redacted bounded evidence summary."
+          },
+          "exceptionType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Exception type only, without a message or assembly path."
+          },
+          "stackFrames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Redacted bounded stack-frame labels."
+          },
+          "eventId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe provider event identifier, when available."
+          }
+        },
+        "description": "One redacted exception, event, or bounded log evidence item."
+      },
+      "FailureRecommendationDto": {
+        "required": [
+          "code",
+          "label",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable recommendation code."
+          },
+          "label": {
+            "type": "string",
+            "description": "Operator-facing recommendation label."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Safe reason for the recommendation."
+          }
+        },
+        "description": "Non-executing remediation guidance derived from bounded failure evidence."
+      },
+      "FailureSeverity": {
+        "enum": [
+          "informational",
+          "warning",
+          "actionRequired",
+          "unknown"
+        ]
+      },
       "FreshnessState": {
         "enum": [
           "unknown",
@@ -2783,6 +3277,83 @@
           "stale"
         ],
         "description": "Freshness classification for this observation; it is never collapsed into a bare online boolean."
+      },
+      "HealthCheckDto": {
+        "required": [
+          "code",
+          "state",
+          "summary",
+          "checkedAtUtc",
+          "remediation"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable server-owned health check code."
+          },
+          "state": {
+            "description": "Current health classification.",
+            "$ref": "#/components/schemas/HealthState"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Safe operator summary."
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "description": "UTC time at which the check was evaluated.",
+            "format": "date-time"
+          },
+          "remediation": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Optional non-executing next-step guidance."
+          }
+        },
+        "description": "One bounded read-only health result with an explicit unknown state."
+      },
+      "HealthReportDto": {
+        "required": [
+          "overallState",
+          "summary",
+          "checkedAtUtc",
+          "checks"
+        ],
+        "type": "object",
+        "properties": {
+          "overallState": {
+            "description": "Conservative aggregate state across the returned checks.",
+            "$ref": "#/components/schemas/HealthState"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Safe aggregate health summary."
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "description": "UTC time at which this health report was evaluated.",
+            "format": "date-time"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "description": "Bounded individual health checks."
+          }
+        },
+        "description": "Aggregate read-only POS health report composed from bounded local evidence."
+      },
+      "HealthState": {
+        "enum": [
+          "healthy",
+          "warning",
+          "actionRequired",
+          "unknown"
+        ]
       },
       "HealthStatusDto": {
         "required": [
@@ -2796,6 +3367,94 @@
           }
         },
         "description": "Anonymous health response produced by the Agent. Status identifies the foundation check that answered; it contains no machine or credential detail."
+      },
+      "IncidentTimelineDto": {
+        "required": [
+          "generatedAtUtc",
+          "events",
+          "unknownReasons"
+        ],
+        "type": "object",
+        "properties": {
+          "generatedAtUtc": {
+            "type": "string",
+            "description": "UTC time at which this timeline view was generated.",
+            "format": "date-time"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncidentTimelineEventDto"
+            },
+            "description": "Newest-first bounded principal-scoped timeline events."
+          },
+          "unknownReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Safe reasons historical evidence may be incomplete."
+          }
+        },
+        "description": "Bounded principal-scoped timeline used for local incident correlation."
+      },
+      "IncidentTimelineEventDto": {
+        "required": [
+          "eventId",
+          "atUtc",
+          "kind",
+          "severity",
+          "summary",
+          "serviceId",
+          "operationId",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "description": "Opaque timeline event identifier."
+          },
+          "atUtc": {
+            "type": "string",
+            "description": "UTC time at which the event was recorded.",
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Safe server-owned event kind."
+          },
+          "severity": {
+            "description": "Conservative event severity.",
+            "$ref": "#/components/schemas/FailureSeverity"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Redacted operator summary."
+          },
+          "serviceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Opaque service identifier, when the event concerns a service."
+          },
+          "operationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned operation identifier, when applicable."
+          },
+          "correlationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe correlation identifier, when available."
+          }
+        },
+        "description": "One safe event in the bounded principal-scoped incident timeline."
       },
       "MaintenanceItemOutcomeDto": {
         "required": [
@@ -3200,6 +3859,52 @@
         },
         "description": "Redacted DB Downloader settings with secret-presence metadata only."
       },
+      "RmsComponentDriftDto": {
+        "required": [
+          "component",
+          "buildNumber",
+          "productRelease",
+          "state",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "string",
+            "description": "Server-owned RMS component label."
+          },
+          "buildNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Installed component build number."
+          },
+          "productRelease": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Product Release from the fixed release file."
+          },
+          "state": {
+            "description": "Component comparison state.",
+            "$ref": "#/components/schemas/RmsComponentDriftState"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Safe comparison reason."
+          }
+        },
+        "description": "Server-owned comparison between an installed RMS component build and Product Release."
+      },
+      "RmsComponentDriftState": {
+        "enum": [
+          "aligned",
+          "drifted",
+          "unavailable"
+        ]
+      },
       "RmsConnectivityDto": {
         "required": [
           "mainServer",
@@ -3315,6 +4020,48 @@
         },
         "description": "Sanitized metadata for an approved Agent-owned RMS database backup; the physical filesystem path and download URL are intentionally absent."
       },
+      "RmsDatabaseBackupHealthDto": {
+        "required": [
+          "count",
+          "latestCreatedAtUtc",
+          "freshness",
+          "state",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Number of physically valid Agent-approved backups.",
+            "format": "int32"
+          },
+          "latestCreatedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Creation time of the newest approved backup, when available.",
+            "format": "date-time"
+          },
+          "freshness": {
+            "description": "Freshness classification of the newest approved backup.",
+            "$ref": "#/components/schemas/FreshnessState"
+          },
+          "state": {
+            "description": "Health classification of the approved backup inventory.",
+            "$ref": "#/components/schemas/HealthState"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Safe backup inventory summary."
+          }
+        },
+        "description": "Bounded inventory and freshness evidence for Agent-approved database backups."
+      },
       "RmsDatabaseBackupRequestDto": {
         "required": [
           "idempotencyKey"
@@ -3336,7 +4083,8 @@
           "configured",
           "databaseNameMatches",
           "connectivityStatus",
-          "evidence"
+          "evidence",
+          "health"
         ],
         "type": "object",
         "properties": {
@@ -3376,6 +4124,10 @@
           "evidence": {
             "description": "Freshness and safe detail for the database diagnostic.",
             "$ref": "#/components/schemas/EvidenceDto"
+          },
+          "health": {
+            "description": "Bounded approved-backup and fixed-root storage health evidence.",
+            "$ref": "#/components/schemas/RmsDatabaseHealthDto"
           }
         },
         "description": "Sanitized Branch database diagnostic for RmsBranchSrv."
@@ -3391,6 +4143,24 @@
           "unreachable"
         ],
         "description": "Sanitized result of configuration validation and the fixed read-only SQL probe."
+      },
+      "RmsDatabaseHealthDto": {
+        "required": [
+          "backups",
+          "storage"
+        ],
+        "type": "object",
+        "properties": {
+          "backups": {
+            "description": "Approved backup inventory and freshness evidence.",
+            "$ref": "#/components/schemas/RmsDatabaseBackupHealthDto"
+          },
+          "storage": {
+            "description": "Fixed-root capacity evidence without exposing a path.",
+            "$ref": "#/components/schemas/RmsStorageHealthDto"
+          }
+        },
+        "description": "Typed database backup and storage health evidence for one approved RMS database target."
       },
       "RmsDatabaseOperationDto": {
         "required": [
@@ -3685,8 +4455,10 @@
           "branchServerAddress",
           "installationMode",
           "clientName",
+          "productRelease",
           "versions",
-          "consistency"
+          "consistency",
+          "componentDrift"
         ],
         "type": "object",
         "properties": {
@@ -3765,6 +4537,13 @@
             ],
             "description": "Safe client label selected from installed Cashier UI metadata."
           },
+          "productRelease": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Product Release read only from the fixed C:\\ProgramData\\RMS_Plus\\ReleaseNumber.txt file."
+          },
           "versions": {
             "description": "Build metadata for the installed RMS components.",
             "$ref": "#/components/schemas/RmsVersionDto"
@@ -3772,9 +4551,55 @@
           "consistency": {
             "description": "Cross-file consistency evidence for duplicated RMS values.",
             "$ref": "#/components/schemas/RmsConsistencyDto"
+          },
+          "componentDrift": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RmsComponentDriftDto"
+            },
+            "description": "Bounded per-component comparison against Product Release."
           }
         },
         "description": "Safe installed RMS identity and consistency evidence."
+      },
+      "RmsStorageHealthDto": {
+        "required": [
+          "state",
+          "availableFreeSpaceBytes",
+          "rootAvailable",
+          "freshness",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "description": "Health classification of the approved storage root.",
+            "$ref": "#/components/schemas/HealthState"
+          },
+          "availableFreeSpaceBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Available bytes reported by the approved storage provider.",
+            "format": "int64"
+          },
+          "rootAvailable": {
+            "type": "boolean",
+            "description": "Whether the approved storage root was available as a directory."
+          },
+          "freshness": {
+            "description": "Freshness of the capacity observation.",
+            "$ref": "#/components/schemas/FreshnessState"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Safe capacity summary."
+          }
+        },
+        "description": "Bounded capacity evidence for the Agent-approved database storage root."
       },
       "RmsVersionDto": {
         "required": [
@@ -3869,6 +4694,74 @@
           }
         },
         "description": "Safe result for one service action. Outcome truth is separate from HTTP status and contains no exception, SID, credential, path, command, or raw service target."
+      },
+      "ServiceFailureAnalysisDto": {
+        "required": [
+          "serviceId",
+          "serviceDisplayName",
+          "category",
+          "severity",
+          "confidence",
+          "summary",
+          "checkedAtUtc",
+          "evidence",
+          "unknownReasons",
+          "recommendations"
+        ],
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "description": "Opaque server-owned service identifier."
+          },
+          "serviceDisplayName": {
+            "type": "string",
+            "description": "Safe service display name."
+          },
+          "category": {
+            "description": "Selected failure category.",
+            "$ref": "#/components/schemas/FailureCategory"
+          },
+          "severity": {
+            "description": "Conservative failure severity.",
+            "$ref": "#/components/schemas/FailureSeverity"
+          },
+          "confidence": {
+            "description": "Confidence that bounded evidence supports the classification.",
+            "$ref": "#/components/schemas/FailureConfidence"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Safe operator summary."
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "description": "UTC time at which the analysis was evaluated.",
+            "format": "date-time"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailureEvidenceDto"
+            },
+            "description": "Bounded redacted failure evidence."
+          },
+          "unknownReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Safe reasons evidence may be incomplete."
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailureRecommendationDto"
+            },
+            "description": "Non-executing operator guidance."
+          }
+        },
+        "description": "Typed, bounded, non-mutating analysis for one opaque RMS service identifier."
       },
       "ServiceRuntimeState": {
         "enum": [
@@ -3966,6 +4859,38 @@
         },
         "description": "Security and API-version diagnostics produced by the Agent for the authenticated Windows account. The raw Windows SID is intentionally omitted."
       },
+      "SupportBundleDto": {
+        "required": [
+          "artifact",
+          "createdAtUtc",
+          "correlationId",
+          "includedSections"
+        ],
+        "type": "object",
+        "properties": {
+          "artifact": {
+            "description": "Opaque principal-scoped Support Bundle artifact capability.",
+            "$ref": "#/components/schemas/ArtifactMetadataDto"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "description": "UTC time at which the Support Bundle was created.",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier."
+          },
+          "includedSections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Server-owned sections included in the archive."
+          }
+        },
+        "description": "Opaque result describing a generated, redacted Support Bundle artifact."
+      },
       "TriggerBatchRequestDto": {
         "required": [
           "branchCodes",
@@ -4014,6 +4939,9 @@
     },
     {
       "name": "RMS Diagnostics"
+    },
+    {
+      "name": "Diagnostics"
     },
     {
       "name": "RMS Database Operations"

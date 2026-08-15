@@ -8,6 +8,8 @@ using ContractConsistencyState = RmsSupportHub.Pos.Contracts.V1.Rms.RmsConsisten
 using ContractDatabaseStatus = RmsSupportHub.Pos.Contracts.V1.Rms.RmsDatabaseDiagnosticStatus;
 using DomainConsistencyState = RmsSupportHub.Pos.Domain.Models.RmsConsistencyState;
 using DomainDatabaseStatus = RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus;
+using DomainDriftState = RmsSupportHub.Pos.Domain.Models.RmsComponentDriftState;
+using ContractDriftState = RmsSupportHub.Pos.Contracts.V1.Rms.RmsComponentDriftState;
 
 namespace RmsSupportHub.Pos.Agent.Rms;
 
@@ -19,24 +21,27 @@ public sealed class RmsDiagnosticsService(
     IRmsInstallationDiscovery discovery,
     IRmsDatabaseDiagnostics databases,
     RmsConnectivityDiagnostics connectivity,
-    ReadOnlyServiceStatusService services)
+    ReadOnlyServiceStatusService services,
+    RmsDatabaseHealthService databaseHealth)
 {
     public async Task<RmsDiagnosticsDto> GetAsync(CancellationToken cancellationToken = default)
     {
         var installation = await discovery.DiscoverAsync(cancellationToken).ConfigureAwait(false);
         var branchDatabase = databases.DiagnoseAsync(RmsDatabaseKind.Branch, cancellationToken);
         var cashierDatabase = databases.DiagnoseAsync(RmsDatabaseKind.Cashier, cancellationToken);
+        var branchHealth = databaseHealth.GetAsync(RmsDatabaseKind.Branch, cancellationToken);
+        var cashierHealth = databaseHealth.GetAsync(RmsDatabaseKind.Cashier, cancellationToken);
         var connectivityTask = connectivity.GetAsync(installation, cancellationToken);
         var servicesTask = services.GetAsync(cancellationToken);
 
-        await Task.WhenAll(branchDatabase, cashierDatabase, connectivityTask, servicesTask)
+        await Task.WhenAll(branchDatabase, cashierDatabase, branchHealth, cashierHealth, connectivityTask, servicesTask)
             .ConfigureAwait(false);
 
         return new(
             ToInstallationDto(installation),
             connectivityTask.Result,
-            ToDatabaseDto(branchDatabase.Result),
-            ToDatabaseDto(cashierDatabase.Result),
+            ToDatabaseDto(branchDatabase.Result, branchHealth.Result),
+            ToDatabaseDto(cashierDatabase.Result, cashierHealth.Result),
             servicesTask.Result);
     }
 
@@ -63,6 +68,7 @@ public sealed class RmsDiagnosticsService(
             installation.BranchServerAddress,
             mode,
             installation.ClientName,
+            installation.ProductRelease,
             new(
                 installation.Versions.BranchServerBuildNumber,
                 installation.Versions.CashierServerBuildNumber,
@@ -73,10 +79,23 @@ public sealed class RmsDiagnosticsService(
                 MapConsistency(installation.Consistency.MainServerBranchId),
                 MapConsistency(installation.Consistency.MainServerPosId),
                 MapConsistency(installation.Consistency.Version),
-                installation.Consistency.Warnings));
+                installation.Consistency.Warnings),
+            (installation.ComponentDrift ?? []).Select(drift => new RmsComponentDriftDto(
+                drift.Component,
+                drift.BuildNumber,
+                drift.ProductRelease,
+                drift.State switch
+                {
+                    DomainDriftState.Aligned => ContractDriftState.Aligned,
+                    DomainDriftState.Drifted => ContractDriftState.Drifted,
+                    _ => ContractDriftState.Unavailable
+                },
+                drift.Reason)).ToArray());
     }
 
-    private static RmsDatabaseDiagnosticDto ToDatabaseDto(RmsDatabaseDiagnosticResult result)
+    private static RmsDatabaseDiagnosticDto ToDatabaseDto(
+        RmsDatabaseDiagnosticResult result,
+        RmsDatabaseHealthDto health)
     {
         var freshness = result.Status switch
         {
@@ -93,7 +112,8 @@ public sealed class RmsDiagnosticsService(
             result.Configured,
             result.DatabaseNameMatches,
             MapDatabaseStatus(result.Status),
-            new EvidenceDto(freshness, result.CheckedAtUtc, result.Detail));
+            new EvidenceDto(freshness, result.CheckedAtUtc, result.Detail),
+            health);
     }
 
     private static ContractConsistencyState MapConsistency(DomainConsistencyState state) => state switch

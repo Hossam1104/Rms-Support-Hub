@@ -35,6 +35,13 @@ public enum RmsSqlProbeStatus
     Unreachable
 }
 
+public enum RmsComponentDriftState
+{
+    Aligned,
+    Drifted,
+    Unavailable
+}
+
 /// <summary>
 /// Safe, non-serializable read model of the installed RMS+ suite. It contains only values selected
 /// from the known RMS files. Raw connection strings and credentials are intentionally absent.
@@ -51,14 +58,15 @@ public sealed record RmsInstallationSnapshot(
     string? MainServerUrl,
     string? BranchServerAddress,
     string? ClientName,
-    string? Release,
+    string? ProductRelease,
     RmsVersionSnapshot Versions,
     RmsConsistencySnapshot Consistency,
     RmsDatabaseConfiguration BranchDatabase,
     RmsDatabaseConfiguration CashierDatabase,
     RmsEndpointConfiguration MainServerEndpoint,
     RmsEndpointConfiguration BranchServerEndpoint,
-    RmsServiceExpectationsSnapshot Services);
+    RmsServiceExpectationsSnapshot Services,
+    IReadOnlyList<RmsComponentDriftSnapshot>? ComponentDrift = null);
 
 public sealed record RmsVersionSnapshot(
     string? BranchServerBuildNumber,
@@ -94,6 +102,13 @@ public sealed record RmsServiceExpectationsSnapshot(
     bool ServicesManagerConfigurationDetected,
     bool BranchServiceConfigured,
     bool CashierServiceConfigured);
+
+public sealed record RmsComponentDriftSnapshot(
+    string Component,
+    string? BuildNumber,
+    string? ProductRelease,
+    RmsComponentDriftState State,
+    string Reason);
 
 public sealed record RmsSqlProbeResult(
     RmsSqlProbeStatus Status,

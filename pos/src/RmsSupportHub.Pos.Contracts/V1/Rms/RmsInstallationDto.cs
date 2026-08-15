@@ -13,5 +13,7 @@ public sealed record RmsInstallationDto(
     string? BranchServerAddress,
     string? InstallationMode,
     string? ClientName,
+    string? ProductRelease,
     RmsVersionDto Versions,
-    RmsConsistencyDto Consistency);
+    RmsConsistencyDto Consistency,
+    IReadOnlyList<RmsComponentDriftDto> ComponentDrift);

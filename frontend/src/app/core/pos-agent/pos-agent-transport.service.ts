@@ -10,6 +10,7 @@ import {
 } from './pos-agent.constants';
 
 type HealthStatus = components['schemas']['HealthStatusDto'];
+type HealthReport = components['schemas']['HealthReportDto'];
 type SessionInfo = components['schemas']['SessionInfoDto'];
 type MutationTokenIssueRequest = components['schemas']['MutationTokenIssueRequestDto'];
 type MutationTokenIssueResponse = components['schemas']['MutationTokenIssueResponseDto'];
@@ -35,6 +36,9 @@ type CleanupExecuteRequest = components['schemas']['CleanupExecuteRequestDto'];
 type BranchResetPreview = components['schemas']['BranchResetPreviewDto'];
 type BranchResetExecuteRequest = components['schemas']['BranchResetExecuteRequestDto'];
 type MaintenanceOperation = components['schemas']['MaintenanceOperationDto'];
+type ServiceFailureAnalysis = components['schemas']['ServiceFailureAnalysisDto'];
+type IncidentTimeline = components['schemas']['IncidentTimelineDto'];
+type SupportBundle = components['schemas']['SupportBundleDto'];
 
 @Injectable({ providedIn: 'root' })
 export class PosAgentTransportService {
@@ -50,6 +54,15 @@ export class PosAgentTransportService {
   getReady(): Observable<HealthStatus> {
     return this.http
       .get<HealthStatus>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.ready}`, { headers: this.jsonHeaders })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getHealthCheck(): Observable<HealthReport> {
+    return this.http
+      .get<HealthReport>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.healthCheck}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 
@@ -111,6 +124,33 @@ export class PosAgentTransportService {
     return this.http
       .get<RmsDiagnostics>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.rmsDiagnostics}`, {
         headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getServiceFailureAnalysis(serviceId: string): Observable<ServiceFailureAnalysis> {
+    return this.http
+      .get<ServiceFailureAnalysis>(
+        `${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.serviceFailureAnalysis}/${encodeURIComponent(serviceId)}/failure`,
+        { headers: this.jsonHeaders, withCredentials: true }
+      )
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getIncidentTimeline(): Observable<IncidentTimeline> {
+    return this.http
+      .get<IncidentTimeline>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.incidentTimeline}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  generateSupportBundle(mutationToken: string): Observable<SupportBundle> {
+    return this.http
+      .post<SupportBundle>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.supportBundles}`, null, {
+        headers: this.mutationHeaders(mutationToken),
         withCredentials: true
       })
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));

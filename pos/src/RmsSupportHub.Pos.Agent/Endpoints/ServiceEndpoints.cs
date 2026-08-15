@@ -1,4 +1,5 @@
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Contracts.V1.Common;
@@ -36,6 +37,8 @@ public static class ServiceEndpoints
                     string serviceId,
                     ServiceActionRequestDto? request,
                     ServiceActionRuntime runtime,
+                    IncidentTimelineService timeline,
+                    IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteAsync(
@@ -43,6 +46,19 @@ public static class ServiceEndpoints
                         serviceId,
                         request,
                         cancellationToken).ConfigureAwait(false);
+
+                    if (result.Response is { } response)
+                    {
+                        IncidentTimelineRecorder.Record(
+                            context,
+                            timeline,
+                            principalSidResolver,
+                            "ServiceAction",
+                            response.Outcome.ToString(),
+                            response.Detail,
+                            serviceId,
+                            ServiceActionOperation.OperationId);
+                    }
 
                     return result.SecurityFailure switch
                     {
