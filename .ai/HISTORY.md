@@ -40,14 +40,14 @@ the linked planning/evidence documents.
 | PR #9 recovery-defect correction | Commit `93d6875` on PR #9; merge `615fda2` | Planner review found 3 recovery-blocking defects before merge, all fixed: (1) Restore now preflights via SQL Server `master`/backup-artifact validation instead of requiring the target database to open, so it works when that database is unavailable/missing; (2) approved backups moved from the in-memory `ArtifactCatalog` to a new durable, restart-surviving, Agent-owned `RmsDatabaseBackupCatalog` (atomic JSON, fail-closed corruption handling, physical revalidation); (3) database backups got a dedicated retention policy (`RmsDatabaseStorageOptions.BackupRetention`, 30-day default) fully decoupled from the generic 24h `ArtifactLifetime`. Added 9 Infrastructure + 11 Agent integration tests. Full suite 306/306, frontend 345/345, Release build 0 warnings, OpenAPI/client drift clean, all 5 PR CI lanes green. Live non-destructive Backup validation was attempted on the representative Testing machine but blocked by a non-elevated session (SCM access denied); no live Restore was attempted (not authorized). |
 
 | POS Downloader / Deployment + Cleanup / Maintenance | Commit `de3dc8f`; full repository validation | Wired typed Downloader, server-owned Cleanup/Branch Reset, and opaque Artifact download through the Agent with principal-scoped REST/SSE state, one-use mutation/challenge/idempotency boundaries, existing Application/Infrastructure seams, generated OpenAPI/client contracts, and the `/tools/pos-maintenance` operator rail. Added focused endpoint coverage and synthetic-only fakes; no real RMS database, Production, or customer execution was performed. POS tests passed 311/311, frontend tests 345/345, Release build passed with 0 warnings, and the generated client was byte-stable on a second pass. |
+| POS runtime/API reconnaissance and product rebaseline | `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`; planning PR | Reconciled PR #10 with the representative UPC installation and GET-only Main Server OpenAPI/runtime evidence. Confirmed authoritative Release/Client sources, real `RMSServiceManager` SCM spelling, usable bounded log/event evidence, matching local repair payloads, Agent-owned Main Server profile requirement, and separate large Slices A/B/C. Replaced `TASK.md` with the full Slice A implementation prompt; no runtime mutation or production code was executed. |
 
 ## Current programme status
 
-INT-00 through INT-08 and INT-13 are complete and validated. The RMS
-installation/diagnostics and typed database recovery slices are implemented
-and repository-validated; live RMS backup/restore remains deliberately
-untested. The Downloader / Deployment + Cleanup / Maintenance slice is
-implemented and repository-validated. The next milestone is POS Final
-Functional Integration + UX + Production Packaging. Production/customer
-deployment remains blocked on M-1 and M-2.
+INT-00 through INT-08 and INT-13 are complete and validated. RMS discovery,
+typed database recovery, and Downloader/Maintenance are repository-validated.
+The final product plan is rebaselined from representative UPC runtime and
+GET-only Main Server evidence. The next milestone is large Slice A: final
+operator workspace plus typed diagnostic evidence. Production/customer
+deployment remains blocked on the recorded fleet/security gates.
 
