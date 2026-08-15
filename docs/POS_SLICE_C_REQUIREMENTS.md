@@ -107,7 +107,40 @@ authorization.
 - Record durable audit facts in `.ai/STATE.md`, `.ai/HISTORY.md`, and the
   appropriate decision record only after the evidence is reproducible.
 
-## 6. Explicit non-goals
+## 6. POS workspace visual redesign (owner-approved direction)
+
+The owner has approved a substantial modern visual redesign of the POS
+Maintenance workspace **for Slice C**. It is deliberately not implemented in the
+Testing provisioning remediation, and it must not be dropped from this plan.
+
+Direction:
+
+- Richer dimensional, layered design with controlled 3D depth; glass and depth
+  surfaces used as structure, not decoration.
+- Modern hover elevation, tactile buttons, and smooth panel transitions.
+- Animated health indicators and animated service-state transitions.
+- Health Check progress animation and Backup/Restore progress visualization.
+- Repair workflow step animation and Incident Timeline motion.
+- Visual gauges for storage, database, and update health.
+- Improved loading and skeleton states.
+- Modern dark mode and responsive layouts across the supported viewports.
+
+Constraints:
+
+- Honour `prefers-reduced-motion`; every animation must have a static
+  equivalent that still communicates state.
+- Full keyboard accessibility and visible focus must survive the redesign.
+- No excessive gaming-style effects. No heavy WebGL unless a specific need is
+  objectively justified and cheaper alternatives are shown to be insufficient.
+- Styles continue to consume design tokens; raw colour literals stay in the
+  designated token and gradient files.
+- The redesign changes presentation only. It must not relax the exact Support
+  Hub origin, HTTPS, Negotiate, Administrator authorization, direct
+  browser-to-Agent transport, typed confirmation, or one-use mutation
+  authorization, and must not surface filesystem paths, credentials, or raw
+  Agent errors.
+
+## 7. Explicit non-goals
 
 Slice C does not authorize Production execution during implementation. It does
 not authorize RMS installer/uninstaller/repair/rollback/package activation,

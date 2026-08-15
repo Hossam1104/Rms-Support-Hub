@@ -71,6 +71,111 @@ function Test-PosServerAuthenticationEku {
     }).Count -eq 1
 }
 
+$script:PosExpectedKeyStorageProvider = 'Microsoft Software Key Storage Provider'
+
+# Principals that must never hold an allow rule on the Testing private-key file.
+# The key is a machine credential for the secure Support Hub origin, so any
+# broad interactive-user grant is treated as an unbounded ACL and fails closed.
+$script:PosForbiddenPrivateKeySids = @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545', 'S-1-5-7', 'S-1-5-32-546')
+
+<#
+.SYNOPSIS
+Describes a private key without exposing key material.
+
+.DESCRIPTION
+Only the CNG-ness, the storage-provider name, and the export policy are read.
+No modulus, exponent, unique key name, or exported blob is returned, so the
+descriptor is safe to compare, log a boolean about, and unit test.
+#>
+function Get-PosPrivateKeyDescriptor {
+    [CmdletBinding()]
+    param([AllowNull()][object]$PrivateKey)
+
+    $cngKey = $PrivateKey -as [Security.Cryptography.RSACng]
+    if ($null -eq $cngKey) {
+        return [pscustomobject]@{ IsCngKey = $false; ProviderName = $null; ExportPolicy = $null }
+    }
+
+    return [pscustomobject]@{
+        IsCngKey = $true
+        ProviderName = [string]$cngKey.Key.Provider.Provider
+        ExportPolicy = [string]$cngKey.Key.ExportPolicy
+    }
+}
+
+<#
+.SYNOPSIS
+Evaluates the required provider and export policy as one boolean expression.
+
+.DESCRIPTION
+This deliberately stays a single expression on one logical line. A previous
+revision split the same test across two physical lines without a continuation,
+so PowerShell parsed the second line as a command named `-and` and the provider
+check never contributed to the result. Keeping the whole policy inside one
+function makes the regression directly testable.
+#>
+function Test-PosSupportHubPrivateKeyPolicy {
+    [CmdletBinding()]
+    param(
+        [bool]$IsCngKey,
+        [AllowNull()][object]$ProviderName,
+        [AllowNull()][object]$ExportPolicy,
+        [string]$ExpectedProvider = $script:PosExpectedKeyStorageProvider
+    )
+
+    return $IsCngKey -and ([string]$ProviderName) -eq $ExpectedProvider -and ([string]$ExportPolicy) -eq 'None'
+}
+
+<#
+.SYNOPSIS
+Returns the allow rules that grant a broad principal, if any.
+#>
+function Get-PosBroadPrivateKeyAccessRule {
+    [CmdletBinding()]
+    param([AllowNull()][AllowEmptyCollection()][object[]]$Rule)
+
+    return @($Rule | Where-Object {
+        $null -ne $_ `
+            -and $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow `
+            -and ([string]$_.IdentityReference.Value) -in $script:PosForbiddenPrivateKeySids
+    })
+}
+
+<#
+.SYNOPSIS
+Fails closed when the Testing private-key file grants broad principals access.
+#>
+function Assert-PosSupportHubPrivateKeyAcl {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$KeyFilePath)
+
+    if (-not (Test-Path -LiteralPath $KeyFilePath -PathType Leaf)) {
+        throw 'The Testing Support Hub private-key file could not be located for ACL verification.'
+    }
+
+    $rules = @((Get-Acl -LiteralPath $KeyFilePath).GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+    if (@(Get-PosBroadPrivateKeyAccessRule -Rule $rules).Count -gt 0) {
+        throw 'The Testing Support Hub private key grants a broad principal; refusing to use an unbounded private-key ACL.'
+    }
+}
+
+function Get-PosSupportHubPrivateKeyFile {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][object]$PrivateKey)
+
+    $cngKey = $PrivateKey -as [Security.Cryptography.RSACng]
+    if ($null -eq $cngKey) {
+        return $null
+    }
+
+    $uniqueName = [string]$cngKey.Key.UniqueName
+    if ([string]::IsNullOrWhiteSpace($uniqueName)) {
+        return $null
+    }
+
+    return Join-Path $env:ProgramData "Microsoft/Crypto/Keys/$uniqueName"
+}
+
 function Assert-PosSupportHubCertificateProperties {
     [CmdletBinding()]
     param(
@@ -96,12 +201,20 @@ function Assert-PosSupportHubCertificateProperties {
         throw 'The Testing Support Hub certificate does not expose an RSA private key.'
     }
     try {
-        $expectedProvider = $privateKey -is [Security.Cryptography.RSACng]
-            -and $privateKey.Key.Provider.Provider -eq 'Microsoft Software Key Storage Provider'
-        $nonExportable = [string]$privateKey.Key.ExportPolicy -eq 'None'
-        if (-not $expectedProvider -or -not $nonExportable) {
-            throw 'The Testing Support Hub certificate must use the Microsoft Software Key Storage Provider with a non-exportable private key.'
+        $descriptor = Get-PosPrivateKeyDescriptor $privateKey
+        $allowed = Test-PosSupportHubPrivateKeyPolicy `
+            -IsCngKey $descriptor.IsCngKey `
+            -ProviderName $descriptor.ProviderName `
+            -ExportPolicy $descriptor.ExportPolicy
+        if (-not $allowed) {
+            throw "The Testing Support Hub certificate must use the $script:PosExpectedKeyStorageProvider with a non-exportable private key."
         }
+
+        $keyFilePath = Get-PosSupportHubPrivateKeyFile $privateKey
+        if ([string]::IsNullOrWhiteSpace($keyFilePath)) {
+            throw 'The Testing Support Hub private-key file could not be resolved for ACL verification.'
+        }
+        Assert-PosSupportHubPrivateKeyAcl $keyFilePath
     } finally {
         if ($null -ne $privateKey) {
             $privateKey.Dispose()
@@ -382,5 +495,10 @@ Export-ModuleMember -Function @(
     'Remove-PosSupportHubCertificate',
     'Get-PosSupportHubCertificates',
     'Get-PosSupportHubCertificate',
-    'Assert-PosSupportHubCertificateProperties'
+    'Assert-PosSupportHubCertificateProperties',
+    'Assert-PosSupportHubPrivateKeyAcl',
+    'Get-PosBroadPrivateKeyAccessRule',
+    'Get-PosPrivateKeyDescriptor',
+    'Get-PosSupportHubPrivateKeyFile',
+    'Test-PosSupportHubPrivateKeyPolicy'
 )

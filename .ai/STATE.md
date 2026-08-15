@@ -1,21 +1,55 @@
 # Current Project State
 
 - **Updated:** 2026-08-15
-- **Repository baseline:** PR #14 is merged as `19f609b` on synchronized
-  `main`; PR #13 was `8192141` and POS Slice A PR #12 was `fb71d01`.
-- **Slice B remediation:** The task-scoped H-1/H-2/H-3 and adjacent M/L
-  remediation is merged and delivered. `TASK.md` is now the bounded
-  independent Claude Opus 5 security-review handoff.
-- **Current outcome:** Fixed service-owned roots, bounded fail-closed
+- **Repository baseline:** the POS Testing provisioning and secure frontend
+  routing remediation is merged on synchronized `main`; the preceding baselines
+  were PR #14 (`19f609b`), PR #13 (`8192141`), and POS Slice A PR #12 (`fb71d01`).
+- **Slice B remediation:** the task-scoped H-1/H-2/H-3 and adjacent M/L
+  remediation remains merged and delivered.
+- **Current outcome:** fixed service-owned roots, bounded fail-closed
   redaction, a machine-wide privileged mutation lease, typed POST previews,
   bounded Main Server transport, exact endpoint binding, configured snapshot
-  identity, and the canonical secure POS entry are implemented. No RMS
-  executable, installer/uninstaller, repair, package activation, registry or
-  RMS folder mutation, database mutation, Production action, or Main Server
-  mutation was run.
-- **Next executable task:** perform the independent security review specified
-  in `TASK.md`. Slice C requirements are durable in
+  identity, and the canonical secure POS entry are implemented, plus the
+  Testing provisioning hardening below. No RMS executable,
+  installer/uninstaller, repair, package activation, registry or RMS folder
+  mutation, database mutation, Production action, or Main Server mutation was
+  run. Production readiness is not claimed.
+- **Next executable task:** the independent POS security / Testing provisioning
+  gate re-review specified in `TASK.md`. Slice C requirements, including the
+  owner-approved POS visual redesign direction, are durable in
   `docs/POS_SLICE_C_REQUIREMENTS.md` and are not implemented.
+
+## Durable Testing provisioning facts
+
+- A multiline boolean in the Testing certificate check had no line
+  continuation, so PowerShell parsed `-and ...` as a command. The script parsed
+  cleanly and failed only at runtime with `The term '-and' is not recognized`,
+  and the private-key provider half never contributed to the decision.
+  Certificate policy is now one boolean expression in
+  `Test-PosSupportHubPrivateKeyPolicy`, and
+  `scripts/test-powershell-quality.ps1` rejects the shape repository-wide.
+- The Testing certificate must be CNG, issued by the Microsoft Software Key
+  Storage Provider, non-exportable, and its private-key file must grant no
+  broad principal (Everyone, Authenticated Users, Users, Anonymous, Guests).
+  Any failure terminates provisioning; no key material is printed.
+- `scripts/start-pos-agent-testing.ps1` self-elevates through UAC by
+  re-launching only itself, only from a PowerShell host inside `$PSHOME`, with
+  only its known typed parameters, quoting paths that contain spaces.
+  `-NoSelfElevate` is the CI/testing opt-out. The boundary is Testing tooling
+  only; Production onboarding remains Slice C.
+- Startup stops only the runtime whose PID, image, and command line it owns,
+  rebuilds the current Angular production frontend and API publish, stages the
+  frontend into the current backend `wwwroot`, and re-verifies the launched PID.
+  An unowned `:4443` listener is never killed or adopted; a stale owned listener
+  is replaced through the normal flow; state binds runtime root, PID,
+  executable, content root, build identity, certificate, host, and port.
+- Frontend freshness is proved by identity, not by HTTP 200:
+  `frontend/scripts/build-identity.mjs` emits a non-secret
+  `/build-identity.json` (commit, source state, deterministic asset-manifest
+  build id, asset count, build timestamp, index and main-bundle hashes).
+  Startup fails closed unless the expected, staged, and served identities match
+  and the served index and main bundle hash as recorded. The document and the
+  Advanced Diagnostics panel expose no filesystem path.
 
 ## Durable Slice A facts
 
@@ -47,8 +81,9 @@
   Branch/POS PUT contracts are not proxied or invoked.
 - The Hub POS card hands the browser to the exact canonical Testing route
   `https://support-hub.integration.test:4443/tools/pos-maintenance`; the route
-  guard rejects wrong-origin direct loads while preserving the direct
-  browser-to-Agent boundary.
+  guard hands off wrong-origin direct loads to the same secure path instead of
+  rendering Agent-unavailable errors, and the Agent still trusts only that
+  exact Origin - `http://localhost:4200` is never allowed.
 - Fixed RMS source roots and the sanitized uninstall registry allow-list are
   recorded in `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`.
 - Slice B boundary details and route inventory are recorded in
@@ -57,24 +92,21 @@
 ## Validation evidence
 
 - POS Release build with `PosAgentSecurity__SupportHubOrigin` set and
-  `-warnaserror` passed.
+  `-warnaserror` passed: 0 warnings, 0 errors.
 - Full POS solution tests passed: Domain 9, Application 76, Infrastructure 90,
   Agent integration 152 (327 total).
-- POS Release solution build passed with warnings treated as errors: 0
-  warnings, 0 errors.
-- Frontend tests passed: 56 files, 345 tests. Production frontend build passed.
-- POS OpenAPI contract tests passed (9 checks); client generation passed twice
-  with a byte-stable second pass. `git diff --check` passed.
+- Frontend tests passed: 58 files, 361 tests. Production frontend build passed.
+- Pester suites passed: 87 tests across provisioning, cleanup, configuration,
+  script quality, and runtime ownership/build identity.
+- `scripts/test-powershell-quality.ps1` passed: 21 tracked PowerShell files
+  parse with no operator-as-command or dangling-continuation findings.
+  PSScriptAnalyzer is not installed locally, so the native gate is the only
+  signal there; CI runs the same gate.
+- Client generation passed twice with a byte-stable second pass, and
+  `git diff --exit-code` on the generated OpenAPI and Angular client passed.
+  `git diff --check` passed.
 - The memory checker reports only the pre-existing root `AGENTS.md` 146-line
-  budget violation; all other checked memory files are within budget. The POS
-  solution checks and frontend checks passed independently. The prescribed
-  `scripts/build.ps1` gate reached backend tests and reported 190/192: its two
-  failures are legacy-route assertions expecting 404 while the current API
-  correctly returns 405. Final merged-main runtime probes returned HTTP 200
-  for `http://localhost:4200/tools/pos-maintenance` and
-  `http://localhost:5200/api/modules/health`; the Testing-only launcher then
-  stopped at its required elevated-Administrator gate. The successful API and
-  frontend development processes remain running.
+  budget violation; all other checked memory files are within budget.
 
 ## Existing Main Server and runtime gates
 

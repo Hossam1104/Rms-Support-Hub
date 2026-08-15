@@ -5,6 +5,7 @@ import { components } from '../../core/pos-agent/generated/pos-agent-api.generat
 import { PosAgentTransportError, classifyPosAgentError } from '../../core/pos-agent/pos-agent-error';
 import { PosAgentTransportService } from '../../core/pos-agent/pos-agent-transport.service';
 import { POS_AGENT_OPERATION_IDS } from '../../core/pos-agent/pos-agent.constants';
+import { BuildIdentityService } from '../../core/services/build-identity.service';
 import { ToastService } from '../../core/services/toast.service';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
 import {
@@ -284,7 +285,7 @@ const POS_MAINTENANCE_TEMPLATE = `
       <details>
         <summary id="advanced-title">Advanced Diagnostics <span>Agent / API / OS, safe configuration statements, and deeper evidence</span></summary>
         <div class="advanced-grid advanced-grid--three"><div class="evidence-block"><h3>Agent / API / OS</h3><dl class="key-value-list"><div><dt>Agent</dt><dd>{{ agentVersion() }}</dd></div><div><dt>API</dt><dd>{{ apiVersion() }}</dd></div><div><dt>OS</dt><dd>{{ capabilities()?.operatingSystem || 'Unavailable' }}</dd></div><div><dt>Authorization</dt><dd>{{ authorizationLabel() }}</dd></div></dl></div><div class="evidence-block"><h3>Safe configuration statements</h3><p>{{ configurationSummary() }}</p><p>Secret values, presence flags, and source paths are intentionally not displayed in this workspace.</p></div><div class="evidence-block"><h3>Legacy SQL evidence</h3><p>{{ connectivity()?.localSql?.detail || 'Local SQL evidence is unavailable.' }}</p><p>Reachability is not database health; database identity and backup evidence are shown above.</p></div></div>
-        <div class="advanced-grid"><div class="evidence-block"><h3>Testing infrastructure</h3><p>{{ testingInfrastructureSummary() }}</p></div><div class="evidence-block"><h3>Incident Timeline</h3>@if (timeline(); as incidents) { <div class="timeline-list">@for (event of incidents.events; track event.eventId) { <div><time>{{ event.atUtc }}</time><strong>{{ event.kind }}</strong><span>{{ event.summary }}</span></div> } @empty { <span class="empty-copy">No retained events for this principal.</span> }</div> } @else { <p>Use View Incident Timeline to load the bounded local timeline.</p> }</div></div>
+        <div class="advanced-grid advanced-grid--three"><div class="evidence-block"><h3>Frontend build identity</h3><p data-testid="frontend-build-identity">{{ frontendBuildSummary() }}</p><p>Commit, build hash, asset count, and build time prove this origin is serving the current build. Filesystem paths are intentionally not displayed.</p></div><div class="evidence-block"><h3>Testing infrastructure</h3><p>{{ testingInfrastructureSummary() }}</p></div><div class="evidence-block"><h3>Incident Timeline</h3>@if (timeline(); as incidents) { <div class="timeline-list">@for (event of incidents.events; track event.eventId) { <div><time>{{ event.atUtc }}</time><strong>{{ event.kind }}</strong><span>{{ event.summary }}</span></div> } @empty { <span class="empty-copy">No retained events for this principal.</span> }</div> } @else { <p>Use View Incident Timeline to load the bounded local timeline.</p> }</div></div>
       </details>
     </section>
 
@@ -869,6 +870,7 @@ const POS_MAINTENANCE_TEMPLATE = `
 export class PosMaintenanceComponent {
   private readonly transport = inject(PosAgentTransportService);
   private readonly toast = inject(ToastService);
+  private readonly buildIdentityService = inject(BuildIdentityService);
 
   readonly loading = signal(true);
   readonly refreshing = signal(false);
@@ -937,7 +939,17 @@ export class PosMaintenanceComponent {
   private downloaderSelectionInitialized = false;
 
   constructor() {
+    void this.buildIdentityService.load();
     void this.load();
+  }
+
+  /**
+   * Non-secret identity of the frontend bundle this browser actually loaded.
+   * It is what distinguishes a current secure origin from one still serving a
+   * previously staged build; it never exposes a filesystem path.
+   */
+  frontendBuildSummary(): string {
+    return this.buildIdentityService.summary();
   }
 
   async refresh(): Promise<void> {
