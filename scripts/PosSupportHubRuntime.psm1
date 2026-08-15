@@ -117,6 +117,72 @@ function Assert-PosSupportHubOwnedListener {
 
 <#
 .SYNOPSIS
+Fails closed unless the supplied listeners are all loopback-only.
+
+.DESCRIPTION
+Ownership is not asserted here: this is the service-port check, where the
+service manages its own process. The listener collection is a parameter so the
+decision stays testable without binding a real socket.
+#>
+function Assert-PosLoopbackOnlyListener {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][int]$Port,
+        [AllowNull()][AllowEmptyCollection()][object[]]$Listener
+    )
+
+    $listeners = @($Listener | Where-Object { $null -ne $_ })
+    if ($listeners.Count -eq 0) {
+        throw "No listener is bound to TCP port $Port."
+    }
+
+    $routable = @($listeners | Where-Object { [string]$_.LocalAddress -notin $script:PosLoopbackAddresses })
+    if ($routable.Count -gt 0) {
+        throw "The TCP port $Port listener was not loopback-only."
+    }
+}
+
+<#
+.SYNOPSIS
+Waits a bounded time for a service to bind its loopback-only port.
+
+.DESCRIPTION
+A Windows Service reaches Running as soon as its host starts, which is before
+the hosted web server has bound its socket. Sampling the port once therefore
+turns an ordinary startup race into a provisioning failure. The wait stays
+fail-closed: a routable listener is rejected as soon as it is observed, and an
+absent listener still throws once the deadline passes.
+#>
+function Wait-PosLoopbackOnlyListener {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][int]$Port,
+        [ValidateRange(1, 600)][int]$TimeoutSeconds = 60,
+        [scriptblock]$ListenerProvider
+    )
+
+    if ($null -eq $ListenerProvider) {
+        $ListenerProvider = { param($p) @(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue) }
+    }
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    do {
+        $listeners = @(& $ListenerProvider $Port | Where-Object { $null -ne $_ })
+        if ($listeners.Count -gt 0) {
+            Assert-PosLoopbackOnlyListener -Port $Port -Listener $listeners
+            return $listeners
+        }
+        if ([DateTime]::UtcNow -ge $deadline) {
+            break
+        }
+        Start-Sleep -Milliseconds 500
+    } while ($true)
+
+    throw "No listener reached TCP port $Port within $TimeoutSeconds seconds."
+}
+
+<#
+.SYNOPSIS
 Verifies the recorded runtime state still binds every identity it claims.
 #>
 function Assert-PosSupportHubRuntimeStateBinding {
@@ -296,6 +362,7 @@ function Get-PosHttpResourceBytes {
 
 Export-ModuleMember -Function @(
     'Assert-PosFrontendBuildIdentity',
+    'Assert-PosLoopbackOnlyListener',
     'Assert-PosSupportHubOwnedListener',
     'Assert-PosSupportHubRuntimeStateBinding',
     'Get-PosElevationHostPath',
@@ -303,5 +370,6 @@ Export-ModuleMember -Function @(
     'Get-PosFrontendAssetManifestHash',
     'Get-PosHttpResourceBytes',
     'Get-PosSha256Hex',
-    'New-PosSelfElevationArgumentList'
+    'New-PosSelfElevationArgumentList',
+    'Wait-PosLoopbackOnlyListener'
 )

@@ -54,6 +54,56 @@ Describe 'Secure Support Hub listener ownership' {
     }
 }
 
+Describe 'Service listener readiness wait' {
+    It 'rejects an empty listener set' {
+        { Assert-PosLoopbackOnlyListener -Port 5001 -Listener @() } | Should Throw 'No listener is bound'
+    }
+
+    It 'rejects a routable listener regardless of ownership' {
+        { Assert-PosLoopbackOnlyListener -Port 5001 -Listener @(New-TestListener '0.0.0.0' 4321) } |
+            Should Throw 'not loopback-only'
+    }
+
+    It 'accepts a loopback-only listener set' {
+        { Assert-PosLoopbackOnlyListener -Port 5001 -Listener @(
+                (New-TestListener '127.0.0.1' 4321),
+                (New-TestListener '::1' 4321)) } | Should Not Throw
+    }
+
+    It 'waits for a service that reaches Running before it binds its socket' {
+        # This is the live failure: the SCM reported Running and the port was
+        # sampled once, so an ordinary startup race aborted provisioning.
+        $script:waitAttempts = 0
+        $provider = {
+            param($p)
+            $script:waitAttempts++
+            if ($script:waitAttempts -lt 3) { return @() }
+            return @(New-TestListener '127.0.0.1' 4321)
+        }
+
+        $listeners = Wait-PosLoopbackOnlyListener -Port 5001 -TimeoutSeconds 30 -ListenerProvider $provider
+
+        @($listeners).Count | Should Be 1
+        $script:waitAttempts | Should Be 3
+    }
+
+    It 'fails closed on a routable listener without waiting out the deadline' {
+        $provider = { param($p) @(New-TestListener '0.0.0.0' 4321) }
+        $started = [DateTime]::UtcNow
+
+        { Wait-PosLoopbackOnlyListener -Port 5001 -TimeoutSeconds 600 -ListenerProvider $provider } |
+            Should Throw 'not loopback-only'
+
+        ([DateTime]::UtcNow - $started).TotalSeconds -lt 30 | Should Be $true
+    }
+
+    It 'fails closed when the socket is never bound' {
+        $provider = { param($p) @() }
+        { Wait-PosLoopbackOnlyListener -Port 5001 -TimeoutSeconds 1 -ListenerProvider $provider } |
+            Should Throw 'No listener reached TCP port 5001'
+    }
+}
+
 Describe 'Secure Support Hub runtime state binding' {
     $completeState = [pscustomobject]@{
         SupportHubRuntimeRoot = 'C:\ProgramData\DBS\RmsSupportHub\Int13Testing\SupportHubRuntime'

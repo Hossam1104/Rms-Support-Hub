@@ -687,27 +687,45 @@ function Start-AndVerify-Service([string]$name) {
     throw "Windows Service did not reach Running state: $name"
 }
 
-function Invoke-Http11HealthCheck {
-    foreach ($path in @('/health/live', '/health/ready')) {
-        $request = [Net.HttpWebRequest]::Create("https://$canonicalHost`:5001$path")
-        $request.Method = 'GET'
-        $request.ProtocolVersion = [Version]::new(1, 1)
-        $request.AllowAutoRedirect = $false
-        $request.Timeout = 10000
-        $response = $null
-        $reader = $null
-        try {
-            $response = [Net.HttpWebResponse]$request.GetResponse()
-            if ($response.StatusCode -ne [Net.HttpStatusCode]::OK -or $response.ProtocolVersion -ne [Version]::new(1, 1)) {
-                throw "Agent health check failed for ${path}: HTTP $([int]$response.StatusCode), protocol $($response.ProtocolVersion)."
-            }
-            $reader = [IO.StreamReader]::new($response.GetResponseStream())
-            $body = $reader.ReadToEnd()
-            Write-Host "[PASS] $path -> HTTP $([int]$response.StatusCode), HTTP/$($response.ProtocolVersion), body status recorded as $((ConvertFrom-Json $body).status)" -ForegroundColor Green
-        } finally {
-            if ($null -ne $reader) { $reader.Dispose() }
-            if ($null -ne $response) { $response.Dispose() }
+function Invoke-Http11HealthProbe([string]$path) {
+    $request = [Net.HttpWebRequest]::Create("https://$canonicalHost`:5001$path")
+    $request.Method = 'GET'
+    $request.ProtocolVersion = [Version]::new(1, 1)
+    $request.AllowAutoRedirect = $false
+    $request.Timeout = 10000
+    $response = $null
+    $reader = $null
+    try {
+        $response = [Net.HttpWebResponse]$request.GetResponse()
+        if ($response.StatusCode -ne [Net.HttpStatusCode]::OK -or $response.ProtocolVersion -ne [Version]::new(1, 1)) {
+            throw "Agent health check failed for ${path}: HTTP $([int]$response.StatusCode), protocol $($response.ProtocolVersion)."
         }
+        $reader = [IO.StreamReader]::new($response.GetResponseStream())
+        $body = $reader.ReadToEnd()
+        Write-Host "[PASS] $path -> HTTP $([int]$response.StatusCode), HTTP/$($response.ProtocolVersion), body status recorded as $((ConvertFrom-Json $body).status)" -ForegroundColor Green
+    } finally {
+        if ($null -ne $reader) { $reader.Dispose() }
+        if ($null -ne $response) { $response.Dispose() }
+    }
+}
+
+function Invoke-Http11HealthCheck {
+    # A bound socket does not mean the host has finished starting, so each probe
+    # gets a bounded retry. The assertions are unchanged and the last failure is
+    # rethrown at the deadline, so an unhealthy Agent still fails closed.
+    foreach ($path in @('/health/live', '/health/ready')) {
+        $deadline = [DateTime]::UtcNow.AddSeconds(30)
+        do {
+            try {
+                Invoke-Http11HealthProbe $path
+                break
+            } catch {
+                if ([DateTime]::UtcNow -ge $deadline) {
+                    throw
+                }
+                Start-Sleep -Milliseconds 500
+            }
+        } while ($true)
     }
 }
 
@@ -824,11 +842,8 @@ if ($addresses.Count -eq 0 -or @($addresses | Where-Object { $_ -notin @('127.0.
 }
 Write-Host "[PASS] $canonicalHost resolves only to $($addresses -join ', ')" -ForegroundColor Green
 
-$listeners = @(Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction Stop)
-if ($listeners.Count -eq 0 -or @($listeners | Where-Object { $_.LocalAddress -notin @('127.0.0.1', '::1') }).Count -gt 0) {
-    throw 'The Agent port 5001 listener was not loopback-only.'
-}
-Write-Host '[PASS] Agent port 5001 listener is loopback-only.' -ForegroundColor Green
+$listeners = Wait-PosLoopbackOnlyListener -Port 5001 -TimeoutSeconds 60
+Write-Host "[PASS] Agent port 5001 listener is loopback-only on $((@($listeners | ForEach-Object { $_.LocalAddress }) | Sort-Object -Unique) -join ', ')." -ForegroundColor Green
 
 Invoke-Http11HealthCheck
 
