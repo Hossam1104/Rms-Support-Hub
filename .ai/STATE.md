@@ -1,13 +1,10 @@
 # Current Project State
 
 - **Updated:** 2026-08-15
-- **Current branch:** `agent/pos-slice-a`; the working tree contains the POS
-  Slice A implementation on top of local PR #11 documentation baseline
-  `ce7b0f2`.
-- **Remote governance:** PR #11 was still open/draft when this session began;
-  do not describe the local baseline as remotely merged. Slice A delivery is
-  intentionally performed on this feature branch and may be merged only after
-  normal review/check governance.
+- **Repository baseline:** PR #11 merged as `2bc8dfc`; POS Slice A PR #12
+  merged as `fb71d01`.
+- **Current branch:** `main`, fast-forwarded to `origin/main` at `fb71d01` with
+  a clean worktree after the authorized delivery merges.
 - **Current outcome:** POS Slice A implementation and validation are complete;
   no RMS executable, installer/uninstaller, database mutation, Production
   action, or Main Server mutation was run.
