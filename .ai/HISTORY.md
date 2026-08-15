@@ -46,13 +46,16 @@ the linked planning/evidence documents.
 | POS Slice B security remediation | PR #14 merge `19f609b`; POS solution 327 tests, Release build 0 warnings/errors, frontend 345 tests/build, Pester 44/44, byte-stable OpenAPI/client generation | Closed H-1/H-2/H-3 and adjacent M/L controls with bounded fail-closed redaction, fixed provisioned service-owned roots, a machine-wide privileged mutation lease, typed POST previews, bounded no-redirect Main Server transport, exact endpoint binding, configured snapshot identity, and the canonical secure external POS entry. Added read-only RMS source/registry evidence and durable Slice C requirements. Merged `main` is synchronized. Final dev API/frontend probes returned HTTP 200; secure Testing startup still requires an elevated Administrator session. No RMS executable, installer, repair, package activation, Production action, registry/RMS-folder mutation, or Main Server mutation was run. |
 
 | POS Testing provisioning, PowerShell and secure routing remediation | PR #15; POS 327 tests, Release build 0 warnings/errors, frontend 58 files/361 tests, Pester 87/87, PowerShell gate 21 files clean, byte-stable OpenAPI/client | Fixed the shipped multiline certificate-validation defect (`-and` parsed as a command) and made private-key provider, export policy, and ACL checks one fail-closed expression. Added a repository-wide PowerShell parse/AST quality gate plus a CI lane, confined UAC self-elevation to the startup script with typed arguments, bound the secure `:4443` runtime to owned PID/listener/content root/certificate, and replaced HTTP-200 startup proof with a served build-identity, index, and main-bundle hash match. The dashboard card and wrong-origin POS route hand off to the exact secure origin with no CORS, Negotiate, or authorization weakening. Slice C, including the owner-approved POS visual redesign direction, remains unimplemented. |
+| POS final Testing security gate remediation | PR #17 merge `b168f1c7cbef2db55c45fb681e46c4234f384855`; Pester 108/108, POS 327/327, frontend 363/363 twice, production build, six CI checks green | Enforced exact-one build-identity output, strict staged/served schema and runtime PID/build/commit binding, Agent ACL checks before/after LocalSystem handling, and a Testing-only elevated Global semaphore proof. Added frontend fixture/store/timer teardown and replaced `TASK.md` with the next review-only gate. Fresh development frontend/backend probes returned HTTP 200; secure Administrator runtime and elevated H-3 evidence remain owner-executed gates. |
 
 ## Current programme status
 
 INT-00 through INT-08 and INT-13 are complete and validated. RMS discovery,
 typed database recovery, Downloader/Maintenance, and Slice B security
 remediation are repository-validated and merged to synchronized `main`. The
-final product plan is rebaselined from representative UPC runtime and
+final Testing security gate remediation is also merged; secure Administrator
+runtime and elevated H-3 evidence remain open. The final product plan is
+rebaselined from representative UPC runtime and
 read-only Main Server evidence.
 Production/customer deployment remains blocked on the recorded fleet/security
 gates and the focused independent review in `TASK.md`.

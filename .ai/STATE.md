@@ -1,9 +1,8 @@
 # Current Project State
 
 - **Updated:** 2026-08-16
-- **Active branch:** `fix/pos-final-security-gate`; implementation is complete
-  locally and Git delivery/runtime verification remain in this session.
-- **Baseline:** synchronized `main` was `03e2c02` before this remediation;
+- **Active branch:** `main`; final remediation is merged and synchronized.
+- **Baseline:** PR #17 merge `b168f1c7cbef2db55c45fb681e46c4234f384855`;
   prior baselines were PR #14 `19f609b`, PR #13 `8192141`, and Slice A PR #12
   `fb71d01`.
 - **Previous gate:** 0 Critical, 2 High blockers, and 3 Medium findings. No
@@ -61,21 +60,31 @@
 - Complete frontend suite passed 363/363 in two consecutive full runs across
   58 files; production build passed. Client generation passed twice with no
   generated diff.
+- `npm ci --prefix frontend` passed; npm reported 5 dependency vulnerabilities
+  (1 moderate, 4 high) and 4 blocked install scripts. No `npm audit fix` ran.
 - POS Release build passed with `-warnaserror`, 0 warnings/errors. POS tests
   passed Domain 9, Application 76, Infrastructure 90, Agent integration 152
   (327 total). Non-admin infrastructure test records Global semaphore
   `Unavailable` as the required fail-closed result.
 - `git diff --check` passed. Memory check passes every file except the
   pre-existing root `AGENTS.md` budget violation (146/140 lines).
-- H-3 elevated proof and secure runtime restart are not yet evidenced because
+- Secure Testing runtime and H-3 elevated proof are not yet evidenced because
   this shell is not Administrator. Owner command: `.\scripts\test-pos-privileged-lease.ps1`.
 
 ## Delivery/runtime gates
 
-- PR number, merge SHA, synchronized-main result, frontend/backend runtime
-  responses, secure Agent/Support Hub responses, and final H-3 evidence are
-  pending and must be recorded after actual execution. Do not infer URLs from
-  configuration.
+- PR #17 is merged non-draft with all six CI checks green. Local `main` equals
+  `origin/main` at the merge SHA and the worktree was clean before runtime
+  restart.
+- Fresh `scripts/dev.ps1` processes are left running: `http://localhost:4200/`
+  returned HTTP 200 and `http://localhost:5200/api/modules/health` returned
+  HTTP 200. `/tools/pos-maintenance` returned the Angular shell at HTTP 200;
+  the local browser controller was unavailable, while the full frontend guard
+  tests verify the exact secure handoff target.
+- Secure Testing Agent/Support Hub startup and elevated H-3 proof remain
+  unverified because this shell is not Administrator. Owner commands are
+  `.\scripts\start-pos-agent-testing.ps1 -IUnderstandTestingOnly` and
+  `.\scripts\test-pos-privileged-lease.ps1`; no UAC loop was attempted.
 - Remaining Production gates include independent Terra review, durable audit,
   package/ACL ownership, representative proof, Whites comparison, and all
   environment/customer approvals.
