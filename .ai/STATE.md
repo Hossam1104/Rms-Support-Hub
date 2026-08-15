@@ -96,8 +96,10 @@
 - Full POS solution tests passed: Domain 9, Application 76, Infrastructure 90,
   Agent integration 152 (327 total).
 - Frontend tests passed: 58 files, 361 tests. Production frontend build passed.
-- Pester suites passed: 87 tests across provisioning, cleanup, configuration,
-  script quality, and runtime ownership/build identity.
+- Pester suites passed: 88 tests across provisioning, cleanup, configuration,
+  script quality, and runtime ownership/build identity. The suites bind no
+  machine state: registry snapshots are mocked and a path containing a space is
+  staged, so a clean CI runner and the owner's machine agree.
 - `scripts/test-powershell-quality.ps1` passed: 21 tracked PowerShell files
   parse with no operator-as-command or dangling-continuation findings.
   PSScriptAnalyzer is not installed locally, so the native gate is the only
