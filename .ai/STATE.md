@@ -1,12 +1,11 @@
 # Current Project State
 
 - **Updated:** 2026-08-15
-- **Repository baseline:** PR #13 merged as `8192141`; POS Slice A PR #12
-  merged as `fb71d01`.
+- **Repository baseline:** PR #14 is merged as `19f609b` on synchronized
+  `main`; PR #13 was `8192141` and POS Slice A PR #12 was `fb71d01`.
 - **Slice B remediation:** The task-scoped H-1/H-2/H-3 and adjacent M/L
-  remediation is implemented on branch
-  `agent/pos-slice-b-security-remediation`, pending its delivery PR. `TASK.md`
-  is the bounded independent Claude Opus 5 security-review handoff.
+  remediation is merged and delivered. `TASK.md` is now the bounded
+  independent Claude Opus 5 security-review handoff.
 - **Current outcome:** Fixed service-owned roots, bounded fail-closed
   redaction, a machine-wide privileged mutation lease, typed POST previews,
   bounded Main Server transport, exact endpoint binding, configured snapshot
@@ -14,9 +13,9 @@
   executable, installer/uninstaller, repair, package activation, registry or
   RMS folder mutation, database mutation, Production action, or Main Server
   mutation was run.
-- **Next executable task:** deliver/synchronize this remediation, then perform
-  the independent security review specified in `TASK.md`. Slice C requirements
-  are durable in `docs/POS_SLICE_C_REQUIREMENTS.md` and are not implemented.
+- **Next executable task:** perform the independent security review specified
+  in `TASK.md`. Slice C requirements are durable in
+  `docs/POS_SLICE_C_REQUIREMENTS.md` and are not implemented.
 
 ## Durable Slice A facts
 
@@ -67,11 +66,15 @@
 - POS OpenAPI contract tests passed (9 checks); client generation passed twice
   with a byte-stable second pass. `git diff --check` passed.
 - The memory checker reports only the pre-existing root `AGENTS.md` 146-line
-  budget violation; all other checked memory files are within budget. The
-  prescribed repository `scripts/build.ps1` gate was blocked by a stale
-  project-owned `RmsSupportHub.Api` process locking Debug backend assemblies;
-  the POS solution checks and frontend checks passed independently. Final
-  runtime probes are recorded after delivery synchronization.
+  budget violation; all other checked memory files are within budget. The POS
+  solution checks and frontend checks passed independently. The prescribed
+  `scripts/build.ps1` gate reached backend tests and reported 190/192: its two
+  failures are legacy-route assertions expecting 404 while the current API
+  correctly returns 405. Final merged-main runtime probes returned HTTP 200
+  for `http://localhost:4200/tools/pos-maintenance` and
+  `http://localhost:5200/api/modules/health`; the Testing-only launcher then
+  stopped at its required elevated-Administrator gate. The successful API and
+  frontend development processes remain running.
 
 ## Existing Main Server and runtime gates
 
