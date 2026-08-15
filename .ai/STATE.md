@@ -1,9 +1,9 @@
 # Current Project State
 
 - **Updated:** 2026-08-16
-- **Active branch:** `feat/pos-slice-c-production-foundation`.
-- **Status:** POS Slice C implementation foundation is complete in the working
-  tree; delivery and authorized runtime smoke checks remain in progress.
+- **Active branch:** `main`, synchronized with `origin/main` after PR #18.
+- **Status:** POS Slice C implementation, validation, Git delivery, and local
+  runtime smoke checks are complete; Production/fleet evidence remains gated.
 - **Next task:** `TASK.md` is the full GPT-5.6 Terra HIGH independent
   Production/fleet security and release-readiness review prompt.
 
@@ -50,11 +50,14 @@
 
 ## Runtime and delivery gates
 
-- The verified stale project-owned `RmsSupportHub.Api` process was stopped to
-  release build output. Final `scripts/dev.ps1` restart and endpoint probes are
-  still pending.
+- `scripts/dev.ps1` was restarted after verified project-owned stale processes
+  were stopped. Actual `http://localhost:4200/`,
+  `http://localhost:4200/tools/pos-maintenance`, and
+  `http://localhost:5200/api/modules/health` each returned HTTP 200; the
+  successful project-owned frontend/backend processes remain running.
 - No Testing or Production Agent provisioning, service control, certificate,
   registry, RMS folder/database, Main Server, customer, or fleet mutation was
   executed.
-- Git delivery is authorized by the owner but not yet completed; record branch,
-  commit, PR, CI, merge, and synchronized-main evidence after each succeeds.
+- PR #18 merged as `0b380ef19eb17e9b911bd89aa62609c6d49c5ec2`; all six CI jobs
+  passed. The implementation commit is `a698fe0` and local `main` is aligned
+  with `origin/main`.
