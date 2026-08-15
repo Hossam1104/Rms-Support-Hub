@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { signal } from '@angular/core';
 import { Subject, of, throwError } from 'rxjs';
@@ -72,6 +72,7 @@ describe('FlatOrderComponent', () => {
   let activeModuleSignal = signal({} as ModuleDto);
   let toast: { showSuccess: ReturnType<typeof vi.fn>, showInfo: ReturnType<typeof vi.fn>, showError: ReturnType<typeof vi.fn> };
   let focus: { scrollToAndFocus: ReturnType<typeof vi.fn> };
+  let fixtures: ComponentFixture<FlatOrderComponent>[] = [];
 
   beforeEach(async () => {
     api = new MockApiService();
@@ -100,11 +101,15 @@ describe('FlatOrderComponent', () => {
   });
 
   afterEach(() => {
+    for (const fixture of fixtures) fixture.destroy();
+    fixtures = [];
+    vi.clearAllTimers();
     vi.useRealTimers();
   });
 
   function createFixture() {
     const fixture = TestBed.createComponent(FlatOrderComponent);
+    fixtures.push(fixture);
     fixture.detectChanges();
     return fixture;
   }

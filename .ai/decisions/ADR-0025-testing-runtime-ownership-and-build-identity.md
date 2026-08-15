@@ -53,6 +53,25 @@ never contributed, and the failure appeared only at runtime.
    closed unless the expected, staged, and served identities agree and the
    served index and main bundle hash as recorded.
 
+6. **Generator output is an exact-one-record contract.** The startup path uses
+   one shared parser for the native generator success stream. It accepts one
+   text JSON object only; warnings, extra records, arrays, scalars, null, and
+   malformed output are rejected rather than filtered or reduced to a last
+   line.
+
+7. **Identity and runtime state are strict schemas.** The PowerShell and
+   Angular validators check all identity fields, types, normalized SHA-256
+   formats, UTC timestamp bounds, safe bundle filenames, staged asset counts,
+   and byte hashes. Runtime state binds the API/content roots, host, port,
+   certificate, PID, build ID, and commit before the secure listener is
+   trusted.
+
+8. **Testing private-key and lease proofs fail closed.** Agent private-key
+   ACLs are checked for broad allow principals before and after LocalSystem
+   read handling. A separate Testing-only elevated proof is the evidence path
+   for the real two-process Global semaphore behavior; a non-elevated caller
+   receiving `Unavailable` is not given a fallback synchronization primitive.
+
 ## Consequences
 
 - The defect class that shipped is now rejected repository-wide and in CI.
@@ -64,3 +83,6 @@ never contributed, and the failure appeared only at runtime.
 - `ng serve` has no immutable identity, so the development placeholder reports
   `unknown` and the UI names it as a development bundle rather than implying a
   real build.
+- Route-scoped frontend stores and maintenance delays cancel their owned work
+  on destruction so full-suite test ordering cannot retain timers or pending
+  subscriptions across fixtures.

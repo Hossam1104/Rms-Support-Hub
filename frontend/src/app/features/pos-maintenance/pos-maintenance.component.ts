@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal, WritableSignal } from '@angular/core';
+import { Component, OnDestroy, inject, signal, WritableSignal } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
 import { components } from '../../core/pos-agent/generated/pos-agent-api.generated';
 import { PosAgentTransportError, classifyPosAgentError } from '../../core/pos-agent/pos-agent-error';
@@ -867,7 +867,7 @@ const POS_MAINTENANCE_TEMPLATE = `
     @media (max-width: 680px) { .pos-page { padding-inline: var(--space-4); } .evidence-grid { grid-template-columns: 1fr; } .service-row { grid-template-columns: 1fr; align-items: flex-start; } .service-row__actions { justify-content: flex-start; } }
   `]
 })
-export class PosMaintenanceComponent {
+export class PosMaintenanceComponent implements OnDestroy {
   private readonly transport = inject(PosAgentTransportService);
   private readonly toast = inject(ToastService);
   private readonly buildIdentityService = inject(BuildIdentityService);
@@ -937,6 +937,8 @@ export class PosMaintenanceComponent {
   private readonly errors = signal<Record<string, string>>({});
   private readonly actionOutcomes = signal<Record<string, ServiceActionResponse>>({});
   private downloaderSelectionInitialized = false;
+  private readonly delayHandles = new Set<ReturnType<typeof globalThis.setTimeout>>();
+  private destroyed = false;
 
   constructor() {
     void this.buildIdentityService.load();
@@ -2042,7 +2044,19 @@ export class PosMaintenanceComponent {
   }
 
   private delay(milliseconds: number): Promise<void> {
-    return new Promise(resolve => globalThis.setTimeout(resolve, milliseconds));
+    return new Promise(resolve => {
+      const handle = globalThis.setTimeout(() => {
+        this.delayHandles.delete(handle);
+        resolve();
+      }, milliseconds);
+      this.delayHandles.add(handle);
+    });
+  }
+
+  ngOnDestroy() {
+    this.destroyed = true;
+    for (const handle of this.delayHandles) globalThis.clearTimeout(handle);
+    this.delayHandles.clear();
   }
 
   private safeDownloadName(fileName: string): string {
@@ -2177,6 +2191,8 @@ export class PosMaintenanceComponent {
       this.settle(this.transport.getAgentPackageStatus()),
       this.settle(this.transport.getGuidedRepairPreview())
     ]);
+
+    if (this.destroyed) return;
 
     const nextErrors: Record<string, string> = {};
     this.applyLive(live, nextErrors);

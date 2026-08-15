@@ -11,6 +11,11 @@ Testing startup script is the only intended caller.
 $script:PosBuildIdentityFileName = 'build-identity.json'
 $script:PosStartupScriptName = 'start-pos-agent-testing.ps1'
 $script:PosLoopbackAddresses = @('127.0.0.1', '::1')
+$script:PosSupportedBuildEnvironments = @('Testing')
+$script:PosFrontendAssetCountLimit = 100000
+$script:PosSha256Pattern = '^[0-9a-f]{64}$'
+$script:PosGitCommitPattern = '^[0-9a-f]{40}$'
+$script:PosMainBundlePattern = '^main-[A-Za-z0-9]+\.js$'
 
 function Get-PosSha256Hex {
     param([Parameter(Mandatory)][byte[]]$Bytes)
@@ -73,6 +78,52 @@ function Get-PosFrontendAssetManifestHash {
     }
 
     return Get-PosSha256Hex ([Text.Encoding]::UTF8.GetBytes($builder.ToString()))
+}
+
+function ConvertFrom-PosBuildIdentityGeneratorOutput {
+    <#
+    Parses the success stream from the build-identity generator without
+    treating a later output item as authoritative. Native diagnostics are not
+    redirected into this parameter; callers keep them on the host/error
+    streams, while this helper accepts exactly one stdout record.
+    #>
+    [CmdletBinding()]
+    param(
+        [AllowNull()]
+        [AllowEmptyCollection()]
+        [object[]]$Output
+    )
+
+    $records = @($Output)
+    if ($records.Count -ne 1) {
+        throw "The build-identity generator must emit exactly one JSON identity record; received $($records.Count) success-stream records."
+    }
+
+    if ($records[0] -isnot [string]) {
+        throw 'The build-identity generator emitted a non-text success-stream object; refusing to trust it.'
+    }
+
+    $json = [string]$records[0]
+    if ([string]::IsNullOrWhiteSpace($json)) {
+        throw 'The build-identity generator emitted an empty or whitespace-only success stream.'
+    }
+
+    $trimmedJson = $json.Trim()
+    if (-not $trimmedJson.StartsWith('{', [StringComparison]::Ordinal) -or -not $trimmedJson.EndsWith('}', [StringComparison]::Ordinal)) {
+        throw 'The build-identity generator must emit one JSON object, not an array, scalar, or null value.'
+    }
+
+    try {
+        $identity = ConvertFrom-Json -InputObject $json -ErrorAction Stop
+    } catch {
+        throw "The build-identity generator emitted malformed JSON: $($_.Exception.Message)"
+    }
+
+    if ($null -eq $identity -or $identity -isnot [pscustomobject]) {
+        throw 'The build-identity generator must emit one JSON object, not an array, scalar, or null value.'
+    }
+
+    return $identity
 }
 
 <#
@@ -194,8 +245,21 @@ function Assert-PosSupportHubRuntimeStateBinding {
         [Parameter(Mandatory)][string]$ExpectedContentRoot,
         [Parameter(Mandatory)][string]$ExpectedHost,
         [Parameter(Mandatory)][int]$ExpectedPort,
-        [Parameter(Mandatory)][string]$ExpectedCertificateThumbprint
+        [Parameter(Mandatory)][string]$ExpectedCertificateThumbprint,
+        [Parameter(Mandatory)][int]$ExpectedProcessId,
+        [Parameter(Mandatory)][string]$ExpectedBuildId,
+        [Parameter(Mandatory)][string]$ExpectedCommit
     )
+
+    if ($ExpectedProcessId -le 0) {
+        throw 'The expected Support Hub runtime PID is invalid.'
+    }
+    if ($ExpectedBuildId -notmatch $script:PosSha256Pattern) {
+        throw 'The expected Support Hub runtime build ID is not a lowercase SHA-256 value.'
+    }
+    if ($ExpectedCommit -notmatch $script:PosGitCommitPattern) {
+        throw 'The expected Support Hub runtime commit is not a lowercase full Git SHA.'
+    }
 
     $bindings = [ordered]@{
         SupportHubRuntimeRoot = $ExpectedRuntimeRoot
@@ -204,6 +268,9 @@ function Assert-PosSupportHubRuntimeStateBinding {
         SupportHubRuntimeHost = $ExpectedHost
         SupportHubRuntimePort = [string]$ExpectedPort
         SupportHubRuntimeCertificateThumbprint = $ExpectedCertificateThumbprint
+        SupportHubRuntimeProcessId = [string]$ExpectedProcessId
+        SupportHubRuntimeBuildId = $ExpectedBuildId
+        SupportHubRuntimeCommit = $ExpectedCommit
     }
 
     foreach ($binding in $bindings.GetEnumerator()) {
@@ -233,41 +300,115 @@ function Assert-PosFrontendBuildIdentity {
         [Parameter(Mandatory)][object]$Identity,
         [Parameter(Mandatory)][string]$ExpectedCommit,
         [Parameter(Mandatory)][string]$ExpectedEnvironment,
+        [Parameter(Mandatory)][ValidateSet('clean', 'modified')][string]$ExpectedSourceState,
         [Parameter(Mandatory)][string]$ExpectedAssetManifestHash,
+        [Parameter(Mandatory)][string]$AssetRoot,
         [Parameter(Mandatory)][DateTime]$NotBeforeUtc
     )
 
-    foreach ($name in @('schemaVersion', 'environment', 'commit', 'buildId', 'builtAtUtc', 'indexHtmlSha256', 'mainBundle')) {
+    if ($null -eq $Identity -or $Identity -isnot [pscustomobject]) {
+        throw 'The frontend build identity must be a JSON object.'
+    }
+
+    $expectedFields = @('schemaVersion', 'environment', 'commit', 'commitShort', 'sourceState', 'buildId', 'assetCount', 'builtAtUtc', 'indexHtmlSha256', 'mainBundle')
+    $actualFields = @($Identity.PSObject.Properties.Name)
+    foreach ($name in $expectedFields) {
         if ($null -eq $Identity.PSObject.Properties[$name]) {
             throw "The frontend build identity document is missing its $name field."
         }
     }
-
-    if ([int]$Identity.schemaVersion -ne 1) {
-        throw 'The frontend build identity document uses an unsupported schema version.'
+    if (@($actualFields | Where-Object { $_ -notin $expectedFields }).Count -gt 0) {
+        throw 'The frontend build identity document contains an unexpected field.'
     }
-    if ([string]$Identity.environment -ne $ExpectedEnvironment) {
-        throw 'The frontend build identity was produced for a different environment.'
+
+    if ($Identity.schemaVersion -is [bool] -or $Identity.schemaVersion -is [string] -or ($Identity.schemaVersion -isnot [int] -and $Identity.schemaVersion -isnot [long]) -or [int64]$Identity.schemaVersion -ne 1) {
+        throw 'The frontend build identity document uses an unsupported or incorrectly typed schema version.'
+    }
+    if ($ExpectedEnvironment -notin $script:PosSupportedBuildEnvironments -or $Identity.environment -isnot [string] -or [string]$Identity.environment -ne $ExpectedEnvironment) {
+        throw 'The frontend build identity was produced for a different or unsupported environment.'
+    }
+    if ($ExpectedCommit -notmatch $script:PosGitCommitPattern -or $Identity.commit -isnot [string] -or [string]$Identity.commit -notmatch $script:PosGitCommitPattern) {
+        throw 'The frontend build identity does not contain a valid full Git commit SHA.'
     }
     if ([string]$Identity.commit -ne $ExpectedCommit) {
         throw 'The frontend build identity does not name the current repository commit. Refusing to serve a stale build.'
+    }
+    if ($Identity.commitShort -isnot [string] -or [string]$Identity.commitShort -ne $ExpectedCommit.Substring(0, 7)) {
+        throw 'The frontend build identity commitShort does not equal the expected commit prefix.'
+    }
+    if ($Identity.sourceState -isnot [string] -or [string]$Identity.sourceState -notin @('clean', 'modified') -or [string]$Identity.sourceState -ne $ExpectedSourceState) {
+        throw 'The frontend build identity has an unsupported or unexpected sourceState.'
+    }
+    if ($Identity.buildId -isnot [string] -or [string]$Identity.buildId -notmatch $script:PosSha256Pattern) {
+        throw 'The frontend build identity buildId is not a lowercase SHA-256 value.'
     }
     if ([string]$Identity.buildId -ne $ExpectedAssetManifestHash) {
         throw 'The staged frontend assets do not hash to the build identity that was generated for them.'
     }
 
+    if ($Identity.assetCount -is [bool] -or $Identity.assetCount -is [string] -or ($Identity.assetCount -isnot [int] -and $Identity.assetCount -isnot [long])) {
+        throw 'The frontend build identity assetCount is not an integer.'
+    }
+    if ([int64]$Identity.assetCount -le 0 -or [int64]$Identity.assetCount -gt $script:PosFrontendAssetCountLimit) {
+        throw 'The frontend build identity assetCount is outside the sane supported range.'
+    }
+
+    if (-not (Test-Path -LiteralPath $AssetRoot -PathType Container)) {
+        throw 'The staged frontend directory for build-identity validation does not exist.'
+    }
+    $assetPrefix = ([IO.Path]::GetFullPath($AssetRoot)).TrimEnd('\') + '\'
+    $assetFiles = @(Get-ChildItem -LiteralPath $AssetRoot -Recurse -File -Force | Where-Object {
+        $_.FullName.Substring($assetPrefix.Length).Replace('\', '/') -ne $script:PosBuildIdentityFileName
+    })
+    if ($assetFiles.Count -ne [int64]$Identity.assetCount) {
+        throw 'The frontend build identity assetCount does not match the staged asset set.'
+    }
+    if ((Get-PosFrontendAssetManifestHash -Root $AssetRoot) -ne [string]$Identity.buildId) {
+        throw 'The staged frontend asset manifest does not match buildId.'
+    }
+
+    if ($Identity.indexHtmlSha256 -isnot [string] -or [string]$Identity.indexHtmlSha256 -notmatch $script:PosSha256Pattern) {
+        throw 'The frontend build identity indexHtmlSha256 is not a lowercase SHA-256 value.'
+    }
+    $indexPath = Join-Path $AssetRoot 'index.html'
+    if (-not (Test-Path -LiteralPath $indexPath -PathType Leaf) -or (Get-PosFileSha256Hex $indexPath) -ne [string]$Identity.indexHtmlSha256) {
+        throw 'The frontend build identity indexHtmlSha256 does not match the staged index.html.'
+    }
+
+    if ($null -eq $Identity.mainBundle -or $Identity.mainBundle -isnot [pscustomobject]) {
+        throw 'The frontend build identity mainBundle must be a JSON object.'
+    }
+    $mainFields = @($Identity.mainBundle.PSObject.Properties.Name)
+    foreach ($name in @('file', 'sha256')) {
+        if ($null -eq $Identity.mainBundle.PSObject.Properties[$name]) {
+            throw "The frontend build identity mainBundle is missing its $name field."
+        }
+    }
+    if (@($mainFields | Where-Object { $_ -notin @('file', 'sha256') }).Count -gt 0) {
+        throw 'The frontend build identity mainBundle contains an unexpected field.'
+    }
+    if ($Identity.mainBundle.file -isnot [string] -or [string]$Identity.mainBundle.file -notmatch $script:PosMainBundlePattern) {
+        throw 'The frontend build identity mainBundle.file is not a safe hashed main bundle filename.'
+    }
+    if ($Identity.mainBundle.sha256 -isnot [string] -or [string]$Identity.mainBundle.sha256 -notmatch $script:PosSha256Pattern) {
+        throw 'The frontend build identity mainBundle.sha256 is not a lowercase SHA-256 value.'
+    }
+    $mainBundlePath = Join-Path $AssetRoot ([string]$Identity.mainBundle.file)
+    if (-not (Test-Path -LiteralPath $mainBundlePath -PathType Leaf) -or (Get-PosFileSha256Hex $mainBundlePath) -ne [string]$Identity.mainBundle.sha256) {
+        throw 'The frontend build identity mainBundle.sha256 does not match the staged main bundle.'
+    }
+
+    if ($Identity.builtAtUtc -isnot [string] -or [string]$Identity.builtAtUtc -notmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,7})?Z$') {
+        throw 'The frontend build identity builtAtUtc must be an ISO-8601 UTC timestamp.'
+    }
     $builtAtUtc = [DateTime]::MinValue
     $parsed = [DateTime]::TryParse(
         [string]$Identity.builtAtUtc,
         [Globalization.CultureInfo]::InvariantCulture,
-        [Globalization.DateTimeStyles]::AdjustToUniversal -bor [Globalization.DateTimeStyles]::AssumeUniversal,
+        [Globalization.DateTimeStyles]::RoundtripKind,
         [ref]$builtAtUtc)
-    if (-not $parsed -or $builtAtUtc -lt $NotBeforeUtc) {
+    if (-not $parsed -or $builtAtUtc.Kind -ne [DateTimeKind]::Utc -or $builtAtUtc -lt $NotBeforeUtc.ToUniversalTime() -or $builtAtUtc -gt [DateTime]::UtcNow.AddMinutes(5)) {
         throw 'The staged frontend build was not produced by this authorized Testing startup. Refusing to serve a stale build.'
-    }
-
-    if ($null -eq $Identity.mainBundle -or [string]::IsNullOrWhiteSpace([string]$Identity.mainBundle.file)) {
-        throw 'The frontend build identity does not name a hashed main bundle.'
     }
 }
 
@@ -370,6 +511,7 @@ Export-ModuleMember -Function @(
     'Get-PosFrontendAssetManifestHash',
     'Get-PosHttpResourceBytes',
     'Get-PosSha256Hex',
+    'ConvertFrom-PosBuildIdentityGeneratorOutput',
     'New-PosSelfElevationArgumentList',
     'Wait-PosLoopbackOnlyListener'
 )

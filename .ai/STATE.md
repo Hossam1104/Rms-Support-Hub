@@ -1,120 +1,81 @@
 # Current Project State
 
-- **Updated:** 2026-08-15
-- **Repository baseline:** the POS Testing provisioning and secure frontend
-  routing remediation is merged on synchronized `main`; the preceding baselines
-  were PR #14 (`19f609b`), PR #13 (`8192141`), and POS Slice A PR #12 (`fb71d01`).
-- **Slice B remediation:** H-1/H-2/H-3 and the adjacent M/L work stay merged.
-- **Current outcome:** fixed service-owned roots, bounded fail-closed
-  redaction, a machine-wide privileged mutation lease, typed POST previews,
-  bounded Main Server transport, exact endpoint binding, configured snapshot
-  identity, and the canonical secure POS entry are implemented, plus the
-  Testing provisioning hardening below. No RMS executable, installer,
-  uninstaller, repair, package activation, registry, RMS folder, database,
-  Production, or Main Server mutation was run. Production readiness is not
+- **Updated:** 2026-08-16
+- **Active branch:** `fix/pos-final-security-gate`; implementation is complete
+  locally and Git delivery/runtime verification remain in this session.
+- **Baseline:** synchronized `main` was `03e2c02` before this remediation;
+  prior baselines were PR #14 `19f609b`, PR #13 `8192141`, and Slice A PR #12
+  `fb71d01`.
+- **Previous gate:** 0 Critical, 2 High blockers, and 3 Medium findings. No
+  Production/customer/RMS mutation has been run; Production readiness is not
   claimed.
-- **Next executable task:** the independent POS security / Testing provisioning
-  gate re-review specified in `TASK.md`. Slice C requirements, including the
-  owner-approved POS visual redesign direction, are durable in
-  `docs/POS_SLICE_C_REQUIREMENTS.md` and are not implemented.
+- **Next task:** `TASK.md` is now the GPT-5.6 Terra independent review-only
+  prompt. Slice C and its visual redesign remain unimplemented.
 
-## Durable Testing provisioning facts
+## Final remediation facts
 
-- A multiline boolean in the Testing certificate check had no line
-  continuation, so PowerShell parsed `-and ...` as a command. The script parsed
-  cleanly and failed only at runtime with `The term '-and' is not recognized`,
-  and the private-key provider half never contributed to the decision. Policy
-  is now one boolean expression in `Test-PosSupportHubPrivateKeyPolicy`, and
-  `scripts/test-powershell-quality.ps1` rejects the shape repository-wide.
-- The Testing certificate must be CNG, from the Microsoft Software Key Storage
-  Provider, non-exportable, with a private-key file granting no broad principal
-  (Everyone, Authenticated Users, Users, Anonymous, Guests). Any failure
-  terminates provisioning; no key material is printed.
-- `scripts/start-pos-agent-testing.ps1` self-elevates through UAC by
-  re-launching only itself, only from a PowerShell host inside `$PSHOME`, with
-  only its known typed parameters, quoting spaced paths. `-NoSelfElevate` is the
-  CI opt-out; the boundary is Testing tooling only, Production is Slice C.
-- Startup stops only the runtime whose PID, image, and command line it owns,
-  rebuilds the current Angular production frontend and API publish, stages the
-  frontend into the current backend `wwwroot`, and re-verifies the launched PID.
-  An unowned `:4443` listener is never killed or adopted; a stale owned one is
-  replaced through the normal flow; state binds runtime root, PID, executable,
-  content root, build identity, certificate, host, and port.
-- A Windows Service reaches Running before its host binds a socket, so
-  provisioning waits for the loopback-only listener with a bounded deadline
-  (`Wait-PosLoopbackOnlyListener`) rather than sampling the port once. It stays
-  fail-closed: a routable listener is rejected at once, an absent one throws.
-- Frontend freshness is proved by identity, not by HTTP 200:
-  `frontend/scripts/build-identity.mjs` emits a non-secret
-  `/build-identity.json` (commit, source state, deterministic asset-manifest
-  build id, asset count, timestamp, index and main-bundle hashes). Startup fails
-  closed unless expected, staged, and served identities match and the served
-  index and main bundle hash as recorded; neither it nor Advanced Diagnostics
-  exposes a filesystem path.
+- Build-generator output now uses one shared exact-one parser; zero, extra,
+  warning, malformed, non-object, and unexpected records fail closed. The
+  owner-preserved `Invoke-Checked ... | Out-Host` fix remains in place.
+- PowerShell and Angular identity validators strictly check fields/types,
+  approved environment, full commit/short prefix, clean-or-modified source,
+  bounded positive asset count, UTC timestamp bounds, lowercase SHA-256 hashes,
+  safe main bundle filename, staged asset count, and index/main byte hashes.
+  Expected/staged/served identity agreement is required before `:4443` starts.
+- Agent certificate provisioning rejects broad private-key allow principals
+  before and after LocalSystem read handling. CNG/provider/export policy,
+  owned certificate, LocalSystem access, no PFX, and no key logging remain
+  fail-closed requirements.
+- Runtime state binding now covers root, API DLL, content root, host, port,
+  certificate, PID, build ID, and commit. Unowned listeners and unrelated
+  processes are never adopted or killed.
+- Frontend route-scoped store subscriptions/debounce state and maintenance
+  delays clean up on fixture/component destruction; formerly order-sensitive
+  full-suite timeout specs have explicit fixture/timer cleanup.
+- `scripts/test-pos-privileged-lease.ps1` is a Testing-only two-process proof
+  for the named Global semaphore and termination release. It does not mutate
+  RMS. Non-elevated `Unavailable` remains fail-closed and is not replaced.
 
-## Durable Slice A facts
+## Durable POS boundaries
 
-- Product Release is read only from
-  `C:\ProgramData\RMS_Plus\ReleaseNumber.txt`; missing, invalid, unreadable,
-  or control-bearing content is unavailable and never falls back to a build.
-- Client is read from `RMS.CashierUI\appsettings.json` at
-  `Settings:TheClient`. Component BuildNumbers remain separate drift evidence.
-- Canonical SCM names are `RMS.BranchService`, `RMS.CashierService`, and
-  `RMSServiceManager`. Friendly display labels remain separate from SCM names.
-- Agent-owned typed contracts now expose read-only Health Check, database and
-  backup/capacity health, bounded redacted service-failure analysis, and a
-  principal-scoped bounded Incident Timeline. Timeline writes occur only after
-  authorized POST operation boundaries; read-only GETs do not mutate state.
-- Support Bundle generation is a protected one-use-token POST. It contains a
-  bounded typed JSON projection in an opaque authenticated artifact and does
-  not proxy raw configuration, credentials, paths, SQL, or unbounded logs.
-- `WindowsRmsDiagnosticEvidenceReader` reads only fixed canonical log roots and
-  allow-listed SCM/.NET/Application Error/WER event IDs, with file, byte, line,
-  event, time, stack, and redaction bounds. The analyzer classifies and
-  recommends only; it never launches a process or changes service state.
-- The Angular POS workspace has the final compact header/peer-status rail,
-  paired Branch/Cashier database cards, canonical three-service table,
-  Health/Timeline/Bundle actions, bounded evidence panels, preserved PR #10
-  controls, and typed Slice B boundary panels. It uses design tokens and responsive
-  desktop/tablet/narrow breakpoints.
-- Main Server state reads remain GET-only and read-only; retained Agent previews
-  are typed POST operations. Secret-bearing inventory DTOs and the discovered
-  Branch/POS PUT contracts are not proxied or invoked.
-- The Hub POS card hands the browser to the exact canonical Testing route
-  `https://support-hub.integration.test:4443/tools/pos-maintenance`; the route
-  guard hands off wrong-origin direct loads to the same secure path instead of
-  rendering Agent-unavailable errors, and the Agent still trusts only that
-  exact Origin - `http://localhost:4200` is never allowed.
-- Fixed RMS source roots and the sanitized uninstall registry allow-list are
-  recorded in `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`.
-- Slice B boundary details and route inventory are recorded in
-  `docs/POS_SLICE_B_BOUNDARY.md`.
+- H-1 bounded redaction/quarantine, H-2 fixed service-owned roots, and H-3
+  machine-wide mutation serialization remain implemented.
+- The canonical browser route is the exact
+  `https://support-hub.integration.test:4443/tools/pos-maintenance`; the Agent
+  is reached directly at its exact HTTPS loopback origin with Negotiate and
+  derived local Administrator authorization. `http://localhost:4200` is not an
+  Agent CORS origin and the Hub API is not a privileged relay/proxy.
+- POS Agent OpenAPI/generated client artifacts are source/contract governed;
+  current SQL and `docs/database-schema.md` remain the database contract.
+- Main Server reads are GET/read-only; retained Agent previews are typed POST
+  boundaries. No RMS installer, repair, rollback, package activation, DB,
+  registry, RMS folder, Production, or Main Server mutation was executed.
 
 ## Validation evidence
 
-- POS Release build with `PosAgentSecurity__SupportHubOrigin` set and
-  `-warnaserror` passed: 0 warnings, 0 errors.
-- Full POS solution tests passed: Domain 9, Application 76, Infrastructure 90,
-  Agent integration 152 (327 total).
-- Frontend tests passed: 58 files, 361 tests. Production frontend build passed.
-- Pester suites passed: 94 tests across provisioning, cleanup, configuration,
-  script quality, and runtime ownership/build identity. They bind no machine
-  state, so a clean CI runner and the owner's machine agree.
-- `scripts/test-powershell-quality.ps1` passed: 21 tracked PowerShell files
-  parse with no operator-as-command or dangling-continuation findings.
-  PSScriptAnalyzer is absent locally, so the native gate is the only local
-  signal; CI runs the same gate.
-- Client generation passed twice with a byte-stable second pass;
-  `git diff --exit-code` on the generated OpenAPI and Angular client and
-  `git diff --check` both passed.
-- The memory checker reports only the pre-existing root `AGENTS.md` 146-line
-  budget violation; all other checked memory files are within budget.
+- `scripts/test-powershell-quality.ps1` passed under both `-File` and
+  `-Command`; 22 tracked PowerShell files parse cleanly. PSScriptAnalyzer is
+  absent locally.
+- Pester passed 108 tests (up from 94), including exact-one output, strict
+  identity fields, runtime PID/build/commit binding, and ACL cases.
+- Complete frontend suite passed 363/363 in two consecutive full runs across
+  58 files; production build passed. Client generation passed twice with no
+  generated diff.
+- POS Release build passed with `-warnaserror`, 0 warnings/errors. POS tests
+  passed Domain 9, Application 76, Infrastructure 90, Agent integration 152
+  (327 total). Non-admin infrastructure test records Global semaphore
+  `Unavailable` as the required fail-closed result.
+- `git diff --check` passed. Memory check passes every file except the
+  pre-existing root `AGENTS.md` budget violation (146/140 lines).
+- H-3 elevated proof and secure runtime restart are not yet evidenced because
+  this shell is not Administrator. Owner command: `.\scripts\test-pos-privileged-lease.ps1`.
 
-## Existing Main Server and runtime gates
+## Delivery/runtime gates
 
-- Main Server Swagger evidence remains read-only and environment-specific.
-  Slice B adds an Agent-owned fixed profile/read boundary; Branch/POS
-  install-state PUTs remain acknowledgements and are not invoked.
-- Testing is the only live environment. Production/customer deployment remains
-  blocked on M-1/M-2, durable audit, package/ACL ownership, representative
-  proof, Whites comparison, and independent review.
+- PR number, merge SHA, synchronized-main result, frontend/backend runtime
+  responses, secure Agent/Support Hub responses, and final H-3 evidence are
+  pending and must be recorded after actual execution. Do not infer URLs from
+  configuration.
+- Remaining Production gates include independent Terra review, durable audit,
+  package/ACL ownership, representative proof, Whites comparison, and all
+  environment/customer approvals.

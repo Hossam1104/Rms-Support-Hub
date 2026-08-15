@@ -21,11 +21,70 @@ function New-TestBuildOutput {
 
 function Invoke-BuildIdentityGenerator([string]$root, [string]$commit, [string]$environmentName) {
     $generator = Join-Path $repositoryRoot 'frontend/scripts/build-identity.mjs'
-    $output = & node $generator 'finalize' '--output' $root '--environment' $environmentName '--commit' $commit '--source-state' 'clean'
+    $output = @(& node $generator 'finalize' '--output' $root '--environment' $environmentName '--commit' $commit '--source-state' 'clean')
     if ($LASTEXITCODE -ne 0) {
         throw "The build-identity generator failed with exit code $LASTEXITCODE."
     }
-    return ($output | Select-Object -Last 1) | ConvertFrom-Json
+    return ConvertFrom-PosBuildIdentityGeneratorOutput -Output $output
+}
+
+function Invoke-TestFrontendIdentityValidation($identity, [string]$root, [DateTime]$notBeforeUtc) {
+    Assert-PosFrontendBuildIdentity `
+        -Identity $identity `
+        -ExpectedCommit 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' `
+        -ExpectedEnvironment 'Testing' `
+        -ExpectedSourceState 'clean' `
+        -ExpectedAssetManifestHash (Get-PosFrontendAssetManifestHash -Root $root) `
+        -AssetRoot $root `
+        -NotBeforeUtc $notBeforeUtc
+}
+
+Describe 'Build identity generator output boundary' {
+    $validJson = '{"schemaVersion":1}'
+
+    It 'accepts exactly one JSON object record' {
+        $parsed = ConvertFrom-PosBuildIdentityGeneratorOutput -Output @($validJson)
+        $parsed.schemaVersion | Should Be 1
+    }
+
+    It 'rejects the demonstrated LAST_LINE_ACCEPTED warning-plus-JSON shape' {
+        { ConvertFrom-PosBuildIdentityGeneratorOutput -Output @('LAST_LINE_ACCEPTED', $validJson) } |
+            Should Throw 'exactly one JSON identity record'
+    }
+
+    It 'rejects JSON followed by warning text instead of selecting the first record' {
+        { ConvertFrom-PosBuildIdentityGeneratorOutput -Output @($validJson, 'warning text') } |
+            Should Throw 'exactly one JSON identity record'
+    }
+
+    It 'rejects zero, blank, and whitespace-only output' {
+        foreach ($output in @(@(), @(''), @('  `t  '))) {
+            { ConvertFrom-PosBuildIdentityGeneratorOutput -Output $output } |
+                Should Throw
+        }
+    }
+
+    It 'rejects malformed and mixed records' {
+        foreach ($output in @(
+                @('{'),
+                @($validJson, '{'),
+                @('warning text', $validJson),
+                @($validJson, 'warning text'))) {
+            { ConvertFrom-PosBuildIdentityGeneratorOutput -Output $output } |
+                Should Throw
+        }
+    }
+
+    It 'rejects arrays, scalars, null, and non-text success-stream objects' {
+        foreach ($output in @(
+                @('[{"schemaVersion":1}]'),
+                @('42'),
+                @('null'),
+                @([pscustomobject]@{ schemaVersion = 1 }))) {
+            { ConvertFrom-PosBuildIdentityGeneratorOutput -Output $output } |
+                Should Throw
+        }
+    }
 }
 
 Describe 'Secure Support Hub listener ownership' {
@@ -112,6 +171,9 @@ Describe 'Secure Support Hub runtime state binding' {
         SupportHubRuntimeHost = 'support-hub.integration.test'
         SupportHubRuntimePort = 4443
         SupportHubRuntimeCertificateThumbprint = '0123456789ABCDEF0123456789ABCDEF01234567'
+        SupportHubRuntimeProcessId = 1234
+        SupportHubRuntimeBuildId = ('a' * 64)
+        SupportHubRuntimeCommit = 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1'
     }
 
     $bind = {
@@ -123,7 +185,10 @@ Describe 'Secure Support Hub runtime state binding' {
             -ExpectedContentRoot 'C:\ProgramData\DBS\RmsSupportHub\Int13Testing\SupportHubRuntime\api' `
             -ExpectedHost 'support-hub.integration.test' `
             -ExpectedPort 4443 `
-            -ExpectedCertificateThumbprint $thumbprint
+            -ExpectedCertificateThumbprint $thumbprint `
+            -ExpectedProcessId 1234 `
+            -ExpectedBuildId ('a' * 64) `
+            -ExpectedCommit 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1'
     }
 
     It 'accepts a fully bound state' {
@@ -138,6 +203,73 @@ Describe 'Secure Support Hub runtime state binding' {
     It 'fails closed when the certificate identity drifts' {
         { & $bind $completeState 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF' } |
             Should Throw 'does not match the current authorized Testing configuration'
+    }
+
+    It 'rejects a stale PID, an unrelated PID, and every other runtime identity drift' {
+        $cases = @(
+            @{ Property = 'SupportHubRuntimeProcessId'; Value = 9999 },
+            @{ Property = 'SupportHubRuntimeProcessId'; Value = 4321 },
+            @{ Property = 'SupportHubRuntimeBuildId'; Value = ('b' * 64) },
+            @{ Property = 'SupportHubRuntimeCommit'; Value = '1111111111111111111111111111111111111111' },
+            @{ Property = 'SupportHubRuntimeContentRoot'; Value = 'C:\foreign\content' },
+            @{ Property = 'SupportHubRuntimeApiDll'; Value = 'C:\foreign\api.dll' },
+            @{ Property = 'SupportHubRuntimeHost'; Value = 'foreign.test' },
+            @{ Property = 'SupportHubRuntimePort'; Value = 5443 },
+            @{ Property = 'SupportHubRuntimeCertificateThumbprint'; Value = ('F' * 40) })
+
+        foreach ($case in $cases) {
+            $drifted = $completeState | Select-Object -Property *
+            $drifted.($case.Property) = $case.Value
+            { & $bind $drifted '0123456789ABCDEF0123456789ABCDEF01234567' } |
+                Should Throw 'does not match the current authorized Testing configuration'
+        }
+    }
+
+    It 'rejects a missing PID, build ID, or commit binding' {
+        foreach ($property in @('SupportHubRuntimeProcessId', 'SupportHubRuntimeBuildId', 'SupportHubRuntimeCommit')) {
+            $partial = $completeState | Select-Object -Property * -ExcludeProperty $property
+            { & $bind $partial '0123456789ABCDEF0123456789ABCDEF01234567' } |
+                Should Throw "missing its $property"
+        }
+    }
+
+    It 'rejects an invalid expected PID, build ID, or commit before trusting state' {
+        { Assert-PosSupportHubRuntimeStateBinding `
+                -State $completeState `
+                -ExpectedRuntimeRoot $completeState.SupportHubRuntimeRoot `
+                -ExpectedApiDll $completeState.SupportHubRuntimeApiDll `
+                -ExpectedContentRoot $completeState.SupportHubRuntimeContentRoot `
+                -ExpectedHost $completeState.SupportHubRuntimeHost `
+                -ExpectedPort 4443 `
+                -ExpectedCertificateThumbprint $completeState.SupportHubRuntimeCertificateThumbprint `
+                -ExpectedProcessId 0 `
+                -ExpectedBuildId ('a' * 64) `
+                -ExpectedCommit $completeState.SupportHubRuntimeCommit } |
+            Should Throw 'expected Support Hub runtime PID is invalid'
+        { Assert-PosSupportHubRuntimeStateBinding `
+                -State $completeState `
+                -ExpectedRuntimeRoot $completeState.SupportHubRuntimeRoot `
+                -ExpectedApiDll $completeState.SupportHubRuntimeApiDll `
+                -ExpectedContentRoot $completeState.SupportHubRuntimeContentRoot `
+                -ExpectedHost $completeState.SupportHubRuntimeHost `
+                -ExpectedPort 4443 `
+                -ExpectedCertificateThumbprint $completeState.SupportHubRuntimeCertificateThumbprint `
+                -ExpectedProcessId 1234 `
+                -ExpectedBuildId 'not-a-hash' `
+                -ExpectedCommit $completeState.SupportHubRuntimeCommit } |
+            Should Throw 'expected Support Hub runtime build ID'
+        { Assert-PosSupportHubRuntimeStateBinding `
+                -State $completeState `
+                -ExpectedRuntimeRoot $completeState.SupportHubRuntimeRoot `
+                -ExpectedApiDll $completeState.SupportHubRuntimeApiDll `
+                -ExpectedContentRoot $completeState.SupportHubRuntimeContentRoot `
+                -ExpectedHost $completeState.SupportHubRuntimeHost `
+                -ExpectedPort 4443 `
+                -ExpectedCertificateThumbprint $completeState.SupportHubRuntimeCertificateThumbprint `
+                -ExpectedProcessId 1234 `
+                -ExpectedBuildId ('a' * 64) `
+                -ExpectedCommit 'not-a-commit' } |
+            Should Throw 'expected Support Hub runtime commit'
     }
 }
 
@@ -162,7 +294,9 @@ Describe 'Frontend build identity' {
                     -Identity $identity `
                     -ExpectedCommit 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' `
                     -ExpectedEnvironment 'Testing' `
+                    -ExpectedSourceState 'clean' `
                     -ExpectedAssetManifestHash (Get-PosFrontendAssetManifestHash -Root $root) `
+                    -AssetRoot $root `
                     -NotBeforeUtc $notBefore
             } | Should Not Throw
         } finally {
@@ -180,7 +314,9 @@ Describe 'Frontend build identity' {
                     -Identity $identity `
                     -ExpectedCommit 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' `
                     -ExpectedEnvironment 'Testing' `
+                    -ExpectedSourceState 'clean' `
                     -ExpectedAssetManifestHash (Get-PosFrontendAssetManifestHash -Root $root) `
+                    -AssetRoot $root `
                     -NotBeforeUtc ([DateTime]::UtcNow.AddSeconds(-5))
             } | Should Throw 'do not hash to the build identity'
         } finally {
@@ -197,7 +333,9 @@ Describe 'Frontend build identity' {
                     -Identity $identity `
                     -ExpectedCommit 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' `
                     -ExpectedEnvironment 'Testing' `
+                    -ExpectedSourceState 'clean' `
                     -ExpectedAssetManifestHash (Get-PosFrontendAssetManifestHash -Root $root) `
+                    -AssetRoot $root `
                     -NotBeforeUtc ([DateTime]::UtcNow.AddMinutes(5))
             } | Should Throw 'Refusing to serve a stale build'
         } finally {
@@ -214,7 +352,9 @@ Describe 'Frontend build identity' {
                     -Identity $identity `
                     -ExpectedCommit 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' `
                     -ExpectedEnvironment 'Testing' `
+                    -ExpectedSourceState 'clean' `
                     -ExpectedAssetManifestHash (Get-PosFrontendAssetManifestHash -Root $root) `
+                    -AssetRoot $root `
                     -NotBeforeUtc ([DateTime]::UtcNow.AddSeconds(-5))
             } | Should Throw 'does not name the current repository commit'
         } finally {
@@ -240,6 +380,106 @@ Describe 'Frontend build identity' {
         try {
             $identity = Invoke-BuildIdentityGenerator $root 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' 'Testing'
             ($identity | ConvertTo-Json -Depth 5) | Should Not Match '([A-Za-z]:\\|ProgramData|Users)'
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force
+        }
+    }
+
+    It 'rejects incorrect schemaVersion, environment, commitShort, and sourceState values' {
+        $root = New-TestBuildOutput
+        try {
+            $identity = Invoke-BuildIdentityGenerator $root 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' 'Testing'
+            foreach ($mutation in @(
+                    @{ Property = 'schemaVersion'; Value = '1' },
+                    @{ Property = 'schemaVersion'; Value = 2 },
+                    @{ Property = 'environment'; Value = 'Production' },
+                    @{ Property = 'commitShort'; Value = '0000000' },
+                    @{ Property = 'sourceState'; Value = 'dirty' })) {
+                $malformed = $identity | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+                $malformed.($mutation.Property) = $mutation.Value
+                { Invoke-TestFrontendIdentityValidation $malformed $root ([DateTime]::UtcNow.AddSeconds(-5)) } |
+                    Should Throw
+            }
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force
+        }
+    }
+
+    It 'rejects invalid buildId, assetCount, index hash, and main bundle hash values' {
+        $root = New-TestBuildOutput
+        try {
+            $identity = Invoke-BuildIdentityGenerator $root 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' 'Testing'
+            foreach ($mutation in @(
+                    @{ Property = 'buildId'; Value = ('A' * 64) },
+                    @{ Property = 'buildId'; Value = ('b' * 64) },
+                    @{ Property = 'assetCount'; Value = '4' },
+                    @{ Property = 'assetCount'; Value = 0 },
+                    @{ Property = 'assetCount'; Value = 100001 },
+                    @{ Property = 'indexHtmlSha256'; Value = 'not-a-hash' })) {
+                $malformed = $identity | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+                $malformed.($mutation.Property) = $mutation.Value
+                { Invoke-TestFrontendIdentityValidation $malformed $root ([DateTime]::UtcNow.AddSeconds(-5)) } |
+                    Should Throw
+            }
+
+            $malformedBundle = $identity | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+            $malformedBundle.mainBundle.sha256 = ('c' * 64)
+            { Invoke-TestFrontendIdentityValidation $malformedBundle $root ([DateTime]::UtcNow.AddSeconds(-5)) } |
+                Should Throw
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force
+        }
+    }
+
+    It 'rejects invalid builtAtUtc timestamps and timestamps outside the startup window' {
+        $root = New-TestBuildOutput
+        try {
+            $identity = Invoke-BuildIdentityGenerator $root 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' 'Testing'
+            foreach ($timestamp in @('not-a-timestamp', '2026-08-15T09:30:00+00:00', '2020-01-01T00:00:00Z', ([DateTime]::UtcNow.AddMinutes(10).ToString('O')))) {
+                $malformed = $identity | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+                $malformed.builtAtUtc = $timestamp
+                { Invoke-TestFrontendIdentityValidation $malformed $root ([DateTime]::UtcNow.AddSeconds(-5)) } |
+                    Should Throw
+            }
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force
+        }
+    }
+
+    It 'rejects every unsafe main bundle filename form' {
+        $root = New-TestBuildOutput
+        try {
+            $identity = Invoke-BuildIdentityGenerator $root 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' 'Testing'
+            foreach ($file in @(
+                    '..\\main-ABC123.js',
+                    '../main-ABC123.js',
+                    'C:\\main-ABC123.js',
+                    '\\server\\share\\main-ABC123.js',
+                    'main-ABC123.js?cache=1',
+                    'main-ABC123.js#fragment',
+                    'nested/main-ABC123.js',
+                    'main-ABC123.css',
+                    'main-ABC123.js/extra')) {
+                $malformed = $identity | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+                $malformed.mainBundle.file = $file
+                { Invoke-TestFrontendIdentityValidation $malformed $root ([DateTime]::UtcNow.AddSeconds(-5)) } |
+                    Should Throw
+            }
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force
+        }
+    }
+
+    It 'rejects missing or non-object mainBundle documents' {
+        $root = New-TestBuildOutput
+        try {
+            $identity = Invoke-BuildIdentityGenerator $root 'b8e8f0fab1e730dc08e73bbb28058f9f5cc8f8b1' 'Testing'
+            foreach ($value in @($null, 'main-ABC123.js')) {
+                $malformed = $identity | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+                $malformed.mainBundle = $value
+                { Invoke-TestFrontendIdentityValidation $malformed $root ([DateTime]::UtcNow.AddSeconds(-5)) } |
+                    Should Throw
+            }
         } finally {
             Remove-Item -LiteralPath $root -Recurse -Force
         }
