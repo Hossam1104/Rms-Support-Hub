@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { routes } from '../../app.routes';
+import { BuildIdentityService } from '../../core/services/build-identity.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PosAgentTransportService } from '../../core/pos-agent/pos-agent-transport.service';
 import { ConfirmDialogComponent, EmptyStateComponent, PageHeaderComponent, SkeletonComponent, UiButtonComponent, UiCardComponent } from '../../shared/ui';
@@ -17,9 +18,12 @@ import { PosMaintenanceComponent } from './pos-maintenance.component';
 })
 class StubNavbarComponent { }
 
+const FRONTEND_BUILD_SUMMARY = 'Testing · commit 0123456 · build b8e8f1a2c3d4 · 42 assets built 2026-08-15T09:30:00Z';
+
 describe('PosMaintenanceComponent', () => {
   let transport: Record<string, ReturnType<typeof vi.fn>>;
   let toast: Record<string, ReturnType<typeof vi.fn>>;
+  let buildIdentity: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
     transport = {
@@ -321,13 +325,18 @@ describe('PosMaintenanceComponent', () => {
       showWarning: vi.fn(),
       showInfo: vi.fn()
     };
+    buildIdentity = {
+      load: vi.fn(() => Promise.resolve(null)),
+      summary: vi.fn(() => FRONTEND_BUILD_SUMMARY)
+    };
 
     await TestBed.configureTestingModule({
       imports: [PosMaintenanceComponent],
       providers: [
         provideRouter([]),
         { provide: PosAgentTransportService, useValue: transport },
-        { provide: ToastService, useValue: toast }
+        { provide: ToastService, useValue: toast },
+        { provide: BuildIdentityService, useValue: buildIdentity }
       ]
     }).overrideComponent(PosMaintenanceComponent, {
       set: {
@@ -438,6 +447,19 @@ describe('PosMaintenanceComponent', () => {
     expect(page.textContent).toContain('The signed-in Windows account is not authorized');
     expect(page.textContent).not.toContain('HttpErrorResponse');
     expect(page.textContent).not.toContain('HttpErrorResponse');
+  });
+
+  it('shows the served frontend build identity in Advanced Diagnostics without a filesystem path', async () => {
+    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    const evidence = page.querySelector('[data-testid="frontend-build-identity"]');
+
+    expect(buildIdentity['load']).toHaveBeenCalled();
+    expect(evidence?.textContent?.trim()).toBe(FRONTEND_BUILD_SUMMARY);
+    expect(evidence?.textContent).not.toMatch(/[A-Za-z]:\\|ProgramData|wwwroot/);
   });
 
   it('routes the POS workspace lazily with a service-control registry status', () => {

@@ -161,24 +161,52 @@ Describe 'POS Windows browser and IWA provisioning contract' {
     }
 
     It 'preserves a previously owned BackConnectionHostNames record on an idempotent rerun' {
-        $state = [pscustomobject]@{
-            BrowserProvisioning = [pscustomobject]@{
-                BrowserPolicies = @()
+        InModuleScope PosAgentWindowsProvisioning {
+            # The machine value is mocked so the proof does not depend on
+            # whether this host has ever been provisioned.
+            Mock Get-PosRegistryValueSnapshot {
+                [pscustomobject]@{
+                    Exists = $true
+                    Kind = [Microsoft.Win32.RegistryValueKind]::MultiString
+                    Value = @('rms-pos-agent.localhost')
+                }
+            }
+
+            $state = [pscustomobject]@{
                 BackConnection = [pscustomobject]@{
                     Added = $true
                     ProvisionedValues = @('rms-pos-agent.localhost')
                 }
             }
+
+            $result = Ensure-PosBackConnectionHostName 'rms-pos-agent.localhost' $state -WhatIf
+
+            $result.Changed | Should Be $false
+            $result.Present | Should Be $true
+            $state.BackConnection.Added | Should Be $true
+            @($state.BackConnection.ProvisionedValues).Count | Should Be 1
         }
+    }
 
-        Ensure-PosAgentBrowserProvisioning `
-            -SupportHubOrigin 'https://support-hub.integration.test:4443' `
-            -CanonicalHost 'rms-pos-agent.localhost' `
-            -State $state `
-            -WhatIf | Out-Null
+    It 'refuses to overwrite BackConnectionHostNames changed outside RMS+ provisioning' {
+        InModuleScope PosAgentWindowsProvisioning {
+            Mock Get-PosRegistryValueSnapshot {
+                [pscustomobject]@{
+                    Exists = $true
+                    Kind = [Microsoft.Win32.RegistryValueKind]::MultiString
+                    Value = @('rms-pos-agent.localhost', 'someone-else.localhost')
+                }
+            }
 
-        $state.BrowserProvisioning.BackConnection.Added | Should Be $true
-        @($state.BrowserProvisioning.BackConnection.ProvisionedValues).Count | Should Be 1
+            $state = [pscustomobject]@{
+                BackConnection = [pscustomobject]@{
+                    Added = $true
+                    ProvisionedValues = @('rms-pos-agent.localhost')
+                }
+            }
+
+            { Ensure-PosBackConnectionHostName 'rms-pos-agent.localhost' $state -WhatIf } | Should Throw
+        }
     }
 
     It 'refuses to remove an owned loopback value that disappeared' {

@@ -254,8 +254,9 @@ function Stop-OwnedSupportHubRuntime($state) {
         throw 'The owned Support Hub runtime has a PID but no recorded API assembly. Refusing to stop an unverifiable process.'
     }
     $expectedApiDll = (Get-FullPath $runtimeApiDll)
-    $unownedProcess = [string]::IsNullOrWhiteSpace([string]$process.CommandLine) `
-        -or [string]$process.CommandLine.IndexOf($expectedApiDll, [StringComparison]::OrdinalIgnoreCase) -lt 0
+    $commandLine = [string]$process.CommandLine
+    $unownedProcess = [string]::IsNullOrWhiteSpace($commandLine) `
+        -or $commandLine.IndexOf($expectedApiDll, [StringComparison]::OrdinalIgnoreCase) -lt 0
     if ($unownedProcess) {
         throw 'The recorded Support Hub runtime PID no longer points to the owned API assembly. Refusing to stop it.'
     }

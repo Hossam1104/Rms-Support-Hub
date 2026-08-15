@@ -10,6 +10,7 @@ Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot 'PosAgentWindowsProvisioning.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'PosTestingConfiguration.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'PosSupportHubProvisioning.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'PosSupportHubRuntime.psm1') -Force
 
 $testingConfiguration = Get-PosTestingConfiguration $SupportHubOrigin
 $SupportHubOrigin = $testingConfiguration.SupportHubOrigin
@@ -116,6 +117,13 @@ function New-InitialState {
         SupportHubRuntimeProcessId = $null
         SupportHubRuntimePublishedFiles = @()
         SupportHubRuntimeLogFiles = @()
+        SupportHubRuntimeContentRoot = $null
+        SupportHubRuntimeHost = $null
+        SupportHubRuntimePort = $null
+        SupportHubRuntimeCertificateThumbprint = $null
+        SupportHubRuntimeBuildId = $null
+        SupportHubRuntimeCommit = $null
+        SupportHubRuntimeStartedUtc = $null
         AgentConfigurationDirectoryCreated = $false
         AgentConfigurationFileCreated = $false
         AgentConfigurationAdopted = $false
@@ -149,6 +157,13 @@ function Ensure-INT13DStateFields($state) {
         SupportHubRuntimeProcessId = $null
         SupportHubRuntimePublishedFiles = @()
         SupportHubRuntimeLogFiles = @()
+        SupportHubRuntimeContentRoot = $null
+        SupportHubRuntimeHost = $null
+        SupportHubRuntimePort = $null
+        SupportHubRuntimeCertificateThumbprint = $null
+        SupportHubRuntimeBuildId = $null
+        SupportHubRuntimeCommit = $null
+        SupportHubRuntimeStartedUtc = $null
     }
     foreach ($entry in $defaults.GetEnumerator()) {
         if ($null -eq $state.PSObject.Properties[$entry.Key]) {
@@ -228,10 +243,14 @@ function Assert-PreexistingResourceConflicts($state) {
         }
     }
 
+    # Ownership is bound to the owning PID, not merely to the presence of a
+    # recorded PID: an unrelated listener on the Support Hub port must never be
+    # adopted just because an earlier INT-13D runtime once ran here.
     $existingSupportHubListeners = @(Get-NetTCPConnection -LocalPort $testingConfiguration.SupportHubPort -State Listen -ErrorAction SilentlyContinue)
-    if ($existingSupportHubListeners.Count -gt 0 -and [string]::IsNullOrWhiteSpace([string]$state.SupportHubRuntimeProcessId)) {
-        throw "TCP port $($testingConfiguration.SupportHubPort) already has a listener without INT-13D ownership. Refusing to interfere with it."
-    }
+    Assert-PosSupportHubOwnedListener `
+        -Port $testingConfiguration.SupportHubPort `
+        -OwnedProcessId $state.SupportHubRuntimeProcessId `
+        -Listener $existingSupportHubListeners | Out-Null
 }
 
 function Get-HostLines {
@@ -307,10 +326,18 @@ function Assert-TestingCertificateProperties($certificate) {
     }
 
     $privateKey = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
+    if ($null -eq $privateKey) {
+        throw 'The Testing certificate does not expose an RSA private key.'
+    }
     try {
-        $expectedProvider = $privateKey -is [Security.Cryptography.RSACng] -and $privateKey.Key.Provider.Provider -eq 'Microsoft Software Key Storage Provider'
-        $nonExportable = [string]$privateKey.Key.ExportPolicy -eq 'None'
-        if (-not $expectedProvider -or -not $nonExportable) {
+        # Single shared boolean policy: see Test-PosSupportHubPrivateKeyPolicy for
+        # why this must never be split across physical lines.
+        $descriptor = Get-PosPrivateKeyDescriptor $privateKey
+        $allowed = Test-PosSupportHubPrivateKeyPolicy `
+            -IsCngKey $descriptor.IsCngKey `
+            -ProviderName $descriptor.ProviderName `
+            -ExportPolicy $descriptor.ExportPolicy
+        if (-not $allowed) {
             throw 'The Testing certificate did not use the Microsoft Software Key Storage Provider with a non-exportable private key.'
         }
     } finally {
@@ -322,21 +349,21 @@ function Assert-TestingCertificateProperties($certificate) {
 
 function Get-CertificateKeyFile($certificate) {
     $privateKey = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
-    if ($privateKey -isnot [Security.Cryptography.RSACng]) {
-        throw 'The Testing certificate did not use the expected Windows CNG provider.'
+    if ($null -eq $privateKey) {
+        throw 'The Testing certificate does not expose an RSA private key.'
     }
-
-    $uniqueName = $privateKey.Key.UniqueName
-    if ([string]::IsNullOrWhiteSpace($uniqueName)) {
-        throw 'The Testing certificate private-key unique name could not be resolved.'
+    try {
+        $keyPath = Get-PosSupportHubPrivateKeyFile $privateKey
+        if ([string]::IsNullOrWhiteSpace($keyPath)) {
+            throw 'The Testing certificate private-key unique name could not be resolved from the expected Windows CNG provider.'
+        }
+        if (-not (Test-Path -LiteralPath $keyPath -PathType Leaf)) {
+            throw 'The Testing certificate private-key file could not be found under the machine CNG key store.'
+        }
+        return $keyPath
+    } finally {
+        $privateKey.Dispose()
     }
-
-    $keyPath = Join-Path $env:ProgramData "Microsoft/Crypto/Keys/$uniqueName"
-    if (-not (Test-Path -LiteralPath $keyPath -PathType Leaf)) {
-        throw "The Testing certificate private-key file could not be found: $keyPath"
-    }
-
-    return $keyPath
 }
 
 function Grant-LocalSystemCertificateRead($certificate) {
