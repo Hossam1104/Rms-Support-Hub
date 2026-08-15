@@ -54,19 +54,29 @@ Do not copy facts that can be cheaply discovered from the repository.
   exported through `frontend/src/app/shared/ui/index.ts`. Toast state is
   capped/queued/deduplicated in `ToastService`, and sidebar collapse is
   persisted by `SidebarStateService` and published to the module shell.
-- No background workers, queues, repository migrations, E2E framework, or
-  Support Hub application auth scheme exists. INT-03 imported the isolated POS
-  solution; INT-03R set Agent provenance to `010abc52dc110cfde3dc2c53e057890ff6edaf97`.
-  Historical INT-01/02/03 imports remain attributed to
-  `25922b499d33bd73f241ffc26c212dd000e81433`.
- - INT-04 composes the Windows-Service-capable Agent at `https://rms-pos-agent.localhost:5001`; INT-05 adds versioned `/pos/openapi`, generated types, and direct `HttpBackend`; INT-05F isolates `openapi-typescript@7.13.0` with a TypeScript 5 peer-compatible lockfile. INT-07 adds the first production read-only device/connectivity/configuration/service routes and direct workspace, with no mutation route or API relay; runtime OpenAPI remains hidden. INT-CI01 makes Windows maintenance/SMB semantics deterministic and all five POS CI lanes green.
- - The Agent also owns the typed RMS database recovery surface at `/api/v1/rms/databases/{branch|cashier}`. Backup and restore use canonical targets, Agent-owned roots, opaque approved artifacts, bounded native SQL, exact confirmation, target-specific service coordination, one-use mutation tokens, bounded idempotency/concurrency, and principal-scoped REST/SSE operation truth. The browser never supplies or receives a raw SQL/database/path/service capability.
- - The Agent composes the existing typed downloader and maintenance application services at `/api/v1/downloads/**`, `/api/v1/maintenance/**`, and `/api/v1/artifacts/{artifactId}`. Downloader configuration and credentials are projected from Agent-owned stores; branch selection, cleanup/reset policy, bounded operation state, one-use challenges/tokens, and opaque artifact capabilities are server-owned. Browser responses contain only logical branch/target state, stable safe codes, and principal-scoped opaque handles.
- - POS Slice A adds Agent-owned typed Health Check at `/api/v1/health/check`, bounded service-failure reads at `/api/v1/diagnostics/services/{serviceId}/failure`, principal-scoped Incident Timeline reads, and one-use-token Support Bundle generation at `/api/v1/support-bundles`. Diagnostic logs/events are fixed-root, allow-listed, bounded, and redacted; only authorized POST operation boundaries record timeline milestones.
-  - POS Slice B adds fixed Main Server profiles/read-only state, manifest-bound diagnostics, atomic principal-scoped snapshots, and typed package/repair/Guided Repair boundaries. State-changing workflows require fresh snapshots, confirmation, one-use auth/idempotency, verified manifests, and truthful health/rollback/recovery; validation never activates RMS packages or runs repair.
+- The isolated POS Agent is Windows-Service-capable and uses versioned OpenAPI,
+  generated client artifacts, direct browser transport, and no Support Hub API
+  relay. Its typed database recovery, downloader, maintenance, health,
+  diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
+  credentials, and operation capabilities server-owned.
+- POS Slice B adds fixed Main Server profiles/read-only state, manifest-bound
+  diagnostics, atomic principal-scoped snapshots, and typed package/repair/
+  Guided Repair boundaries. State-changing workflows require fresh snapshots,
+  confirmation, one-use auth/idempotency, verified manifests, and truthful
+  health/rollback/recovery; validation never activates RMS packages or runs
+  repair.
  - Fixed `RMS_Plus/ReleaseNumber.txt` is Product Release; Cashier UI `Settings:TheClient` is Client; component builds are drift evidence; the real manager SCM name is `RMSServiceManager`.
  - Main Server maintenance uses Agent-owned profiles bound to discovered Branch/POS; Angular supplies no URL/target, and every live mutation requires owner approval.
  - Device repair is typed local-package work; Main Server install/uninstall are state acknowledgements until evidence proves otherwise.
+ - The canonical Testing POS entry is the exact external route
+  `https://support-hub.integration.test:4443/tools/pos-maintenance`; the Hub
+  card opens it and the route guard rejects wrong-origin direct loads.
+ - Slice B security remediation uses fixed provisioned service-owned roots, a
+  machine-wide privileged mutation lease, bounded fail-closed redaction, and
+  typed POST previews. The fixed RMS source catalog and sanitized registry
+  allow-list are documented in
+  `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`; Slice C requirements
+  are in `docs/POS_SLICE_C_REQUIREMENTS.md`.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.

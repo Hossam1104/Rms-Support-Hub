@@ -691,13 +691,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Preview a fixed Diagnostic Console run
          * @description Previews only a logical target from the fixed Agent manifest. The executable, arguments, working directory, child environment, timeout, and output bounds are resolved server-side; arbitrary process execution is not accepted.
          */
-        get: operations["PreviewDiagnosticConsoleRun"];
-        put?: never;
-        post?: never;
+        post: operations["PreviewDiagnosticConsoleRun"];
         delete?: never;
         options?: never;
         head?: never;
@@ -771,13 +771,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Preview a typed Agent package operation
          * @description Reads only the Agent-owned package catalog and verifier. Preview does not stage, activate, uninstall, register, or roll back a package.
          */
-        get: operations["PreviewAgentPackageOperation"];
-        put?: never;
-        post?: never;
+        post: operations["PreviewAgentPackageOperation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -831,13 +831,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Preview a typed Repair Installation operation
          * @description Validates the server-owned package manifest, signature, checksum, compatibility, archive, fixed installation boundary, required Safety Snapshot, capacity, and rollback preconditions without changing the machine.
          */
-        get: operations["PreviewRepairWithoutSnapshot"];
-        put?: never;
-        post?: never;
+        post: operations["PreviewRepairWithoutSnapshot"];
         delete?: never;
         options?: never;
         head?: never;
@@ -851,13 +851,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Preview a typed Repair Installation operation
          * @description Validates the server-owned package manifest, signature, checksum, compatibility, archive, fixed installation boundary, required Safety Snapshot, capacity, and rollback preconditions without changing the machine.
          */
-        get: operations["PreviewRepairWithSnapshot"];
-        put?: never;
-        post?: never;
+        post: operations["PreviewRepairWithSnapshot"];
         delete?: never;
         options?: never;
         head?: never;
@@ -911,13 +911,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Preview Guided Repair checkpoints
          * @description Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.
          */
-        get: operations["PreviewGuidedRepair"];
-        put?: never;
-        post?: never;
+        post: operations["PreviewGuidedRepair"];
         delete?: never;
         options?: never;
         head?: never;
@@ -931,13 +931,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Preview Guided Repair checkpoints
          * @description Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.
          */
-        get: operations["PreviewGuidedRepairWithSnapshot"];
-        put?: never;
-        post?: never;
+        post: operations["PreviewGuidedRepairWithSnapshot"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1153,7 +1153,7 @@ export interface components {
          * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
          * @enum {unknown}
          */
-        AgentPackageOperationStateDto: "notAttempted" | "preview" | "accepted" | "staging" | "activating" | "verifying" | "completed" | "failed" | "rollbackSucceeded" | "rollbackFailed" | "recoveryRequired" | "outcomeUnknown";
+        AgentPackageOperationStateDto: "notAttempted" | "busy" | "preview" | "accepted" | "staging" | "activating" | "verifying" | "completed" | "failed" | "rollbackSucceeded" | "rollbackFailed" | "recoveryRequired" | "outcomeUnknown";
         /** @description Typed Agent package lifecycle preview with manifest verification and bounded effects/blockers. */
         AgentPackagePreviewDto: {
             /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
@@ -1177,6 +1177,11 @@ export interface components {
              * @description UTC lifecycle timestamp produced and enforced by the Agent.
              */
             expiresAtUtc: string;
+        };
+        /** @description Typed request for a retained Agent package preview. It contains only a bounded idempotency key and never selects an archive, path, or installer action. */
+        AgentPackagePreviewRequestDto: {
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
         };
         /** @description Safe server-owned Agent package status and truthful verification state. */
         AgentPackageStatusDto: {
@@ -1416,6 +1421,11 @@ export interface components {
              */
             expiresAtUtc: string;
         };
+        /** @description Typed request for a retained fixed diagnostic preview. It contains only a bounded idempotency key and never selects a process, path, executable, or argument. */
+        DiagnosticConsolePreviewRequestDto: {
+            /** @description Bounded caller-generated key; repeating the same fixed diagnostic preview returns the retained preview. */
+            idempotencyKey: string;
+        };
         /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
         DiagnosticConsoleResultDto: {
             /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
@@ -1652,6 +1662,11 @@ export interface components {
              * @description UTC lifecycle timestamp produced and enforced by the Agent.
              */
             expiresAtUtc: string;
+        };
+        /** @description Typed request for a retained Guided Repair preview. It contains only a bounded idempotency key; any snapshot reference is a server-owned route value. */
+        GuidedRepairPreviewRequestDto: {
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
         };
         /** @description One typed Guided Repair checkpoint. Advancing it never implies package activation. */
         GuidedRepairStepDto: {
@@ -2047,7 +2062,7 @@ export interface components {
          * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
          * @enum {unknown}
          */
-        RepairOperationStateDto: "notAttempted" | "preview" | "accepted" | "running" | "completed" | "failed" | "partial" | "rollbackSucceeded" | "rollbackFailed" | "recoveryRequired" | "outcomeUnknown";
+        RepairOperationStateDto: "notAttempted" | "busy" | "preview" | "accepted" | "running" | "completed" | "failed" | "partial" | "rollbackSucceeded" | "rollbackFailed" | "recoveryRequired" | "outcomeUnknown";
         /** @description Typed repair precondition preview bound to a fresh principal-scoped Safety Snapshot. */
         RepairPreviewDto: {
             /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
@@ -2071,6 +2086,11 @@ export interface components {
              * @description UTC lifecycle timestamp produced and enforced by the Agent.
              */
             expiresAtUtc: string;
+        };
+        /** @description Typed request for a retained repair precondition preview. It contains only a bounded idempotency key and never selects an installer, path, or Main Server action. */
+        RepairPreviewRequestDto: {
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
         };
         /** @description Server-owned comparison between an installed RMS component build and Product Release. */
         RmsComponentDriftDto: {
@@ -4859,7 +4879,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiagnosticConsolePreviewRequestDto"];
+            };
+        };
         responses: {
             /** @description The Agent returned the typed DiagnosticConsolePreviewDto preview. */
             200: {
@@ -5070,7 +5094,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPackagePreviewRequestDto"];
+            };
+        };
         responses: {
             /** @description The Agent returned the typed AgentPackagePreviewDto preview. */
             200: {
@@ -5236,7 +5264,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepairPreviewRequestDto"];
+            };
+        };
         responses: {
             /** @description The Agent returned the typed RepairPreviewDto precondition result. */
             200: {
@@ -5298,7 +5330,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepairPreviewRequestDto"];
+            };
+        };
         responses: {
             /** @description The Agent returned the typed RepairPreviewDto precondition result. */
             200: {
@@ -5463,7 +5499,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuidedRepairPreviewRequestDto"];
+            };
+        };
         responses: {
             /** @description The Agent returned the typed GuidedRepairDto checkpoint projection. */
             200: {
@@ -5502,7 +5542,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuidedRepairPreviewRequestDto"];
+            };
+        };
         responses: {
             /** @description The Agent returned the typed GuidedRepairDto checkpoint projection. */
             200: {

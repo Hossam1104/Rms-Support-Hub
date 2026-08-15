@@ -19,18 +19,22 @@ type SafetySnapshot = components['schemas']['SafetySnapshotDto'];
 type SafetySnapshotVerification = components['schemas']['SafetySnapshotVerificationDto'];
 type DiagnosticConsoleTarget = components['schemas']['DiagnosticConsoleTargetDto'];
 type DiagnosticConsolePreview = components['schemas']['DiagnosticConsolePreviewDto'];
+type DiagnosticConsolePreviewRequest = components['schemas']['DiagnosticConsolePreviewRequestDto'];
 type DiagnosticConsoleStartRequest = components['schemas']['DiagnosticConsoleStartRequestDto'];
 type DiagnosticConsoleRun = components['schemas']['DiagnosticConsoleRunDto'];
 type AgentPackageOperationKind = components['schemas']['AgentPackageOperationKindDto'];
 type AgentPackageStatus = components['schemas']['AgentPackageStatusDto'];
 type AgentPackagePreview = components['schemas']['AgentPackagePreviewDto'];
+type AgentPackagePreviewRequest = components['schemas']['AgentPackagePreviewRequestDto'];
 type AgentPackageOperationRequest = components['schemas']['AgentPackageOperationRequestDto'];
 type AgentPackageOperation = components['schemas']['AgentPackageOperationDto'];
 type RepairOperationKind = components['schemas']['RepairOperationKindDto'];
 type RepairPreview = components['schemas']['RepairPreviewDto'];
+type RepairPreviewRequest = components['schemas']['RepairPreviewRequestDto'];
 type RepairExecuteRequest = components['schemas']['RepairExecuteRequestDto'];
 type RepairOperation = components['schemas']['RepairOperationDto'];
 type GuidedRepair = components['schemas']['GuidedRepairDto'];
+type GuidedRepairPreviewRequest = components['schemas']['GuidedRepairPreviewRequestDto'];
 type GuidedRepairStepRequest = components['schemas']['GuidedRepairStepRequestDto'];
 type SessionInfo = components['schemas']['SessionInfoDto'];
 type MutationTokenIssueRequest = components['schemas']['MutationTokenIssueRequestDto'];
@@ -141,9 +145,10 @@ export class PosAgentTransportService {
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 
-  getDiagnosticConsolePreview(target: DiagnosticConsoleTarget): Observable<DiagnosticConsolePreview> {
+  getDiagnosticConsolePreview(target: DiagnosticConsoleTarget, idempotencyKey = this.createPreviewIdempotencyKey()): Observable<DiagnosticConsolePreview> {
+    const body: DiagnosticConsolePreviewRequest = { idempotencyKey };
     return this.http
-      .get<DiagnosticConsolePreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.diagnosticConsolePreview}/${encodeURIComponent(target)}`, {
+      .post<DiagnosticConsolePreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.diagnosticConsolePreview}/${encodeURIComponent(target)}`, body, {
         headers: this.jsonHeaders,
         withCredentials: true
       })
@@ -177,9 +182,10 @@ export class PosAgentTransportService {
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 
-  getAgentPackagePreview(operation: AgentPackageOperationKind): Observable<AgentPackagePreview> {
+  getAgentPackagePreview(operation: AgentPackageOperationKind, idempotencyKey = this.createPreviewIdempotencyKey()): Observable<AgentPackagePreview> {
+    const body: AgentPackagePreviewRequest = { idempotencyKey };
     return this.http
-      .get<AgentPackagePreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.packagePreview}/${encodeURIComponent(operation)}`, {
+      .post<AgentPackagePreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.packagePreview}/${encodeURIComponent(operation)}`, body, {
         headers: this.jsonHeaders,
         withCredentials: true
       })
@@ -204,10 +210,11 @@ export class PosAgentTransportService {
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 
-  getRepairPreview(operation: RepairOperationKind, snapshotId?: string): Observable<RepairPreview> {
+  getRepairPreview(operation: RepairOperationKind, snapshotId?: string, idempotencyKey = this.createPreviewIdempotencyKey()): Observable<RepairPreview> {
     const suffix = snapshotId ? `/${encodeURIComponent(snapshotId)}` : '';
+    const body: RepairPreviewRequest = { idempotencyKey };
     return this.http
-      .get<RepairPreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.repairPreview}/${encodeURIComponent(operation)}${suffix}`, {
+      .post<RepairPreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.repairPreview}/${encodeURIComponent(operation)}${suffix}`, body, {
         headers: this.jsonHeaders,
         withCredentials: true
       })
@@ -232,10 +239,11 @@ export class PosAgentTransportService {
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
   }
 
-  getGuidedRepairPreview(snapshotId?: string): Observable<GuidedRepair> {
+  getGuidedRepairPreview(snapshotId?: string, idempotencyKey = this.createPreviewIdempotencyKey()): Observable<GuidedRepair> {
     const suffix = snapshotId ? `/${encodeURIComponent(snapshotId)}` : '';
+    const body: GuidedRepairPreviewRequest = { idempotencyKey };
     return this.http
-      .get<GuidedRepair>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.guidedRepairPreview}${suffix}`, {
+      .post<GuidedRepair>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.guidedRepairPreview}${suffix}`, body, {
         headers: this.jsonHeaders,
         withCredentials: true
       })
@@ -539,5 +547,10 @@ export class PosAgentTransportService {
     return this.jsonHeaders
       .set('Content-Type', 'application/json')
       .set(POS_AGENT_MUTATION_TOKEN_HEADER, mutationToken);
+  }
+
+  private createPreviewIdempotencyKey(): string {
+    const randomId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `preview-${randomId}`.slice(0, 128);
   }
 }

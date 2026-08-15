@@ -60,6 +60,17 @@ export type ToolCardStatus = 'available' | 'read-only' | 'migration-pending';
     </ng-template>
 
     <a
+      *ngIf="externalRoute() && !disabled(); else localOrInteractive"
+      class="tool-card__link"
+      [href]="externalRoute()"
+      [attr.aria-label]="accessibleLabel()">
+      <ui-card class="tool-card" [class]="accentClass()" variant="raised">
+        <ng-container *ngTemplateOutlet="cardContent"></ng-container>
+      </ui-card>
+    </a>
+
+    <ng-template #localOrInteractive>
+    <a
       *ngIf="route() && !disabled(); else interactiveCard"
       class="tool-card__link"
       [routerLink]="route()"
@@ -68,6 +79,7 @@ export type ToolCardStatus = 'available' | 'read-only' | 'migration-pending';
         <ng-container *ngTemplateOutlet="cardContent"></ng-container>
       </ui-card>
     </a>
+    </ng-template>
 
     <ng-template #interactiveCard>
       <ui-card
@@ -215,6 +227,7 @@ export class ToolCardComponent {
   readonly accent = input<ToolCardAccent>('brand');
   readonly status = input<ToolCardStatus>('available');
   readonly route = input<string | null>(null);
+  readonly externalRoute = input<string | null>(null);
   readonly actionLabel = input('Open tool');
   readonly capabilities = input<readonly string[]>([]);
   readonly availabilityMessage = input('');

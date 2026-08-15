@@ -278,9 +278,10 @@ Write-Host "[PASS] $($testingConfiguration.SupportHubHost) resolves only to $($a
 
 $existingRuntime = Get-OwnedRuntimeProcess $state
 if ($null -ne $existingRuntime) {
-    Wait-ForSecureSupportHub $state
-    Write-Host "Secure Support Hub Testing origin is already running: $SupportHubOrigin" -ForegroundColor Green
-    exit 0
+    # A live owned process may still serve a previous Angular/API publish. Refresh the owned
+    # Testing runtime on every authorized start so the canonical secure origin cannot drift from
+    # the current repository source while localhost:4200 and the secure route expose two UIs.
+    Stop-OwnedRuntimeProcess $state
 }
 
 Invoke-SupportHubBuild $state

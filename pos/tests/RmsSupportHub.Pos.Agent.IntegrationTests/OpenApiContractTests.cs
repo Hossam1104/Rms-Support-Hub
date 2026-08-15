@@ -119,6 +119,12 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetMaintenanceOperation", Operation(document, "/api/v1/maintenance/operations/{operationId}", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("StreamMaintenanceOperationEvents", Operation(document, "/api/v1/maintenance/operations/{operationId}/events", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("DownloadArtifact", Operation(document, "/api/v1/artifacts/{artifactId}", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewDiagnosticConsoleRun", Operation(document, "/api/v1/diagnostic-console/preview/{targetId}", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewAgentPackageOperation", Operation(document, "/api/v1/packages/preview/{operationId}", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewRepairWithoutSnapshot", Operation(document, "/api/v1/repair/preview/{operationId}", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewRepairWithSnapshot", Operation(document, "/api/v1/repair/preview/{operationId}/{snapshotId}", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewGuidedRepair", Operation(document, "/api/v1/repair/guided/preview", "post")["operationId"]!.GetValue<string>());
+        Assert.Equal("PreviewGuidedRepairWithSnapshot", Operation(document, "/api/v1/repair/guided/preview/{snapshotId}", "post")["operationId"]!.GetValue<string>());
 
         var servers = document["servers"]!.AsArray();
         Assert.Single(servers);
@@ -438,6 +444,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
              ,"SafetySnapshotDto"
              ,"SafetySnapshotVerificationDto"
              ,"DiagnosticConsolePreviewDto"
+             ,"DiagnosticConsolePreviewRequestDto"
              ,"DiagnosticConsoleStartRequestDto"
              ,"DiagnosticConsoleRunDto"
              ,"DiagnosticConsoleResultDto"
@@ -445,9 +452,12 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
              ,"AgentPackageManifestDto"
              ,"AgentPackageStatusDto"
              ,"AgentPackagePreviewDto"
+             ,"AgentPackagePreviewRequestDto"
              ,"AgentPackageOperationRequestDto"
              ,"AgentPackageOperationDto"
              ,"RepairPreviewDto"
+             ,"RepairPreviewRequestDto"
+             ,"GuidedRepairPreviewRequestDto"
              ,"RepairExecuteRequestDto"
              ,"RepairOperationDto"
              ,"GuidedRepairDto"

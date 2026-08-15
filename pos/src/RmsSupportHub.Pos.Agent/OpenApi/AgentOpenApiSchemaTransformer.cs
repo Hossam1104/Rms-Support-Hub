@@ -166,6 +166,9 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Principal-scoped Safety Snapshot integrity, freshness, and authorization verification result.",
             (var value, null) when value == typeof(DiagnosticConsolePreviewDto) =>
                 "Preview of one fixed Agent diagnostic manifest target with bounded process and output policy.",
+            (var value, null) when value == typeof(DiagnosticConsolePreviewRequestDto) =>
+                "Typed request for a retained fixed diagnostic preview. It contains only a bounded " +
+                "idempotency key and never selects a process, path, executable, or argument.",
             (var value, null) when value == typeof(DiagnosticConsoleStartRequestDto) =>
                 "Typed request for one prior fixed diagnostic preview. It contains no process path, shell, " +
                 "executable, argument, or environment input.",
@@ -181,18 +184,27 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Safe logical package-file metadata used for server-side checksum and size verification.",
             (var value, null) when value == typeof(AgentPackagePreviewDto) =>
                 "Typed Agent package lifecycle preview with manifest verification and bounded effects/blockers.",
+            (var value, null) when value == typeof(AgentPackagePreviewRequestDto) =>
+                "Typed request for a retained Agent package preview. It contains only a bounded " +
+                "idempotency key and never selects an archive, path, or installer action.",
             (var value, null) when value == typeof(AgentPackageOperationRequestDto) =>
                 "Typed request for one prior Agent package preview with exact confirmation and idempotency.",
             (var value, null) when value == typeof(AgentPackageOperationDto) =>
                 "Principal-scoped package lifecycle state with activation, health, rollback, and recovery truth.",
             (var value, null) when value == typeof(RepairPreviewDto) =>
                 "Typed repair precondition preview bound to a fresh principal-scoped Safety Snapshot.",
+            (var value, null) when value == typeof(RepairPreviewRequestDto) =>
+                "Typed request for a retained repair precondition preview. It contains only a bounded " +
+                "idempotency key and never selects an installer, path, or Main Server action.",
             (var value, null) when value == typeof(RepairExecuteRequestDto) =>
                 "Typed request for one prior repair preview. It contains no installer path, command, or Main Server mutation input.",
             (var value, null) when value == typeof(RepairOperationDto) =>
                 "Principal-scoped repair lifecycle state with activation, health, rollback, and recovery truth.",
             (var value, null) when value == typeof(GuidedRepairDto) =>
                 "Fixed principal-scoped Guided Repair checkpoint sequence with explicit blocked and recovery states.",
+            (var value, null) when value == typeof(GuidedRepairPreviewRequestDto) =>
+                "Typed request for a retained Guided Repair preview. It contains only a bounded " +
+                "idempotency key; any snapshot reference is a server-owned route value.",
             (var value, null) when value == typeof(GuidedRepairStepDto) =>
                 "One typed Guided Repair checkpoint. Advancing it never implies package activation.",
             (var value, null) when value == typeof(GuidedRepairStepRequestDto) =>
@@ -293,6 +305,8 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Branch codes selected from the server-approved downloader catalog.",
             (var value, "idempotencyKey") when value == typeof(TriggerBatchRequestDto) =>
                 "Bounded caller-generated key; repeating the same branch selection returns the retained operation.",
+            (var value, "idempotencyKey") when value == typeof(DiagnosticConsolePreviewRequestDto) =>
+                "Bounded caller-generated key; repeating the same fixed diagnostic preview returns the retained preview.",
             (var value, "branchCode") when value == typeof(DownloaderBranchOutcomeDto) =>
                 "Logical branch code from the server-approved downloader selection.",
             (var value, "state") when value == typeof(DownloaderBranchOutcomeDto) =>

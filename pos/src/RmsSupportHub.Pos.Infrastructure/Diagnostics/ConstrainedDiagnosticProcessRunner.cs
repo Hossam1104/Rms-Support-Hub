@@ -55,12 +55,16 @@ public sealed class ConstrainedDiagnosticProcessRunner : IConstrainedDiagnosticP
             var stdoutTask = ReadBoundedAsync(process.StandardOutput, outputByteLimit, outputLineLimit, cancellationToken);
             var stderrTask = ReadBoundedAsync(process.StandardError, outputByteLimit, outputLineLimit, cancellationToken);
             var waitTask = process.WaitForExitAsync(cancellationToken);
-            var timeoutTask = Task.Delay(wallTimeLimit, cancellationToken);
+            using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var timeoutTask = Task.Delay(wallTimeLimit, timeoutCancellation.Token);
             var completed = await Task.WhenAny(waitTask, timeoutTask).ConfigureAwait(false);
             DiagnosticConsoleProcessState state;
 
             if (completed == waitTask)
             {
+                // Stop the delay as soon as the process has a terminal result. This avoids leaving
+                // a live timer behind for every successful diagnostic invocation.
+                timeoutCancellation.Cancel();
                 await waitTask.ConfigureAwait(false);
                 state = process.ExitCode == 0 ? DiagnosticConsoleProcessState.Succeeded : DiagnosticConsoleProcessState.Failed;
             }

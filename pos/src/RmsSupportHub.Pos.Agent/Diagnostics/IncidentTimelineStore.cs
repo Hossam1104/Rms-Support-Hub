@@ -1,4 +1,5 @@
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
+using RmsSupportHub.Pos.Infrastructure.Diagnostics;
 
 namespace RmsSupportHub.Pos.Agent.Diagnostics;
 
@@ -26,7 +27,7 @@ public sealed class IncidentTimelineStore(TimeProvider timeProvider)
             atUtc,
             Safe(kind, 64, "Evidence"),
             severity,
-            Safe(summary, 512, "Diagnostic event recorded."),
+            SafeSummary(summary),
             SafeIdentifier(serviceId),
             SafeIdentifier(operationId),
             SafeIdentifier(correlationId));
@@ -87,4 +88,12 @@ public sealed class IncidentTimelineStore(TimeProvider timeProvider)
             char.IsControl(character) || char.IsWhiteSpace(character) || character is '/' or '\\' or '?' or '#')
             ? null
             : value;
+
+    private static string SafeSummary(string? value)
+    {
+        // Timeline entries are later embedded in Support Bundles, so this is a second independent
+        // evidence boundary rather than an assumption that every caller already redacted input.
+        var redacted = DiagnosticRedactor.RedactSummary(value);
+        return Safe(redacted, 512, "Diagnostic event recorded.");
+    }
 }

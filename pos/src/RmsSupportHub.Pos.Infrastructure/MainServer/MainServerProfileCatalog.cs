@@ -71,12 +71,30 @@ public sealed class MainServerProfileCatalog : IMainServerProfileCatalog
     private static bool IsSameEndpoint(string? discovered, Uri profile)
     {
         if (string.IsNullOrWhiteSpace(discovered)) return false;
-        var candidate = discovered.TrimEnd('/');
-        if (!candidate.Contains("://", StringComparison.Ordinal)) candidate = $"https://{candidate}";
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)) return false;
-        var profilePort = profile.IsDefaultPort ? profile.Port : profile.Port;
-        var discoveredPort = uri.IsDefaultPort ? (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ? 443 : 80) : uri.Port;
-        return string.Equals(uri.Host, profile.Host, StringComparison.OrdinalIgnoreCase)
-            && discoveredPort == profilePort;
+        if (!Uri.TryCreate(discovered.Trim(), UriKind.Absolute, out var uri)
+            || uri.UserInfo.Length > 0
+            || uri.Query.Length > 0
+            || uri.Fragment.Length > 0)
+        {
+            return false;
+        }
+
+        var profileScheme = profile.Scheme.ToLowerInvariant();
+        var candidateScheme = uri.Scheme.ToLowerInvariant();
+        var profilePort = EffectivePort(profile);
+        var discoveredPort = EffectivePort(uri);
+        var profilePath = NormalizeBasePath(profile.AbsolutePath);
+        var discoveredPath = NormalizeBasePath(uri.AbsolutePath);
+        return string.Equals(candidateScheme, profileScheme, StringComparison.Ordinal)
+            && string.Equals(uri.Host, profile.Host, StringComparison.OrdinalIgnoreCase)
+            && discoveredPort == profilePort
+            && string.Equals(discoveredPath, profilePath, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static int EffectivePort(Uri uri) => uri.IsDefaultPort
+        ? string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ? 443 : 80
+        : uri.Port;
+
+    private static string NormalizeBasePath(string path) =>
+        "/" + path.Trim('/');
 }

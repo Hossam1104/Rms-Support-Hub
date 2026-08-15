@@ -29,6 +29,43 @@ public sealed class DiagnosticRedactorTests
     }
 
     [Fact]
+    public void RedactionCoversStructuredSecretsAndTruncatedKeyMaterial()
+    {
+        var value = """
+            <add key="Password" value="xml-secret" />
+            <add name="apiKey" value='xml-api-secret' />
+            {"password":"json-secret","apiKey":"json-api-secret","access_token":"json-token-secret","authorization":"Bearer json-bearer-secret"}
+            Server=sql.synthetic.test;Password=sql-secret;User ID=sql-user;
+            Authorization: Bearer bearer-secret token=token-secret ApiKey=api-secret
+            https://main.synthetic.test/api?client=one&password=url-secret
+            """;
+        var redacted = new DiagnosticOutputRedactor().Redact(value);
+
+        foreach (var secret in new[]
+        {
+            "xml-secret",
+            "xml-api-secret",
+            "json-secret",
+            "json-api-secret",
+            "json-token-secret",
+            "json-bearer-secret",
+            "sql-secret",
+            "bearer-secret",
+            "token-secret",
+            "api-secret",
+            "url-secret"
+        })
+        {
+            Assert.DoesNotContain(secret, redacted, StringComparison.Ordinal);
+        }
+
+        var truncatedPem = new DiagnosticOutputRedactor().Redact("-----BEGIN RSA PRIVATE KEY-----\ntruncated-private-key");
+        Assert.DoesNotContain("BEGIN RSA PRIVATE KEY", truncatedPem, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("truncated-private-key", truncatedPem, StringComparison.Ordinal);
+        Assert.InRange(redacted.Length, 0, 64 * 1024);
+    }
+
+    [Fact]
     public void StackFramesRemainBoundedAndKeepOnlyFrameLabels()
     {
         var frames = DiagnosticRedactor.StackFrames(

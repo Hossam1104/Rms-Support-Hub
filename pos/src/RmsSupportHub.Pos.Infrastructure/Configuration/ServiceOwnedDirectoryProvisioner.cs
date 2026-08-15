@@ -20,10 +20,17 @@ public static class ServiceOwnedDirectoryProvisioner
         }
 
         var fullPath = Path.GetFullPath(path);
+        if (HasParentTraversal(path) || path.Any(char.IsControl))
+        {
+            throw new UnauthorizedAccessException("The service-owned storage path is not canonical.");
+        }
 
         if (!OperatingSystem.IsWindows())
         {
+            RejectReparsePointsOnExistingChain(fullPath);
+            if (File.Exists(fullPath)) throw new UnauthorizedAccessException("The service-owned storage path is occupied by a file.");
             Directory.CreateDirectory(fullPath);
+            RejectReparsePointsOnExistingChain(fullPath);
             return;
         }
 
@@ -31,6 +38,8 @@ public static class ServiceOwnedDirectoryProvisioner
         {
             throw new UnauthorizedAccessException("Machine-owned service storage requires LocalSystem or an administrator token.");
         }
+
+        RejectReparsePointsOnExistingChain(fullPath);
 
         var missingDirectories = new List<string>();
         var current = fullPath;
@@ -58,7 +67,7 @@ public static class ServiceOwnedDirectoryProvisioner
             && missingDirectories.Count > 0
             && IsMachineOwnedPath(current))
         {
-            ApplyRestrictedAcl(current, allowTemporaryTestIdentity: false);
+            VerifyTrustedExistingDirectory(current);
         }
 
         // Secure each newly-created segment before the next segment or any file is created below it.
@@ -199,4 +208,58 @@ public static class ServiceOwnedDirectoryProvisioner
         return fullPath.Equals(temporaryRoot, StringComparison.OrdinalIgnoreCase)
             || fullPath.StartsWith(temporaryRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static void RejectReparsePointsOnExistingChain(string fullPath)
+    {
+        var current = fullPath;
+        while (!string.IsNullOrWhiteSpace(current))
+        {
+            if (Directory.Exists(current) || File.Exists(current))
+            {
+                try
+                {
+                    if (File.GetAttributes(current).HasFlag(FileAttributes.ReparsePoint))
+                    {
+                        throw new UnauthorizedAccessException("Reparse-point service-owned storage is not accepted.");
+                    }
+                }
+                catch (FileNotFoundException) { }
+                catch (DirectoryNotFoundException) { }
+            }
+
+            var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
+            if (string.IsNullOrWhiteSpace(parent) || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase)) break;
+            current = parent;
+        }
+    }
+
+    private static void VerifyTrustedExistingDirectory(string path)
+    {
+        var directory = new DirectoryInfo(path);
+        if (directory.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        {
+            throw new UnauthorizedAccessException("Reparse-point service-owned storage is not accepted.");
+        }
+
+        var security = directory.GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
+        var owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+        var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        if (!IsTrustedIdentity(owner, administrators, system) || !security.AreAccessRulesProtected)
+        {
+            throw new UnauthorizedAccessException("The existing service-owned parent is not trusted.");
+        }
+
+        var rules = security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
+            .Cast<FileSystemAccessRule>();
+        if (rules.Any(rule => rule.AccessControlType == AccessControlType.Allow
+            && !IsTrustedIdentity(rule.IdentityReference as SecurityIdentifier, administrators, system)))
+        {
+            throw new UnauthorizedAccessException("The existing service-owned parent contains an untrusted allow rule.");
+        }
+    }
+
+    private static bool HasParentTraversal(string path) =>
+        path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment => segment is "." or "..");
 }

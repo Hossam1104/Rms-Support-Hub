@@ -15,6 +15,7 @@ public enum RepairOperationKindDto
 public enum RepairOperationStateDto
 {
     NotAttempted,
+    Busy,
     Preview,
     Accepted,
     Running,
@@ -48,6 +49,11 @@ public sealed record RepairPreviewDto(
     IReadOnlyList<string> Blockers,
     string ConfirmationPhrase,
     DateTimeOffset ExpiresAtUtc);
+
+/// <summary>Typed preview input. The operation remains the fixed route segment and the snapshot is opaque.</summary>
+public sealed record RepairPreviewRequestDto(string IdempotencyKey);
+
+public sealed record GuidedRepairPreviewRequestDto(string IdempotencyKey);
 
 public sealed record SafetySnapshotReferenceDto(
     string? SnapshotId,

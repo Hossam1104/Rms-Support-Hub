@@ -5,6 +5,7 @@ using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Contracts.V1.Packages;
 using RmsSupportHub.Pos.Contracts.V1.Repair;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
+using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Application.Repair;
 
@@ -260,48 +261,86 @@ public sealed class RepairService(
     GuidedRepairStore guided,
     AgentScopedIdempotencyStore idempotency,
     IAgentPackageLifecycle lifecycle,
+    IPrivilegedMutationLease privilegedLease,
     IncidentTimelineService timeline,
     TimeProvider clock)
 {
     private const string IdempotencyScope = "repair.installation";
     private const string GuidedIdempotencyScope = "repair.guided";
+    private const string PreviewIdempotencyScope = "repair.preview";
 
     public async Task<RepairPreviewDto> PreviewAsync(
         string principalSid,
         RepairOperationKind operation,
         string? snapshotId,
+        string idempotencyKey,
         CancellationToken cancellationToken = default)
     {
-        var now = clock.GetUtcNow();
-        var expires = now.AddMinutes(5);
-        var snapshot = await VerifySnapshotAsync(principalSid, snapshotId, cancellationToken).ConfigureAwait(false);
-        var packageOperation = operation == RepairOperationKind.Guided ? AgentPackageOperationKind.Repair : MapPackageOperation(operation);
-        var (manifest, validation) = await packages.VerifyForRepairAsync(packageOperation, cancellationToken).ConfigureAwait(false);
-        var blockers = new List<string>();
-        if (!snapshot.Verified) blockers.Add(snapshot.SnapshotId is null ? "fresh_snapshot_required" : "fresh_snapshot_not_verified");
-        if (validation.State != AgentPackageVerificationState.Verified) blockers.AddRange(validation.Blockers);
-        if (snapshot.Verified && snapshot.Snapshot is { Capacity.State: not SafetySnapshotEvidenceState.Healthy }) blockers.Add("capacity_precondition_not_healthy");
-
-        if (manifest is null)
+        if (!AgentScopedIdempotencyStore.IsValidKey(idempotencyKey))
         {
-            return new(string.Empty, MapRepairOperation(operation), false, Map(validation.State), snapshot.Reference, EffectsFor(operation), blockers.Distinct(StringComparer.Ordinal).ToArray(), ConfirmationFor(operation), expires);
+            throw new RepairRejectedException("repair_preview_idempotency_invalid");
         }
 
-        var confirmation = ConfirmationFor(operation);
-        var ready = blockers.Count == 0 && validation.State == AgentPackageVerificationState.Verified;
-        var previewId = ready ? previews.Add(principalSid, operation, manifest, snapshotId, confirmation, expires) : null;
-        if (ready && previewId is null) blockers.Add("repair_preview_capacity");
-        return new(
-            previewId ?? string.Empty,
-                MapRepairOperation(operation),
-            ready && previewId is not null,
-            Map(validation.State),
-            snapshot.Reference,
-            EffectsFor(operation),
-            blockers.Distinct(StringComparer.Ordinal).ToArray(),
-            confirmation,
-            expires);
+        var material = operation + "|" + (snapshotId ?? string.Empty);
+        var reservation = idempotency.TryReserve(principalSid, PreviewIdempotencyScope, idempotencyKey, material);
+        if (reservation.State == AgentIdempotencyReservationState.Completed
+            && reservation.OperationId is not null
+            && previews.TryGet(principalSid, reservation.OperationId, out var existing)
+            && existing is not null)
+        {
+            return ToPreview(reservation.OperationId, existing);
+        }
+        if (reservation.State != AgentIdempotencyReservationState.Reserved)
+        {
+            throw new RepairRejectedException(reservation.State switch
+            {
+                AgentIdempotencyReservationState.InProgress => "repair_preview_in_progress",
+                AgentIdempotencyReservationState.Capacity => "repair_preview_capacity",
+                _ => "repair_preview_idempotency_conflict"
+            });
+        }
+
+        try
+        {
+            var now = clock.GetUtcNow();
+            var expires = now.AddMinutes(5);
+            var snapshot = await VerifySnapshotAsync(principalSid, snapshotId, cancellationToken).ConfigureAwait(false);
+            var packageOperation = operation == RepairOperationKind.Guided ? AgentPackageOperationKind.Repair : MapPackageOperation(operation);
+            var (manifest, validation) = await packages.VerifyForRepairAsync(packageOperation, cancellationToken).ConfigureAwait(false);
+            var blockers = new List<string>();
+            if (!snapshot.Verified) blockers.Add(snapshot.SnapshotId is null ? "fresh_snapshot_required" : "fresh_snapshot_not_verified");
+            if (validation.State != AgentPackageVerificationState.Verified) blockers.AddRange(validation.Blockers);
+            if (snapshot.Verified && snapshot.Snapshot is { Capacity.State: not SafetySnapshotEvidenceState.Healthy }) blockers.Add("capacity_precondition_not_healthy");
+
+            if (manifest is null)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+                return new(string.Empty, MapRepairOperation(operation), false, Map(validation.State), snapshot.Reference, EffectsFor(operation), blockers.Distinct(StringComparer.Ordinal).ToArray(), ConfirmationFor(operation), expires);
+            }
+
+            var confirmation = ConfirmationFor(operation);
+            var ready = blockers.Count == 0 && validation.State == AgentPackageVerificationState.Verified;
+            var previewId = ready ? previews.Add(principalSid, operation, manifest, snapshotId, confirmation, expires) : null;
+            if (ready && previewId is null) blockers.Add("repair_preview_capacity");
+            if (previewId is null)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+            }
+            else
+            {
+                idempotency.Bind(principalSid, PreviewIdempotencyScope, idempotencyKey, previewId);
+            }
+            return new(previewId ?? string.Empty, MapRepairOperation(operation), ready && previewId is not null, Map(validation.State), snapshot.Reference, EffectsFor(operation), blockers.Distinct(StringComparer.Ordinal).ToArray(), confirmation, expires);
+        }
+        catch
+        {
+            idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+            throw;
+        }
     }
+
+    private static RepairPreviewDto ToPreview(string previewId, RepairPreviewEntry entry) =>
+        new(previewId, MapRepairOperation(entry.Operation), true, AgentPackageVerificationStateDto.Verified, new(entry.SnapshotId, "Verified", true, entry.ExpiresAtUtc, "The retained repair preview remains valid."), EffectsFor(entry.Operation), [], entry.Confirmation, entry.ExpiresAtUtc);
 
     public async Task<RepairOperationDto> ExecuteAsync(
         string principalSid,
@@ -370,28 +409,66 @@ public sealed class RepairService(
         return false;
     }
 
-    public async Task<GuidedRepairDto> BeginGuidedAsync(string principalSid, string? snapshotId, CancellationToken cancellationToken = default)
+    public async Task<GuidedRepairDto> BeginGuidedAsync(string principalSid, string? snapshotId, string idempotencyKey, CancellationToken cancellationToken = default)
     {
-        var verification = await VerifySnapshotAsync(principalSid, snapshotId, cancellationToken).ConfigureAwait(false);
-        var steps = GuidedRepairWorkflow.Checkpoints.Select((checkpoint, index) => new GuidedRepairStepDto(
-            checkpoint.StepId,
-            checkpoint.Title,
-            checkpoint.Description,
-            index == 0 && verification.Verified ? GuidedRepairStepStateDto.Ready : index == 0 ? GuidedRepairStepStateDto.Blocked : GuidedRepairStepStateDto.Pending,
-            true,
-            ConfirmationForStep(checkpoint.StepId),
-            index == 0 && !verification.Verified ? "fresh_snapshot_not_verified" : null)).ToArray();
-        var expires = clock.GetUtcNow().AddMinutes(15);
-        var state = new GuidedRepairState(
-            RepairOperationStateDto.Preview,
-            snapshotId,
-            null,
-            steps,
-            verification.Verified ? "Guided Repair is waiting for typed checkpoint confirmation." : verification.Reference.Detail,
-            expires);
-        var id = guided.Add(principalSid, state);
-        if (id is null) return new(string.Empty, RepairOperationStateDto.OutcomeUnknown, [], "Guided Repair retention is full.", expires);
-        return ToDto(id, state);
+        if (!AgentScopedIdempotencyStore.IsValidKey(idempotencyKey))
+        {
+            throw new RepairRejectedException("guided_preview_idempotency_invalid");
+        }
+
+        var material = "guided|" + (snapshotId ?? string.Empty);
+        var reservation = idempotency.TryReserve(principalSid, GuidedIdempotencyScope, idempotencyKey, material);
+        if (reservation.State == AgentIdempotencyReservationState.Completed
+            && reservation.OperationId is not null
+            && guided.TryGet(principalSid, reservation.OperationId, out var existing)
+            && existing is not null)
+        {
+            return ToDto(reservation.OperationId, existing);
+        }
+        if (reservation.State != AgentIdempotencyReservationState.Reserved)
+        {
+            throw new RepairRejectedException(reservation.State switch
+            {
+                AgentIdempotencyReservationState.InProgress => "guided_preview_in_progress",
+                AgentIdempotencyReservationState.Capacity => "guided_preview_capacity",
+                _ => "guided_preview_idempotency_conflict"
+            });
+        }
+
+        try
+        {
+            var verification = await VerifySnapshotAsync(principalSid, snapshotId, cancellationToken).ConfigureAwait(false);
+            var steps = GuidedRepairWorkflow.Checkpoints.Select((checkpoint, index) => new GuidedRepairStepDto(
+                checkpoint.StepId,
+                checkpoint.Title,
+                checkpoint.Description,
+                index == 0 && verification.Verified ? GuidedRepairStepStateDto.Ready : index == 0 ? GuidedRepairStepStateDto.Blocked : GuidedRepairStepStateDto.Pending,
+                true,
+                ConfirmationForStep(checkpoint.StepId),
+                index == 0 && !verification.Verified ? "fresh_snapshot_not_verified" : null)).ToArray();
+            var expires = clock.GetUtcNow().AddMinutes(15);
+            var state = new GuidedRepairState(
+                RepairOperationStateDto.Preview,
+                snapshotId,
+                null,
+                steps,
+                verification.Verified ? "Guided Repair is waiting for typed checkpoint confirmation." : verification.Reference.Detail,
+                expires);
+            var id = guided.Add(principalSid, state);
+            if (id is null)
+            {
+                idempotency.Release(principalSid, GuidedIdempotencyScope, idempotencyKey);
+                return new(string.Empty, RepairOperationStateDto.OutcomeUnknown, [], "Guided Repair retention is full.", expires);
+            }
+
+            idempotency.Bind(principalSid, GuidedIdempotencyScope, idempotencyKey, id);
+            return ToDto(id, state);
+        }
+        catch
+        {
+            idempotency.Release(principalSid, GuidedIdempotencyScope, idempotencyKey);
+            throw;
+        }
     }
 
     public bool TryGetGuided(string principalSid, string guidedId, out GuidedRepairDto? response)
@@ -447,32 +524,54 @@ public sealed class RepairService(
             throw new RepairRejectedException("guided_checkpoint_invalid");
         }
 
-        var checkpointIndex = Array.FindIndex(GuidedRepairWorkflow.Checkpoints.ToArray(), item => item.StepId == request.StepId);
-        var outcome = await EvaluateCheckpointAsync(principalSid, current, request.StepId, checkpointIndex, cancellationToken).ConfigureAwait(false);
-        var updatedSteps = current.Steps.Select(step => step.StepId == request.StepId ? step with
+        IDisposable? privilegedHandle = null;
+        try
         {
-            State = outcome.Completed ? GuidedRepairStepStateDto.Completed : GuidedRepairStepStateDto.Blocked,
-            FailureCode = outcome.Completed ? null : outcome.FailureCode
-        } : step).ToArray();
-        if (outcome.Completed && checkpointIndex + 1 < updatedSteps.Length)
-        {
-            var next = updatedSteps[checkpointIndex + 1];
-            updatedSteps[checkpointIndex + 1] = next with { State = GuidedRepairStepStateDto.Ready };
-        }
+            if (request.StepId is "stage-package" or "activate-package" or "health-verified")
+            {
+                var attempt = privilegedLease.TryAcquire("repair.guided." + request.StepId, principalSid);
+                if (attempt.State != PrivilegedMutationLeaseState.Acquired || attempt.Handle is null)
+                {
+                    idempotency.Release(principalSid, GuidedIdempotencyScope, request.IdempotencyKey);
+                    throw new RepairRejectedException(attempt.State == PrivilegedMutationLeaseState.Busy
+                        ? "privileged_mutation_busy"
+                        : "privileged_mutation_lease_unavailable");
+                }
 
-        var workflowState = outcome.Completed && checkpointIndex == updatedSteps.Length - 1
-            ? RepairOperationStateDto.Completed
-            : outcome.Completed ? RepairOperationStateDto.Preview : RepairOperationStateDto.Partial;
-        var nextState = current with
+                privilegedHandle = attempt.Handle;
+            }
+
+            var checkpointIndex = Array.FindIndex(GuidedRepairWorkflow.Checkpoints.ToArray(), item => item.StepId == request.StepId);
+            var outcome = await EvaluateCheckpointAsync(principalSid, current, request.StepId, checkpointIndex, cancellationToken).ConfigureAwait(false);
+            var updatedSteps = current.Steps.Select(step => step.StepId == request.StepId ? step with
+            {
+                State = outcome.Completed ? GuidedRepairStepStateDto.Completed : GuidedRepairStepStateDto.Blocked,
+                FailureCode = outcome.Completed ? null : outcome.FailureCode
+            } : step).ToArray();
+            if (outcome.Completed && checkpointIndex + 1 < updatedSteps.Length)
+            {
+                var next = updatedSteps[checkpointIndex + 1];
+                updatedSteps[checkpointIndex + 1] = next with { State = GuidedRepairStepStateDto.Ready };
+            }
+
+            var workflowState = outcome.Completed && checkpointIndex == updatedSteps.Length - 1
+                ? RepairOperationStateDto.Completed
+                : outcome.Completed ? RepairOperationStateDto.Preview : RepairOperationStateDto.Partial;
+            var nextState = current with
+            {
+                State = workflowState,
+                CurrentStepId = request.StepId,
+                Steps = updatedSteps,
+                Detail = outcome.Detail
+            };
+            guided.Update(principalSid, request.GuidedRepairId, _ => nextState);
+            idempotency.Bind(principalSid, GuidedIdempotencyScope, request.IdempotencyKey, request.GuidedRepairId);
+            return ToDto(request.GuidedRepairId, nextState);
+        }
+        finally
         {
-            State = workflowState,
-            CurrentStepId = request.StepId,
-            Steps = updatedSteps,
-            Detail = outcome.Detail
-        };
-        guided.Update(principalSid, request.GuidedRepairId, _ => nextState);
-        idempotency.Bind(principalSid, GuidedIdempotencyScope, request.IdempotencyKey, request.GuidedRepairId);
-        return ToDto(request.GuidedRepairId, nextState);
+            privilegedHandle?.Dispose();
+        }
     }
 
     private async Task<CheckpointOutcome> EvaluateCheckpointAsync(
@@ -523,34 +622,53 @@ public sealed class RepairService(
         });
 
         AgentPackageExecutionResult result;
+        IDisposable? privilegedHandle = null;
         try
         {
-            result = await lifecycle.ExecuteAsync(new(
-                preview.Operation == RepairOperationKind.Guided ? AgentPackageOperationKind.Repair : MapPackageOperation(preview.Operation),
-                preview.Manifest,
-                snapshotId,
-                principalSid,
-                correlationId), CancellationToken.None).ConfigureAwait(false);
-        }
-        catch
-        {
-            result = new(AgentPackageOperationState.OutcomeUnknown, false, false, true, "The repair lifecycle outcome could not be determined safely.");
-        }
+            try
+            {
+                var leaseAttempt = privilegedLease.TryAcquire("repair." + preview.Operation, principalSid);
+                if (leaseAttempt.State != PrivilegedMutationLeaseState.Acquired || leaseAttempt.Handle is null)
+                {
+                    result = leaseAttempt.State == PrivilegedMutationLeaseState.Busy
+                        ? new(AgentPackageOperationState.Busy, false, false, false, leaseAttempt.Detail)
+                        : new(AgentPackageOperationState.Failed, false, false, true, leaseAttempt.Detail);
+                }
+                else
+                {
+                    privilegedHandle = leaseAttempt.Handle;
+                    result = await lifecycle.ExecuteAsync(new(
+                        preview.Operation == RepairOperationKind.Guided ? AgentPackageOperationKind.Repair : MapPackageOperation(preview.Operation),
+                        preview.Manifest,
+                        snapshotId,
+                        principalSid,
+                        correlationId), CancellationToken.None).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                result = new(AgentPackageOperationState.OutcomeUnknown, false, false, true, "The repair lifecycle outcome could not be determined safely.");
+            }
 
-        var outcome = Map(result.State);
-        operations.Update(principalSid, operationId, current => current with
+            var outcome = Map(result.State);
+            operations.Update(principalSid, operationId, current => current with
+            {
+                State = outcome,
+                Outcome = outcome,
+                ProgressPercent = 100,
+                Stage = "completed",
+                Detail = SafeDetail(result.Detail),
+                RollbackAttempted = result.RollbackAttempted,
+                RollbackSucceeded = result.RollbackSucceeded,
+                RecoveryRequired = result.RecoveryRequired,
+                CompletedAtUtc = clock.GetUtcNow()
+            });
+            timeline.Record(principalSid, "Repair", result.RecoveryRequired ? FailureSeverity.ActionRequired : FailureSeverity.Informational, SafeDetail(result.Detail), operationId: RepairOperation.OperationId, correlationId: correlationId);
+        }
+        finally
         {
-            State = outcome,
-            Outcome = outcome,
-            ProgressPercent = 100,
-            Stage = "completed",
-            Detail = SafeDetail(result.Detail),
-            RollbackAttempted = result.RollbackAttempted,
-            RollbackSucceeded = result.RollbackSucceeded,
-            RecoveryRequired = result.RecoveryRequired,
-            CompletedAtUtc = clock.GetUtcNow()
-        });
-        timeline.Record(principalSid, "Repair", result.RecoveryRequired ? FailureSeverity.ActionRequired : FailureSeverity.Informational, SafeDetail(result.Detail), operationId: RepairOperation.OperationId, correlationId: correlationId);
+            privilegedHandle?.Dispose();
+        }
     }
 
     private bool TryGetAndValidatePreview(string principalSid, RepairExecuteRequestDto request, out RepairPreviewEntry? preview)
@@ -603,6 +721,7 @@ public sealed class RepairService(
 
     private static RepairOperationStateDto Map(AgentPackageOperationState value) => value switch
     {
+        AgentPackageOperationState.Busy => RepairOperationStateDto.Busy,
         AgentPackageOperationState.Completed => RepairOperationStateDto.Completed,
         AgentPackageOperationState.RollbackSucceeded => RepairOperationStateDto.RollbackSucceeded,
         AgentPackageOperationState.RollbackFailed => RepairOperationStateDto.RollbackFailed,

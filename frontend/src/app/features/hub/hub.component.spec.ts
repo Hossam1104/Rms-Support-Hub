@@ -5,6 +5,7 @@ import { BrandMarkComponent, EmptyStateComponent, ToolCardComponent } from '../.
 import { THEME_STORAGE_KEY, ThemeService } from '../../core/services/theme.service';
 import { HubComponent } from './hub.component';
 import { QA_TOOL_REGISTRY } from './tool-registry';
+import { POS_SUPPORT_HUB_MAINTENANCE_URL } from '../../core/pos-agent/pos-agent.constants';
 
 @Component({
     standalone: true,
@@ -58,7 +59,7 @@ describe('HubComponent', () => {
         expect(cards.map(card => card.querySelector('a')?.getAttribute('href'))).toEqual([
             '/tools/prompt-studio',
             '/tools/online-orders',
-            '/tools/pos-maintenance'
+            POS_SUPPORT_HUB_MAINTENANCE_URL
         ]);
     });
 

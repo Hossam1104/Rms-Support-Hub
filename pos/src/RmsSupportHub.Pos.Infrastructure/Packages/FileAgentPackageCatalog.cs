@@ -10,14 +10,14 @@ public sealed class FileAgentPackageCatalog(AgentPackageOptions options) : IAgen
 
     public async Task<AgentPackageManifest?> GetAvailableAsync(AgentPackageOperationKind operation, CancellationToken cancellationToken = default)
     {
-        options.Validate();
+        options.EnsureStorageProvisioned();
         if (operation == AgentPackageOperationKind.Rollback) return await ReadAsync(Path.Combine(options.PackageRoot, "rollback", "manifest.json"), cancellationToken).ConfigureAwait(false);
         return await ReadAsync(Path.Combine(options.PackageRoot, "available", "manifest.json"), cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<AgentPackageManifest?> GetInstalledAsync(CancellationToken cancellationToken = default)
     {
-        options.Validate();
+        options.EnsureStorageProvisioned();
         return await ReadAsync(Path.Combine(options.InstallationRoot, "manifest.json"), cancellationToken).ConfigureAwait(false);
     }
 
@@ -25,7 +25,9 @@ public sealed class FileAgentPackageCatalog(AgentPackageOptions options) : IAgen
     {
         try
         {
-            if (!File.Exists(path) || new FileInfo(path).Length > 1024 * 1024) return null;
+            if (!File.Exists(path)
+                || File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)
+                || new FileInfo(path).Length > 1024 * 1024) return null;
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             return await JsonSerializer.DeserializeAsync<AgentPackageManifest>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
         }

@@ -41,6 +41,7 @@ public sealed class FileSafetySnapshotStore(SafetySnapshotOptions options) : ISa
         CancellationToken cancellationToken = default)
     {
         options.Validate();
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.RootDirectory);
         if (string.IsNullOrWhiteSpace(principalSid) || !IsValidId(snapshotId)) return new(SafetySnapshotState.Unavailable, false, null, "The snapshot identifier is invalid.");
         var path = PathFor(snapshotId);
         if (!File.Exists(path)) return new(SafetySnapshotState.Unavailable, false, null, "The requested snapshot is not available.");
@@ -65,7 +66,11 @@ public sealed class FileSafetySnapshotStore(SafetySnapshotOptions options) : ISa
     {
         options.Validate();
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try { return await PruneCoreAsync(now, cancellationToken).ConfigureAwait(false); }
+        try
+        {
+            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.RootDirectory);
+            return await PruneCoreAsync(now, cancellationToken).ConfigureAwait(false);
+        }
         finally { gate.Release(); }
     }
 
@@ -78,30 +83,52 @@ public sealed class FileSafetySnapshotStore(SafetySnapshotOptions options) : ISa
     private async Task<int> PruneCoreAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(options.RootDirectory)) return 0;
-        var files = Directory.EnumerateFiles(options.RootDirectory, "*.json", SearchOption.TopDirectoryOnly)
-            .Where(path => IsValidId(Path.GetFileNameWithoutExtension(path)))
-            .Select(path => new FileInfo(path))
-            .OrderByDescending(info => info.LastWriteTimeUtc)
-            .ToArray();
-        var removed = 0;
-        for (var index = 0; index < files.Length; index++)
+        var files = new List<(FileInfo Info, string PrincipalSid)>();
+        foreach (var path in Directory.EnumerateFiles(options.RootDirectory, "*.json", SearchOption.TopDirectoryOnly))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var remove = index >= options.MaxSnapshots;
-            if (!remove)
+            if (!IsValidId(Path.GetFileNameWithoutExtension(path))) continue;
+            try
             {
-                try
+                var info = new FileInfo(path);
+                if (info.Attributes.HasFlag(FileAttributes.ReparsePoint)) continue;
+                var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+                var snapshot = JsonSerializer.Deserialize<SafetySnapshotDocument>(json, JsonOptions);
+                if (snapshot is null || string.IsNullOrWhiteSpace(snapshot.PrincipalSid))
                 {
-                    var json = await File.ReadAllTextAsync(files[index].FullName, cancellationToken).ConfigureAwait(false);
-                    var snapshot = JsonSerializer.Deserialize<SafetySnapshotDocument>(json, JsonOptions);
-                    remove = snapshot is null || now - snapshot.ExpiresAtUtc >= options.Lifetime;
+                    try { File.Delete(path); } catch { }
+                    continue;
                 }
-                catch { remove = true; }
+                files.Add((info, snapshot.PrincipalSid));
             }
-
-            if (remove)
+            catch
             {
-                try { File.Delete(files[index].FullName); removed++; } catch { }
+                try { File.Delete(path); } catch { }
+            }
+        }
+        var removed = 0;
+        foreach (var group in files.GroupBy(file => file.PrincipalSid, StringComparer.Ordinal))
+        {
+            var ordered = group.OrderByDescending(file => file.Info.LastWriteTimeUtc).ToArray();
+            for (var index = 0; index < ordered.Length; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var remove = index >= options.MaxSnapshots;
+                if (!remove)
+                {
+                    try
+                    {
+                        var json = await File.ReadAllTextAsync(ordered[index].Info.FullName, cancellationToken).ConfigureAwait(false);
+                        var snapshot = JsonSerializer.Deserialize<SafetySnapshotDocument>(json, JsonOptions);
+                        remove = snapshot is null || now - snapshot.ExpiresAtUtc >= options.Lifetime;
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+                    catch { remove = true; }
+                }
+
+                if (remove)
+                {
+                    try { File.Delete(ordered[index].Info.FullName); removed++; } catch { }
+                }
             }
         }
         return removed;

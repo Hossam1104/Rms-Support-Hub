@@ -3,21 +3,46 @@
 ## Current readiness rebaseline — 2026-08-15
 
 PR #10 and the earlier security/database/service slices are complete inputs.
-The representative UPC runtime and GET-only Main Server discovery are recorded
+The representative UPC runtime and read-only Main Server discovery are recorded
 in
 [`POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`](POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md).
 That evidence replaces the stale “next INT gate” language below for active
 execution while preserving the historical record.
 
-The next executable work is the large Slice A in root `TASK.md`: authoritative
-Release/Client/drift, correction of the real `RMSServiceManager` service name,
-Health Check, database/capacity/backup health, Service Failure Analyzer,
-bounded RMS logs/Windows events, sanitized Support Bundle, Incident Timeline,
-and the final responsive operator workspace. Slice B then owns Main Server
-profiles/install-state mutations, Safe Diagnostic Console Run, Safety Snapshot,
-Repair/Guided Repair, and Agent packaging. Slice C owns M-1/M-2, durable
-Production audit, fleet/representative evidence, Whites comparison, and final
-independent review.
+## Slice B security remediation status - 2026-08-15
+
+The current Slice B remediation closes the reviewed H-1/H-2/H-3 boundaries and
+the directly adjacent M-1 through M-4 and L-1 through L-3 controls in the POS
+Agent and Support Hub entry path. The implementation is limited to the
+server-owned typed Agent boundary and synthetic/read-only Testing evidence:
+
+- bounded fail-closed structured-secret redaction is applied before diagnostic,
+  timeline, artifact, and snapshot retention;
+- fixed package, staging, installation, and diagnostic roots are provisioned
+  and verified against ownership, ACL, and reparse escape;
+- one machine-wide non-blocking privileged-mutation lease covers package and
+  Repair Installation workflows through terminal operation truth;
+- retained privileged previews are typed `POST` operations with bounded
+  principal-scoped idempotency; GET remains read-only;
+- Main Server transport is bounded and no-redirect, with exact normalized
+  scheme/host/effective-port/base-path binding and configured snapshot
+  environment/profile evidence;
+- the Hub card and POS route use the exact secure external origin
+  `https://support-hub.integration.test:4443/tools/pos-maintenance`, and the
+  route guard redirects any wrong-origin direct load to that canonical URL.
+
+No RMS executable, installer, uninstaller, repair, rollback, package
+activation, Main Server mutation, registry mutation, or RMS folder mutation was
+performed. The durable future-work contract is
+[`POS_SLICE_C_REQUIREMENTS.md`](POS_SLICE_C_REQUIREMENTS.md); Slice C is not
+implemented by this remediation.
+
+The next executable work is the bounded Slice C gate described in that
+document: permanent Agent deployment/onboarding, lifecycle and legacy-service
+migration proof, folder-aware update/download/asset health, safe Support Bundle
+evidence, fleet/Production audit, Whites comparison, and the independent
+Claude Opus 5 High review. The prior Slice A/Slice B planning language below
+is retained as historical context only.
 
 Only UPC is live-reachable on the current VPN; Whites same-application
 equivalence remains expected but unverified. No live Main Server mutation is
@@ -42,7 +67,7 @@ The full independent review outcome (0 Critical, 0 High, 2 Medium, 6 Low
 resolved, 3 Informational) is recorded in
 [POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md](reviews/POS_FIRST_RELEASE_SECURITY_REVIEW_2026-08-14.md).
 M-1 and M-2 remain Production/fleet Slice C gates. They are not part of the
-next Slice A implementation task.
+current Slice B remediation or the focused security re-review in `TASK.md`.
 
 ## Purpose and status
 
@@ -494,8 +519,8 @@ open.
 | Gate | Requirement |
 | --- | --- |
 | Frontend suite | Generator `npm ci`, client generation, Angular tests, and builds passed; the requested frontend `npm ci` was blocked by Windows `EPERM` on an esbuild binary held by an existing local `ng serve`, then dependency reconciliation with `npm install` restored the tree; 345 tests across 56 files passed |
-| Backend suite | POS Domain 7, Application 76, Infrastructure 60, and Agent 114 tests pass |
-| Full gate | `./scripts/build.ps1` was attempted but its Debug backend test phase was blocked by an existing local `RmsSupportHub.Api` process locking referenced DLLs; the safe no-build regression run had 190 passed and the 2 known unchanged 404-vs-405 assertions, while the backend Release build and Angular production build passed separately |
+| Backend suite | POS Domain 9, Application 76, Infrastructure 90, and Agent 152 tests pass (327 total) |
+| Full gate | POS Release build passed with warnings treated as errors; the repository `scripts/build.ps1` was attempted but its Debug backend phase was blocked by an existing local `RmsSupportHub.Api` process locking referenced DLLs; Angular tests/build and Pester passed separately |
 | Bundle budgets | POS stays out of the initial bundle beyond its route chunk; investigate meaningful growth |
 | Offline build | `production-offline` still succeeds |
 | Riyal verifier | `scripts/verify-riyal-asset.ps1` passes |

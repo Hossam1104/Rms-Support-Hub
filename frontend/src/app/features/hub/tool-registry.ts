@@ -1,4 +1,5 @@
 import { QaToolDefinition, TOOL_ROUTE_DATA } from '../../core/models';
+import { POS_SUPPORT_HUB_MAINTENANCE_URL } from '../../core/pos-agent/pos-agent.constants';
 
 /** Single source of truth for the three tools presented by the hub. */
 export const QA_TOOL_REGISTRY = [
@@ -27,6 +28,7 @@ export const QA_TOOL_REGISTRY = [
         ...TOOL_ROUTE_DATA.posMaintenance,
         description: 'POS diagnostics, redacted configuration visibility, connectivity evidence, and guarded allow-listed service controls.',
         route: '/tools/pos-maintenance',
+        externalRoute: POS_SUPPORT_HUB_MAINTENANCE_URL,
         icon: 'bi-pc-display',
         actionLabel: 'Open Maintenance',
         capabilities: ['Diagnostics', 'Connectivity', 'Services'],

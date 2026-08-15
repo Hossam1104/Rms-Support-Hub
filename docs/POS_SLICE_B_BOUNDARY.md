@@ -5,6 +5,39 @@ Support Hub remains a direct browser client of the installed Windows POS Agent;
 the browser does not become an installer, process launcher, Main Server proxy, or
 package store.
 
+## 2026-08-15 security remediation rebaseline
+
+The Slice B remediation closes the reviewed H-1/H-2/H-3 boundaries and the
+directly adjacent M-1 through M-4 and L-1 through L-3 findings in the current
+implementation:
+
+- Diagnostic stdout/stderr, timeline summaries, and downstream evidence use a
+  bounded fail-closed redaction pipeline for structured JSON/XML, connection
+  strings, bearer/token/API-key assignments, complete PEM material, and
+  truncated private-key blocks. If sanitization fails, output is quarantined
+  rather than persisted.
+- The fixed package root, `available`, `rollback`, `staging`, Agent
+  installation root, and diagnostic artifact root are provisioned and verified
+  before reads or writes. Reparse-point escape, unsafe ownership, and
+  untrusted ACLs fail closed.
+- Package mutation and Repair Installation use one non-blocking machine-wide
+  lease. Guided Repair state-changing package checkpoints use the same lease;
+  a different principal, idempotency key, or scope cannot bypass a busy
+  result. The lease remains held through terminal operation/timeline truth.
+- Retained previews are typed POST operations with bounded principal-scoped
+  idempotency. Read-only GETs do not allocate retained privileged workflow
+  state.
+- Main Server transport uses a bounded no-redirect HTTP policy, and endpoint
+  binding compares normalized scheme, host, effective port, and base path.
+  Snapshot evidence persists the configured environment/profile identity.
+- Diagnostic process timeout cancellation and package streaming size checks
+  remain bounded before output or files can cross their respective boundaries.
+
+Testing remains synthetic/read-only for RMS and Main Server. This slice does
+not launch RMS executables, installers, uninstallers, repair, rollback, or
+package activation, and does not issue Main Server state-changing requests.
+
+
 ## Main Server profiles and state
 
 The Agent owns the profile catalog. Testing is the only enabled profile. The
@@ -45,7 +78,7 @@ not create a run.
 
 Routes:
 
-- `GET /api/v1/diagnostic-console/preview/{targetId}`
+- `POST /api/v1/diagnostic-console/preview/{targetId}`
 - `POST /api/v1/diagnostic-console/runs`
 - `GET /api/v1/diagnostic-console/runs/{operationId}`
 
@@ -108,13 +141,13 @@ diagnostic logs cannot generate new steps.
 Routes:
 
 - `GET /api/v1/packages/status`
-- `GET /api/v1/packages/preview/{operationId}`
+- `POST /api/v1/packages/preview/{operationId}`
 - `POST /api/v1/packages/operations`
 - `GET /api/v1/packages/operations/{operationId}`
-- `GET /api/v1/repair/preview/{operationId}[/{snapshotId}]`
+- `POST /api/v1/repair/preview/{operationId}[/{snapshotId}]`
 - `POST /api/v1/repair/operations`
 - `GET /api/v1/repair/operations/{operationId}`
-- `GET /api/v1/repair/guided/preview[/{snapshotId}]`
+- `POST /api/v1/repair/guided/preview[/{snapshotId}]`
 - `GET /api/v1/repair/guided/{guidedRepairId}`
 - `POST /api/v1/repair/guided/steps`
 

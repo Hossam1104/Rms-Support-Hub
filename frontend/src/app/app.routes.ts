@@ -1,5 +1,6 @@
 import { Route, Routes } from '@angular/router';
 import { capabilityGuard } from './core/guards/capability.guard';
+import { securePosOriginGuard } from './core/guards/secure-pos-origin.guard';
 import { TOOL_ROUTE_DATA, ToolRouteData } from './core/models';
 import { environment } from '../environments/environment';
 
@@ -92,6 +93,7 @@ export const routes: Routes = [
   },
   {
     path: 'tools/pos-maintenance',
+    canActivate: [securePosOriginGuard],
     loadComponent: () => import('./features/pos-maintenance/pos-maintenance.component').then(m => m.PosMaintenanceComponent),
     data: { ...TOOL_ROUTE_DATA.posMaintenance } satisfies ToolRouteData
   },

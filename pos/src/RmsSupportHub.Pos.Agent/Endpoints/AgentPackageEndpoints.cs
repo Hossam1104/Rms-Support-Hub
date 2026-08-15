@@ -25,11 +25,12 @@ public static class AgentPackageEndpoints
             .Produces<AgentPackageStatusDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
-        app.MapGet(
+        app.MapPost(
                 "/api/v1/packages/preview/{operationId}",
                 async (
                     HttpContext context,
                     string operationId,
+                    AgentPackagePreviewRequestDto request,
                     AgentPackageService service,
                     IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
@@ -44,13 +45,21 @@ public static class AgentPackageEndpoints
                         return AgentProblemDetails.CreateResult(context, StatusCodes.Status403Forbidden, "The authenticated Windows SID could not be resolved.", AgentProblemCodes.WindowsSidUnavailable);
                     }
 
-                    return Results.Ok(await service.PreviewAsync(principalSid, operation, cancellationToken).ConfigureAwait(false));
+                    try
+                    {
+                        return Results.Ok(await service.PreviewAsync(principalSid, operation, request.IdempotencyKey, cancellationToken).ConfigureAwait(false));
+                    }
+                    catch (AgentPackageRejectedException exception)
+                    {
+                        return AgentProblemDetails.CreateResult(context, StatusCodes.Status400BadRequest, "The package preview was rejected by the Agent.", exception.Message);
+                    }
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewAgentPackageOperation")
             .WithTags("Agent Package")
             .WithSummary("Preview a typed Agent package operation")
             .WithDescription("Reads only the server-owned package catalog and verifier. It does not stage, activate, uninstall, register, or roll back a package.")
+            .Accepts<AgentPackagePreviewRequestDto>("application/json")
             .Produces<AgentPackagePreviewDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
