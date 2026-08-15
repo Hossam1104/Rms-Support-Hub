@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Contracts.V1.Common;
@@ -39,9 +40,23 @@ public static class DownloaderEndpoints
                     HttpContext context,
                     TriggerBatchRequestDto? request,
                     DownloaderOperationRuntime runtime,
+                    IncidentTimelineService timeline,
+                    IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteAsync(context, request, cancellationToken).ConfigureAwait(false);
+                    if (result.Response is { } response)
+                    {
+                        IncidentTimelineRecorder.Record(
+                            context,
+                            timeline,
+                            principalSidResolver,
+                            "DownloaderOperation",
+                            response.Outcome.ToString(),
+                            response.Detail,
+                            operationId: response.OperationId);
+                    }
+
                     return ToMutationResult(context, result);
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)

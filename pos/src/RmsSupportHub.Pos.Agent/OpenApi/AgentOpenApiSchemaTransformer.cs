@@ -203,8 +203,8 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Server-owned branch code for the local POS device.",
             (var value, "posNumber") when value == typeof(DeviceIdentityDto) =>
                 "Server-owned POS number for the local device.",
-            (var value, "release") when value == typeof(DeviceIdentityDto) =>
-                "Configured RMS+ release label for the local device.",
+            (var value, "productRelease") when value == typeof(DeviceIdentityDto) =>
+                "Product Release read from the fixed server-owned release file for the local device.",
             (var value, "clientName") when value == typeof(DeviceIdentityDto) =>
                 "Configured client/product label for the local device.",
             (var value, "localSql") when value == typeof(DeviceConnectivityDto) =>

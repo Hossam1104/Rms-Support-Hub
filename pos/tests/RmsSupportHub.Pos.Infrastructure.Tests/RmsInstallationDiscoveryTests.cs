@@ -95,6 +95,40 @@ public sealed class RmsInstallationDiscoveryTests : IDisposable
     }
 
     [Fact]
+    public async Task ProductReleaseUsesTheFixedReleaseFileAndClientUsesCashierUiSettings()
+    {
+        WriteRmsInfo(version: "5.7.4");
+        WriteBranch(version: "5.7.4");
+        WriteCashier(version: "5.7.4");
+        WriteCashierUi(version: "5.7.4");
+        WriteFile("ReleaseNumber.txt", " 5.7.4\r\n");
+
+        var aligned = await DiscoverAsync();
+
+        Assert.Equal("5.7.4", aligned.ProductRelease);
+        Assert.Equal("UPC", aligned.ClientName);
+        Assert.All(aligned.ComponentDrift!, item => Assert.Equal(RmsComponentDriftState.Aligned, item.State));
+
+        WriteFile("ReleaseNumber.txt", "5.8.0\u0001");
+        var invalid = await DiscoverAsync();
+
+        Assert.Null(invalid.ProductRelease);
+        Assert.All(invalid.ComponentDrift!, item => Assert.Equal(RmsComponentDriftState.Unavailable, item.State));
+
+        WriteFile("ReleaseNumber.txt", "5.8.0");
+        var drifted = await DiscoverAsync();
+
+        Assert.Equal("5.8.0", drifted.ProductRelease);
+        Assert.All(drifted.ComponentDrift!, item => Assert.Equal(RmsComponentDriftState.Drifted, item.State));
+
+        File.Delete(Path.Combine(_root, "ReleaseNumber.txt"));
+        var unavailable = await DiscoverAsync();
+
+        Assert.Null(unavailable.ProductRelease);
+        Assert.All(unavailable.ComponentDrift!, item => Assert.Equal(RmsComponentDriftState.Unavailable, item.State));
+    }
+
+    [Fact]
     public async Task DuplicateMetadataMismatchIsReportedWithoutFailingDiscovery()
     {
         WriteRmsInfo(branchCode: "P001", posNumber: "1", version: "5.7.4");
@@ -248,6 +282,7 @@ public sealed class RmsInstallationDiscoveryTests : IDisposable
     private RmsInstallationOptions CreateOptions() => new()
     {
         RmsInfoPath = Path.Combine(_root, "RMSInfo.json"),
+        ReleaseNumberPath = Path.Combine(_root, "ReleaseNumber.txt"),
         BranchServerSettingsPath = Path.Combine(_root, "RMS.BranchServer", "appsettings.json"),
         CashierServerSettingsPath = Path.Combine(_root, "RMS.CashierServer", "appsettings.json"),
         CashierUiSettingsPath = Path.Combine(_root, "RMS.CashierUI", "appsettings.json"),

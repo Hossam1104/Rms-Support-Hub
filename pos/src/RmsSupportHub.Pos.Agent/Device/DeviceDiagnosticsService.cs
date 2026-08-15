@@ -18,7 +18,7 @@ public sealed class DeviceDiagnosticsService(
         return new(
             installation.BranchCode ?? "Unavailable",
             installation.PosNumber ?? "Unavailable",
-            installation.Release ?? "Unavailable",
+            installation.ProductRelease ?? "Unavailable",
             installation.ClientName ?? "RMS+");
     }
 

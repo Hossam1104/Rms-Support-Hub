@@ -9,15 +9,15 @@ import { ToastService } from '../../core/services/toast.service';
 import { NavbarComponent } from '../../layout/navbar/navbar.component';
 import {
   ConfirmDialogComponent,
-  EmptyStateComponent,
   PageHeaderComponent,
-  SkeletonComponent,
-  UiButtonComponent,
-  UiCardComponent
+  UiButtonComponent
 } from '../../shared/ui';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 type HealthStatus = components['schemas']['HealthStatusDto'];
+type HealthReport = components['schemas']['HealthReportDto'];
+type HealthState = components['schemas']['HealthState'];
+type HealthCheck = components['schemas']['HealthCheckDto'];
 type SessionInfo = components['schemas']['SessionInfoDto'];
 type DeviceIdentity = components['schemas']['DeviceIdentityDto'];
 type DeviceConnectivity = components['schemas']['DeviceConnectivityDto'];
@@ -35,6 +35,11 @@ type RmsDatabaseTarget = components['schemas']['RmsDatabaseTarget'];
 type RmsDatabaseWorkspace = components['schemas']['RmsDatabaseWorkspaceDto'];
 type RmsDatabaseOperation = components['schemas']['RmsDatabaseOperationDto'];
 type RmsDatabaseArtifact = components['schemas']['RmsDatabaseArtifactDto'];
+type RmsDatabaseHealth = components['schemas']['RmsDatabaseHealthDto'];
+type RmsComponentDriftState = components['schemas']['RmsComponentDriftState'];
+type ServiceFailureAnalysis = components['schemas']['ServiceFailureAnalysisDto'];
+type IncidentTimeline = components['schemas']['IncidentTimelineDto'];
+type SupportBundle = components['schemas']['SupportBundleDto'];
 type BranchCatalogEntry = components['schemas']['BranchCatalogEntryDto'];
 type DownloaderOperation = components['schemas']['DownloaderOperationDto'];
 type DownloaderBranchOutcome = components['schemas']['DownloaderBranchOutcomeDto'];
@@ -57,6 +62,161 @@ type PendingMaintenanceAction = Readonly<{
   confirmationText: string;
 }>;
 
+const POS_MAINTENANCE_TEMPLATE = `
+  <app-navbar></app-navbar>
+
+  <main class="pos-shell" aria-label="POS Maintenance service control and evidence">
+    <app-page-header
+      title="POS Maintenance"
+      [subtitle]="operatorHeaderLine()"
+      [compact]="true">
+      <ui-button
+        variant="secondary"
+        size="sm"
+        icon="bi-arrow-clockwise"
+        [loading]="refreshing()"
+        loadingLabel="Refreshing"
+        [ariaLabel]="refreshing() ? 'Refreshing POS Agent data' : 'Refresh POS Agent data'"
+        (pressed)="refresh()">
+        Refresh
+      </ui-button>
+    </app-page-header>
+
+    <section class="peer-status" aria-labelledby="peer-status-title">
+      <div class="section-kicker">Operator workspace</div>
+      <div class="section-heading section-heading--compact">
+        <div>
+        <h2 id="peer-status-title">Live evidence at a glance</h2>
+          <p>Five peer states keep the first decision visible: what is healthy, what is stale, and what needs attention.</p>
+        </div>
+        <span class="last-read" aria-live="polite">{{ health()?.checkedAtUtc ? ('Checked ' + health()?.checkedAtUtc) : 'Waiting for the first health check' }}</span>
+      </div>
+      <div class="peer-status__grid" role="list">
+        <div class="peer-status__item" role="listitem">
+          <span class="peer-status__label">POS Agent</span>
+          <app-status-badge [label]="agentStatusLabel()" [variant]="agentStatusVariant()" role="status"></app-status-badge>
+          <span class="peer-status__detail">{{ agentStatusDetail() }}</span>
+        </div>
+        <div class="peer-status__item" role="listitem">
+          <span class="peer-status__label">Windows Auth / Authorization</span>
+          <app-status-badge [label]="authStatusLabel() + ' · ' + authorizationLabel()" [variant]="authStatusVariant()" role="status"></app-status-badge>
+          <span class="peer-status__detail">{{ authStatusDetail() }}</span>
+        </div>
+        <div class="peer-status__item" role="listitem">
+          <span class="peer-status__label">Main Server</span>
+          <app-status-badge [label]="peerHealthLabel('main-server')" [variant]="peerHealthVariant('main-server')" role="status"></app-status-badge>
+          <span class="peer-status__detail">{{ peerHealthDetail('main-server') }}</span>
+        </div>
+        <div class="peer-status__item" role="listitem">
+          <span class="peer-status__label">Configuration Consistency</span>
+          <app-status-badge [label]="consistencyHeaderLabel()" [variant]="consistencyHeaderVariant()" role="status"></app-status-badge>
+          <span class="peer-status__detail">{{ consistencyHeaderDetail() }}</span>
+        </div>
+        <div class="peer-status__item peer-status__item--overall" role="listitem">
+          <span class="peer-status__label">Overall Health</span>
+          <app-status-badge [label]="healthStateLabel(health()?.overallState)" [variant]="healthStateVariant(health()?.overallState)" role="status"></app-status-badge>
+          <span class="peer-status__detail">{{ health()?.summary || 'Health evidence is not available yet.' }}</span>
+        </div>
+      </div>
+    </section>
+
+    @if (globalError()) {
+      <section class="workspace-notice" role="alert" aria-label="POS Agent read warning">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <div><strong>Some direct Agent reads are unavailable.</strong><p>{{ globalError() }}</p></div>
+      </section>
+    }
+
+    <section class="workspace-panel installation-panel" aria-labelledby="installation-title">
+      <div class="section-heading">
+        <div><div class="section-kicker">01 / Identity</div><h2 id="installation-title">Installation</h2><p>Server-owned RMS identity and release evidence. Values are read from known installation files only.</p></div>
+        <app-status-badge [label]="rmsDiagnostics() ? componentInstallLabel(rmsDiagnostics()!) : 'Reading'" [variant]="rmsDiagnostics() ? 'success' : 'info'" role="status"></app-status-badge>
+      </div>
+      @if (rmsDiagnostics()?.installation; as installation) {
+        <div class="field-grid field-grid--six">
+          <div class="field"><span>Branch</span><strong>{{ installation.branchCode || 'Unavailable' }}</strong></div>
+          <div class="field"><span>POS</span><strong>{{ installation.posNumber || 'Unavailable' }}</strong></div>
+          <div class="field"><span>Client</span><strong>{{ installation.clientName || 'Unavailable' }}</strong></div>
+          <div class="field"><span>Product Release</span><strong>{{ productRelease() }}</strong></div>
+          <div class="field"><span>Mode</span><strong>{{ installation.installationMode || 'Unavailable' }}</strong></div>
+          <div class="field"><span>GUID</span><strong>{{ installation.installationGuid || 'Unavailable' }}</strong></div>
+        </div>
+      } @else {
+        <p class="empty-copy">{{ readError('rms') }}</p>
+      }
+      <details class="advanced-disclosure">
+        <summary>Advanced installation evidence <span>Builds, detailed connectivity, and consistency</span></summary>
+        <div class="advanced-grid">
+          <div class="evidence-block"><h3>Component builds</h3><dl class="key-value-list"><div><dt>Branch Server</dt><dd>{{ rmsDiagnostics()?.installation?.versions?.branchServerBuildNumber || 'Unavailable' }}</dd></div><div><dt>Cashier Server</dt><dd>{{ rmsDiagnostics()?.installation?.versions?.cashierServerBuildNumber || 'Unavailable' }}</dd></div><div><dt>Cashier UI</dt><dd>{{ rmsDiagnostics()?.installation?.versions?.cashierUiBuildNumber || 'Unavailable' }}</dd></div><div><dt>Product Release</dt><dd>{{ productRelease() }}</dd></div></dl></div>
+          <div class="evidence-block"><h3>Detailed connectivity</h3><dl class="key-value-list"><div><dt>Main Server</dt><dd>{{ endpointText(rmsDiagnostics()?.connectivity?.mainServer) }}</dd></div><div><dt>Branch Server</dt><dd>{{ endpointText(rmsDiagnostics()?.connectivity?.branchServer) }}</dd></div><div><dt>Main endpoint read</dt><dd>{{ rmsDiagnostics()?.connectivity?.mainServer?.reachability?.detail || 'Unavailable' }}</dd></div><div><dt>Branch endpoint read</dt><dd>{{ rmsDiagnostics()?.connectivity?.branchServer?.reachability?.detail || 'Unavailable' }}</dd></div></dl></div>
+          <div class="evidence-block evidence-block--wide"><h3>Release drift</h3><div class="drift-list">@for (drift of rmsDiagnostics()?.installation?.componentDrift || []; track drift.component) { <div class="drift-row"><span>{{ drift.component }}</span><app-status-badge [label]="driftLabel(drift.state)" [variant]="driftVariant(drift.state)" role="status"></app-status-badge><small>{{ drift.reason }}</small></div> } @empty { <span class="empty-copy">Release drift evidence is unavailable.</span> }</div></div>
+          <div class="evidence-block evidence-block--wide"><h3>Consistency</h3><div class="warning-list">@for (warning of rmsDiagnostics()?.installation?.consistency?.warnings || []; track warning) { <span>{{ warning }}</span> } @empty { <span>Known duplicated values are consistent or no warning was returned.</span> }</div></div>
+        </div>
+      </details>
+    </section>
+
+    <section class="workspace-panel database-panel" aria-labelledby="database-title">
+      <div class="section-heading"><div><div class="section-kicker">02 / Recovery evidence</div><h2 id="database-title">Database health</h2><p>Branch and Cashier stay side by side on desktop and stack cleanly on narrow screens.</p></div><ui-button variant="secondary" size="sm" icon="bi-heart-pulse" (pressed)="runHealthCheck()">Health Check</ui-button></div>
+      <div class="database-grid">
+        @for (target of databaseTargets; track target) {
+          <article class="database-card" [attr.aria-labelledby]="target + '-database-title'">
+            <div class="database-card__heading"><div><div class="section-kicker">{{ target === 'branch' ? 'Branch' : 'Cashier' }}</div><h3 [id]="target + '-database-title'">{{ databaseTargetLabel(target) }}</h3><p>{{ databaseDiagnostic(target)?.serverDisplay || 'Server display unavailable' }}</p></div><app-status-badge [label]="databaseStatusLabel(databaseDiagnostic(target))" [variant]="databaseStatusVariant(databaseDiagnostic(target))" role="status"></app-status-badge></div>
+            <dl class="key-value-list database-facts"><div><dt>Configured DB</dt><dd>{{ databaseDiagnostic(target)?.configuredDatabase || 'Unavailable' }}</dd></div><div><dt>Expected DB</dt><dd>{{ databaseDiagnostic(target)?.expectedDatabase || databaseTargetLabel(target) }}</dd></div><div><dt>Approved backups</dt><dd>{{ databaseHealth(target)?.backups?.count ?? databaseWorkspace(target)?.approvedBackups?.length ?? 0 }}</dd></div><div><dt>Latest backup</dt><dd>{{ latestBackupLabel(target) }}</dd></div><div><dt>Freshness</dt><dd>{{ databaseHealthFreshnessLabel(target) }}</dd></div><div><dt>Storage</dt><dd>{{ databaseHealth(target)?.storage?.summary || 'Capacity evidence unavailable' }}</dd></div></dl>
+            <p class="evidence-copy">{{ databaseDiagnostic(target)?.evidence?.detail || readError(target + 'Database') }}</p>
+            <div class="database-actions" aria-label="Database actions">
+              <ui-button variant="primary" size="sm" icon="bi-cloud-arrow-up" [disabled]="!canControlDatabases()" [ariaLabel]="'Back up ' + databaseTargetLabel(target)" (pressed)="requestDatabaseBackup(target)">Backup</ui-button>
+              <ui-button variant="danger" size="sm" icon="bi-arrow-counterclockwise" [disabled]="!canRestore(target)" [ariaLabel]="restoreDisabledReason(target)" (pressed)="restoreLatestBackup(target)">Restore</ui-button>
+              <ui-button variant="secondary" size="sm" icon="bi-archive" (pressed)="toggleBackupList(target)">View Backups</ui-button>
+              <ui-button variant="ghost" size="sm" icon="bi-heart-pulse" (pressed)="runHealthCheck()">Health</ui-button>
+            </div>
+            @if (!canRestore(target)) { <p class="action-hint" role="note">{{ restoreDisabledReason(target) }}</p> }
+            @if (backupListOpen(target)) {
+              <div class="backup-list" aria-label="Approved backups">
+                @for (artifact of databaseWorkspace(target)?.approvedBackups || []; track artifact.artifactId) { <div class="backup-row"><div><strong>{{ artifact.displayName }}</strong><small>{{ formatArtifactSize(artifact) }} · {{ formatArtifactDate(artifact) }}</small></div><ui-button variant="ghost" size="sm" icon="bi-arrow-counterclockwise" [disabled]="!canControlDatabases()" (pressed)="requestDatabaseRestore(target, artifact)">Restore</ui-button></div> } @empty { <span class="empty-copy">No approved backups are retained for this database. Restore remains disabled.</span> }
+              </div>
+            }
+            @if (databaseWorkspace(target)?.latestOperation; as operation) { <div class="operation-strip" role="status"><strong>{{ databaseOperationLabel(operation) }}</strong><span>{{ operation.detail }}</span></div> }
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="workspace-panel services-panel" aria-labelledby="services-title">
+      <div class="section-heading"><div><div class="section-kicker">03 / Service control</div><h2 id="services-title">RMS services</h2><p>Only the three canonical RMS services are shown here. Diagnostics and state-valid actions remain separate.</p></div><span class="last-read">{{ services()?.length || 0 }} allow-listed services</span></div>
+      <div class="service-table-wrap"><table class="service-table"><caption class="sr-only">Canonical RMS Windows service state and typed actions</caption><thead><tr><th scope="col">Service</th><th scope="col">State</th><th scope="col">Diagnostics</th><th scope="col">Actions</th></tr></thead><tbody>@for (service of services() || []; track service.serviceId) { <tr><th scope="row"><span class="service-name">{{ service.displayName }}</span><small>{{ service.lastChecked.detail }}</small></th><td><app-status-badge [label]="serviceStateLabel(service.state)" [variant]="serviceStateVariant(service.state)" role="status"></app-status-badge></td><td><ui-button variant="secondary" size="sm" icon="bi-search" [ariaLabel]="'Diagnose ' + service.displayName" [loading]="diagnosingService() === service.serviceId" [disabled]="diagnosingService() !== null" (pressed)="diagnoseServiceFailure(service.serviceId)">Diagnose</ui-button></td><td><div class="service-actions">@if (canControlServices()) { @for (action of service.allowedActions; track action) { <ui-button variant="ghost" size="sm" [icon]="action === 'start' ? 'bi-play' : action === 'stop' ? 'bi-stop' : 'bi-arrow-repeat'" (pressed)="requestServiceAction(service, action)">{{ actionLabel(action) }}</ui-button> } @empty { <span class="muted">No state-valid action</span> } } @else { <span class="muted">Authorization required</span> } @if (actionOutcome(service); as outcome) { <span class="muted">{{ actionOutcomeLabel(outcome.outcome) }}</span> }</div></td></tr> } @empty { <tr><td colspan="4" class="empty-copy">{{ readError('services') }}</td></tr> }</tbody></table></div>
+      @if (failureAnalysis(); as analysis) { <div class="analysis-panel" role="status" aria-live="polite"><div class="analysis-panel__heading"><div><div class="section-kicker">Service Failure Analyzer</div><h3>{{ analysis.serviceDisplayName }}</h3></div><app-status-badge [label]="failureCategoryLabel(analysis.category)" [variant]="failureSeverityVariant(analysis.severity)" role="status"></app-status-badge></div><p>{{ analysis.summary }}</p><div class="analysis-grid"><div><strong>Confidence</strong><span>{{ analysis.confidence }}</span></div><div><strong>Evidence</strong><span>{{ analysis.evidence.length }} bounded item(s)</span></div><div><strong>Unknowns</strong><span>{{ analysis.unknownReasons.length }}</span></div></div>@if (analysis.evidence.length) { <details><summary>Exception / stack evidence</summary><div class="evidence-list">@for (item of analysis.evidence; track item.source + item.eventId) { <div><strong>{{ item.source }}</strong><span>{{ item.summary }}</span>@if (item.exceptionType) { <small>{{ item.exceptionType }}</small> } @for (frame of item.stackFrames; track frame) { <small>{{ frame }}</small> }</div> }</div></details> }</div> }
+    </section>
+
+    <section class="workspace-panel maintenance-panel" aria-labelledby="maintenance-title">
+      <div class="section-heading"><div><div class="section-kicker">04 / Operator actions</div><h2 id="maintenance-title">Maintenance</h2><p>Evidence-first actions remain available in Slice A. Repair and console execution are deliberately held for Slice B.</p></div></div>
+      <div class="action-grid action-grid--primary">
+        <ui-button variant="primary" icon="bi-heart-pulse" [loading]="loadingHealth()" (pressed)="runHealthCheck()">Run Health Check</ui-button>
+        <ui-button variant="secondary" icon="bi-activity" (pressed)="viewIncidentTimeline()">View Incident Timeline</ui-button>
+        <ui-button variant="secondary" icon="bi-box-arrow-down" [loading]="generatingBundle()" [disabled]="!canOperate()" (pressed)="generateSupportBundle()">Generate Support Bundle</ui-button>
+        <ui-button variant="ghost" icon="bi-terminal" [disabled]="true">Safe Diagnostic Console Run <span class="planned-label">Planned — Slice B</span></ui-button>
+      </div>
+      @if (supportBundle(); as bundle) { <div class="result-strip" role="status"><strong>Support Bundle ready</strong><span>{{ bundle.artifact.displayName }} · {{ formatBytes(numberValue(bundle.artifact.sizeBytes)) }}</span><ui-button variant="ghost" size="sm" icon="bi-download" (pressed)="downloadArtifact(bundle.artifact.artifactId, bundle.artifact.displayName)">Download</ui-button></div> }
+      <div class="operator-grid">
+        <article class="operator-card"><div class="operator-card__heading"><div><div class="section-kicker">Preserved PR #10</div><h3>Downloader / Artifact</h3></div><app-status-badge label="Available" variant="success" role="status"></app-status-badge></div><p>Trigger the typed Downloader flow and download only server-registered opaque artifacts.</p><div class="branch-picker">@for (branch of downloaderBranches() || []; track branch.branchCode) { <label class="branch-chip"><input type="checkbox" [checked]="isBranchSelected(branch.branchCode)" (change)="toggleBranch(branch.branchCode)" />{{ branch.branchCode }}</label> } @empty { <span class="empty-copy">{{ readError('downloaderBranches') }}</span> }</div><ui-button variant="secondary" size="sm" icon="bi-cloud-download" [loading]="submittingDownloader()" [disabled]="!canOperate() || !selectedBranches().length" (pressed)="startDownloader()">Start Downloader</ui-button>@if (downloaderOperation(); as operation) { <p class="result-copy" role="status">{{ downloaderOperationLabel(operation) }}</p> }</article>
+        <article class="operator-card"><div class="operator-card__heading"><div><div class="section-kicker">Preserved PR #10</div><h3>Cleanup / Branch Reset</h3></div><app-status-badge label="Available" variant="warning" role="status"></app-status-badge></div><p>Preview and confirm the existing policy-bound cleanup and branch reset workflows.</p><div class="action-row"><ui-button variant="secondary" size="sm" [loading]="previewingMaintenance() === 'cleanup'" [disabled]="!canOperate()" (pressed)="previewCleanup()">Preview Cleanup</ui-button><ui-button variant="danger" size="sm" [loading]="previewingMaintenance() === 'branch-reset'" [disabled]="!canOperate()" (pressed)="previewBranchReset()">Preview Branch Reset</ui-button></div>@if (cleanupPreview(); as preview) { <p class="result-copy">Cleanup: {{ preview.ready ? 'Ready for confirmation' : 'Rejected by policy' }}</p> } @if (branchResetPreview(); as preview) { <p class="result-copy">Branch reset: {{ preview.ready ? 'Ready for confirmation' : 'Rejected by policy' }}</p> }</article>
+      </div>
+      <div class="planned-grid"><article><span class="section-kicker">Slice B</span><h3>Deployment</h3><p>Planned — Slice B</p></article><article><span class="section-kicker">Slice B</span><h3>Repair Installation</h3><p>Planned — Slice B</p></article><article><span class="section-kicker">Slice B</span><h3>Guided Repair</h3><p>Planned — Slice B</p></article></div>
+    </section>
+
+    <section class="workspace-panel advanced-panel" aria-labelledby="advanced-title">
+      <details>
+        <summary id="advanced-title">Advanced Diagnostics <span>Agent / API / OS, safe configuration statements, and deeper evidence</span></summary>
+        <div class="advanced-grid advanced-grid--three"><div class="evidence-block"><h3>Agent / API / OS</h3><dl class="key-value-list"><div><dt>Agent</dt><dd>{{ agentVersion() }}</dd></div><div><dt>API</dt><dd>{{ apiVersion() }}</dd></div><div><dt>OS</dt><dd>{{ capabilities()?.operatingSystem || 'Unavailable' }}</dd></div><div><dt>Authorization</dt><dd>{{ authorizationLabel() }}</dd></div></dl></div><div class="evidence-block"><h3>Safe configuration statements</h3><p>{{ configurationSummary() }}</p><p>Secret values, presence flags, and source paths are intentionally not displayed in this workspace.</p></div><div class="evidence-block"><h3>Legacy SQL evidence</h3><p>{{ connectivity()?.localSql?.detail || 'Local SQL evidence is unavailable.' }}</p><p>Reachability is not database health; database identity and backup evidence are shown above.</p></div></div>
+        <div class="advanced-grid"><div class="evidence-block"><h3>Testing infrastructure</h3><p>{{ testingInfrastructureSummary() }}</p></div><div class="evidence-block"><h3>Incident Timeline</h3>@if (timeline(); as incidents) { <div class="timeline-list">@for (event of incidents.events; track event.eventId) { <div><time>{{ event.atUtc }}</time><strong>{{ event.kind }}</strong><span>{{ event.summary }}</span></div> } @empty { <span class="empty-copy">No retained events for this principal.</span> }</div> } @else { <p>Use View Incident Timeline to load the bounded local timeline.</p> }</div></div>
+      </details>
+    </section>
+
+    @if (pendingAction(); as pending) { <app-confirm-dialog variant="danger" [title]="'Confirm ' + actionLabel(pending.action).toLowerCase() + ' service'" [message]="confirmationMessage(pending)" confirmLabel="Continue" cancelLabel="Cancel" (cancel)="cancelPendingAction()" (confirm)="executePendingAction()"></app-confirm-dialog> }
+    @if (pendingDatabaseAction(); as pending) { <app-confirm-dialog variant="danger" [title]="'Restore ' + pending.displayName.toLowerCase() + '?'" [message]="databaseConfirmationMessage(pending)" [requireReason]="true" [requiredTypedValue]="pending.confirmationText" reasonLabel="Type the exact confirmation phrase" [reasonPlaceholder]="pending.confirmationText" confirmLabel="Restore database" cancelLabel="Cancel" (cancel)="cancelPendingDatabaseAction()" (confirm)="executePendingDatabaseRestore($event)"></app-confirm-dialog> }
+    @if (pendingMaintenanceAction(); as pending) { <app-confirm-dialog variant="danger" [title]="pending.mode === 'cleanup' ? 'Confirm cleanup' : 'Confirm branch reset'" [message]="pending.mode === 'cleanup' ? 'The Agent will re-check its configured cleanup policy and may stop approved services before deleting approved targets.' : 'The Agent will re-check the configured branch and approved table scope before resetting data.'" [requireReason]="true" [requiredTypedValue]="pending.confirmationText" reasonLabel="Type the exact Agent confirmation phrase" [reasonPlaceholder]="pending.confirmationText" confirmLabel="Execute" cancelLabel="Cancel" (cancel)="cancelPendingMaintenance()" (confirm)="executePendingMaintenance($event)"></app-confirm-dialog> }
+  </main>
+`;
+
 @Component({
   selector: 'app-pos-maintenance',
   standalone: true,
@@ -66,12 +226,9 @@ type PendingMaintenanceAction = Readonly<{
     PageHeaderComponent,
     StatusBadgeComponent,
     UiButtonComponent,
-    UiCardComponent,
-    EmptyStateComponent,
-    SkeletonComponent,
     ConfirmDialogComponent
   ],
-  template: `
+  template: POS_MAINTENANCE_TEMPLATE, /* legacy template retained below while the Slice A workspace is verified
     <app-navbar></app-navbar>
 
     <main class="pos-page" aria-label="POS Maintenance service control and evidence">
@@ -380,8 +537,8 @@ type PendingMaintenanceAction = Readonly<{
             <dl class="data-list">
               <div><dt>Branch / POS</dt><dd>{{ value.branchCode }} · {{ value.posNumber }}</dd></div>
               <div><dt>SQL user</dt><dd>{{ value.sqlUser || 'Not configured' }}</dd></div>
-              <div><dt>SQL password</dt><dd>{{ presenceLabel(value.hasSqlPassword) }}</dd></div>
-              <div><dt>RDB password</dt><dd>{{ presenceLabel(value.downloader.hasRdbPassword) }}</dd></div>
+              <div><dt>Database configuration</dt><dd>Detected</dd></div>
+              <div><dt>Credentials</dt><dd>Available internally</dd></div>
               <div><dt>Configured databases</dt><dd>{{ value.databases.length }}</dd></div>
               <div><dt>Configured services</dt><dd>{{ value.services.length }}</dd></div>
             </dl>
@@ -578,7 +735,7 @@ type PendingMaintenanceAction = Readonly<{
         (confirm)="executePendingMaintenance($event)">
       </app-confirm-dialog>
     }
-  `,
+  */
   styles: [`
     :host { display: block; min-height: 100vh; background: var(--scene-backdrop), var(--surface-page); }
     .pos-page { width: min(100%, 1380px); box-sizing: border-box; margin: 0 auto; padding: calc(var(--navbar-height) + var(--page-padding-block)) var(--page-padding-inline) var(--section-gap); }
@@ -646,6 +803,15 @@ export class PosMaintenanceComponent {
   readonly configuration = signal<RedactedConfiguration | null>(null);
   readonly services = signal<ServiceSummary[] | null>(null);
   readonly rmsDiagnostics = signal<RmsDiagnostics | null>(null);
+  readonly health = signal<HealthReport | null>(null);
+  readonly failureAnalysis = signal<ServiceFailureAnalysis | null>(null);
+  readonly timeline = signal<IncidentTimeline | null>(null);
+  readonly supportBundle = signal<SupportBundle | null>(null);
+  readonly diagnosingService = signal<string | null>(null);
+  readonly loadingHealth = signal(false);
+  readonly generatingBundle = signal(false);
+  readonly expandedBackups = signal<Record<RmsDatabaseTarget, boolean>>({ branch: false, cashier: false });
+  readonly databaseTargets: RmsDatabaseTarget[] = ['branch', 'cashier'];
   readonly branchDatabaseWorkspace = signal<RmsDatabaseWorkspace | null>(null);
   readonly cashierDatabaseWorkspace = signal<RmsDatabaseWorkspace | null>(null);
   readonly globalError = signal<string | null>(null);
@@ -676,6 +842,215 @@ export class PosMaintenanceComponent {
   async refresh(): Promise<void> {
     if (this.refreshing()) return;
     await this.load();
+  }
+
+  operatorHeaderLine(): string {
+    const installation = this.rmsDiagnostics()?.installation;
+    const branch = installation?.branchCode || this.identity()?.branchCode || 'Branch unavailable';
+    const pos = installation?.posNumber || this.identity()?.posNumber || 'POS unavailable';
+    return `${branch} · ${pos} · ${this.productRelease()} · ${installation?.clientName || this.identityClientName()}`;
+  }
+
+  identityClientName(): string {
+    return this.identity()?.clientName || 'Client unavailable';
+  }
+
+  productRelease(): string {
+    const installation = this.rmsDiagnostics()?.installation;
+    const identity = this.identity() as (DeviceIdentity & { release?: string }) | null;
+    return installation?.productRelease || identity?.productRelease || identity?.release || 'Unavailable';
+  }
+
+  databaseWorkspace(target: RmsDatabaseTarget): RmsDatabaseWorkspace | null {
+    return target === 'branch' ? this.branchDatabaseWorkspace() : this.cashierDatabaseWorkspace();
+  }
+
+  databaseDiagnostic(target: RmsDatabaseTarget): RmsDatabaseDiagnostic | null {
+    const rms = this.rmsDiagnostics();
+    return target === 'branch' ? rms?.branchDatabase || null : rms?.cashierDatabase || null;
+  }
+
+  databaseHealth(target: RmsDatabaseTarget): RmsDatabaseHealth | null {
+    return this.databaseDiagnostic(target)?.health || null;
+  }
+
+  databaseTargetLabel(target: RmsDatabaseTarget): string {
+    return target === 'branch' ? 'RmsBranchSrv' : 'RmsCashierSrv';
+  }
+
+  latestBackupLabel(target: RmsDatabaseTarget): string {
+    const latest = this.databaseHealth(target)?.backups?.latestCreatedAtUtc;
+    if (latest) return this.formatDate(latest);
+    const artifact = this.databaseWorkspace(target)?.approvedBackups?.[0];
+    return artifact ? this.formatArtifactDate(artifact) : 'None approved';
+  }
+
+  databaseHealthFreshnessLabel(target: RmsDatabaseTarget): string {
+    const freshness = this.databaseHealth(target)?.backups?.freshness;
+    return freshness ? this.freshnessLabel({ freshness, lastCheckedUtc: null, detail: '' } as Evidence) : 'Unknown';
+  }
+
+  canRestore(target: RmsDatabaseTarget): boolean {
+    return this.canControlDatabases() && (this.databaseWorkspace(target)?.approvedBackups?.length || 0) > 0;
+  }
+
+  restoreDisabledReason(target: RmsDatabaseTarget): string {
+    if (!this.canControlDatabases()) return 'Restore requires local Administrator authorization.';
+    return (this.databaseWorkspace(target)?.approvedBackups?.length || 0) > 0
+      ? 'Restore the newest approved backup.'
+      : 'Restore is disabled until an approved backup is available.';
+  }
+
+  restoreLatestBackup(target: RmsDatabaseTarget): void {
+    const artifact = this.databaseWorkspace(target)?.approvedBackups?.[0];
+    if (artifact) this.requestDatabaseRestore(target, artifact);
+  }
+
+  backupListOpen(target: RmsDatabaseTarget): boolean {
+    return this.expandedBackups()[target] === true;
+  }
+
+  toggleBackupList(target: RmsDatabaseTarget): void {
+    this.expandedBackups.update(current => ({ ...current, [target]: !current[target] }));
+  }
+
+  formatBytes(value: number): string {
+    if (!Number.isFinite(value) || value < 0) return 'Unavailable';
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+
+  async runHealthCheck(): Promise<void> {
+    if (this.loadingHealth()) return;
+    this.loadingHealth.set(true);
+    const result = await this.settle(this.transport.getHealthCheck());
+    if (result.ok) {
+      this.health.set(result.value);
+      this.toast.showSuccess('Health Check completed.');
+    } else {
+      this.errors.update(errors => ({ ...errors, health: this.userFacingError(result.error) }));
+      this.toast.showError('Health Check could not be completed.');
+    }
+    this.loadingHealth.set(false);
+  }
+
+  async diagnoseServiceFailure(serviceId: string): Promise<void> {
+    if (this.diagnosingService()) return;
+    this.diagnosingService.set(serviceId);
+    const result = await this.settle(this.transport.getServiceFailureAnalysis(serviceId));
+    if (result.ok) {
+      this.failureAnalysis.set(result.value);
+      this.toast.showInfo('Bounded service evidence loaded.');
+    } else {
+      this.errors.update(errors => ({ ...errors, failureAnalysis: this.userFacingError(result.error) }));
+      this.toast.showError('Service failure analysis could not be completed.');
+    }
+    this.diagnosingService.set(null);
+  }
+
+  async viewIncidentTimeline(): Promise<void> {
+    const result = await this.settle(this.transport.getIncidentTimeline());
+    if (result.ok) this.timeline.set(result.value);
+    else this.toast.showError('Incident Timeline could not be loaded.');
+  }
+
+  async generateSupportBundle(): Promise<void> {
+    if (this.generatingBundle() || !this.canOperate()) return;
+    this.generatingBundle.set(true);
+    try {
+      const tokenResult = await firstValueFrom(this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.supportBundleGenerate));
+      const bundle = await firstValueFrom(this.transport.generateSupportBundle(tokenResult.token));
+      this.supportBundle.set(bundle);
+      this.toast.showSuccess('Support Bundle generated from redacted evidence.');
+    } catch (error) {
+      this.toast.showError(this.userFacingError(classifyPosAgentError(error)));
+    } finally {
+      this.generatingBundle.set(false);
+    }
+  }
+
+  healthCheck(code: string): HealthCheck | null {
+    return this.health()?.checks.find(check => check.code === code) || null;
+  }
+
+  peerHealthLabel(code: string): string {
+    return this.healthStateLabel(this.healthCheck(code)?.state);
+  }
+
+  peerHealthVariant(code: string): 'success' | 'warning' | 'danger' | 'info' {
+    return this.healthStateVariant(this.healthCheck(code)?.state);
+  }
+
+  peerHealthDetail(code: string): string {
+    return this.healthCheck(code)?.summary || 'Health evidence is not available yet.';
+  }
+
+  healthStateLabel(state: HealthState | null | undefined): string {
+    switch (state) {
+      case 'healthy': return 'Healthy';
+      case 'warning': return 'Warning';
+      case 'actionRequired': return 'Action required';
+      default: return 'Unknown';
+    }
+  }
+
+  healthStateVariant(state: HealthState | null | undefined): 'success' | 'warning' | 'danger' | 'info' {
+    switch (state) {
+      case 'healthy': return 'success';
+      case 'warning': return 'warning';
+      case 'actionRequired': return 'danger';
+      default: return 'info';
+    }
+  }
+
+  consistencyHeaderLabel(): string {
+    const warnings = this.rmsDiagnostics()?.installation.consistency.warnings || [];
+    return warnings.length ? 'Action required' : this.rmsDiagnostics() ? 'Consistent' : 'Unknown';
+  }
+
+  consistencyHeaderVariant(): 'success' | 'warning' | 'danger' | 'info' {
+    return this.rmsDiagnostics()?.installation.consistency.warnings?.length ? 'danger' : this.rmsDiagnostics() ? 'success' : 'info';
+  }
+
+  consistencyHeaderDetail(): string {
+    const warnings = this.rmsDiagnostics()?.installation.consistency.warnings || [];
+    return warnings[0] || 'Known duplicated values are aligned or no warning was returned.';
+  }
+
+  endpointText(endpoint: RmsEndpointDiagnostic | undefined): string {
+    if (!endpoint) return 'Unavailable';
+    return `${endpoint.configured ? 'Configured' : 'Not configured'} · ${endpoint.reachability.detail}`;
+  }
+
+  driftLabel(state: RmsComponentDriftState): string {
+    return state === 'aligned' ? 'Aligned' : state === 'drifted' ? 'Drifted' : 'Unavailable';
+  }
+
+  driftVariant(state: RmsComponentDriftState): 'success' | 'warning' | 'danger' | 'info' {
+    return state === 'aligned' ? 'success' : state === 'drifted' ? 'danger' : 'info';
+  }
+
+  failureCategoryLabel(category: components['schemas']['FailureCategory']): string {
+    return category === 'none' ? 'No failure found' : category.replace(/([A-Z])/g, ' $1').replace(/^./, value => value.toUpperCase());
+  }
+
+  failureSeverityVariant(severity: components['schemas']['FailureSeverity']): 'success' | 'warning' | 'danger' | 'info' {
+    return severity === 'actionRequired' ? 'danger' : severity === 'warning' ? 'warning' : severity === 'informational' ? 'success' : 'info';
+  }
+
+  configurationSummary(): string {
+    return this.configuration() ? 'The Agent returned a server-owned redacted configuration projection.' : 'Redacted configuration evidence is unavailable.';
+  }
+
+  testingInfrastructureSummary(): string {
+    return 'Testing-only infrastructure and test service details remain outside the primary RMS service table.';
+  }
+
+  private formatDate(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Unavailable' : date.toLocaleString();
   }
 
   canControlServices(): boolean {
@@ -871,10 +1246,6 @@ export class PosMaintenanceComponent {
     } finally {
       this.submittingMaintenance.set(false);
     }
-  }
-
-  databaseWorkspace(target: RmsDatabaseTarget): RmsDatabaseWorkspace | null {
-    return target === 'branch' ? this.branchDatabaseWorkspace() : this.cashierDatabaseWorkspace();
   }
 
   requestDatabaseBackup(target: RmsDatabaseTarget): void {
@@ -1358,7 +1729,8 @@ export class PosMaintenanceComponent {
     return endpoint.configured ? this.freshnessVariant(endpoint.reachability) : 'info';
   }
 
-  databaseStatusLabel(database: RmsDatabaseDiagnostic): string {
+  databaseStatusLabel(database: RmsDatabaseDiagnostic | null): string {
+    if (!database) return 'Unavailable';
     switch (database.connectivityStatus) {
       case 'reachable': return 'Reachable';
       case 'authenticationFailed': return 'Authentication failed';
@@ -1370,7 +1742,8 @@ export class PosMaintenanceComponent {
     }
   }
 
-  databaseStatusVariant(database: RmsDatabaseDiagnostic): 'success' | 'warning' | 'danger' | 'info' {
+  databaseStatusVariant(database: RmsDatabaseDiagnostic | null): 'success' | 'warning' | 'danger' | 'info' {
+    if (!database) return 'info';
     switch (database.connectivityStatus) {
       case 'reachable': return 'success';
       case 'databaseNameMismatch':
@@ -1382,10 +1755,6 @@ export class PosMaintenanceComponent {
     }
   }
 
-  presenceLabel(present: boolean): string {
-    return present ? 'Present (value hidden)' : 'Not present';
-  }
-
   readError(area: string): string {
     return this.errors()[area] || 'The Agent did not return this read model.';
   }
@@ -1395,7 +1764,7 @@ export class PosMaintenanceComponent {
     this.refreshing.set(true);
     if (firstLoad) this.loading.set(true);
 
-    const [live, session, identity, connectivity, capabilities, configuration, services, rms, branchDatabase, cashierDatabase, downloaderBranches] = await Promise.all([
+    const [live, session, identity, connectivity, capabilities, configuration, services, rms, health, branchDatabase, cashierDatabase, downloaderBranches] = await Promise.all([
       this.settle(this.transport.getLive()),
       this.settle(this.transport.getSession()),
       this.settle(this.transport.getDeviceIdentity()),
@@ -1404,6 +1773,7 @@ export class PosMaintenanceComponent {
       this.settle(this.transport.getConfiguration()),
       this.settle(this.transport.getServices()),
       this.settle(this.transport.getRmsDiagnostics()),
+      this.settle(this.transport.getHealthCheck()),
       this.settle(this.transport.getRmsDatabaseWorkspace('branch')),
       this.settle(this.transport.getRmsDatabaseWorkspace('cashier')),
       this.settle(this.transport.getDownloaderBranches())
@@ -1418,6 +1788,7 @@ export class PosMaintenanceComponent {
     this.applyValue('configuration', configuration, this.configuration, nextErrors);
     this.applyValue('services', services, this.services, nextErrors);
     this.applyValue('rms', rms, this.rmsDiagnostics, nextErrors);
+    this.applyValue('health', health, this.health, nextErrors);
     this.applyValue('branchDatabase', branchDatabase, this.branchDatabaseWorkspace, nextErrors);
     this.applyValue('cashierDatabase', cashierDatabase, this.cashierDatabaseWorkspace, nextErrors);
     this.applyDownloaderBranches(downloaderBranches, nextErrors);

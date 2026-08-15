@@ -8,6 +8,8 @@ public sealed class RmsInstallationOptions
 {
     public string RmsInfoPath { get; set; } = @"C:\ProgramData\RMS_Plus\RMSInfo.json";
 
+    public string ReleaseNumberPath { get; set; } = @"C:\ProgramData\RMS_Plus\ReleaseNumber.txt";
+
     public string BranchServerSettingsPath { get; set; } =
         @"C:\Workspaces\DBS\RMS\RMS.BranchServer\appsettings.json";
 

@@ -9,12 +9,14 @@ using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Device;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Endpoints;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Application.UseCases;
 using RmsSupportHub.Pos.Application.Services;
@@ -26,6 +28,7 @@ using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Infrastructure.Backups;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
+using RmsSupportHub.Pos.Infrastructure.Diagnostics;
 using RmsSupportHub.Pos.Infrastructure.Databases;
 using RmsSupportHub.Pos.Infrastructure.Installation;
 using RmsSupportHub.Pos.Infrastructure.Http;
@@ -115,7 +118,8 @@ builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationR
     RmsDatabaseOperation.RestoreDescriptor,
     DownloaderOperation.Descriptor,
     MaintenanceOperation.CleanupDescriptor,
-    MaintenanceOperation.BranchResetDescriptor
+    MaintenanceOperation.BranchResetDescriptor,
+    SupportBundleOperation.Descriptor
 ]));
 
 builder.Services.AddOpenApi("v1", options =>
@@ -141,8 +145,18 @@ builder.Services.AddSingleton<IRmsDatabaseConnectionStringSource>(services =>
     services.GetRequiredService<RmsInstallationDiscovery>());
 builder.Services.AddSingleton<IRmsSqlReadOnlyProbe, SqlClientReadOnlyProbe>();
 builder.Services.AddSingleton<IRmsDatabaseDiagnostics, RmsDatabaseDiagnostics>();
+builder.Services.AddSingleton(new RmsDiagnosticEvidenceOptions());
+builder.Services.AddSingleton<IRmsDiagnosticEvidenceReader, WindowsRmsDiagnosticEvidenceReader>();
+builder.Services.AddSingleton<ServiceFailureAnalyzer>();
+builder.Services.AddSingleton<IncidentTimelineStore>();
+builder.Services.AddSingleton<IncidentTimelineService>();
 builder.Services.AddSingleton<RmsConnectivityDiagnostics>();
 builder.Services.AddSingleton<RmsDiagnosticsService>();
+builder.Services.AddSingleton<RmsDatabaseHealthService>();
+builder.Services.AddSingleton<PosHealthService>();
+builder.Services.AddSingleton(new SupportBundleOptions());
+builder.Services.AddSingleton<SupportBundleService>();
+builder.Services.AddSingleton<SupportBundleRuntime>();
 builder.Services.AddSingleton<DeviceDiagnosticsService>();
 builder.Services.AddSingleton<IServiceManager, WindowsServiceManager>();
 builder.Services.AddSingleton<ServiceAllowList>();
@@ -352,6 +366,9 @@ app.MapDeviceEndpoints();
 app.MapConfigurationEndpoints();
 app.MapServiceEndpoints();
 app.MapRmsEndpoints();
+app.MapDiagnosticsEndpoints();
+app.MapTimelineEndpoints();
+app.MapSupportBundleEndpoints();
 app.MapRmsDatabaseEndpoints();
 app.MapDownloaderEndpoints();
 app.MapMaintenanceEndpoints();

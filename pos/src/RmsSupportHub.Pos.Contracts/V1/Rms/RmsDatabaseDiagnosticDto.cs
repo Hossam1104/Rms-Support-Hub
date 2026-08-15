@@ -9,4 +9,5 @@ public sealed record RmsDatabaseDiagnosticDto(
     bool Configured,
     bool? DatabaseNameMatches,
     RmsDatabaseDiagnosticStatus ConnectivityStatus,
-    EvidenceDto Evidence);
+    EvidenceDto Evidence,
+    RmsDatabaseHealthDto Health);

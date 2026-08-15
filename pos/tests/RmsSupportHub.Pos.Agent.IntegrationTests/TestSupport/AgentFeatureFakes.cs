@@ -27,7 +27,7 @@ internal sealed class InMemoryAgentConfigurationStore : IAgentConfigurationStore
             DbFilesPath = Path.Combine(storageRoot, "db"),
             BranchConfigPath = Path.Combine(storageRoot, "branch.json"),
             Databases = ["RmsBranchSrv"],
-            Services = ["RMS.BranchService", "RMS.CashierService", "RMSServicesManager"],
+            Services = ["RMS.BranchService", "RMS.CashierService", "RMSServiceManager"],
             Downloader = new AgentDownloaderConfiguration
             {
                 ApiUrl = "https://downloader.integration.test",
@@ -267,7 +267,7 @@ internal sealed class InMemoryServiceManager : IServiceManager
         {
             ["RMS.BranchService"] = ServiceStatus.Running,
             ["RMS.CashierService"] = ServiceStatus.Stopped,
-            ["RMSServicesManager"] = ServiceStatus.Stopped
+            ["RMSServiceManager"] = ServiceStatus.Stopped
         };
 
     public ConcurrentQueue<(string ServiceName, ServiceControlAction Action)> ControlCalls { get; } = new();
@@ -300,6 +300,17 @@ internal sealed class InMemoryServiceManager : IServiceManager
         cancellationToken.ThrowIfCancellationRequested();
         ControlCalls.Enqueue((serviceName, action));
         return ControlBehavior?.Invoke(serviceName, action, cancellationToken) ?? Task.CompletedTask;
+    }
+}
+
+internal sealed class InMemoryRmsDiagnosticEvidenceReader : IRmsDiagnosticEvidenceReader
+{
+    public Task<RmsDiagnosticEvidenceReadResult> ReadAsync(
+        string serviceName,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new RmsDiagnosticEvidenceReadResult([], []));
     }
 }
 

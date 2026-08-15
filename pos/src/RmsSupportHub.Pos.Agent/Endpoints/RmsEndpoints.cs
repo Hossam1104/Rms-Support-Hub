@@ -10,6 +10,25 @@ public static class RmsEndpoints
     public static void MapRmsEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet(
+                "/api/v1/health/check",
+                async (PosHealthService health, CancellationToken cancellationToken) =>
+                    Results.Ok(await health.GetAsync(cancellationToken).ConfigureAwait(false)))
+            .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
+            .WithName("GetHealthCheck")
+            .WithTags("Health")
+            .WithSummary("Run the bounded POS health check")
+            .WithDescription(
+                "Runs the read-only Slice A health checks for installation identity, Product Release, " +
+                "component drift, configured endpoints, RMS databases, backup capacity, storage, and " +
+                "the canonical RMS Windows services. It never starts processes, invokes installers, " +
+                "changes Main Server state, or returns secrets, paths, raw logs, SQL, or exception text.")
+            .Produces<HealthReportDto>(StatusCodes.Status200OK, "application/json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
+
+        app.MapGet(
                 "/api/v1/rms/diagnostics",
                 async (RmsDiagnosticsService diagnostics, CancellationToken cancellationToken) =>
                     Results.Ok(await diagnostics.GetAsync(cancellationToken).ConfigureAwait(false)))

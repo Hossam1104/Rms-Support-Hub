@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Contracts.V1.Common;
@@ -48,9 +49,12 @@ public static class MaintenanceEndpoints
                 async (HttpContext context,
                     CleanupExecuteRequestDto? request,
                     MaintenanceOperationRuntime runtime,
+                    IncidentTimelineService timeline,
+                    IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteCleanupAsync(context, request, cancellationToken).ConfigureAwait(false);
+                    RecordOperation(context, result.Response, timeline, principalSidResolver);
                     return ToMutationResult(context, result);
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
@@ -100,9 +104,12 @@ public static class MaintenanceEndpoints
                 async (HttpContext context,
                     BranchResetExecuteRequestDto? request,
                     MaintenanceOperationRuntime runtime,
+                    IncidentTimelineService timeline,
+                    IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteBranchResetAsync(context, request, cancellationToken).ConfigureAwait(false);
+                    RecordOperation(context, result.Response, timeline, principalSidResolver);
                     return ToMutationResult(context, result);
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
@@ -222,4 +229,23 @@ public static class MaintenanceEndpoints
                 "The maintenance operation request was rejected.",
                 AgentProblemCodes.MutationTargetInvalid)
         };
+
+    private static void RecordOperation(
+        HttpContext context,
+        MaintenanceOperationDto? operation,
+        IncidentTimelineService timeline,
+        IAgentPrincipalSidResolver principalSidResolver)
+    {
+        if (operation is null) return;
+        IncidentTimelineRecorder.Record(
+            context,
+            timeline,
+            principalSidResolver,
+            operation.Mode.Equals("branch-reset", StringComparison.OrdinalIgnoreCase)
+                ? "BranchReset"
+                : "Cleanup",
+            operation.Outcome.ToString(),
+            operation.Detail,
+            operationId: operation.OperationId);
+    }
 }

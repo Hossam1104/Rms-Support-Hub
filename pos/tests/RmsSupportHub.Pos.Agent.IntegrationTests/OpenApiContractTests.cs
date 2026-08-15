@@ -31,10 +31,13 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/device/capabilities",
                 "/api/v1/device/connectivity",
                 "/api/v1/device/identity",
+                "/api/v1/diagnostics/services/{serviceId}/failure",
+                "/api/v1/diagnostics/timeline",
                 "/api/v1/downloads/batches",
                 "/api/v1/downloads/branches",
                 "/api/v1/downloads/operations/{operationId}",
                 "/api/v1/downloads/operations/{operationId}/events",
+                "/api/v1/health/check",
                 "/api/v1/maintenance/cleanup/execute",
                 "/api/v1/maintenance/cleanup/preview",
                 "/api/v1/maintenance/operations/{operationId}",
@@ -51,6 +54,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/services",
                 "/api/v1/services/{serviceId}/actions",
                 "/api/v1/session",
+                "/api/v1/support-bundles",
                 "/health/live",
                 "/health/ready"
             ],
@@ -65,6 +69,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
 
         Assert.Equal("GetHealthLive", Operation(document, "/health/live", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetHealthReady", Operation(document, "/health/ready", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetHealthCheck", Operation(document, "/api/v1/health/check", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetAgentSession", Operation(document, "/api/v1/session", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("IssueMutationToken", Operation(document, "/api/v1/security/mutation-token", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("GetDeviceIdentity", Operation(document, "/api/v1/device/identity", "get")["operationId"]!.GetValue<string>());
@@ -74,6 +79,9 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetServices", Operation(document, "/api/v1/services", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("ControlService", Operation(document, "/api/v1/services/{serviceId}/actions", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("GetRmsDiagnostics", Operation(document, "/api/v1/rms/diagnostics", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetServiceFailureAnalysis", Operation(document, "/api/v1/diagnostics/services/{serviceId}/failure", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetIncidentTimeline", Operation(document, "/api/v1/diagnostics/timeline", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GenerateSupportBundle", Operation(document, "/api/v1/support-bundles", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("GetRmsDatabaseWorkspace", Operation(document, "/api/v1/rms/databases/{targetId}", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("BackupRmsDatabase", Operation(document, "/api/v1/rms/databases/{targetId}/backup", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("RestoreRmsDatabase", Operation(document, "/api/v1/rms/databases/{targetId}/restore", "post")["operationId"]!.GetValue<string>());
@@ -111,6 +119,10 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.True(Operation(document, "/api/v1/services", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/services/{serviceId}/actions", "post").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/diagnostics", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/health/check", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/diagnostics/services/{serviceId}/failure", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/diagnostics/timeline", "get").ContainsKey("security"));
+        Assert.True(Operation(document, "/api/v1/support-bundles", "post").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}", "get").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/backup", "post").ContainsKey("security"));
         Assert.True(Operation(document, "/api/v1/rms/databases/{targetId}/restore", "post").ContainsKey("security"));
@@ -365,6 +377,18 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "RmsEndpointDiagnosticDto",
             "RmsConnectivityDto",
             "RmsDatabaseDiagnosticDto"
+            ,"RmsDatabaseHealthDto"
+            ,"RmsDatabaseBackupHealthDto"
+            ,"RmsStorageHealthDto"
+            ,"HealthReportDto"
+            ,"HealthCheckDto"
+            ,"RmsComponentDriftDto"
+            ,"ServiceFailureAnalysisDto"
+            ,"FailureEvidenceDto"
+            ,"FailureRecommendationDto"
+            ,"IncidentTimelineDto"
+            ,"IncidentTimelineEventDto"
+            ,"SupportBundleDto"
             ,"RmsDatabaseArtifactDto"
             ,"RmsDatabaseBackupRequestDto"
             ,"RmsDatabaseRestoreRequestDto"

@@ -4,5 +4,5 @@ namespace RmsSupportHub.Pos.Contracts.V1.Device;
 public sealed record DeviceIdentityDto(
     string BranchCode,
     string PosNumber,
-    string Release,
+    string ProductRelease,
     string ClientName);

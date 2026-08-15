@@ -27,6 +27,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/health/ready"):
                 DocumentHealthReady(operation);
                 break;
+            case ("GET", "/api/v1/health/check"):
+                DocumentHealthCheck(operation);
+                break;
             case ("GET", "/api/v1/session"):
                 DocumentSession(operation);
                 break;
@@ -50,6 +53,15 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
                 break;
             case ("GET", "/api/v1/rms/diagnostics"):
                 DocumentRmsDiagnostics(operation);
+                break;
+            case ("GET", "/api/v1/diagnostics/services/{serviceId}/failure"):
+                DocumentFailureAnalysis(operation);
+                break;
+            case ("GET", "/api/v1/diagnostics/timeline"):
+                DocumentTimeline(operation);
+                break;
+            case ("POST", "/api/v1/support-bundles"):
+                DocumentSupportBundle(operation);
                 break;
             case ("GET", "/api/v1/rms/databases/{targetId}"):
                 DocumentRmsDatabaseWorkspace(operation);
@@ -764,6 +776,118 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(operation, "403", "The authenticated administrator or exact-origin transport boundary rejected the artifact request.");
         SetResponseDescription(operation, "404", "The opaque artifact identifier is malformed, missing, expired, wrong-principal, or no longer backed by a file.");
         DocumentNegotiateChallenge(operation);
+    }
+
+    private static void DocumentHealthCheck(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Run the bounded POS health check",
+            "Runs read-only health checks for the installed identity, Product Release, component " +
+            "drift, endpoint reachability, databases, backup capacity, storage, and canonical RMS " +
+            "services. No process, installer, Main Server mutation, raw path, secret, log, or SQL " +
+            "surface is exposed.",
+            "The Agent returned the typed HealthReportDto health model.",
+            new JsonObject
+            {
+                ["overallState"] = "warning",
+                ["summary"] = "POS health checks found conditions to monitor.",
+                ["checkedAtUtc"] = "2030-01-01T00:00:00Z",
+                ["checks"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["code"] = "main-server",
+                        ["state"] = "healthy",
+                        ["summary"] = "Main Server endpoint is reachable.",
+                        ["checkedAtUtc"] = "2030-01-01T00:00:00Z",
+                        ["remediation"] = null
+                    }
+                }
+            });
+    }
+
+    private static void DocumentFailureAnalysis(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Analyze bounded evidence for an RMS service",
+            "Reads one opaque allow-listed RMS service identifier and correlates its current state " +
+            "with bounded fixed-root logs and allow-listed Windows event identifiers. Only redacted " +
+            "exception, stack, and event evidence is returned; no command, path, query, process, or " +
+            "state-changing action is accepted.",
+            "The Agent returned the typed ServiceFailureAnalysisDto analysis model.",
+            new JsonObject
+            {
+                ["serviceId"] = "svc-0123456789abcdef",
+                ["serviceDisplayName"] = "RMS Branch Service",
+                ["category"] = "serviceStopped",
+                ["severity"] = "warning",
+                ["confidence"] = "high",
+                ["summary"] = "The allow-listed Windows service is stopped.",
+                ["checkedAtUtc"] = "2030-01-01T00:00:00Z",
+                ["evidence"] = new JsonArray(),
+                ["unknownReasons"] = new JsonArray(),
+                ["recommendations"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["code"] = "start-service",
+                        ["label"] = "Review Start",
+                        ["summary"] = "Confirm the local state before using the typed Start action."
+                    }
+                }
+            });
+        SetResponseDescription(operation, "404", "The opaque service identifier is not present in the server-owned RMS service catalog.");
+    }
+
+    private static void DocumentTimeline(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Read the bounded incident timeline",
+            "Returns newest-first principal-scoped events retained by this Agent for health, service, " +
+            "database, recovery, download, and maintenance correlation. Events contain safe summaries " +
+            "and opaque identifiers only; raw logs, secrets, arbitrary history, and filters are not exposed.",
+            "The Agent returned the typed IncidentTimelineDto timeline model.",
+            new JsonObject
+            {
+                ["generatedAtUtc"] = "2030-01-01T00:00:00Z",
+                ["events"] = new JsonArray(),
+                ["unknownReasons"] = new JsonArray()
+            });
+    }
+
+    private static void DocumentSupportBundle(OpenApiOperation operation)
+    {
+        SetOperation(
+            operation,
+            "Generate a redacted Support Bundle",
+            "Generates one bounded local ZIP containing typed, redacted Slice A evidence and returns " +
+            "only an opaque principal-scoped artifact capability. The exact Support Hub Origin and a " +
+            "one-use mutation token are required; raw configuration, credentials, paths, arbitrary " +
+            "logs, executable content, repair, console execution, and Main Server mutation are not included.");
+        SetResponseDescription(operation, "200", "The Agent generated a bounded SupportBundleDto with an opaque artifact capability.");
+        SetResponseDescription(operation, "400", "The Agent rejected the canonical transport boundary or request with safe problem details.");
+        SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge.");
+        SetResponseDescription(operation, "403", "Authorization, exact-origin, SID, or the one-use mutation-token boundary rejected the request.");
+        SetResponseDescription(operation, "500", "The Agent could not generate the bundle and returned a safe generic error.");
+        DocumentNegotiateChallenge(operation);
+        SetResponseExample(operation, "200", "application/json", new JsonObject
+        {
+            ["artifact"] = new JsonObject
+            {
+                ["artifactId"] = "0123456789abcdef0123456789abcdef",
+                ["displayName"] = "rms-support-bundle.zip",
+                ["sizeBytes"] = 4096,
+                ["sha256Checksum"] = new string('0', 64),
+                ["createdAtUtc"] = "2030-01-01T00:00:00Z",
+                ["expiresAtUtc"] = "2030-01-02T00:00:00Z"
+            },
+            ["createdAtUtc"] = "2030-01-01T00:00:00Z",
+            ["correlationId"] = "corr-placeholder",
+            ["includedSections"] = new JsonArray("health", "installation", "database", "services")
+        });
     }
 
     private static void DocumentProtectedRead(

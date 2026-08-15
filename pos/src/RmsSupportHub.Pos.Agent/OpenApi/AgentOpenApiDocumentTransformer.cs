@@ -58,6 +58,10 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         AddWindowsSecurityRequirement(document, "/api/v1/services", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/services/{serviceId}/actions", HttpMethod.Post);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/diagnostics", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/health/check", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/diagnostics/services/{serviceId}/failure", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/diagnostics/timeline", HttpMethod.Get);
+        AddWindowsSecurityRequirement(document, "/api/v1/support-bundles", HttpMethod.Post);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}", HttpMethod.Get);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/backup", HttpMethod.Post);
         AddWindowsSecurityRequirement(document, "/api/v1/rms/databases/{targetId}/restore", HttpMethod.Post);
@@ -81,6 +85,19 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
 
     private static void AddReferencePropertyDescriptions(OpenApiDocument document)
     {
+        SetSchemaDescription(document, "HealthReportDto", "Aggregate read-only POS health report composed from bounded local evidence.");
+        SetSchemaDescription(document, "HealthCheckDto", "One bounded read-only health result with an explicit unknown state.");
+        SetSchemaDescription(document, "RmsComponentDriftDto", "Server-owned comparison between an installed RMS component build and Product Release.");
+        SetSchemaDescription(document, "RmsDatabaseHealthDto", "Typed database backup and storage health evidence for one approved RMS database target.");
+        SetSchemaDescription(document, "RmsDatabaseBackupHealthDto", "Bounded inventory and freshness evidence for Agent-approved database backups.");
+        SetSchemaDescription(document, "RmsStorageHealthDto", "Bounded capacity evidence for the Agent-approved database storage root.");
+        SetSchemaDescription(document, "ServiceFailureAnalysisDto", "Typed, bounded, non-mutating analysis for one opaque RMS service identifier.");
+        SetSchemaDescription(document, "FailureEvidenceDto", "One redacted exception, event, or bounded log evidence item.");
+        SetSchemaDescription(document, "FailureRecommendationDto", "Non-executing remediation guidance derived from bounded failure evidence.");
+        SetSchemaDescription(document, "IncidentTimelineDto", "Bounded principal-scoped timeline used for local incident correlation.");
+        SetSchemaDescription(document, "IncidentTimelineEventDto", "One safe event in the bounded principal-scoped incident timeline.");
+        SetSchemaDescription(document, "SupportBundleDto", "Opaque result describing a generated, redacted Support Bundle artifact.");
+
         SetPropertyDescription(
             document,
             "DeviceConnectivityDto",
@@ -91,6 +108,7 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "DeviceConnectivityDto",
             "mainServer",
             "Independent main-server endpoint reachability evidence.");
+        SetPropertyDescription(document, "DeviceIdentityDto", "productRelease", "Product Release read from the fixed release file.");
         SetPropertyDescription(
             document,
             "EvidenceDto",
@@ -161,6 +179,8 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
             "RmsDiagnosticsDto",
             "services",
             "Current SCM status for the bounded canonical RMS service catalog.");
+        SetPropertyDescription(document, "RmsInstallationDto", "productRelease", "Product Release read only from the fixed C:\\ProgramData\\RMS_Plus\\ReleaseNumber.txt file.");
+        SetPropertyDescription(document, "RmsInstallationDto", "componentDrift", "Bounded per-component comparison against Product Release.");
         SetPropertyDescription(
             document,
             "RmsInstallationDto",
@@ -192,6 +212,67 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "databaseNameMatches", "Whether the configured/queried database identity matches the canonical expected database.");
         SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "connectivityStatus", "Sanitized result of configuration validation and the fixed read-only SQL probe.");
         SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "evidence", "Freshness and safe detail for the database diagnostic.");
+        SetPropertyDescription(document, "RmsDatabaseDiagnosticDto", "health", "Bounded approved-backup and fixed-root storage health evidence.");
+        SetPropertyDescription(document, "RmsDatabaseHealthDto", "backups", "Approved backup inventory and freshness evidence.");
+        SetPropertyDescription(document, "RmsDatabaseHealthDto", "storage", "Fixed-root capacity evidence without exposing a path.");
+        SetPropertyDescription(document, "RmsDatabaseBackupHealthDto", "count", "Number of physically valid Agent-approved backups.");
+        SetPropertyDescription(document, "RmsDatabaseBackupHealthDto", "latestCreatedAtUtc", "Creation time of the newest approved backup, when available.");
+        SetPropertyDescription(document, "RmsDatabaseBackupHealthDto", "freshness", "Freshness classification of the newest approved backup.");
+        SetPropertyDescription(document, "RmsDatabaseBackupHealthDto", "state", "Health classification of the approved backup inventory.");
+        SetPropertyDescription(document, "RmsDatabaseBackupHealthDto", "summary", "Safe backup inventory summary.");
+        SetPropertyDescription(document, "RmsStorageHealthDto", "state", "Health classification of the approved storage root.");
+        SetPropertyDescription(document, "RmsStorageHealthDto", "availableFreeSpaceBytes", "Available bytes reported by the approved storage provider.");
+        SetPropertyDescription(document, "RmsStorageHealthDto", "rootAvailable", "Whether the approved storage root was available as a directory.");
+        SetPropertyDescription(document, "RmsStorageHealthDto", "freshness", "Freshness of the capacity observation.");
+        SetPropertyDescription(document, "RmsStorageHealthDto", "summary", "Safe capacity summary.");
+        SetPropertyDescription(document, "HealthReportDto", "overallState", "Conservative aggregate state across the returned checks.");
+        SetPropertyDescription(document, "HealthReportDto", "summary", "Safe aggregate health summary.");
+        SetPropertyDescription(document, "HealthReportDto", "checkedAtUtc", "UTC time at which this health report was evaluated.");
+        SetPropertyDescription(document, "HealthReportDto", "checks", "Bounded individual health checks.");
+        SetPropertyDescription(document, "HealthCheckDto", "code", "Stable server-owned health check code.");
+        SetPropertyDescription(document, "HealthCheckDto", "state", "Current health classification.");
+        SetPropertyDescription(document, "HealthCheckDto", "summary", "Safe operator summary.");
+        SetPropertyDescription(document, "HealthCheckDto", "checkedAtUtc", "UTC time at which the check was evaluated.");
+        SetPropertyDescription(document, "HealthCheckDto", "remediation", "Optional non-executing next-step guidance.");
+        SetPropertyDescription(document, "RmsComponentDriftDto", "component", "Server-owned RMS component label.");
+        SetPropertyDescription(document, "RmsComponentDriftDto", "buildNumber", "Installed component build number.");
+        SetPropertyDescription(document, "RmsComponentDriftDto", "productRelease", "Product Release from the fixed release file.");
+        SetPropertyDescription(document, "RmsComponentDriftDto", "state", "Component comparison state.");
+        SetPropertyDescription(document, "RmsComponentDriftDto", "reason", "Safe comparison reason.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "evidence", "Bounded redacted failure evidence.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "unknownReasons", "Safe reasons evidence may be incomplete.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "recommendations", "Non-executing operator guidance.");
+        SetPropertyDescription(document, "FailureEvidenceDto", "summary", "Redacted bounded evidence summary.");
+        SetPropertyDescription(document, "FailureEvidenceDto", "stackFrames", "Redacted bounded stack-frame labels.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "serviceId", "Opaque server-owned service identifier.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "serviceDisplayName", "Safe service display name.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "category", "Selected failure category.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "severity", "Conservative failure severity.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "confidence", "Confidence that bounded evidence supports the classification.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "summary", "Safe operator summary.");
+        SetPropertyDescription(document, "ServiceFailureAnalysisDto", "checkedAtUtc", "UTC time at which the analysis was evaluated.");
+        SetPropertyDescription(document, "FailureEvidenceDto", "source", "Safe evidence source label.");
+        SetPropertyDescription(document, "FailureEvidenceDto", "atUtc", "UTC evidence time, when supplied by the source.");
+        SetPropertyDescription(document, "FailureEvidenceDto", "exceptionType", "Exception type only, without a message or assembly path.");
+        SetPropertyDescription(document, "FailureEvidenceDto", "eventId", "Safe provider event identifier, when available.");
+        SetPropertyDescription(document, "FailureRecommendationDto", "code", "Stable recommendation code.");
+        SetPropertyDescription(document, "FailureRecommendationDto", "label", "Operator-facing recommendation label.");
+        SetPropertyDescription(document, "FailureRecommendationDto", "summary", "Safe reason for the recommendation.");
+        SetPropertyDescription(document, "IncidentTimelineDto", "events", "Newest-first bounded principal-scoped timeline events.");
+        SetPropertyDescription(document, "IncidentTimelineDto", "unknownReasons", "Safe reasons historical evidence may be incomplete.");
+        SetPropertyDescription(document, "IncidentTimelineDto", "generatedAtUtc", "UTC time at which this timeline view was generated.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "eventId", "Opaque timeline event identifier.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "atUtc", "UTC time at which the event was recorded.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "kind", "Safe server-owned event kind.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "severity", "Conservative event severity.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "summary", "Redacted operator summary.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "serviceId", "Opaque service identifier, when the event concerns a service.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "operationId", "Safe server-owned operation identifier, when applicable.");
+        SetPropertyDescription(document, "IncidentTimelineEventDto", "correlationId", "Safe correlation identifier, when available.");
+        SetPropertyDescription(document, "SupportBundleDto", "artifact", "Opaque principal-scoped Support Bundle artifact capability.");
+        SetPropertyDescription(document, "SupportBundleDto", "createdAtUtc", "UTC time at which the Support Bundle was created.");
+        SetPropertyDescription(document, "SupportBundleDto", "correlationId", "Safe request correlation identifier.");
+        SetPropertyDescription(document, "SupportBundleDto", "includedSections", "Server-owned sections included in the archive.");
         SetPropertyDescription(document, "RmsDatabaseArtifactDto", "artifactId", "Opaque Agent-owned backup handle; it is not a filesystem path or download URL.");
         SetPropertyDescription(document, "RmsDatabaseArtifactDto", "displayName", "Server-generated safe backup display name without a physical path.");
         SetPropertyDescription(document, "RmsDatabaseOperationDto", "detail", "Safe operator detail without credentials, connection strings, SQL, unrestricted paths, or raw service targets.");
@@ -213,6 +294,28 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         SetPropertyDescription(document, "MaintenanceOperationDto", "state", "Current maintenance REST/SSE lifecycle state.");
         SetPropertyDescription(document, "MaintenanceOperationDto", "outcome", "Maintenance outcome truth; OutcomeUnknown requires recovery inspection before retry.");
         SetPropertyDescription(document, "MaintenanceOperationDto", "maintenanceOutcome", "Sanitized logical item outcomes and recovery truth, when available.");
+    }
+
+    private static void SetSchemaDescription(
+        OpenApiDocument document,
+        string schemaName,
+        string description)
+    {
+        if (document.Components?.Schemas is null
+            || !document.Components.Schemas.TryGetValue(schemaName, out var schema))
+        {
+            return;
+        }
+
+        switch (schema)
+        {
+            case OpenApiSchema openApiSchema:
+                openApiSchema.Description = description;
+                break;
+            case OpenApiSchemaReference schemaReference:
+                schemaReference.Description = description;
+                break;
+        }
     }
 
     private static void SetPropertyDescription(

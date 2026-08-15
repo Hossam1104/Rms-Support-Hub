@@ -13,6 +13,7 @@ using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 
@@ -102,6 +103,8 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IRmsInstallationDiscovery>();
             services.AddSingleton<IRmsInstallationDiscovery>(new InMemoryRmsInstallationDiscovery());
+            services.RemoveAll<IRmsDiagnosticEvidenceReader>();
+            services.AddSingleton<IRmsDiagnosticEvidenceReader, InMemoryRmsDiagnosticEvidenceReader>();
             services.RemoveAll<IRmsDatabaseConnectionStringSource>();
             services.RemoveAll<IRmsDatabaseDiagnostics>();
             services.AddSingleton<IRmsDatabaseDiagnostics>(new InMemoryRmsDatabaseDiagnostics());
@@ -110,6 +113,11 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
             {
                 BackupRootPath = Path.Combine(_databaseStorageRoot, "backups"),
                 DatabaseFilesRootPath = Path.Combine(_databaseStorageRoot, "database-files")
+            });
+            services.RemoveAll<SupportBundleOptions>();
+            services.AddSingleton(new SupportBundleOptions
+            {
+                BundleRootPath = Path.Combine(_databaseStorageRoot, "bundles")
             });
             services.RemoveAll<IRmsDatabaseSqlOperations>();
             services.AddSingleton<IRmsDatabaseSqlOperations, InMemoryRmsDatabaseSqlOperations>();
@@ -123,6 +131,7 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
                 DownloaderOperation.Descriptor,
                 MaintenanceOperation.CleanupDescriptor,
                 MaintenanceOperation.BranchResetDescriptor,
+                SupportBundleOperation.Descriptor,
                 new MutationOperationDescriptor("integration.test-mutation", "PUT")
             ]));
         });

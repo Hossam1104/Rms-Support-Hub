@@ -10,7 +10,7 @@ public static class RmsServiceCatalog
 {
     public const string BranchServiceName = "RMS.BranchService";
     public const string CashierServiceName = "RMS.CashierService";
-    public const string ServicesManagerServiceName = "RMSServicesManager";
+    public const string ServicesManagerServiceName = "RMSServiceManager";
 
     public static IReadOnlyList<RmsServiceDefinition> Definitions { get; } =
     [

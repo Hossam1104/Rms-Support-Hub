@@ -3,6 +3,7 @@ export const POS_AGENT_ORIGIN = 'https://rms-pos-agent.localhost:5001' as const;
 export const POS_AGENT_PATHS = {
   live: '/health/live',
   ready: '/health/ready',
+  healthCheck: '/api/v1/health/check',
   session: '/api/v1/session',
   mutationToken: '/api/v1/security/mutation-token',
   deviceIdentity: '/api/v1/device/identity',
@@ -11,6 +12,9 @@ export const POS_AGENT_PATHS = {
   configuration: '/api/v1/configuration',
   services: '/api/v1/services',
   rmsDiagnostics: '/api/v1/rms/diagnostics',
+  serviceFailureAnalysis: '/api/v1/diagnostics/services',
+  incidentTimeline: '/api/v1/diagnostics/timeline',
+  supportBundles: '/api/v1/support-bundles',
   rmsDatabases: '/api/v1/rms/databases',
   downloaderBranches: '/api/v1/downloads/branches',
   downloaderBatches: '/api/v1/downloads/batches',
@@ -29,7 +33,8 @@ export const POS_AGENT_OPERATION_IDS = {
   rmsDatabaseRestore: 'rms.database.restore',
   downloaderBatchTrigger: 'downloader.batch.trigger',
   maintenanceCleanup: 'maintenance.cleanup.execute',
-  maintenanceBranchReset: 'maintenance.branch-reset.execute'
+  maintenanceBranchReset: 'maintenance.branch-reset.execute',
+  supportBundleGenerate: 'support.bundle.generate'
 } as const;
 
 export const POS_AGENT_MUTATION_TOKEN_HEADER = 'X-RMS-Mutation-Token' as const;

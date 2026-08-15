@@ -144,6 +144,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run the bounded POS health check
+         * @description Runs read-only health checks for the installed identity, Product Release, component drift, endpoint reachability, databases, backup capacity, storage, and canonical RMS services. No process, installer, Main Server mutation, raw path, secret, log, or SQL surface is exposed.
+         */
+        get: operations["GetHealthCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rms/diagnostics": {
         parameters: {
             query?: never;
@@ -158,6 +178,66 @@ export interface paths {
         get: operations["GetRmsDiagnostics"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnostics/services/{serviceId}/failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analyze bounded evidence for an RMS service
+         * @description Reads one opaque allow-listed RMS service identifier and correlates its current state with bounded fixed-root logs and allow-listed Windows event identifiers. Only redacted exception, stack, and event evidence is returned; no command, path, query, process, or state-changing action is accepted.
+         */
+        get: operations["GetServiceFailureAnalysis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnostics/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the bounded incident timeline
+         * @description Returns newest-first principal-scoped events retained by this Agent for health, service, database, recovery, download, and maintenance correlation. Events contain safe summaries and opaque identifiers only; raw logs, secrets, arbitrary history, and filters are not exposed.
+         */
+        get: operations["GetIncidentTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support-bundles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a redacted Support Bundle
+         * @description Generates one bounded local ZIP containing typed, redacted Slice A evidence and returns only an opaque principal-scoped artifact capability. The exact Support Hub Origin and a one-use mutation token are required; raw configuration, credentials, paths, arbitrary logs, executable content, repair, console execution, and Main Server mutation are not included.
+         */
+        post: operations["GenerateSupportBundle"];
         delete?: never;
         options?: never;
         head?: never;
@@ -564,6 +644,17 @@ export interface components {
             /** @description Optional request correlation identifier echoed by the Agent for diagnostics. */
             correlationId?: null | string;
         };
+        ArtifactMetadataDto: {
+            artifactId: string;
+            displayName: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            sha256Checksum: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            expiresAtUtc?: null | string;
+        };
         /** @description Server-approved downloader branch metadata. It contains no SMB path, credential, or endpoint detail. */
         BranchCatalogEntryDto: {
             /** @description Server-approved logical branch code accepted by the typed downloader route. */
@@ -711,8 +802,8 @@ export interface components {
             branchCode: string;
             /** @description Server-owned POS number for the local device. */
             posNumber: string;
-            /** @description Configured RMS+ release label for the local device. */
-            release: string;
+            /** @description Product Release read from the fixed release file. */
+            productRelease: string;
             /** @description Configured client/product label for the local device. */
             clientName: string;
         };
@@ -806,15 +897,114 @@ export interface components {
             /** @description Safe diagnostic detail without credentials, Windows SIDs, or raw exception text. */
             detail: string;
         };
+        /** @enum {unknown} */
+        FailureCategory: "none" | "serviceStopped" | "serviceStartFailure" | "crash" | "database" | "network" | "configuration" | "versionDrift" | "unknown";
+        /** @enum {unknown} */
+        FailureConfidence: "high" | "medium" | "low" | "unknown";
+        /** @description One redacted exception, event, or bounded log evidence item. */
+        FailureEvidenceDto: {
+            /** @description Safe evidence source label. */
+            source: string;
+            /**
+             * Format: date-time
+             * @description UTC evidence time, when supplied by the source.
+             */
+            atUtc: null | string;
+            /** @description Redacted bounded evidence summary. */
+            summary: string;
+            /** @description Exception type only, without a message or assembly path. */
+            exceptionType: null | string;
+            /** @description Redacted bounded stack-frame labels. */
+            stackFrames: string[];
+            /** @description Safe provider event identifier, when available. */
+            eventId: null | string;
+        };
+        /** @description Non-executing remediation guidance derived from bounded failure evidence. */
+        FailureRecommendationDto: {
+            /** @description Stable recommendation code. */
+            code: string;
+            /** @description Operator-facing recommendation label. */
+            label: string;
+            /** @description Safe reason for the recommendation. */
+            summary: string;
+        };
+        /** @enum {unknown} */
+        FailureSeverity: "informational" | "warning" | "actionRequired" | "unknown";
         /**
          * @description Freshness classification for this observation; it is never collapsed into a bare online boolean.
          * @enum {unknown}
          */
         FreshnessState: "unknown" | "fresh" | "stale";
+        /** @description One bounded read-only health result with an explicit unknown state. */
+        HealthCheckDto: {
+            /** @description Stable server-owned health check code. */
+            code: string;
+            /** @description Current health classification. */
+            state: components["schemas"]["HealthState"];
+            /** @description Safe operator summary. */
+            summary: string;
+            /**
+             * Format: date-time
+             * @description UTC time at which the check was evaluated.
+             */
+            checkedAtUtc: string;
+            /** @description Optional non-executing next-step guidance. */
+            remediation: null | string;
+        };
+        /** @description Aggregate read-only POS health report composed from bounded local evidence. */
+        HealthReportDto: {
+            /** @description Conservative aggregate state across the returned checks. */
+            overallState: components["schemas"]["HealthState"];
+            /** @description Safe aggregate health summary. */
+            summary: string;
+            /**
+             * Format: date-time
+             * @description UTC time at which this health report was evaluated.
+             */
+            checkedAtUtc: string;
+            /** @description Bounded individual health checks. */
+            checks: components["schemas"]["HealthCheckDto"][];
+        };
+        /** @enum {unknown} */
+        HealthState: "healthy" | "warning" | "actionRequired" | "unknown";
         /** @description Anonymous health response produced by the Agent. Status identifies the foundation check that answered; it contains no machine or credential detail. */
         HealthStatusDto: {
             /** @description Identifies which anonymous foundation health check produced the response (live or ready). */
             status: string;
+        };
+        /** @description Bounded principal-scoped timeline used for local incident correlation. */
+        IncidentTimelineDto: {
+            /**
+             * Format: date-time
+             * @description UTC time at which this timeline view was generated.
+             */
+            generatedAtUtc: string;
+            /** @description Newest-first bounded principal-scoped timeline events. */
+            events: components["schemas"]["IncidentTimelineEventDto"][];
+            /** @description Safe reasons historical evidence may be incomplete. */
+            unknownReasons: string[];
+        };
+        /** @description One safe event in the bounded principal-scoped incident timeline. */
+        IncidentTimelineEventDto: {
+            /** @description Opaque timeline event identifier. */
+            eventId: string;
+            /**
+             * Format: date-time
+             * @description UTC time at which the event was recorded.
+             */
+            atUtc: string;
+            /** @description Safe server-owned event kind. */
+            kind: string;
+            /** @description Conservative event severity. */
+            severity: components["schemas"]["FailureSeverity"];
+            /** @description Redacted operator summary. */
+            summary: string;
+            /** @description Opaque service identifier, when the event concerns a service. */
+            serviceId: null | string;
+            /** @description Safe server-owned operation identifier, when applicable. */
+            operationId: null | string;
+            /** @description Safe correlation identifier, when available. */
+            correlationId: null | string;
         };
         /** @description Sanitized maintenance item outcome with logical target identity and explicit recovery truth. */
         MaintenanceItemOutcomeDto: {
@@ -973,6 +1163,21 @@ export interface components {
              */
             timeoutSeconds: number | string;
         };
+        /** @description Server-owned comparison between an installed RMS component build and Product Release. */
+        RmsComponentDriftDto: {
+            /** @description Server-owned RMS component label. */
+            component: string;
+            /** @description Installed component build number. */
+            buildNumber: null | string;
+            /** @description Product Release from the fixed release file. */
+            productRelease: null | string;
+            /** @description Component comparison state. */
+            state: components["schemas"]["RmsComponentDriftState"];
+            /** @description Safe comparison reason. */
+            reason: string;
+        };
+        /** @enum {unknown} */
+        RmsComponentDriftState: "aligned" | "drifted" | "unavailable";
         /** @description Safe main-server and Branch-server reachability evidence. */
         RmsConnectivityDto: {
             /** @description Main-server configuration and reachability evidence. */
@@ -1024,6 +1229,25 @@ export interface components {
              */
             expiresAtUtc: null | string;
         };
+        /** @description Bounded inventory and freshness evidence for Agent-approved database backups. */
+        RmsDatabaseBackupHealthDto: {
+            /**
+             * Format: int32
+             * @description Number of physically valid Agent-approved backups.
+             */
+            count: number | string;
+            /**
+             * Format: date-time
+             * @description Creation time of the newest approved backup, when available.
+             */
+            latestCreatedAtUtc: null | string;
+            /** @description Freshness classification of the newest approved backup. */
+            freshness: components["schemas"]["FreshnessState"];
+            /** @description Health classification of the approved backup inventory. */
+            state: components["schemas"]["HealthState"];
+            /** @description Safe backup inventory summary. */
+            summary: string;
+        };
         /** @description Typed RMS database backup request containing only a bounded idempotency key. */
         RmsDatabaseBackupRequestDto: {
             /** @description Bounded caller-generated key scoped to the canonical database and backup operation. */
@@ -1045,12 +1269,21 @@ export interface components {
             connectivityStatus: components["schemas"]["RmsDatabaseDiagnosticStatus"];
             /** @description Freshness and safe detail for the database diagnostic. */
             evidence: components["schemas"]["EvidenceDto"];
+            /** @description Bounded approved-backup and fixed-root storage health evidence. */
+            health: components["schemas"]["RmsDatabaseHealthDto"];
         };
         /**
          * @description Sanitized result of configuration validation and the fixed read-only SQL probe.
          * @enum {unknown}
          */
         RmsDatabaseDiagnosticStatus: "notConfigured" | "configurationInvalid" | "databaseNameMismatch" | "reachable" | "authenticationFailed" | "databaseUnavailable" | "unreachable";
+        /** @description Typed database backup and storage health evidence for one approved RMS database target. */
+        RmsDatabaseHealthDto: {
+            /** @description Approved backup inventory and freshness evidence. */
+            backups: components["schemas"]["RmsDatabaseBackupHealthDto"];
+            /** @description Fixed-root capacity evidence without exposing a path. */
+            storage: components["schemas"]["RmsStorageHealthDto"];
+        };
         /** @description Latest principal-scoped operation state, when retained. */
         RmsDatabaseOperationDto: {
             /** @description Opaque Agent operation handle scoped to the authenticated Windows principal. */
@@ -1187,10 +1420,30 @@ export interface components {
             installationMode: null | string;
             /** @description Safe client label selected from installed Cashier UI metadata. */
             clientName: null | string;
+            /** @description Product Release read only from the fixed C:\ProgramData\RMS_Plus\ReleaseNumber.txt file. */
+            productRelease: null | string;
             /** @description Build metadata for the installed RMS components. */
             versions: components["schemas"]["RmsVersionDto"];
             /** @description Cross-file consistency evidence for duplicated RMS values. */
             consistency: components["schemas"]["RmsConsistencyDto"];
+            /** @description Bounded per-component comparison against Product Release. */
+            componentDrift: components["schemas"]["RmsComponentDriftDto"][];
+        };
+        /** @description Bounded capacity evidence for the Agent-approved database storage root. */
+        RmsStorageHealthDto: {
+            /** @description Health classification of the approved storage root. */
+            state: components["schemas"]["HealthState"];
+            /**
+             * Format: int64
+             * @description Available bytes reported by the approved storage provider.
+             */
+            availableFreeSpaceBytes: null | number | string;
+            /** @description Whether the approved storage root was available as a directory. */
+            rootAvailable: boolean;
+            /** @description Freshness of the capacity observation. */
+            freshness: components["schemas"]["FreshnessState"];
+            /** @description Safe capacity summary. */
+            summary: string;
         };
         /** @description Build metadata for the installed RMS components. */
         RmsVersionDto: {
@@ -1226,6 +1479,32 @@ export interface components {
             /** @description Safe Agent/request correlation identifier for diagnostics. */
             correlationId: string;
         };
+        /** @description Typed, bounded, non-mutating analysis for one opaque RMS service identifier. */
+        ServiceFailureAnalysisDto: {
+            /** @description Opaque server-owned service identifier. */
+            serviceId: string;
+            /** @description Safe service display name. */
+            serviceDisplayName: string;
+            /** @description Selected failure category. */
+            category: components["schemas"]["FailureCategory"];
+            /** @description Conservative failure severity. */
+            severity: components["schemas"]["FailureSeverity"];
+            /** @description Confidence that bounded evidence supports the classification. */
+            confidence: components["schemas"]["FailureConfidence"];
+            /** @description Safe operator summary. */
+            summary: string;
+            /**
+             * Format: date-time
+             * @description UTC time at which the analysis was evaluated.
+             */
+            checkedAtUtc: string;
+            /** @description Bounded redacted failure evidence. */
+            evidence: components["schemas"]["FailureEvidenceDto"][];
+            /** @description Safe reasons evidence may be incomplete. */
+            unknownReasons: string[];
+            /** @description Non-executing operator guidance. */
+            recommendations: components["schemas"]["FailureRecommendationDto"][];
+        };
         /**
          * @description Current Windows service runtime state observed by the Agent.
          * @enum {unknown}
@@ -1260,6 +1539,20 @@ export interface components {
             apiVersion: string;
             /** @description Contract versions the installed Agent can serve, produced by the Agent rather than accepted from the browser. */
             supportedApiVersions: string[];
+        };
+        /** @description Opaque result describing a generated, redacted Support Bundle artifact. */
+        SupportBundleDto: {
+            /** @description Opaque principal-scoped Support Bundle artifact capability. */
+            artifact: components["schemas"]["ArtifactMetadataDto"];
+            /**
+             * Format: date-time
+             * @description UTC time at which the Support Bundle was created.
+             */
+            createdAtUtc: string;
+            /** @description Safe request correlation identifier. */
+            correlationId: string;
+            /** @description Server-owned sections included in the archive. */
+            includedSections: string[];
         };
         /** @description Typed downloader batch request containing only server-approved logical branch codes and a bounded idempotency key. */
         TriggerBatchRequestDto: {
@@ -1781,6 +2074,85 @@ export interface operations {
             };
         };
     };
+    GetHealthCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed HealthReportDto health model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "overallState": "warning",
+                     *       "summary": "POS health checks found conditions to monitor.",
+                     *       "checkedAtUtc": "2030-01-01T00:00:00Z",
+                     *       "checks": [
+                     *         {
+                     *           "code": "main-server",
+                     *           "state": "healthy",
+                     *           "summary": "Main Server endpoint is reachable.",
+                     *           "checkedAtUtc": "2030-01-01T00:00:00Z",
+                     *           "remediation": null
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HealthReportDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
     GetRmsDiagnostics: {
         parameters: {
             query?: never;
@@ -1929,6 +2301,246 @@ export interface operations {
                 content?: never;
             };
             /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetServiceFailureAnalysis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed ServiceFailureAnalysisDto analysis model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "serviceId": "svc-0123456789abcdef",
+                     *       "serviceDisplayName": "RMS Branch Service",
+                     *       "category": "serviceStopped",
+                     *       "severity": "warning",
+                     *       "confidence": "high",
+                     *       "summary": "The allow-listed Windows service is stopped.",
+                     *       "checkedAtUtc": "2030-01-01T00:00:00Z",
+                     *       "evidence": [],
+                     *       "unknownReasons": [],
+                     *       "recommendations": [
+                     *         {
+                     *           "code": "start-service",
+                     *           "label": "Review Start",
+                     *           "summary": "Confirm the local state before using the typed Start action."
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ServiceFailureAnalysisDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The opaque service identifier is not present in the server-owned RMS service catalog. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetIncidentTimeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed IncidentTimelineDto timeline model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "generatedAtUtc": "2030-01-01T00:00:00Z",
+                     *       "events": [],
+                     *       "unknownReasons": []
+                     *     }
+                     */
+                    "application/json": components["schemas"]["IncidentTimelineDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GenerateSupportBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent generated a bounded SupportBundleDto with an opaque artifact capability. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "artifact": {
+                     *         "artifactId": "0123456789abcdef0123456789abcdef",
+                     *         "displayName": "rms-support-bundle.zip",
+                     *         "sizeBytes": 4096,
+                     *         "sha256Checksum": "0000000000000000000000000000000000000000000000000000000000000000",
+                     *         "createdAtUtc": "2030-01-01T00:00:00Z",
+                     *         "expiresAtUtc": "2030-01-02T00:00:00Z"
+                     *       },
+                     *       "createdAtUtc": "2030-01-01T00:00:00Z",
+                     *       "correlationId": "corr-placeholder",
+                     *       "includedSections": [
+                     *         "health",
+                     *         "installation",
+                     *         "database",
+                     *         "services"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SupportBundleDto"];
+                };
+            };
+            /** @description The Agent rejected the canonical transport boundary or request with safe problem details. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin, SID, or the one-use mutation-token boundary rejected the request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent could not generate the bundle and returned a safe generic error. */
             500: {
                 headers: {
                     [name: string]: unknown;

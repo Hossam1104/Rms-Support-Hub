@@ -1,82 +1,69 @@
 # Current Project State
 
 - **Updated:** 2026-08-15
-- **Repository baseline:** PR #10 merged at `16fd303`; typed Downloader,
-  Artifact Download, Cleanup, Branch Reset, database Backup/Restore, and
-  service control remain the accepted completed baseline.
-- **Current session outcome:** read-only representative UPC runtime and Main
-  Server OpenAPI reconnaissance completed; no production code, installer,
-  service action, database mutation, or Main Server mutation was run.
-- **Next executable task:** root `TASK.md` is the full large Slice A
-  implementation prompt for the final POS operator workspace and diagnostic
-  evidence. It is implementation, not planning.
+- **Current branch:** `agent/pos-slice-a`; the working tree contains the POS
+  Slice A implementation on top of local PR #11 documentation baseline
+  `ce7b0f2`.
+- **Remote governance:** PR #11 was still open/draft when this session began;
+  do not describe the local baseline as remotely merged. Slice A delivery is
+  intentionally performed on this feature branch and may be merged only after
+  normal review/check governance.
+- **Current outcome:** POS Slice A implementation and validation are complete;
+  no RMS executable, installer/uninstaller, database mutation, Production
+  action, or Main Server mutation was run.
+- **Next executable task:** after Slice A delivery, root `TASK.md` contains the
+  full Slice B implementation task for Main Server profiles, Safe Diagnostic
+  Console Run, Safety Snapshot, Repair/Guided Repair, and the real Agent
+  package boundary. Do not execute Slice B in the Slice A session.
 
-## Reconciled runtime facts
+## Durable Slice A facts
 
-- Authoritative RMS Product Release is the fixed
-  `C:\ProgramData\RMS_Plus\ReleaseNumber.txt`; representative value `5.7.4`.
-- Authoritative Client is Cashier UI `Settings:TheClient`; representative
-  value `UPC`. Branch/Cashier/UI BuildNumbers are separate drift evidence.
-- Installed mode is Branch + Cashier. Branch/POS identity sources agree on the
-  representative installation.
-- Actual RMS SCM names are `RMS.BranchService`, `RMS.CashierService`, and
-  `RMSServiceManager`. The current catalog's `RMSServicesManager` spelling is a
-  confirmed defect assigned to Slice A.
-- Branch, Cashier, and Service Manager use fixed Serilog Console/File sources;
-  bounded native logs and Windows SCM/.NET/Application Error/WER events contain
-  useful exception/stack evidence. No raw messages are stored in the repo.
-- `C:\ProgramData\RMS_Plus` contains local installer/uninstaller and complete
-  RMS payload surfaces; the four component apphost hashes matched the installed
-  apphosts. Supported repair switches/rollback remain unproven.
+- Product Release is read only from
+  `C:\ProgramData\RMS_Plus\ReleaseNumber.txt`; missing, invalid, unreadable,
+  or control-bearing content is unavailable and never falls back to a build.
+- Client is read from `RMS.CashierUI\appsettings.json` at
+  `Settings:TheClient`. Component BuildNumbers remain separate drift evidence.
+- Canonical SCM names are `RMS.BranchService`, `RMS.CashierService`, and
+  `RMSServiceManager`. Friendly display labels remain separate from SCM names.
+- Agent-owned typed contracts now expose read-only Health Check, database and
+  backup/capacity health, bounded redacted service-failure analysis, and a
+  principal-scoped bounded Incident Timeline. Timeline writes occur only after
+  authorized POST operation boundaries; read-only GETs do not mutate state.
+- Support Bundle generation is a protected one-use-token POST. It contains a
+  bounded typed JSON projection in an opaque authenticated artifact and does
+  not proxy raw configuration, credentials, paths, SQL, or unbounded logs.
+- `WindowsRmsDiagnosticEvidenceReader` reads only fixed canonical log roots and
+  allow-listed SCM/.NET/Application Error/WER event IDs, with file, byte, line,
+  event, time, stack, and redaction bounds. The analyzer classifies and
+  recommends only; it never launches a process or changes service state.
+- The Angular POS workspace has the final compact header/peer-status rail,
+  paired Branch/Cashier database cards, canonical three-service table,
+  Health/Timeline/Bundle actions, bounded evidence panels, preserved PR #10
+  controls, and Slice B planned states. It uses design tokens and responsive
+  desktop/tablet/narrow breakpoints.
+- Main Server integration remains GET-only and read-only. Secret-bearing
+  inventory DTOs and the discovered Branch/POS PUT contracts are not proxied
+  or invoked.
 
-## Main Server findings
+## Validation evidence
 
-- UPC Swagger exposes OpenAPI v1 (523 paths) and v2 (26 paths). The documents
-  define Branch/POS install-state `PUT`s with query-bound identity and empty
-  status responses, but no package body, operation ID, polling, cancellation,
-  idempotency, or rollback contract.
-- The install inventory response schema is credential-bearing and must never
-  be proxied, cached, logged, or bundled.
-- Global Swagger Bearer security is not reliable per-route runtime evidence:
-  two safe POS lookup GETs were anonymously reachable while Branch status GETs
-  returned 401.
-- Installed runtime Main Server and owner-provided Swagger bases use different
-  hosts. Future integration uses Agent-owned allow-listed client profiles and
-  local discovered Branch/POS binding; Angular never supplies a URL or target.
-- Whites is expected to host the same application but could not be reached on
-  the UPC VPN. The owner confirmed UPC-only connectivity; equivalence remains
-  an explicit read-only gate.
-- Main Server GET is pre-authorized only when side-effect-free. Any
-  POST/PUT/PATCH/DELETE or state-changing GET requires explicit owner approval
-  before live invocation.
+- POS Release build with `PosAgentSecurity__SupportHubOrigin` set and
+  `-warnaserror` passed.
+- Full POS solution tests passed: Domain 9, Application 76, Infrastructure 83,
+  Agent integration 149 (317 total).
+- Frontend tests passed: 56 files, 345 tests. Production frontend build passed.
+- POS OpenAPI/client generation passed twice; the second generated-client pass
+  was byte-stable. `git diff --check` passed.
+- The memory checker reports the pre-existing `AGENTS.md` 146-line budget
+  violation; all other checked memory files are within budget after the Slice B
+  task replacement. No generated/runtime paths are part of the source change.
 
-## Accelerated remaining roadmap
+## Existing Main Server and runtime gates
 
-1. **Slice A:** Product Release/Client/drift, service-name correction, Health
-   Check, DB/capacity/backup health, Failure Analyzer, bounded logs/events,
-   Support Bundle, Incident Timeline, final responsive operator UI, and
-   regression preservation of completed operations.
-2. **Slice B:** Agent-owned Main Server profiles and Branch/POS install-state
-   operations, Safety Snapshot, Safe Diagnostic Console Run, Deployment,
-   Repair/Guided Repair, and real Agent package/install/upgrade/uninstall/
-   rollback boundary.
-3. **Slice C:** M-1 managed browser policy, M-2 Production certificate
-   lifecycle, durable Production audit, package/ACL and representative-device
-   proofs, Whites comparison, fleet rollout, and Claude Opus 5 High independent
-   security/readiness review.
-
-Slices A and B remain separate because Slice B adds confined process launch,
-remote credentials/mutations, installer rollback, and package ownership; it
-must consume Slice A's stable typed evidence model.
-
-## Validation baseline and open evidence
-
-- PR #10 baseline: POS 311 tests passed; frontend 345 tests passed; Release
-  build passed without warnings; generated client was byte-stable.
-- This planning/reconnaissance change requires documentation diff/memory/secret
-  validation only; it does not change buildable product source.
-- Pending representative-device proof remains non-destructive Branch/Cashier
-  Backup plus approved artifact/checksum retention across Agent restart. No
-  Restore is authorized for that proof.
-- Production/customer deployment remains blocked on M-1, M-2, durable audit,
-  package/ACL ownership, final representative evidence, and independent review.
+- Main Server Swagger evidence is read-only and environment-specific. Branch/POS
+  install-state PUTs have no proven package, operation, polling, cancellation,
+  idempotency, or rollback contract; Slice B must add an Agent-owned profile
+  boundary before any mutation is considered.
+- Testing is the only live environment. Production/customer deployment remains
+  blocked on M-1/M-2, durable audit, package/ACL ownership, representative
+  proof, Whites comparison, and independent review.
