@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { OrderDraft } from '../../core/models';
 
@@ -31,8 +32,9 @@ function emptyDraft(): OrderDraft {
  * same draft signal in sync after those calls succeed.
  */
 @Injectable()
-export class DraftStore {
+export class DraftStore implements OnDestroy {
   private api = inject(ApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private moduleKey = '';
   draft = signal<OrderDraft>(emptyDraft());
@@ -112,7 +114,7 @@ export class DraftStore {
     this.saving.set(true);
 
     const key = this.moduleKey;
-    this.api.patch(`modules/${key}/order-data`, { fields }).subscribe({
+    this.api.patch(`modules/${key}/order-data`, { fields }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.onSendSettled(),
       // errorEnvelopeInterceptor already surfaces the failure via a toast.
       // The fields stay applied locally and rejoin the next batch (newer
@@ -130,5 +132,14 @@ export class DraftStore {
     this.saving.set(false);
     this.flushVersion.update(v => v + 1);
     if (Object.keys(this.pendingFields).length > 0) this.flush();
+  }
+
+  ngOnDestroy() {
+    // Route-scoped stores can be destroyed while the debounce window or a
+    // PATCH request is still pending. Cancel both so a departed order route
+    // cannot update a later fixture/component or leave fake timers/open
+    // subscriptions behind in the test runner.
+    this.cancelPending();
+    this.sendInFlight = false;
   }
 }

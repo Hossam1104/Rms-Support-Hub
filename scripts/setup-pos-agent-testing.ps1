@@ -368,6 +368,12 @@ function Get-CertificateKeyFile($certificate) {
 
 function Grant-LocalSystemCertificateRead($certificate) {
     $keyPath = Get-CertificateKeyFile $certificate
+
+    # Reject broad allow rules before changing the ACL. The Agent private key
+    # is a machine credential; a broad inherited grant must never be made
+    # acceptable merely because LocalSystem also needs read access.
+    Assert-PosSupportHubPrivateKeyAcl $keyPath
+
     $systemSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
     $acl = Get-Acl -LiteralPath $keyPath
     $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
@@ -386,6 +392,10 @@ function Grant-LocalSystemCertificateRead($certificate) {
     if (-not $verified) {
         throw 'LocalSystem private-key read access could not be verified.'
     }
+
+    # Re-check after the LocalSystem rule is applied so an inherited or
+    # accidentally preserved broad allow cannot survive provisioning.
+    Assert-PosSupportHubPrivateKeyAcl $keyPath
 }
 
 function Ensure-TestingCertificate {

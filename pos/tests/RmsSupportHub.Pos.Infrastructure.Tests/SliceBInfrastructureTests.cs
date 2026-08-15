@@ -66,6 +66,18 @@ public sealed class SliceBInfrastructureTests
         using var lease = new MachineWidePrivilegedMutationLease();
 
         var first = lease.TryAcquire("agent-package.upgrade", "S-1-5-21-first");
+        if (first.State == PrivilegedMutationLeaseState.Unavailable)
+        {
+            // A non-elevated Windows test process is expected to fail closed
+            // when it cannot open the Global semaphore. The elevated,
+            // two-process proof covers the real cross-process property.
+            Assert.True(OperatingSystem.IsWindows());
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var principal = new System.Security.Principal.WindowsPrincipal(identity);
+            Assert.False(principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator), first.Detail);
+            return;
+        }
+
         Assert.Equal(PrivilegedMutationLeaseState.Acquired, first.State);
         Assert.NotNull(first.Handle);
 

@@ -233,7 +233,7 @@ function Stop-OwnedRuntimeProcess($state) {
 }
 
 function Invoke-Checked([string]$FilePath, [string[]]$Arguments, [string]$Label) {
-    & $FilePath @Arguments
+    & $FilePath @Arguments | Out-Host
     if ($LASTEXITCODE -ne 0) {
         throw "$Label failed with exit code $LASTEXITCODE."
     }
@@ -308,15 +308,16 @@ function Invoke-SupportHubBuild($state) {
     $browserOutput = $indexFiles[0].DirectoryName
 
     $commit = Get-CurrentCommit
-    $identityJson = & $nodePath $buildIdentityScript 'finalize' `
+    $sourceState = Get-CurrentSourceState
+    $identityOutput = @(& $nodePath $buildIdentityScript 'finalize' `
         '--output' $browserOutput `
         '--environment' $buildEnvironment `
         '--commit' $commit `
-        '--source-state' (Get-CurrentSourceState)
+        '--source-state' $sourceState)
     if ($LASTEXITCODE -ne 0) {
         throw "Frontend build-identity generation failed with exit code $LASTEXITCODE."
     }
-    $identity = ($identityJson | Select-Object -Last 1) | ConvertFrom-Json
+    $identity = ConvertFrom-PosBuildIdentityGeneratorOutput -Output $identityOutput
 
     Invoke-Checked $dotnetPath @('restore', $backendProject, '--nologo') 'Support Hub API restore'
     Invoke-Checked $dotnetPath @('publish', $backendProject, '-c', 'Release', '--no-restore', '--nologo', '-o', $apiStageRoot) 'Support Hub API publish'
@@ -339,7 +340,9 @@ function Invoke-SupportHubBuild($state) {
         -Identity $identity `
         -ExpectedCommit $commit `
         -ExpectedEnvironment $buildEnvironment `
+        -ExpectedSourceState $sourceState `
         -ExpectedAssetManifestHash $stagedManifestHash `
+        -AssetRoot $wwwrootPath `
         -NotBeforeUtc $startedUtc
     Write-Host "[PASS] Staged frontend build $($identity.buildId.Substring(0, 12)) for commit $($identity.commitShort) matches its $($identity.assetCount)-asset manifest." -ForegroundColor Green
 
@@ -545,7 +548,10 @@ try {
         -ExpectedContentRoot $apiStageRoot `
         -ExpectedHost $testingConfiguration.SupportHubHost `
         -ExpectedPort $testingConfiguration.SupportHubPort `
-        -ExpectedCertificateThumbprint ([string]$state.SupportHubCertificateThumbprint)
+        -ExpectedCertificateThumbprint ([string]$state.SupportHubCertificateThumbprint) `
+        -ExpectedProcessId ([int]$process.Id) `
+        -ExpectedBuildId ([string]$buildIdentity.buildId) `
+        -ExpectedCommit ([string]$buildIdentity.commit)
 
     Assert-ServedFrontendIsCurrentBuild $buildIdentity
 } catch {

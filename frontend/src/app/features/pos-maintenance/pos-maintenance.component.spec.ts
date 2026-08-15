@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { routes } from '../../app.routes';
@@ -24,6 +24,18 @@ describe('PosMaintenanceComponent', () => {
   let transport: Record<string, ReturnType<typeof vi.fn>>;
   let toast: Record<string, ReturnType<typeof vi.fn>>;
   let buildIdentity: Record<string, ReturnType<typeof vi.fn>>;
+  let fixtures: ComponentFixture<PosMaintenanceComponent>[] = [];
+
+  afterEach(() => {
+    for (const fixture of fixtures) fixture.destroy();
+    fixtures = [];
+  });
+
+  function createFixture(): ComponentFixture<PosMaintenanceComponent> {
+    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    fixtures.push(fixture);
+    return fixture;
+  }
 
   beforeEach(async () => {
     transport = {
@@ -355,7 +367,7 @@ describe('PosMaintenanceComponent', () => {
   });
 
   it('renders direct Agent data with authorized state-valid service controls', async () => {
-    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    const fixture = createFixture();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -377,7 +389,7 @@ describe('PosMaintenanceComponent', () => {
   });
 
   it('requires confirmation before issuing a one-use token and submitting a service action', async () => {
-    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    const fixture = createFixture();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -415,7 +427,7 @@ describe('PosMaintenanceComponent', () => {
       supportedApiVersions: ['1.0']
     }));
 
-    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    const fixture = createFixture();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -436,7 +448,7 @@ describe('PosMaintenanceComponent', () => {
     transport['getRmsDiagnostics'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     transport['getRmsDatabaseWorkspace'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
-    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    const fixture = createFixture();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -450,7 +462,7 @@ describe('PosMaintenanceComponent', () => {
   });
 
   it('shows the served frontend build identity in Advanced Diagnostics without a filesystem path', async () => {
-    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    const fixture = createFixture();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -470,7 +482,7 @@ describe('PosMaintenanceComponent', () => {
   });
 
   it('keeps one labelled main landmark and a visible refresh action', async () => {
-    const fixture = TestBed.createComponent(PosMaintenanceComponent);
+    const fixture = createFixture();
     await fixture.whenStable();
     fixture.detectChanges();
 

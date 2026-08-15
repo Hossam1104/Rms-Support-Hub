@@ -1,98 +1,118 @@
-# Independent POS Security / Testing Provisioning Gate Re-review
+# Final POS Security Gate Verification
 
-**Preferred reviewer:** GPT-5.6 Terra
-**Effort:** HIGH
-**Role:** REVIEW ONLY
+MODEL: GPT-5.6 Terra
+EFFORT: HIGH
+ROLE: REVIEW ONLY
 
 ## Objective
 
-Independently re-review the current synchronized POS security and Testing
-provisioning surface after the "Testing provisioning, PowerShell and secure
-routing remediation". Confirm that the previously closed Slice B controls
-remain closed, and that the new provisioning, elevation, runtime-ownership,
-build-identity, and routing boundaries are actually sound.
+Independently verify the final POS Testing security remediation on the current
+repository. This is a review gate, not implementation. Do not modify code,
+tests, generated artifacts, docs, memory, Git state, services, certificates,
+registry, hosts, RMS folders, databases, or runtime processes. Do not start
+Slice C, perform the POS visual redesign, or claim Production readiness.
 
-The implementer of that remediation must not perform this review.
+Verify closure of these preceding findings:
 
-Use the current repository, the task-scoped diff, tests, and durable project
-memory. Context lives in `.ai/STATE.md`,
-`.ai/decisions/ADR-0025-testing-runtime-ownership-and-build-identity.md`,
-`docs/POS_SLICE_B_BOUNDARY.md`,
-`docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`, and
-`docs/POS_SLICE_C_REQUIREMENTS.md`. Slice C requirements, including the
-owner-approved POS visual redesign direction, are context only and must not be
-implemented.
+HIGH: (1) exactly one build-identity JSON record; (2) strict frontend identity
+schema and expected/staged/served binding; (3) complete frontend suite green.
 
-## Required review areas
+MEDIUM: (4) Agent private-key ACL broad-principal rejection; (5) runtime root,
+API DLL, content root, host, port, certificate, PID, build ID, and commit
+binding; (6) elevated two-process H-3 Global semaphore proof.
 
-1. **Slice B regression.** H-1 bounded fail-closed redaction and quarantine,
-   H-2 fixed service-owned roots and traversal/ownership confinement, and H-3
-   the single machine-wide privileged mutation lease remain closed. The
-   adjacent M-1..M-4 and L-1..L-3 remediation remains sound.
-2. **Certificate validation.** `Test-PosSupportHubPrivateKeyPolicy` evaluates
-   CNG-ness, key storage provider, and export policy as one boolean expression;
-   a wrong provider or an exportable key fails closed; the private-key ACL
-   rejects broad principals; failure terminates provisioning; no certificate or
-   private-key material is printed.
-3. **PowerShell surface.** Every tracked `.ps1`/`.psm1` parses; no operator is
-   parsed as a command; no dangling continuation, unsafe partial state, path
-   quoting, `Start-Process` argument, or working-directory defect remains.
-   Confirm `scripts/test-powershell-quality.ps1` runs under both `-File` and
-   `-Command` invocation and that the CI lane actually gates.
-4. **Elevation confinement.** Self-elevation re-launches only the known startup
-   script, only from a PowerShell host inside `$PSHOME`, with only the known
-   typed parameters, correct quoting for paths containing spaces, and a working
-   opt-out. Prove no arbitrary command, executable, path, or argument can be
-   injected, including through the forwarded origin.
-5. **Secure `:4443` runtime ownership.** An unowned listener is neither killed
-   nor adopted; a stale owned listener is replaced only through the normal
-   flow; unrelated `dotnet` processes are never stopped; a stale or corrupt
-   state file fails closed; state binds runtime root, PID, executable, content
-   root, build identity, certificate, host, and port.
-6. **Frontend freshness.** The expected, staged, and served build identities
-   must agree, including the index document and main bundle hashes. A stale
-   build must be a typed startup failure. HTTP 200 and the presence of
-   `<app-root>` must not be accepted as proof. The identity document and the
-   Advanced Diagnostics panel must expose no filesystem path or secret.
-7. **Canonical POS routing and transport.** The dashboard card and a direct
-   wrong-origin `/tools/pos-maintenance` load both hand off to exactly
-   `https://support-hub.integration.test:4443/tools/pos-maintenance` without
-   first rendering Agent-unavailable errors. The Agent still requires the exact
-   Origin, HTTPS, Windows Negotiate, and derived local Administrator
-   authorization; the browser still reaches the Agent directly; there is no
-   `RmsSupportHub.Api` relay, generic proxy, browser-selectable Agent endpoint,
-   or `http://localhost:4200` allowance.
+## Startup context
 
-## Review constraints
+Read `TASK.md`, `.ai/STATE.md`, and run `python .ai/scripts/context.py`.
+Read `.ai/HANDOFF.md` only if `In Progress` or `Blocked`; read only scoped
+source/tests/docs and the task diff. Read `.ai/PROJECT.md` or the affected ADR
+only when stable context is needed.
 
-- Review only. Do not modify implementation, tests, generated artifacts,
-  documentation, or project memory, and do not broaden the review.
-- Use synthetic seams and existing tests. Testing is the only permitted live
-  environment; never act against Production.
-- Do not launch RMS Branch, Cashier, Service Manager, Cashier UI, installer,
-  uninstaller, repair, rollback, or package activation executables.
-- Do not perform Branch Reset, Cleanup, Restore, database mutation, registry or
-  RMS folder mutation, or any Main Server state-changing request.
-- Do not treat a successful HTTP acceptance as proof of a completed privileged
-  action.
-- Do not implement Slice C.
+## Review contract
 
-## Evidence and outcome
+1. Inspect the real parser used by `scripts/start-pos-agent-testing.ps1` and
+   its Pester tests. It must accept exactly one text success-stream record
+   containing one JSON object, reject zero/blank/whitespace, two/three records,
+   warning+JSON, JSON+warning, malformed, valid+malformed, array, scalar, null,
+   and unexpected objects, and make `LAST_LINE_ACCEPTED` impossible. Confirm
+   no `Select-Object -Last 1`, arbitrary filtering, or diagnostic contamination.
 
-Inspect the complete task-scoped diff and the relevant source and tests. Run
-only read-only or synthetic checks. Report findings in severity order:
-Critical, High, Medium, Low, Informational. Each Critical or High finding must
-carry file/line evidence, impact, and a concrete acceptance condition, and
-blocks the Slice C gate.
+2. Inspect the PowerShell and Angular identity validators. Confirm strict types
+   and values for schemaVersion, approved environment, full commit,
+   commitShort prefix, sourceState (`clean`/`modified`), lowercase SHA-256
+   build/index/main hashes, positive bounded assetCount, UTC builtAtUtc with
+   startup/future bounds, and `main-<hash>.js`. Reject rooted/drive/UNC/ADS/
+   URI/query/fragment/traversal/slash/backslash/nested/wrong-extension names,
+   unknown fields, and byte/hash/count drift. Confirm exact expected commit and
+   environment are required before `:4443` starts, and identity/diagnostics
+   expose no path, credential, certificate, or secret. The development
+   placeholder is allowed only in its exact documented sentinel shape.
 
-Return a concise report containing:
+3. Run the complete frontend suite twice and the production build:
 
-1. Executive outcome and blocker status.
-2. Findings with file/line evidence and acceptance conditions.
-3. Coverage of H-1/H-2/H-3 and the adjacent M/L controls.
-4. Coverage of certificate validation, PowerShell parse health, elevation
-   confinement, `:4443` runtime ownership, and frontend build identity.
-5. Coverage of canonical POS routing, exact Origin, Negotiate, Administrator
-   authorization, and the direct browser-to-Agent boundary.
-6. Validation evidence, unrelated pre-existing failures, residual assumptions,
-   and the explicit Production/Slice C gates that remain.
+       npm test --prefix frontend -- --watch=false --no-progress
+       npm run build --prefix frontend -- --configuration production
+
+   Require at least 361 tests on each full run plus new tests. No timeout
+   increase, skip, xit, fdescribe, disabled teardown, or hidden failure. Check
+   cleanup for fake timers, deferred promises, subscriptions, fixture
+   destruction, route-scoped stores, and shared state, especially the former
+   `pos-maintenance` and `flat-order` timeout specs.
+
+4. Inspect Agent certificate provisioning and shared ACL logic. It must reject
+   broad allow rules for Everyone, Authenticated Users, BUILTIN\Users,
+   ANONYMOUS LOGON, Guests, and equivalent SIDs before and after LocalSystem
+   read handling. Confirm CNG, expected provider, non-exportable policy, exact
+   owned certificate, LocalSystem access, no PFX exposure, and no key logging.
+
+5. Confirm the reusable runtime-state helper itself binds every value listed
+   above. Review stale/reused/unrelated PID, unrelated dotnet, missing/corrupt
+   state, unowned listener, and stale owned listener. Never adopt or kill an
+   unrelated process or unowned listener.
+
+6. From elevated Administrator PowerShell, run exactly once:
+
+       .\scripts\test-pos-privileged-lease.ps1
+
+   Confirm Process A acquired; B was busy while A held; A released; B then
+   acquired; and a later process acquired after B termination. The proof may
+   use only the named semaphore and temporary markers: no RMS/service/DB/
+   installer/Main Server mutation. If this shell is not elevated, do not loop
+   on UAC; report the exact command and leave H-3 unverified.
+
+## Regression and validation
+
+Check H-1 redaction/quarantine, H-2 fixed roots/path confinement, H-3
+serialization, certificate policies, PowerShell safety/elevation confinement,
+exact Agent `https://rms-pos-agent.localhost:5001`, exact Support Hub
+`https://support-hub.integration.test:4443`, exact Origin, HTTPS, Negotiate,
+derived local Administrator authorization, direct browser-to-Agent transport,
+no API relay/proxy, no browser-selected Agent address, no localhost:4200 Agent
+CORS, canonical wrong-origin routing, freshness, and CI coverage.
+
+Use synthetic seams and existing tests. Testing is the only live environment;
+never launch RMS products, installers, repair, rollback, package activation,
+Production services, or Main Server state-changing requests. Where relevant:
+
+    .\scripts\test-powershell-quality.ps1
+    dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo -warnaserror
+    dotnet test pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo
+    git diff --check
+    python .ai/scripts/check_memory.py
+
+Do not run `npm audit fix` or claim a URL from configuration alone; report
+actual responses and distinguish pre-existing failures.
+
+## Outcome and return
+
+Report findings Critical, High, Medium, Low, Informational with file/line
+evidence, impact, and acceptance conditions for Critical/High findings.
+
+    Critical > 0 -> BLOCKED
+    High > 0     -> BLOCKED
+    Critical = 0 AND High = 0 -> SLICE C APPROVED
+
+Return the executive outcome, blocker status, findings, H-1/H-2/H-3 and
+certificate/PowerShell/runtime/frontend/routing evidence, actual validation
+results, unavailable elevated/live dependencies, residual Production gates,
+and the explicit Slice C decision. Do not implement findings.
