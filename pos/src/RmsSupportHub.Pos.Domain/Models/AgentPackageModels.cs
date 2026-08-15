@@ -21,6 +21,7 @@ public enum AgentPackageVerificationState
 public enum AgentPackageOperationState
 {
     NotAttempted,
+    Busy,
     Preview,
     Accepted,
     Staging,
@@ -92,6 +93,10 @@ public interface IAgentPackageCatalog
 public interface IAgentPackageVerifier
 {
     Task<AgentPackageValidationResult> VerifyAsync(
+        AgentPackageManifest manifest,
+        CancellationToken cancellationToken = default);
+
+    Task<AgentPackageValidationResult> VerifyInstalledAsync(
         AgentPackageManifest manifest,
         CancellationToken cancellationToken = default);
 }

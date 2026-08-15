@@ -22,6 +22,8 @@ export interface ToolRouteData {
 export interface QaToolDefinition extends ToolRouteData {
   id: ToolId;
   route: string;
+  /** Absolute secure workspace target for a surface that must not run from a dev HTTP origin. */
+  externalRoute?: string;
   description: string;
   icon: string;
   actionLabel: string;

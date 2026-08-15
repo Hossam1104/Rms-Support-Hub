@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
-using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 
 namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
@@ -40,16 +40,21 @@ public sealed class FileAgentPackageLifecycle(
 {
     public async Task<AgentPackageExecutionResult> ExecuteAsync(AgentPackageExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        options.Validate();
-        var validation = await verifier.VerifyAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
+        options.EnsureStorageProvisioned();
+        var validation = request.Operation == AgentPackageOperationKind.Uninstall
+            ? await verifier.VerifyInstalledAsync(request.Manifest, cancellationToken).ConfigureAwait(false)
+            : await verifier.VerifyAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
         if (validation.State != AgentPackageVerificationState.Verified) return new(AgentPackageOperationState.Failed, false, false, false, validation.Detail);
-        if (!await platform.PrepareAsync(request.Manifest, cancellationToken).ConfigureAwait(false)) return new(AgentPackageOperationState.Failed, false, false, true, "The Agent platform precondition failed; package activation was not attempted.");
 
         var stagingRoot = Path.Combine(options.PackageRoot, "staging", Guid.NewGuid().ToString("N"));
         try
         {
-            Directory.CreateDirectory(stagingRoot);
-            await ExtractExactFilesAsync(verifier.ArchivePath(request.Manifest), stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false);
+            if (!await platform.PrepareAsync(request.Manifest, cancellationToken).ConfigureAwait(false)) return new(AgentPackageOperationState.Failed, false, false, true, "The Agent platform precondition failed; package activation was not attempted.");
+            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(stagingRoot);
+            if (request.Operation != AgentPackageOperationKind.Uninstall)
+            {
+                await ExtractExactFilesAsync(verifier.ArchivePath(request.Manifest), stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false);
+            }
             if (!await platform.ActivateAsync(stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false))
             {
                 var rollback = await platform.RollbackAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
@@ -114,7 +119,7 @@ public sealed class FileAgentPackageLifecycle(
             await using (var source = entry.Open())
             await using (var destination = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
+                await CopyExactAsync(source, destination, file.SizeBytes, cancellationToken).ConfigureAwait(false);
             }
             if (IsReparsePoint(target)) throw new InvalidDataException("The staged package file became a reparse point.");
             var actualSize = new FileInfo(target).Length;
@@ -122,6 +127,27 @@ public sealed class FileAgentPackageLifecycle(
         }
 
         if (seen.Count != expected.Count) throw new InvalidDataException("The package archive did not contain every manifest file.");
+    }
+
+    private static async Task CopyExactAsync(Stream source, Stream destination, long declaredSize, CancellationToken cancellationToken)
+    {
+        if (declaredSize < 0) throw new InvalidDataException("The package manifest declared a negative file size.");
+        var buffer = new byte[64 * 1024];
+        long copied = 0;
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            if (read == 0) break;
+            if (copied > declaredSize - read)
+            {
+                throw new InvalidDataException("The package archive streamed beyond the declared manifest size.");
+            }
+
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+            copied += read;
+        }
+
+        if (copied != declaredSize) throw new InvalidDataException("The package archive ended before the declared manifest size.");
     }
 
     private async Task<bool> SafeRollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken)

@@ -1,4 +1,6 @@
 export const POS_AGENT_ORIGIN = 'https://rms-pos-agent.localhost:5001' as const;
+export const POS_SUPPORT_HUB_ORIGIN = 'https://support-hub.integration.test:4443' as const;
+export const POS_SUPPORT_HUB_MAINTENANCE_URL = `${POS_SUPPORT_HUB_ORIGIN}/tools/pos-maintenance` as const;
 
 export const POS_AGENT_PATHS = {
   live: '/health/live',

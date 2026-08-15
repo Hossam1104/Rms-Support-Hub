@@ -70,7 +70,7 @@ public sealed class SafetySnapshotService(
         var reservation = idempotency.TryReserve(principalSid, IdempotencyScope, idempotencyKey, typedConfirmation);
         if (reservation.State == AgentIdempotencyReservationState.Completed
             && reservation.OperationId is not null
-            && completedCaptures.TryGetValue(principalSid + "|" + reservation.OperationId, out var existing))
+            && TryGetCompleted(principalSid, reservation.OperationId, out var existing))
         {
             return existing;
         }
@@ -86,8 +86,8 @@ public sealed class SafetySnapshotService(
             var snapshot = new SafetySnapshotDocument(
                 Guid.NewGuid().ToString("N"),
                 principalSid,
-                "Testing",
-                profileId,
+                options.EnvironmentName,
+                profileId ?? options.ProfileId,
                 evidence.BranchCode,
                 evidence.PosNumber,
                 evidence.InstallationGuid,
@@ -107,7 +107,16 @@ public sealed class SafetySnapshotService(
                 string.Empty);
             await store.SaveAsync(snapshot, cancellationToken).ConfigureAwait(false);
             var response = ToDto(snapshot, SafetySnapshotState.Captured, "The pre-maintenance safety snapshot was captured atomically.");
-            lock (gate) completedCaptures[principalSid + "|" + snapshot.SnapshotId] = response;
+            lock (gate)
+            {
+                PruneCompletedLocked(now);
+                completedCaptures[principalSid + "|" + snapshot.SnapshotId] = response;
+                while (completedCaptures.Count > options.MaxSnapshots)
+                {
+                    var oldest = completedCaptures.OrderBy(pair => pair.Value.ExpiresAtUtc).First();
+                    completedCaptures.Remove(oldest.Key);
+                }
+            }
             idempotency.Bind(principalSid, IdempotencyScope, idempotencyKey, snapshot.SnapshotId);
             return response;
         }
@@ -151,6 +160,23 @@ public sealed class SafetySnapshotService(
             snapshot.CapturedAtUtc,
             snapshot.ExpiresAtUtc,
             detail);
+
+    private bool TryGetCompleted(string principalSid, string snapshotId, out SafetySnapshotDto response)
+    {
+        lock (gate)
+        {
+            PruneCompletedLocked(clock.GetUtcNow());
+            return completedCaptures.TryGetValue(principalSid + "|" + snapshotId, out response!);
+        }
+    }
+
+    private void PruneCompletedLocked(DateTimeOffset now)
+    {
+        foreach (var pair in completedCaptures.ToArray())
+        {
+            if (now >= pair.Value.ExpiresAtUtc) completedCaptures.Remove(pair.Key);
+        }
+    }
 
     private static SafetySnapshotEvidenceStateDto Map(SafetySnapshotEvidenceState state) => state switch
     {

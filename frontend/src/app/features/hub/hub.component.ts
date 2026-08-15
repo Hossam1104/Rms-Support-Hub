@@ -95,6 +95,7 @@ import { APP_ASSETS, themedAsset } from '../../core/config/app-assets';
                   [title]="tool.title"
                   [description]="tool.description"
                   [route]="tool.route"
+                  [externalRoute]="tool.externalRoute || null"
                   [icon]="tool.icon"
                   [accent]="tool.accent"
                   [status]="tool.status"

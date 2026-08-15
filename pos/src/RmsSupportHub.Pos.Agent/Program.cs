@@ -65,6 +65,7 @@ builder.Services.AddSingleton(securityOptions);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(RuntimeRetentionPolicy.Default);
 builder.Services.AddSingleton<AgentScopedIdempotencyStore>();
+builder.Services.AddSingleton<IPrivilegedMutationLease, MachineWidePrivilegedMutationLease>();
 
 // The real process always uses Negotiate. IntegrationTest is a dedicated host environment used by
 // the test project to substitute a fake scheme because TestServer cannot perform SSPI handshakes;
@@ -230,7 +231,14 @@ builder.Services.AddSingleton<RmsDatabaseOperationRuntime>();
 // from the backup client so no browser-selected URL, header, or route can reach this boundary.
 builder.Services.AddSingleton(new MainServerProfileOptions());
 builder.Services.AddSingleton<IMainServerProfileCatalog, MainServerProfileCatalog>();
-builder.Services.AddSingleton<MainServerHttpClient>(_ => new MainServerHttpClient(new HttpClient()));
+builder.Services.AddSingleton<MainServerHttpClient>(_ =>
+{
+    var client = new HttpClient(MainServerHttpMessageHandlerFactory.Create())
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };
+    return new MainServerHttpClient(client);
+});
 builder.Services.AddSingleton<IMainServerReadOnlyClient>(services => services.GetRequiredService<MainServerHttpClient>());
 builder.Services.AddSingleton<MainServerService>();
 
@@ -247,7 +255,11 @@ builder.Services.AddSingleton<DiagnosticConsoleRuntime>();
 
 // Safety snapshots are fixed-root, atomic, integrity-protected Agent records. Their evidence
 // source is composed from the existing safe Slice A diagnostics projection.
-builder.Services.AddSingleton(new SafetySnapshotOptions());
+builder.Services.AddSingleton(new SafetySnapshotOptions
+{
+    EnvironmentName = builder.Environment.EnvironmentName,
+    ProfileId = builder.Configuration["PosAgent:ProfileId"]
+});
 builder.Services.AddSingleton<ISafetySnapshotStore, FileSafetySnapshotStore>();
 builder.Services.AddSingleton<ISafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
 builder.Services.AddSingleton<SafetySnapshotService>();

@@ -35,6 +35,9 @@ public sealed record DiagnosticConsolePreviewDto(
     string ConfirmationPhrase,
     DateTimeOffset ExpiresAtUtc);
 
+/// <summary>Typed preview input. Retained preview state is never allocated by a GET request.</summary>
+public sealed record DiagnosticConsolePreviewRequestDto(string IdempotencyKey);
+
 /// <summary>Typed start input. It contains no command, executable, path, shell, or arguments.</summary>
 public sealed record DiagnosticConsoleStartRequestDto(
     string PreviewId,

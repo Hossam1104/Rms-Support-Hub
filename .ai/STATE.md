@@ -1,18 +1,22 @@
 # Current Project State
 
 - **Updated:** 2026-08-15
-- **Repository baseline:** PR #11 merged as `2bc8dfc`; POS Slice A PR #12
+- **Repository baseline:** PR #13 merged as `8192141`; POS Slice A PR #12
   merged as `fb71d01`.
-- **Slice B delivery:** The task-scoped Slice B work is delivered from feature
-  branch `agent/pos-slice-b` through a normal PR against `main`. `TASK.md` is
-  now the independent Claude Opus 5 security-review handoff.
-- **Current outcome:** POS Slice A and Slice B implementation and validation are
-  complete. No RMS executable, installer/uninstaller, repair, package
-  activation, database mutation, Production action, or Main Server mutation
-  was run.
-- **Next executable task:** after Slice B delivery is synchronized, perform the
-  independent security review specified in `TASK.md`. Slice C is out of scope
-  for the delivery session.
+- **Slice B remediation:** The task-scoped H-1/H-2/H-3 and adjacent M/L
+  remediation is implemented on branch
+  `agent/pos-slice-b-security-remediation`, pending its delivery PR. `TASK.md`
+  is the bounded independent Claude Opus 5 security-review handoff.
+- **Current outcome:** Fixed service-owned roots, bounded fail-closed
+  redaction, a machine-wide privileged mutation lease, typed POST previews,
+  bounded Main Server transport, exact endpoint binding, configured snapshot
+  identity, and the canonical secure POS entry are implemented. No RMS
+  executable, installer/uninstaller, repair, package activation, registry or
+  RMS folder mutation, database mutation, Production action, or Main Server
+  mutation was run.
+- **Next executable task:** deliver/synchronize this remediation, then perform
+  the independent security review specified in `TASK.md`. Slice C requirements
+  are durable in `docs/POS_SLICE_C_REQUIREMENTS.md` and are not implemented.
 
 ## Durable Slice A facts
 
@@ -39,9 +43,15 @@
   Health/Timeline/Bundle actions, bounded evidence panels, preserved PR #10
   controls, and typed Slice B boundary panels. It uses design tokens and responsive
   desktop/tablet/narrow breakpoints.
-- Main Server integration remains GET-only and read-only. Secret-bearing
-  inventory DTOs and the discovered Branch/POS PUT contracts are not proxied
-  or invoked.
+- Main Server state reads remain GET-only and read-only; retained Agent previews
+  are typed POST operations. Secret-bearing inventory DTOs and the discovered
+  Branch/POS PUT contracts are not proxied or invoked.
+- The Hub POS card hands the browser to the exact canonical Testing route
+  `https://support-hub.integration.test:4443/tools/pos-maintenance`; the route
+  guard rejects wrong-origin direct loads while preserving the direct
+  browser-to-Agent boundary.
+- Fixed RMS source roots and the sanitized uninstall registry allow-list are
+  recorded in `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`.
 - Slice B boundary details and route inventory are recorded in
   `docs/POS_SLICE_B_BOUNDARY.md`.
 
@@ -49,21 +59,19 @@
 
 - POS Release build with `PosAgentSecurity__SupportHubOrigin` set and
   `-warnaserror` passed.
-- Full POS solution tests passed: Domain 9, Application 76, Infrastructure 87,
-  Agent integration 152 (324 total).
+- Full POS solution tests passed: Domain 9, Application 76, Infrastructure 90,
+  Agent integration 152 (327 total).
 - POS Release solution build passed with warnings treated as errors: 0
   warnings, 0 errors.
 - Frontend tests passed: 56 files, 345 tests. Production frontend build passed.
 - POS OpenAPI contract tests passed (9 checks); client generation passed twice
   with a byte-stable second pass. `git diff --check` passed.
-- Local runtime verification responded successfully at the frontend `4200`
-  root and backend `5200/api/modules/health`; those project-owned development
-  processes were left running.
-- The memory checker reports the pre-existing `AGENTS.md` 146-line budget
-  violation; all other checked memory files are within budget. The repository
-  `scripts/build.ps1` gate remains red on two unrelated legacy backend tests
-  expecting 404 instead of the current 405 (190/192 passed). No
-  generated/runtime paths are part of the source change.
+- The memory checker reports only the pre-existing root `AGENTS.md` 146-line
+  budget violation; all other checked memory files are within budget. The
+  prescribed repository `scripts/build.ps1` gate was blocked by a stale
+  project-owned `RmsSupportHub.Api` process locking Debug backend assemblies;
+  the POS solution checks and frontend checks passed independently. Final
+  runtime probes are recorded after delivery synchronization.
 
 ## Existing Main Server and runtime gates
 

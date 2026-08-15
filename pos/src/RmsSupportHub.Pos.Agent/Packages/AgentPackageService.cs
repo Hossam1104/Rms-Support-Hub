@@ -4,6 +4,7 @@ using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Contracts.V1.Packages;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
+using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Packages;
@@ -185,10 +186,12 @@ public sealed class AgentPackageService(
     AgentPackagePreviewStore previews,
     AgentPackageOperationStore operations,
     AgentScopedIdempotencyStore idempotency,
+    IPrivilegedMutationLease privilegedLease,
     IncidentTimelineService timeline,
     TimeProvider clock)
 {
     private const string IdempotencyScope = "agent-package.operation";
+    private const string PreviewIdempotencyScope = "agent-package.preview";
 
     public async Task<AgentPackageStatusDto> GetStatusAsync(CancellationToken cancellationToken = default)
     {
@@ -211,55 +214,74 @@ public sealed class AgentPackageService(
     public async Task<AgentPackagePreviewDto> PreviewAsync(
         string principalSid,
         AgentPackageOperationKind operation,
+        string idempotencyKey,
         CancellationToken cancellationToken = default)
     {
-        var now = clock.GetUtcNow();
-        var expires = now.AddMinutes(5);
-        var manifest = operation == AgentPackageOperationKind.Uninstall
-            ? await catalog.GetInstalledAsync(cancellationToken).ConfigureAwait(false)
-            : await catalog.GetAvailableAsync(operation, cancellationToken).ConfigureAwait(false);
-        if (manifest is null)
+        if (!AgentScopedIdempotencyStore.IsValidKey(idempotencyKey))
         {
-            return new(
-                string.Empty,
-                Map(operation),
-                false,
-                AgentPackageVerificationStateDto.Unknown,
-                null,
-                EffectsFor(operation),
-                ["server_owned_package_unavailable"],
-                ConfirmationFor(operation),
-                expires);
+            throw new AgentPackageRejectedException("package_preview_idempotency_invalid");
         }
 
-        var validation = await verifier.VerifyAsync(manifest, cancellationToken).ConfigureAwait(false);
-        if (validation.State != AgentPackageVerificationState.Verified)
+        var reservation = idempotency.TryReserve(principalSid, PreviewIdempotencyScope, idempotencyKey, operation.ToString());
+        if (reservation.State == AgentIdempotencyReservationState.Completed
+            && reservation.OperationId is not null
+            && previews.TryGet(principalSid, reservation.OperationId, out var existing)
+            && existing is not null)
         {
-            return new(
-                string.Empty,
-                Map(operation),
-                false,
-                Map(validation.State),
-                ToDto(manifest),
-                EffectsFor(operation),
-                validation.Blockers.Count == 0 ? ["package_verification_failed"] : validation.Blockers,
-                ConfirmationFor(operation),
-                expires);
+            return ToPreview(reservation.OperationId, existing);
+        }
+        if (reservation.State != AgentIdempotencyReservationState.Reserved)
+        {
+            throw new AgentPackageRejectedException(reservation.State switch
+            {
+                AgentIdempotencyReservationState.InProgress => "package_preview_in_progress",
+                AgentIdempotencyReservationState.Capacity => "package_preview_capacity",
+                _ => "package_preview_idempotency_conflict"
+            });
         }
 
-        var confirmation = ConfirmationFor(operation);
-        var previewId = previews.Add(principalSid, operation, manifest, confirmation, expires);
-        return new(
-            previewId ?? string.Empty,
-            Map(operation),
-            previewId is not null,
-            Map(validation.State),
-            ToDto(manifest),
-            EffectsFor(operation),
-            previewId is null ? ["package_preview_capacity"] : [],
-            confirmation,
-            expires);
+        try
+        {
+            var now = clock.GetUtcNow();
+            var expires = now.AddMinutes(5);
+            var manifest = operation == AgentPackageOperationKind.Uninstall
+                ? await catalog.GetInstalledAsync(cancellationToken).ConfigureAwait(false)
+                : await catalog.GetAvailableAsync(operation, cancellationToken).ConfigureAwait(false);
+            if (manifest is null)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+                return new(string.Empty, Map(operation), false, AgentPackageVerificationStateDto.Unknown, null, EffectsFor(operation), ["server_owned_package_unavailable"], ConfirmationFor(operation), expires);
+            }
+
+            var validation = operation == AgentPackageOperationKind.Uninstall
+                ? await verifier.VerifyInstalledAsync(manifest, cancellationToken).ConfigureAwait(false)
+                : await verifier.VerifyAsync(manifest, cancellationToken).ConfigureAwait(false);
+            if (validation.State != AgentPackageVerificationState.Verified)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+                return new(string.Empty, Map(operation), false, Map(validation.State), ToDto(manifest), EffectsFor(operation), validation.Blockers.Count == 0 ? ["package_verification_failed"] : validation.Blockers, ConfirmationFor(operation), expires);
+            }
+
+            var confirmation = ConfirmationFor(operation);
+            var previewId = previews.Add(principalSid, operation, manifest, confirmation, expires);
+            if (previewId is null)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+                return new(string.Empty, Map(operation), false, Map(validation.State), ToDto(manifest), EffectsFor(operation), ["package_preview_capacity"], confirmation, expires);
+            }
+
+            idempotency.Bind(principalSid, PreviewIdempotencyScope, idempotencyKey, previewId);
+            return new(previewId, Map(operation), true, Map(validation.State), ToDto(manifest), EffectsFor(operation), [], confirmation, expires);
+        }
+        catch
+        {
+            idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+            throw;
+        }
     }
+
+    private static AgentPackagePreviewDto ToPreview(string previewId, AgentPackagePreviewEntry entry) =>
+        new(previewId, Map(entry.Operation), true, AgentPackageVerificationStateDto.Verified, ToDto(entry.Manifest), EffectsFor(entry.Operation), [], entry.Confirmation, entry.ExpiresAtUtc);
 
     public async Task<AgentPackageOperationDto> StartAsync(
         string principalSid,
@@ -368,42 +390,61 @@ public sealed class AgentPackageService(
         });
 
         AgentPackageExecutionResult result;
+        IDisposable? privilegedHandle = null;
         try
         {
-            result = await lifecycle.ExecuteAsync(new(
-                preview.Operation,
-                preview.Manifest,
-                snapshotId,
+            try
+            {
+                var leaseAttempt = privilegedLease.TryAcquire("agent-package." + preview.Operation, principalSid);
+                if (leaseAttempt.State != PrivilegedMutationLeaseState.Acquired || leaseAttempt.Handle is null)
+                {
+                    result = leaseAttempt.State == PrivilegedMutationLeaseState.Busy
+                        ? new(AgentPackageOperationState.Busy, false, false, false, leaseAttempt.Detail)
+                        : new(AgentPackageOperationState.Failed, false, false, true, leaseAttempt.Detail);
+                }
+                else
+                {
+                    privilegedHandle = leaseAttempt.Handle;
+                    result = await lifecycle.ExecuteAsync(new(
+                        preview.Operation,
+                        preview.Manifest,
+                        snapshotId,
+                        principalSid,
+                        correlationId), CancellationToken.None).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                result = new(AgentPackageOperationState.OutcomeUnknown, false, false, true, "The package lifecycle outcome could not be determined safely.");
+            }
+
+            var completed = clock.GetUtcNow();
+            var outcome = Map(result.State);
+            operations.Update(principalSid, operationId, current => current with
+            {
+                State = outcome,
+                Outcome = outcome,
+                ProgressPercent = 100,
+                Stage = "completed",
+                Detail = SafeDetail(result.Detail),
+                RollbackAttempted = result.RollbackAttempted,
+                RollbackSucceeded = result.RollbackSucceeded,
+                RecoveryRequired = result.RecoveryRequired,
+                CompletedAtUtc = completed
+            });
+
+            timeline.Record(
                 principalSid,
-                correlationId), CancellationToken.None).ConfigureAwait(false);
+                "AgentPackage",
+                result.RecoveryRequired || !result.RollbackSucceeded && result.RollbackAttempted ? FailureSeverity.ActionRequired : FailureSeverity.Informational,
+                SafeDetail(result.Detail),
+                operationId: AgentPackageOperation.OperationId,
+                correlationId: correlationId);
         }
-        catch
+        finally
         {
-            result = new(AgentPackageOperationState.OutcomeUnknown, false, false, true, "The package lifecycle outcome could not be determined safely.");
+            privilegedHandle?.Dispose();
         }
-
-        var completed = clock.GetUtcNow();
-        var outcome = Map(result.State);
-        operations.Update(principalSid, operationId, current => current with
-        {
-            State = outcome,
-            Outcome = outcome,
-            ProgressPercent = 100,
-            Stage = "completed",
-            Detail = SafeDetail(result.Detail),
-            RollbackAttempted = result.RollbackAttempted,
-            RollbackSucceeded = result.RollbackSucceeded,
-            RecoveryRequired = result.RecoveryRequired,
-            CompletedAtUtc = completed
-        });
-
-        timeline.Record(
-            principalSid,
-            "AgentPackage",
-            result.RecoveryRequired || !result.RollbackSucceeded && result.RollbackAttempted ? FailureSeverity.ActionRequired : FailureSeverity.Informational,
-            SafeDetail(result.Detail),
-            operationId: AgentPackageOperation.OperationId,
-            correlationId: correlationId);
     }
 
     private static AgentPackageManifestDto ToDto(AgentPackageManifest manifest) =>

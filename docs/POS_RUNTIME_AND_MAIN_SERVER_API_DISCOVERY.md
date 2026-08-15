@@ -56,6 +56,71 @@ bounded, control-character rejected, and treated as optional evidence. It is
 the primary product release. Component builds and executable versions remain
 separate drift evidence.
 
+## Authoritative RMS maintenance source catalog — 2026-08-15
+
+The owner-confirmed filesystem map below is the server-owned source catalog
+for future typed Maintenance/Health evidence. The Agent must resolve every
+entry from fixed configuration; Angular never supplies a user, root, path,
+filename, age threshold, or deletion request. This session performed no RMS
+folder mutation and did not delete or copy any item.
+
+| Source | Meaning and permitted future evidence | Safety boundary |
+| --- | --- | --- |
+| `C:\ProgramData\Branch` | Branch-service update cache: bounded update history/status, pending or stale package indicators, disk usage, and update diagnostics | Fixed canonical root, bounded file/age/byte/record counts; no deletion in Slice B |
+| `C:\ProgramData\Cashier` | Cashier-service update cache received from Branch: the same bounded update evidence | Fixed canonical root and bounded reads; no deletion in Slice B |
+| `C:\ProgramData\DBS\POS` | POS insurance invoice attachments referenced by invoice-header attachment identifiers | Sensitive business data; metadata only (exists, count, bytes, age distribution, oldest item, capacity pressure); never contents, raw filenames, bundles, age-only orphan deletion, or default cleanup |
+| `C:\ProgramData\Logs\Branch\BranchLogs` | Primary native Branch RMS logs | Fixed root, rotation-aware bounded TXT/log reads, reparse rejection, bounded files/age/bytes/lines/records, then the fail-closed redaction pipeline |
+| `C:\ProgramData\Logs\Cashier` | Primary native Cashier RMS logs for Cashier and Service Manager evidence | Same fixed-root, rotation, reparse, bound, and redaction controls as Branch |
+| `C:\ProgramData\RMS_Plus` | RMS setup/install evidence, `RMSInfo.json`, `ReleaseNumber.txt`, local payload, installer/uninstaller evidence | Read-only evidence in this session; no setup executable, installer, uninstaller, or payload mutation |
+| `C:\ProgramData\RMS_Plus_Downloads` | POS master-data download backlog, activity, size/capacity, and stale/failed evidence | Ownership and business-state rules are required before any cleanup |
+| `C:\ProgramData\RMS_Plus_ReleaseRepo` | Latest releases downloaded by the POS auto-update cycle before the operator installs them into `RMS_Plus` | Presence is not trust; future use requires owner, exact manifest, checksum, signature/trust, compatibility, size, path, and reparse validation; no copy/install here |
+| `C:\Users\<authenticated-user>\AppData\Local\DBS_RMS+_POS` | Per-user POS theme and notification settings | Resolve the authenticated Windows principal server-side; never enumerate profiles or accept Angular user/path input |
+
+The known update workflow is `ReleaseRepo` download → operator chooses
+install in POS → files are copied into `RMS_Plus` → setup runs from
+`RMS_Plus`. It is documented as workflow evidence only; no trust or execution
+is inferred from folder presence.
+
+Native RMS logs are the primary Failure Analyzer sources. SCM events and
+.NET Runtime/Application Error/WER remain bounded corroborating sources. The
+fixed Diagnostic Console is a fallback only when those native sources do not
+provide sufficient evidence; it never becomes a generic process runner.
+
+## Read-only RMS registry discovery
+
+A representative-machine reconnaissance read inspected the uninstall
+registration in both `HKLM` 64-bit and 32-bit views and `HKCU` 64-bit and
+32-bit views. No registry value was changed and no uninstall/modify command
+was executed. The only RMS-owned Add/Remove Programs candidate was found at:
+
+`HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\RMS_a270dcffb6e64377948841a6607ff0d2`
+
+The sanitized allow-list for future server-side typed evidence is limited
+to the following values:
+
+- `DisplayName = RMS+ POS v5.7.4`
+- `Publisher = DBS`
+- `DisplayVersion = 5.7.4`
+- `InstallLocation = C:\ProgramData\RMS_Plus`
+- `InstallDate = 20260812`
+- presence of `EstimatedSize`, `WindowsInstaller`, `NoModify`, and `NoRepair`
+- presence-only flags for `ModifyPath`, `DisplayIcon`, `UninstallString`, and
+  `QuietUninstallString`; their raw values/arguments are never exposed or
+  executed
+
+The displayed Visual Studio and Postman entries in other views were not
+RMS-owned and are excluded. No separate `HKLM\Software\DBS`, `RMS`, or
+`RMS+` maintenance root was found in the inspected views. Future registry
+reads must use this exact allow-list, suppress credentials/tokens/private
+keys/connection strings, and retain uninstall registration only as evidence
+for a server-owned verified package manifest.
+
+The installed `RMSInfo.json:UninstallGUID` remains the primary installation
+identifier. The registry uninstall key is corroborating product/publisher
+and install-location evidence, not an authorization to run an untrusted
+uninstaller.
+
+
 ## Executable and SCM map
 
 | Product label | Actual SCM name | Image and runtime facts | Observed state |
@@ -64,9 +129,8 @@ separate drift evidence.
 | Cashier Service | `RMS.CashierService` | Exact Cashier apphost; no arguments; Auto; LocalSystem; no declared dependency or recovery action | Running, exit code 0 |
 | RMS Services Manager | `RMSServiceManager` | Exact Service Manager apphost; no arguments; Auto; LocalSystem | Running, exit code 0 |
 
-The current repository catalog incorrectly uses `RMSServicesManager`; the real
-SCM name is `RMSServiceManager`. The next implementation must correct the
-server-owned catalog and retain a friendly operator label. The Testing-only
+The server-owned catalog uses the real SCM name `RMSServiceManager` and keeps
+the friendly Service Manager display label separate. The Testing-only
 `RmsSupportHub.Pos.Int13.TestService` is not an RMS business service and belongs
 only in Advanced Diagnostics when the Agent is in Testing.
 

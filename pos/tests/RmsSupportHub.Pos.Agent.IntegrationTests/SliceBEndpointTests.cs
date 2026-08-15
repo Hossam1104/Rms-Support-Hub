@@ -71,10 +71,10 @@ public sealed class SliceBEndpointTests : IClassFixture<AgentWebApplicationFacto
     {
         using var client = factory.CreateAdminClient();
 
-        var console = await client.GetFromJsonAsync<JsonElement>("/api/v1/diagnostic-console/preview/branchServerApi");
-        var package = await client.GetFromJsonAsync<JsonElement>("/api/v1/packages/preview/upgrade");
-        var repair = await client.GetFromJsonAsync<JsonElement>("/api/v1/repair/preview/repair");
-        var guided = await client.GetFromJsonAsync<JsonElement>("/api/v1/repair/guided/preview");
+        var console = await PostPreviewAsync(client, "/api/v1/diagnostic-console/preview/branchServerApi", "console-preview-00000000000000000000000000000001");
+        var package = await PostPreviewAsync(client, "/api/v1/packages/preview/upgrade", "package-preview-00000000000000000000000000000001");
+        var repair = await PostPreviewAsync(client, "/api/v1/repair/preview/repair", "repair-preview-00000000000000000000000000000001");
+        var guided = await PostPreviewAsync(client, "/api/v1/repair/guided/preview", "guided-preview-00000000000000000000000000000001");
 
         Assert.False(console.GetProperty("ready").GetBoolean());
         Assert.Equal("notAttempted", console.GetProperty("state").GetString());
@@ -96,5 +96,12 @@ public sealed class SliceBEndpointTests : IClassFixture<AgentWebApplicationFacto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
         return body.RootElement.GetProperty("token").GetString()!;
+    }
+
+    private static async Task<JsonElement> PostPreviewAsync(HttpClient client, string path, string idempotencyKey)
+    {
+        using var response = await client.PostAsJsonAsync(path, new { idempotencyKey });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).Clone();
     }
 }

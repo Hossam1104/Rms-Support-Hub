@@ -8,6 +8,7 @@ using RmsSupportHub.Pos.Contracts.V1.Console;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Diagnostics;
 
 namespace RmsSupportHub.Pos.Agent.Console;
@@ -47,6 +48,24 @@ public sealed class DiagnosticConsolePreviewStore(
         {
             PruneLocked(clock.GetUtcNow());
             if (entries.Remove(previewId, out var found)
+                && string.Equals(found.PrincipalSid, principalSid, StringComparison.Ordinal)
+                && clock.GetUtcNow() < found.ExpiresAtUtc)
+            {
+                entry = new(found.PrincipalSid, found.Target, found.Spec, found.Confirmation, found.ExpiresAtUtc);
+                return true;
+            }
+
+            entry = null;
+            return false;
+        }
+    }
+
+    public bool TryGet(string principalSid, string previewId, out DiagnosticConsolePreviewEntry? entry)
+    {
+        lock (gate)
+        {
+            PruneLocked(clock.GetUtcNow());
+            if (entries.TryGetValue(previewId, out var found)
                 && string.Equals(found.PrincipalSid, principalSid, StringComparison.Ordinal)
                 && clock.GetUtcNow() < found.ExpiresAtUtc)
             {
@@ -185,68 +204,122 @@ public sealed class DiagnosticConsoleRuntime(
     TimeProvider clock)
 {
     private const string IdempotencyScope = "diagnostic-console.run";
+    private const string PreviewIdempotencyScope = "diagnostic-console.preview";
 
     public async Task<DiagnosticConsolePreviewDto> PreviewAsync(
         string principalSid,
         DiagnosticConsoleTarget target,
+        string idempotencyKey,
         CancellationToken cancellationToken = default)
     {
-        var now = clock.GetUtcNow();
-        var expires = now.AddMinutes(5);
-        var displayName = target.ToString();
-        if (manifest.TryGet(target, out var definition)) displayName = definition.DisplayName;
-
-        var installation = await discovery.DiscoverAsync(cancellationToken).ConfigureAwait(false);
-        if (!policy.TryCreateLaunchSpec(target, installation, out definition!, out var spec, out var failureCode)
-            || spec is null)
+        if (!AgentScopedIdempotencyStore.IsValidKey(idempotencyKey))
         {
-            return new(
-                string.Empty,
-                Map(target),
-                false,
-                displayName,
-                DiagnosticConsoleRunStateDto.NotAttempted,
-                definition?.MaxWallTime.TotalSeconds is { } seconds ? (int)seconds : 30,
-                definition?.MaxOutputBytes ?? 64 * 1024,
-                definition?.MaxOutputLines ?? 512,
-                ["fixed Agent manifest", "fixed RMS installation discovery", "bounded stdout and stderr", "separate redacted artifacts"],
-                [failureCode ?? "console_precondition_unknown"],
-                ConfirmationFor(displayName),
-                expires);
+            throw new DiagnosticConsoleRejectedException("diagnostic_preview_idempotency_invalid");
         }
 
-        var confirmation = ConfirmationFor(definition.DisplayName);
-        var previewId = previews.Add(principalSid, target, spec, confirmation, expires);
-        if (previewId is null)
+        var reservation = idempotency.TryReserve(principalSid, PreviewIdempotencyScope, idempotencyKey, target.ToString());
+        if (reservation.State == AgentIdempotencyReservationState.Completed
+            && reservation.OperationId is not null
+            && previews.TryGet(principalSid, reservation.OperationId, out var existing)
+            && existing is not null)
         {
+            return ToPreview(reservation.OperationId, existing);
+        }
+        if (reservation.State != AgentIdempotencyReservationState.Reserved)
+        {
+            throw new DiagnosticConsoleRejectedException(reservation.State switch
+            {
+                AgentIdempotencyReservationState.InProgress => "diagnostic_preview_in_progress",
+                AgentIdempotencyReservationState.Capacity => "diagnostic_preview_capacity",
+                _ => "diagnostic_preview_idempotency_conflict"
+            });
+        }
+
+        try
+        {
+            var now = clock.GetUtcNow();
+            var expires = now.AddMinutes(5);
+            var displayName = target.ToString();
+            if (manifest.TryGet(target, out var definition)) displayName = definition.DisplayName;
+
+            var installation = await discovery.DiscoverAsync(cancellationToken).ConfigureAwait(false);
+            if (!policy.TryCreateLaunchSpec(target, installation, out definition!, out var spec, out var failureCode)
+                || spec is null)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+                return new(
+                    string.Empty,
+                    Map(target),
+                    false,
+                    displayName,
+                    DiagnosticConsoleRunStateDto.NotAttempted,
+                    definition?.MaxWallTime.TotalSeconds is { } seconds ? (int)seconds : 30,
+                    definition?.MaxOutputBytes ?? 64 * 1024,
+                    definition?.MaxOutputLines ?? 512,
+                    ["fixed Agent manifest", "fixed RMS installation discovery", "bounded stdout and stderr", "separate redacted artifacts"],
+                    [failureCode ?? "console_precondition_unknown"],
+                    ConfirmationFor(displayName),
+                    expires);
+            }
+
+            var confirmation = ConfirmationFor(definition.DisplayName);
+            var previewId = previews.Add(principalSid, target, spec, confirmation, expires);
+            if (previewId is null)
+            {
+                idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+                return new(
+                    string.Empty,
+                    Map(target),
+                    false,
+                    definition.DisplayName,
+                    DiagnosticConsoleRunStateDto.NotAttempted,
+                    (int)definition.MaxWallTime.TotalSeconds,
+                    definition.MaxOutputBytes,
+                    definition.MaxOutputLines,
+                    [],
+                    ["console_preview_capacity"],
+                    confirmation,
+                    expires);
+            }
+
+            idempotency.Bind(principalSid, PreviewIdempotencyScope, idempotencyKey, previewId);
             return new(
-                string.Empty,
+                previewId,
                 Map(target),
-                false,
+                true,
                 definition.DisplayName,
                 DiagnosticConsoleRunStateDto.NotAttempted,
                 (int)definition.MaxWallTime.TotalSeconds,
                 definition.MaxOutputBytes,
                 definition.MaxOutputLines,
+                ["fixed Agent executable manifest", "fixed working directory", "fixed diagnostic arguments", "empty child environment", "bounded stdout and stderr", "redacted opaque artifacts"],
                 [],
-                ["console_preview_capacity"],
                 confirmation,
                 expires);
         }
+        catch
+        {
+            idempotency.Release(principalSid, PreviewIdempotencyScope, idempotencyKey);
+            throw;
+        }
+    }
 
+    private DiagnosticConsolePreviewDto ToPreview(string previewId, DiagnosticConsolePreviewEntry entry)
+    {
+        var definition = manifest.TryGet(entry.Target, out var found) ? found : null;
         return new(
             previewId,
-            Map(target),
+            Map(entry.Target),
             true,
-            definition.DisplayName,
+            definition?.DisplayName ?? entry.Target.ToString(),
             DiagnosticConsoleRunStateDto.NotAttempted,
-            (int)definition.MaxWallTime.TotalSeconds,
-            definition.MaxOutputBytes,
-            definition.MaxOutputLines,
+            definition is null ? 30 : (int)definition.MaxWallTime.TotalSeconds,
+            definition?.MaxOutputBytes ?? 64 * 1024,
+            definition?.MaxOutputLines ?? 512,
             ["fixed Agent executable manifest", "fixed working directory", "fixed diagnostic arguments", "empty child environment", "bounded stdout and stderr", "redacted opaque artifacts"],
             [],
-            confirmation,
-            expires);
+            entry.Confirmation,
+            entry.ExpiresAtUtc);
     }
 
     public async Task<DiagnosticConsoleRunDto> StartAsync(
@@ -359,8 +432,21 @@ public sealed class DiagnosticConsoleRuntime(
             processResult = new(DiagnosticConsoleProcessState.Unknown, null, string.Empty, string.Empty, 0, 0, 0, 0, false, false, "The diagnostic outcome could not be determined safely.");
         }
 
-        var stdout = redactor.Redact(Bounded(processResult.StandardOutput));
-        var stderr = redactor.Redact(Bounded(processResult.StandardError));
+        string stdout;
+        string stderr;
+        try
+        {
+            // The runner has already bounded the in-memory streams. No raw child output reaches
+            // an artifact, timeline, or response if the sanitizer itself fails.
+            stdout = redactor.Redact(Bounded(processResult.StandardOutput));
+            stderr = redactor.Redact(Bounded(processResult.StandardError));
+        }
+        catch
+        {
+            stdout = "[diagnostic output quarantined: redaction failed]";
+            stderr = "[diagnostic output quarantined: redaction failed]";
+            processResult = processResult with { OutputTruncated = true, Detail = "The diagnostic output was quarantined because it could not be redacted safely." };
+        }
         var stdoutArtifact = await WriteArtifactAsync(principalSid, "diagnostic-stdout.txt", stdout, cancellationToken).ConfigureAwait(false);
         var stderrArtifact = await WriteArtifactAsync(principalSid, "diagnostic-stderr.txt", stderr, cancellationToken).ConfigureAwait(false);
         var outcome = MapOutcome(processResult);
@@ -407,6 +493,10 @@ public sealed class DiagnosticConsoleRuntime(
         try
         {
             options.Validate();
+            // Redaction is complete before this call, and the output boundary is reconciled before
+            // any artifact file is opened. A hostile owner or reparse point therefore blocks the
+            // write instead of turning diagnostic output into an uncontrolled file primitive.
+            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.OutputRoot);
             await fileSystem.EnsureDirectoryAsync(options.OutputRoot, cancellationToken).ConfigureAwait(false);
             var path = Path.Combine(options.OutputRoot, Guid.NewGuid().ToString("N") + ".txt");
             await using (var stream = await fileSystem.CreateFileAsync(path, cancellationToken).ConfigureAwait(false))

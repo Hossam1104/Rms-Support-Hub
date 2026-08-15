@@ -21,6 +21,7 @@ public enum AgentPackageVerificationStateDto
 public enum AgentPackageOperationStateDto
 {
     NotAttempted,
+    Busy,
     Preview,
     Accepted,
     Staging,
@@ -76,6 +77,9 @@ public sealed record AgentPackagePreviewDto(
     IReadOnlyList<string> Blockers,
     string ConfirmationPhrase,
     DateTimeOffset ExpiresAtUtc);
+
+/// <summary>Typed preview input for a server-owned package operation.</summary>
+public sealed record AgentPackagePreviewRequestDto(string IdempotencyKey);
 
 public sealed record AgentPackageOperationRequestDto(
     string PreviewId,

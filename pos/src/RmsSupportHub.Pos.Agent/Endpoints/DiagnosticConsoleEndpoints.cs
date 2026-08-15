@@ -13,11 +13,12 @@ public static class DiagnosticConsoleEndpoints
 {
     public static void MapDiagnosticConsoleEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet(
+        app.MapPost(
                 "/api/v1/diagnostic-console/preview/{targetId}",
                 async (
                     HttpContext context,
                     string targetId,
+                    DiagnosticConsolePreviewRequestDto request,
                     DiagnosticConsoleRuntime runtime,
                     IAgentPrincipalSidResolver principalSidResolver,
                     CancellationToken cancellationToken) =>
@@ -32,7 +33,14 @@ public static class DiagnosticConsoleEndpoints
                         return AgentProblemDetails.CreateResult(context, StatusCodes.Status403Forbidden, "The authenticated Windows SID could not be resolved.", AgentProblemCodes.WindowsSidUnavailable);
                     }
 
-                    return Results.Ok(await runtime.PreviewAsync(principalSid, target, cancellationToken).ConfigureAwait(false));
+                    try
+                    {
+                        return Results.Ok(await runtime.PreviewAsync(principalSid, target, request.IdempotencyKey, cancellationToken).ConfigureAwait(false));
+                    }
+                    catch (DiagnosticConsoleRejectedException exception)
+                    {
+                        return AgentProblemDetails.CreateResult(context, StatusCodes.Status400BadRequest, "The diagnostic preview was rejected by the Agent.", exception.Message);
+                    }
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewDiagnosticConsoleRun")
@@ -43,6 +51,7 @@ public static class DiagnosticConsoleEndpoints
                 "logical target identifier; executable name, arguments, working directory, child " +
                 "environment, timeout, and output bounds are resolved by the Agent and never accepted " +
                 "from the request.")
+            .Accepts<DiagnosticConsolePreviewRequestDto>("application/json")
             .Produces<DiagnosticConsolePreviewDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)

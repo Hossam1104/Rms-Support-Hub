@@ -253,6 +253,10 @@ public sealed class DownloaderMaintenanceEndpointTests : IClassFixture<AgentWebA
             release.TrySetResult(new(DownloaderTriggerState.Accepted));
             using var firstResponse = await firstResponseTask;
             Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+            var firstBody = await ReadJsonAsync(firstResponse);
+            var firstOperationId = firstBody.GetProperty("operationId").GetString()!;
+            var firstCompleted = await WaitForFinalAsync(client, $"/api/v1/downloads/operations/{firstOperationId}");
+            Assert.Equal("completed", firstCompleted.GetProperty("outcome").GetString());
         }
         finally
         {

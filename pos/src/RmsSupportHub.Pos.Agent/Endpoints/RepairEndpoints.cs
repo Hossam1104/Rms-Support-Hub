@@ -13,28 +13,30 @@ public static class RepairEndpoints
 {
     public static void MapRepairEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet(
+        app.MapPost(
                 "/api/v1/repair/preview/{operationId}",
-                (HttpContext context, string operationId) =>
-                    PreviewAsync(context, operationId, null))
+                (HttpContext context, string operationId, RepairPreviewRequestDto request) =>
+                    PreviewAsync(context, operationId, null, request.IdempotencyKey))
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewRepairWithoutSnapshot")
             .WithTags("Repair")
             .WithSummary("Preview a typed repair operation")
             .WithDescription("Returns a blocked preview until a fresh opaque safety snapshot identifier is supplied. Health recommendations never trigger repair automatically.")
+            .Accepts<RepairPreviewRequestDto>("application/json")
             .Produces<RepairPreviewDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
-        app.MapGet(
+        app.MapPost(
                 "/api/v1/repair/preview/{operationId}/{snapshotId}",
-                (HttpContext context, string operationId, string snapshotId) =>
-                    PreviewAsync(context, operationId, snapshotId))
+                (HttpContext context, string operationId, string snapshotId, RepairPreviewRequestDto request) =>
+                    PreviewAsync(context, operationId, snapshotId, request.IdempotencyKey))
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewRepairWithSnapshot")
             .WithTags("Repair")
             .WithSummary("Preview repair after selecting an opaque safety snapshot")
             .WithDescription("Binds the typed repair preview to the authenticated principal and the fresh snapshot identifier; package identity, signature, checksum, capacity, and compatibility are verified server-side.")
+            .Accepts<RepairPreviewRequestDto>("application/json")
             .Produces<RepairPreviewDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
@@ -117,27 +119,29 @@ public static class RepairEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
-        app.MapGet(
+        app.MapPost(
                 "/api/v1/repair/guided/preview",
-                (HttpContext context, RepairService service, IAgentPrincipalSidResolver principalSidResolver, CancellationToken cancellationToken) =>
-                    BeginGuidedAsync(context, null, service, principalSidResolver, cancellationToken))
+                (HttpContext context, GuidedRepairPreviewRequestDto request, RepairService service, IAgentPrincipalSidResolver principalSidResolver, CancellationToken cancellationToken) =>
+                    BeginGuidedAsync(context, null, request.IdempotencyKey, service, principalSidResolver, cancellationToken))
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewGuidedRepair")
             .WithTags("Repair")
             .WithSummary("Begin a blocked or ready Guided Repair workflow")
             .WithDescription("Creates a principal-scoped fixed checkpoint sequence. It never enables repair from a health recommendation and requires an opaque safety snapshot before advancing.")
+            .Accepts<GuidedRepairPreviewRequestDto>("application/json")
             .Produces<GuidedRepairDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
-        app.MapGet(
+        app.MapPost(
                 "/api/v1/repair/guided/preview/{snapshotId}",
-                (HttpContext context, string snapshotId, RepairService service, IAgentPrincipalSidResolver principalSidResolver, CancellationToken cancellationToken) =>
-                    BeginGuidedAsync(context, snapshotId, service, principalSidResolver, cancellationToken))
+                (HttpContext context, string snapshotId, GuidedRepairPreviewRequestDto request, RepairService service, IAgentPrincipalSidResolver principalSidResolver, CancellationToken cancellationToken) =>
+                    BeginGuidedAsync(context, snapshotId, request.IdempotencyKey, service, principalSidResolver, cancellationToken))
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewGuidedRepairWithSnapshot")
             .WithTags("Repair")
             .WithSummary("Begin Guided Repair with an opaque safety snapshot")
             .WithDescription("Binds the fixed checkpoint sequence to the authenticated principal and fresh opaque snapshot identifier.")
+            .Accepts<GuidedRepairPreviewRequestDto>("application/json")
             .Produces<GuidedRepairDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
 
@@ -212,7 +216,7 @@ public static class RepairEndpoints
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
     }
 
-    private static async Task<IResult> PreviewAsync(HttpContext context, string operationId, string? snapshotId)
+    private static async Task<IResult> PreviewAsync(HttpContext context, string operationId, string? snapshotId, string idempotencyKey)
     {
         if (!TryMapOperation(operationId, out var operation))
         {
@@ -226,17 +230,31 @@ public static class RepairEndpoints
             return AgentProblemDetails.CreateResult(context, StatusCodes.Status403Forbidden, "The authenticated Windows SID could not be resolved.", AgentProblemCodes.WindowsSidUnavailable);
         }
 
-        return Results.Ok(await service.PreviewAsync(principalSid, operation, snapshotId, context.RequestAborted).ConfigureAwait(false));
+        try
+        {
+            return Results.Ok(await service.PreviewAsync(principalSid, operation, snapshotId, idempotencyKey, context.RequestAborted).ConfigureAwait(false));
+        }
+        catch (RepairRejectedException exception)
+        {
+            return AgentProblemDetails.CreateResult(context, StatusCodes.Status400BadRequest, "The repair preview was rejected by the Agent.", exception.Message);
+        }
     }
 
-    private static async Task<IResult> BeginGuidedAsync(HttpContext context, string? snapshotId, RepairService service, IAgentPrincipalSidResolver principalSidResolver, CancellationToken cancellationToken)
+    private static async Task<IResult> BeginGuidedAsync(HttpContext context, string? snapshotId, string idempotencyKey, RepairService service, IAgentPrincipalSidResolver principalSidResolver, CancellationToken cancellationToken)
     {
         if (!principalSidResolver.TryGetSid(context.User, out var principalSid))
         {
             return AgentProblemDetails.CreateResult(context, StatusCodes.Status403Forbidden, "The authenticated Windows SID could not be resolved.", AgentProblemCodes.WindowsSidUnavailable);
         }
 
-        return Results.Ok(await service.BeginGuidedAsync(principalSid, snapshotId, cancellationToken).ConfigureAwait(false));
+        try
+        {
+            return Results.Ok(await service.BeginGuidedAsync(principalSid, snapshotId, idempotencyKey, cancellationToken).ConfigureAwait(false));
+        }
+        catch (RepairRejectedException exception)
+        {
+            return AgentProblemDetails.CreateResult(context, StatusCodes.Status400BadRequest, "The Guided Repair preview was rejected by the Agent.", exception.Message);
+        }
     }
 
     private static bool TryMapOperation(string value, out RepairOperationKind operation) =>

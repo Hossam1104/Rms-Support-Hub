@@ -10,17 +10,11 @@ public static partial class DiagnosticRedactor
 
     public static string RedactSummary(string? value)
     {
-        var text = value ?? string.Empty;
-        text = ConnectionStringPattern().Replace(text, "[redacted connection data]");
-        text = SecretAssignmentPattern().Replace(text, "$1=[redacted]");
-        text = BearerPattern().Replace(text, "$1[redacted]");
+        var text = DiagnosticSecretRedactionPipeline.Redact(value, MaxSummaryLength);
         text = UrlSecretPattern().Replace(text, "$1[redacted]");
         text = WindowsPathPattern().Replace(text, "[redacted path]");
         text = UserIdentityPattern().Replace(text, "[redacted user]");
         text = SidPattern().Replace(text, "[redacted SID]");
-        text = KeyMaterialPattern().Replace(text, "$1[redacted]");
-        text = text.Replace("-----BEGIN PRIVATE KEY-----", "[redacted key]", StringComparison.OrdinalIgnoreCase);
-        text = text.Replace("-----END PRIVATE KEY-----", "", StringComparison.OrdinalIgnoreCase);
         text = new string(text.Where(character => !char.IsControl(character) || character is '\t').ToArray()).Trim();
         return text.Length <= MaxSummaryLength ? text : text[..MaxSummaryLength];
     }
@@ -43,12 +37,6 @@ public static partial class DiagnosticRedactor
             .Select(value => value.Length <= MaxFrameLength ? value : value[..MaxFrameLength])
             .ToArray();
 
-    [GeneratedRegex(@"(?i)(?:password|pwd|secret|token|apikey|api-key|connectionstring|clientsecret|credential|username|userid|user|auth|authorization)\s*[:=]\s*[^\s,;]+")]
-    private static partial Regex SecretAssignmentPattern();
-
-    [GeneratedRegex(@"(?i)(Bearer\s+)[^\s]+")]
-    private static partial Regex BearerPattern();
-
     [GeneratedRegex(@"(?i)(https?://[^\s?]+\?[^\s]*?)(?:password|pwd|secret|token|key)=[^&\s]+")]
     private static partial Regex UrlSecretPattern();
 
@@ -61,12 +49,7 @@ public static partial class DiagnosticRedactor
     [GeneratedRegex(@"(?i)\bS-1-(?:\d+-){1,14}\d+\b")]
     private static partial Regex SidPattern();
 
-    [GeneratedRegex(@"(?i)\b(dpapi|pfx|pkcs12|private[- ]?key|certificate)\s*[:=]\s*[^\s,;]+")]
-    private static partial Regex KeyMaterialPattern();
-
     [GeneratedRegex(@"(?i)\b([A-Za-z_][A-Za-z0-9_.]*(?:Exception|Error))\b")]
     private static partial Regex ExceptionTypePattern();
 
-    [GeneratedRegex(@"(?i)(?:Data Source|Server|Initial Catalog|User ID|Password)\s*=\s*[^;]+(?:;|$)")]
-    private static partial Regex ConnectionStringPattern();
 }

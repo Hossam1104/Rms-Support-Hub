@@ -1,4 +1,4 @@
-# Independent POS Privileged Repair / Installation Security Review
+# Focused POS Slice B Security Remediation Re-review
 
 **Reviewer:** Claude Opus 5
 **Effort:** HIGH
@@ -6,69 +6,75 @@
 
 ## Objective
 
-Perform an independent security and readiness review of the delivered POS Slice
-B privileged repair, installation, diagnostic, Main Server, Safety Snapshot,
-package, and Guided Repair boundaries. Review the current repository, tests,
-task-scoped diff, and durable project memory. Do not reconstruct the project
-from chat history.
+Independently review the current synchronized POS Slice B security
+remediation. Verify H-1, H-2, and H-3 and the directly adjacent M-1 through M-4
+and L-1 through L-3 controls, plus the canonical POS entry path. This is a
+focused security gate, not a broad product review and not a new implementation
+task.
 
-Slice B is delivered as a typed Agent-backed boundary. Testing is the only
-permitted live environment. Slice C remains out of scope. Critical or High
-findings block Slice C and must be reported with evidence, affected boundary,
-impact, and a concrete acceptance condition.
+The review must use the current repository, task-scoped diff, tests, and
+durable project memory. The fixed RMS source catalog and sanitized registry
+discovery are in
+`docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`. The bounded future work
+contract is in `docs/POS_SLICE_C_REQUIREMENTS.md`; Slice C requirements are
+context only and must not be implemented during this review.
 
 ## Required review areas
 
-Review arbitrary process-launch prevention; executable-manifest confinement;
-argument, environment, and working-directory confinement; process-tree timeout
-and termination; output bounds and redaction; Main Server profile allow-listing;
-absence of a generic API proxy; Branch/POS identity binding; API credential
-handling; and mutation isolation from GET/read endpoints.
-
-Review Safety Snapshot integrity, principal/environment/package binding, expiry,
-fixed-root storage, atomicity, corruption handling, retention, and fail-closed
-verification. Review package signature and checksum validation, compatibility,
-archive traversal, duplicate and absolute paths, reparse/symlink escape,
-package ownership, ACL and service ownership, certificate/private-key handling,
-installer and uninstaller confinement, rollback material, and recovery truth.
-
-Review Repair confirmation, one-use mutation tokens, idempotency, concurrency,
-fresh-snapshot enforcement, state-changing step isolation, rollback behavior,
-and Guided Repair confinement. Confirm that recommendations cannot become
-arbitrary generated commands or actions, that only server-owned typed repair
-checkpoints exist, and that no health check performs automatic repair.
-
-Review Testing/Production separation, secret leakage through Angular contracts,
-logs, artifacts, bundles, generated clients, persisted evidence, and error
-responses. Confirm there is no arbitrary SQL, filesystem, shell, process,
-service, URL, credential, or browser-supplied target capability.
+- H-1: bounded fail-closed redaction before diagnostic stdout/stderr,
+  exceptions, timeline summaries, artifacts, snapshots, generated clients,
+  and Support Bundle evidence; quarantine behavior on sanitization failure.
+- H-2: fixed service-owned roots, provisioning, ownership/ACL checks, reparse
+  and traversal confinement, package staging, installation-root verification,
+  manifest/checksum/size validation, and no unsafe inherited write boundary.
+- H-3: one machine-wide privileged mutation lease across package, Repair
+  Installation, and Guided Repair state-changing checkpoints; principal,
+  scope, and idempotency bypass resistance; lease held through terminal truth.
+- Adjacent M-1 through M-4 and L-1 through L-3: bounded transport and
+  redirects, timeout cancellation, exact Main Server endpoint binding,
+  snapshot environment/profile identity, retention/corruption handling,
+  truthful lifecycle/rollback/recovery states, and typed POST retained
+  previews with GET remaining read-only.
+- Canonical POS entry: exact external secure origin
+  `https://support-hub.integration.test:4443/tools/pos-maintenance`, Hub
+  external handoff, wrong-origin route guard, preserved exact Origin policy,
+  Windows Negotiate identity, derived Administrator authorization, and direct
+  browser-to-Agent transport with no Support Hub API relay or generic proxy.
+- RMS evidence: fixed Branch/Cashier/update/download/log/setup/ReleaseRepo
+  sources, metadata-only POS insurance evidence, exact SCM/source identity,
+  sanitized uninstall registry allow-list, and read-only Testing discovery.
 
 ## Review constraints
 
-- Review only. Do not remediate findings, modify implementation, or broaden
-  Slice B in this review.
+- Review only. Do not modify implementation, tests, generated artifacts,
+  documentation, or project memory, and do not broaden the review.
+- Use synthetic seams and existing tests for validation. Testing is the only
+  permitted live environment.
 - Do not launch RMS Branch, Cashier, Service Manager, Cashier UI, installer,
   uninstaller, repair, rollback, or package activation executables.
-- Do not issue Main Server mutations or use Production/customer data.
-- Use synthetic seams and existing tests for boundary validation.
-- Do not mark a boundary safe merely because an HTTP request was accepted;
-  distinguish accepted, running, completed, partial, failed, rollback-failed,
-  recovery-required, and unknown outcomes.
-- Do not execute this Opus review during the Slice B delivery session.
+- Do not issue Main Server state-changing requests, mutate a registry or RMS
+  folder, modify a database, or use Production/customer data.
+- Preserve and verify the exact Origin, Negotiate, Administrator, and direct
+  browser-to-Agent boundaries; do not treat a successful HTTP acceptance as
+  proof of a completed privileged action.
+- Do not implement Slice C requirements during this review.
 
 ## Evidence and outcome
 
-Inspect the complete Slice B diff and relevant current code/tests. Run only
-read-only or synthetic checks appropriate to review. Record concrete findings
-with severity: Critical, High, Medium, Low, or Informational. Critical and High
-findings are release blockers for Slice C. If no blocker is found, state the
-remaining assumptions, unavailable proof, and explicit gates still required
-before Production or Slice C.
+Inspect the complete task-scoped diff and relevant source/tests. Run only
+read-only or synthetic checks appropriate to the review. Report findings in
+severity order: Critical, High, Medium, Low, or Informational. Any Critical or
+High finding blocks the Slice C gate and must include file/line evidence,
+impact, and a concrete acceptance condition.
 
-Return a concise review report with:
+Return a concise report containing:
 
 1. Executive outcome and blocker status.
-2. Findings ordered by severity, with file/line evidence.
-3. Boundary-by-boundary coverage against this task.
-4. Validation evidence and any known unrelated failures.
-5. Residual risks, assumptions, and required follow-up.
+2. Findings with file/line evidence and acceptance conditions.
+3. Boundary-by-boundary coverage against H-1/H-2/H-3, M-1..M-4, and L-1..L-3.
+4. Canonical POS entry and exact transport/authentication coverage.
+5. RMS source/registry discovery and safety-boundary coverage.
+6. Validation evidence, unrelated failures, residual assumptions, and the
+   explicit Production/Slice C gates that remain.
+
+Do not execute this review during the implementation/delivery session.

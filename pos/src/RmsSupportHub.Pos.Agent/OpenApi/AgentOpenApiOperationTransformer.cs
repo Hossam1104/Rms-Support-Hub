@@ -200,7 +200,7 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
                     });
                 SetResponseDescription(operation, "404", "The opaque snapshot identifier is unavailable for the authenticated principal.");
                 break;
-            case ("GET", "/api/v1/diagnostic-console/preview/{targetId}"):
+            case ("POST", "/api/v1/diagnostic-console/preview/{targetId}"):
                 DocumentProtectedRead(
                     operation,
                     "Preview a fixed Diagnostic Console run",
@@ -237,7 +237,7 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
                         ["detail"] = "No verified server-owned package is available."
                     });
                 break;
-            case ("GET", "/api/v1/packages/preview/{operationId}"):
+            case ("POST", "/api/v1/packages/preview/{operationId}"):
                 DocumentProtectedRead(
                     operation,
                     "Preview a typed Agent package operation",
@@ -259,8 +259,8 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/packages/operations/{operationId}"):
                 DocumentTypedOperation(operation, "Read one principal-scoped Agent package operation", "The Agent returned the retained typed package lifecycle state and recovery evidence.");
                 break;
-            case ("GET", "/api/v1/repair/preview/{operationId}"):
-            case ("GET", "/api/v1/repair/preview/{operationId}/{snapshotId}"):
+            case ("POST", "/api/v1/repair/preview/{operationId}"):
+            case ("POST", "/api/v1/repair/preview/{operationId}/{snapshotId}"):
                 DocumentProtectedRead(
                     operation,
                     "Preview a typed Repair Installation operation",
@@ -283,8 +283,8 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/repair/operations/{operationId}"):
                 DocumentTypedOperation(operation, "Read one principal-scoped repair operation", "The Agent returned the retained typed repair lifecycle state and recovery evidence.");
                 break;
-            case ("GET", "/api/v1/repair/guided/preview"):
-            case ("GET", "/api/v1/repair/guided/preview/{snapshotId}"):
+            case ("POST", "/api/v1/repair/guided/preview"):
+            case ("POST", "/api/v1/repair/guided/preview/{snapshotId}"):
                 DocumentProtectedRead(
                     operation,
                     "Preview Guided Repair checkpoints",

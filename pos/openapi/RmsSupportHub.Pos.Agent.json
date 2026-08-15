@@ -2622,7 +2622,7 @@
       }
     },
     "/api/v1/diagnostic-console/preview/{targetId}": {
-      "get": {
+      "post": {
         "tags": [
           "Diagnostics"
         ],
@@ -2639,6 +2639,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiagnosticConsolePreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "The Agent returned the typed DiagnosticConsolePreviewDto preview.",
@@ -2864,7 +2874,7 @@
       }
     },
     "/api/v1/packages/preview/{operationId}": {
-      "get": {
+      "post": {
         "tags": [
           "Agent Package"
         ],
@@ -2881,6 +2891,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPackagePreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "The Agent returned the typed AgentPackagePreviewDto preview.",
@@ -3057,7 +3077,7 @@
       }
     },
     "/api/v1/repair/preview/{operationId}": {
-      "get": {
+      "post": {
         "tags": [
           "Repair"
         ],
@@ -3074,6 +3094,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepairPreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "The Agent returned the typed RepairPreviewDto precondition result.",
@@ -3126,7 +3156,7 @@
       }
     },
     "/api/v1/repair/preview/{operationId}/{snapshotId}": {
-      "get": {
+      "post": {
         "tags": [
           "Repair"
         ],
@@ -3151,6 +3181,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepairPreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "The Agent returned the typed RepairPreviewDto precondition result.",
@@ -3328,13 +3368,23 @@
       }
     },
     "/api/v1/repair/guided/preview": {
-      "get": {
+      "post": {
         "tags": [
           "Repair"
         ],
         "summary": "Preview Guided Repair checkpoints",
         "description": "Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.",
         "operationId": "PreviewGuidedRepair",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuidedRepairPreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "The Agent returned the typed GuidedRepairDto checkpoint projection.",
@@ -3366,7 +3416,7 @@
       }
     },
     "/api/v1/repair/guided/preview/{snapshotId}": {
-      "get": {
+      "post": {
         "tags": [
           "Repair"
         ],
@@ -3383,6 +3433,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuidedRepairPreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "The Agent returned the typed GuidedRepairDto checkpoint projection.",
@@ -4026,6 +4086,7 @@
       "AgentPackageOperationStateDto": {
         "enum": [
           "notAttempted",
+          "busy",
           "preview",
           "accepted",
           "staging",
@@ -4106,6 +4167,19 @@
           }
         },
         "description": "Typed Agent package lifecycle preview with manifest verification and bounded effects/blockers."
+      },
+      "AgentPackagePreviewRequestDto": {
+        "required": [
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          }
+        },
+        "description": "Typed request for a retained Agent package preview. It contains only a bounded idempotency key and never selects an archive, path, or installer action."
       },
       "AgentPackageStatusDto": {
         "required": [
@@ -4730,6 +4804,19 @@
         },
         "description": "Preview of one fixed Agent diagnostic manifest target with bounded process and output policy."
       },
+      "DiagnosticConsolePreviewRequestDto": {
+        "required": [
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key; repeating the same fixed diagnostic preview returns the retained preview."
+          }
+        },
+        "description": "Typed request for a retained fixed diagnostic preview. It contains only a bounded idempotency key and never selects a process, path, executable, or argument."
+      },
       "DiagnosticConsoleResultDto": {
         "required": [
           "stdoutArtifactId",
@@ -5329,6 +5416,19 @@
           }
         },
         "description": "Fixed principal-scoped Guided Repair checkpoint sequence with explicit blocked and recovery states."
+      },
+      "GuidedRepairPreviewRequestDto": {
+        "required": [
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          }
+        },
+        "description": "Typed request for a retained Guided Repair preview. It contains only a bounded idempotency key; any snapshot reference is a server-owned route value."
       },
       "GuidedRepairStepDto": {
         "required": [
@@ -6321,6 +6421,7 @@
       "RepairOperationStateDto": {
         "enum": [
           "notAttempted",
+          "busy",
           "preview",
           "accepted",
           "running",
@@ -6393,6 +6494,19 @@
           }
         },
         "description": "Typed repair precondition preview bound to a fresh principal-scoped Safety Snapshot."
+      },
+      "RepairPreviewRequestDto": {
+        "required": [
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          }
+        },
+        "description": "Typed request for a retained repair precondition preview. It contains only a bounded idempotency key and never selects an installer, path, or Main Server action."
       },
       "RmsComponentDriftDto": {
         "required": [

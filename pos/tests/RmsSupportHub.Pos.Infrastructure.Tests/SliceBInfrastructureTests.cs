@@ -1,8 +1,10 @@
 using RmsSupportHub.Pos.Application.Packages;
+using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Infrastructure.Diagnostics;
 using RmsSupportHub.Pos.Infrastructure.MainServer;
 using RmsSupportHub.Pos.Infrastructure.Snapshots;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 
 namespace RmsSupportHub.Pos.Infrastructure.Tests;
 
@@ -17,6 +19,63 @@ public sealed class SliceBInfrastructureTests
         };
 
         Assert.Throws<ArgumentException>(() => options.Validate());
+    }
+
+    [Fact]
+    public void MainServerBindingRequiresTheExactServerOwnedEndpoint()
+    {
+        var catalog = new MainServerProfileCatalog(new MainServerProfileOptions
+        {
+            TestingBaseAddress = "https://main.synthetic.test/rmsmainserverApi/"
+        });
+        var installation = new RmsInstallationSnapshot(
+            true,
+            true,
+            true,
+            "BR-001",
+            "POS-01",
+            null,
+            null,
+            "installation-guid",
+            "https://main.synthetic.test/rmsmainserverApi/",
+            null,
+            "RMS+ UPC",
+            "5.7.4",
+            new("5.7.4", "5.7.4", "5.7.4"),
+            new(RmsConsistencyState.Consistent, RmsConsistencyState.Consistent, RmsConsistencyState.Consistent, RmsConsistencyState.Consistent, RmsConsistencyState.Consistent, []),
+            new(true, RmsConnectionStringState.Valid, "sql.synthetic.test", "RmsBranchSrv", true),
+            new(true, RmsConnectionStringState.Valid, "sql.synthetic.test", "RmsCashierSrv", true),
+            new(RmsEndpointConfigurationState.Configured, "main.synthetic.test", 443, "https://main.synthetic.test/rmsmainserverApi/"),
+            new(RmsEndpointConfigurationState.Unavailable, null, null, null),
+            new(true, true, true, true));
+
+        Assert.True(catalog.TryGetActive(installation, out _, out var bound));
+        Assert.Equal(MainServerBindingState.Bound, bound.State);
+
+        var mismatched = installation with
+        {
+            MainServerUrl = "https://main.synthetic.test/rmsmainserverApi/other"
+        };
+        Assert.False(catalog.TryGetActive(mismatched, out _, out var mismatch));
+        Assert.Equal(MainServerBindingState.Mismatch, mismatch.State);
+    }
+
+    [Fact]
+    public void PrivilegedMutationLeaseSerializesDifferentScopesAndPrincipals()
+    {
+        using var lease = new MachineWidePrivilegedMutationLease();
+
+        var first = lease.TryAcquire("agent-package.upgrade", "S-1-5-21-first");
+        Assert.Equal(PrivilegedMutationLeaseState.Acquired, first.State);
+        Assert.NotNull(first.Handle);
+
+        var second = lease.TryAcquire("repair.installation", "S-1-5-21-second");
+        Assert.Equal(PrivilegedMutationLeaseState.Busy, second.State);
+
+        first.Handle!.Dispose();
+        var third = lease.TryAcquire("repair.installation", "S-1-5-21-second");
+        Assert.Equal(PrivilegedMutationLeaseState.Acquired, third.State);
+        third.Handle!.Dispose();
     }
 
     [Fact]

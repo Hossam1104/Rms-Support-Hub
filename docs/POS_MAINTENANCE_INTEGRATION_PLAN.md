@@ -27,12 +27,35 @@ INT-style micro-milestones:
 3. M-1/M-2, durable Production audit, fleet/representative proof, Whites
    comparison, and independent Claude Opus 5 High review.
 
-Slices 1 and 2 are not merged because confined process launch, remote
-credentials/mutations, installer rollback, and package ownership require the
-first slice's typed evidence model. Root `TASK.md` is the full Slice A
-implementation prompt. GET-only Main Server reconnaissance remains authorized
-when side-effect-free; every live Main Server mutation requires explicit owner
+Slices 1 and 2 are historical planning labels. Their confined process launch,
+remote credentials/mutations, installer rollback, and package ownership
+boundaries are now represented by the current typed implementation. Root
+`TASK.md` is the focused independent security re-review prompt. The current
+security remediation and its exact retained
+preview contract are recorded below; the remaining Production/fleet work is
+the bounded Slice C contract in
+[`POS_SLICE_C_REQUIREMENTS.md`](POS_SLICE_C_REQUIREMENTS.md). Read-only Main
+Server discovery remains authorized when side-effect-free; retained previews
+are typed POSTs and every live Main Server mutation requires explicit owner
 approval before invocation.
+
+## Slice B security remediation rebaseline - 2026-08-15
+
+The current Agent implementation closes H-1/H-2/H-3 and adjacent M-1 through
+M-4 and L-1 through L-3 findings with bounded redaction, fixed service-owned
+roots, a machine-wide privileged mutation lease, typed POST previews,
+no-redirect Main Server transport, exact endpoint binding, configured snapshot
+identity, and the canonical secure POS entry at
+`https://support-hub.integration.test:4443/tools/pos-maintenance`. The Hub
+opens that route externally and the route guard redirects wrong-origin direct
+loads; the browser remains a direct browser-to-Agent client.
+
+Testing remains synthetic/read-only for RMS and Main Server. No RMS executable,
+installer, uninstaller, repair, rollback, package activation, Main Server
+mutation, registry mutation, or RMS folder mutation is part of this gate.
+Fixed RMS source roots and the sanitized uninstall registry allow-list are
+recorded in
+[`POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`](POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md).
 
 ## Status and authorization
 
