@@ -11,6 +11,27 @@ import {
 
 type HealthStatus = components['schemas']['HealthStatusDto'];
 type HealthReport = components['schemas']['HealthReportDto'];
+type MainServerProfiles = components['schemas']['MainServerProfilesDto'];
+type MainServerState = components['schemas']['MainServerStateEvidenceDto'];
+type SafetySnapshotPreview = components['schemas']['SafetySnapshotPreviewDto'];
+type SafetySnapshotCaptureRequest = components['schemas']['SafetySnapshotCaptureRequestDto'];
+type SafetySnapshot = components['schemas']['SafetySnapshotDto'];
+type SafetySnapshotVerification = components['schemas']['SafetySnapshotVerificationDto'];
+type DiagnosticConsoleTarget = components['schemas']['DiagnosticConsoleTargetDto'];
+type DiagnosticConsolePreview = components['schemas']['DiagnosticConsolePreviewDto'];
+type DiagnosticConsoleStartRequest = components['schemas']['DiagnosticConsoleStartRequestDto'];
+type DiagnosticConsoleRun = components['schemas']['DiagnosticConsoleRunDto'];
+type AgentPackageOperationKind = components['schemas']['AgentPackageOperationKindDto'];
+type AgentPackageStatus = components['schemas']['AgentPackageStatusDto'];
+type AgentPackagePreview = components['schemas']['AgentPackagePreviewDto'];
+type AgentPackageOperationRequest = components['schemas']['AgentPackageOperationRequestDto'];
+type AgentPackageOperation = components['schemas']['AgentPackageOperationDto'];
+type RepairOperationKind = components['schemas']['RepairOperationKindDto'];
+type RepairPreview = components['schemas']['RepairPreviewDto'];
+type RepairExecuteRequest = components['schemas']['RepairExecuteRequestDto'];
+type RepairOperation = components['schemas']['RepairOperationDto'];
+type GuidedRepair = components['schemas']['GuidedRepairDto'];
+type GuidedRepairStepRequest = components['schemas']['GuidedRepairStepRequestDto'];
 type SessionInfo = components['schemas']['SessionInfoDto'];
 type MutationTokenIssueRequest = components['schemas']['MutationTokenIssueRequestDto'];
 type MutationTokenIssueResponse = components['schemas']['MutationTokenIssueResponseDto'];
@@ -61,6 +82,179 @@ export class PosAgentTransportService {
     return this.http
       .get<HealthReport>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.healthCheck}`, {
         headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getMainServerProfiles(): Observable<MainServerProfiles> {
+    return this.http
+      .get<MainServerProfiles>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.mainServerProfiles}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getMainServerState(): Observable<MainServerState> {
+    return this.http
+      .get<MainServerState>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.mainServerState}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getSafetySnapshotPreview(): Observable<SafetySnapshotPreview> {
+    return this.http
+      .get<SafetySnapshotPreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.safetySnapshotPreview}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  captureSafetySnapshot(request: SafetySnapshotCaptureRequest, mutationToken: string): Observable<SafetySnapshot> {
+    return this.http
+      .post<SafetySnapshot>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.safetySnapshotCapture}`, request, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getSafetySnapshot(snapshotId: string): Observable<SafetySnapshot> {
+    return this.http
+      .get<SafetySnapshot>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.safetySnapshots}/${encodeURIComponent(snapshotId)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  verifySafetySnapshot(snapshotId: string): Observable<SafetySnapshotVerification> {
+    return this.http
+      .get<SafetySnapshotVerification>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.safetySnapshots}/${encodeURIComponent(snapshotId)}/verify`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDiagnosticConsolePreview(target: DiagnosticConsoleTarget): Observable<DiagnosticConsolePreview> {
+    return this.http
+      .get<DiagnosticConsolePreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.diagnosticConsolePreview}/${encodeURIComponent(target)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  startDiagnosticConsoleRun(request: DiagnosticConsoleStartRequest, mutationToken: string): Observable<DiagnosticConsoleRun> {
+    return this.http
+      .post<DiagnosticConsoleRun>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.diagnosticConsoleRuns}`, request, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getDiagnosticConsoleRun(operationId: string): Observable<DiagnosticConsoleRun> {
+    return this.http
+      .get<DiagnosticConsoleRun>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.diagnosticConsoleRuns}/${encodeURIComponent(operationId)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getAgentPackageStatus(): Observable<AgentPackageStatus> {
+    return this.http
+      .get<AgentPackageStatus>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.packageStatus}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getAgentPackagePreview(operation: AgentPackageOperationKind): Observable<AgentPackagePreview> {
+    return this.http
+      .get<AgentPackagePreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.packagePreview}/${encodeURIComponent(operation)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  startAgentPackageOperation(request: AgentPackageOperationRequest, mutationToken: string): Observable<AgentPackageOperation> {
+    return this.http
+      .post<AgentPackageOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.packageOperations}`, request, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getAgentPackageOperation(operationId: string): Observable<AgentPackageOperation> {
+    return this.http
+      .get<AgentPackageOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.packageOperations}/${encodeURIComponent(operationId)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getRepairPreview(operation: RepairOperationKind, snapshotId?: string): Observable<RepairPreview> {
+    const suffix = snapshotId ? `/${encodeURIComponent(snapshotId)}` : '';
+    return this.http
+      .get<RepairPreview>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.repairPreview}/${encodeURIComponent(operation)}${suffix}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  startRepairOperation(request: RepairExecuteRequest, mutationToken: string): Observable<RepairOperation> {
+    return this.http
+      .post<RepairOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.repairOperations}`, request, {
+        headers: this.mutationHeaders(mutationToken),
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getRepairOperation(operationId: string): Observable<RepairOperation> {
+    return this.http
+      .get<RepairOperation>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.repairOperations}/${encodeURIComponent(operationId)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getGuidedRepairPreview(snapshotId?: string): Observable<GuidedRepair> {
+    const suffix = snapshotId ? `/${encodeURIComponent(snapshotId)}` : '';
+    return this.http
+      .get<GuidedRepair>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.guidedRepairPreview}${suffix}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getGuidedRepair(guidedRepairId: string): Observable<GuidedRepair> {
+    return this.http
+      .get<GuidedRepair>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.guidedRepair}/${encodeURIComponent(guidedRepairId)}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  advanceGuidedRepair(request: GuidedRepairStepRequest, mutationToken: string): Observable<GuidedRepair> {
+    return this.http
+      .post<GuidedRepair>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.guidedRepairSteps}`, request, {
+        headers: this.mutationHeaders(mutationToken),
         withCredentials: true
       })
       .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));

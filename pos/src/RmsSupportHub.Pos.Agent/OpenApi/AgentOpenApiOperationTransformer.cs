@@ -114,6 +114,197 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/artifacts/{artifactId}"):
                 DocumentArtifact(operation);
                 break;
+            case ("GET", "/api/v1/main-server/profiles"):
+                DocumentProtectedRead(
+                    operation,
+                    "Read fixed Main Server profiles",
+                    "Returns only the server-owned Testing profile and disabled future Production " +
+                    "profile. Branch/POS binding, credentials, free URLs, and arbitrary Main Server " +
+                    "routes remain Agent-owned and are not exposed.",
+                    "The Agent returned the bounded MainServerProfilesDto profile projection.",
+                    new JsonObject
+                    {
+                        ["activeProfileId"] = "main-server-testing",
+                        ["activeBinding"] = "unknown",
+                        ["detail"] = "The active Testing profile remains server-owned."
+                    });
+                break;
+            case ("GET", "/api/v1/main-server/state"):
+                DocumentProtectedRead(
+                    operation,
+                    "Read bound Main Server Branch and POS state",
+                    "Performs only typed, server-owned GET projections after Branch/POS identity and " +
+                    "fixed profile binding succeed. Installation acknowledgements, credentials, free " +
+                    "URLs, and generic proxy behavior are outside this read boundary.",
+                    "The Agent returned the bounded MainServerStateEvidenceDto state projection.",
+                    new JsonObject
+                    {
+                        ["profileId"] = "main-server-testing",
+                        ["environment"] = "testing",
+                        ["binding"] = "unknown",
+                        ["outcome"] = "notAttempted",
+                        ["detail"] = "Main Server state was not attempted because binding was not established."
+                    });
+                break;
+            case ("GET", "/api/v1/safety-snapshots/preview"):
+                DocumentProtectedRead(
+                    operation,
+                    "Preview a pre-maintenance Safety Snapshot",
+                    "Returns the bounded evidence categories that would be captured before a local " +
+                    "package or repair operation. Credentials, raw configuration, SQL, logs, private " +
+                    "keys, arbitrary paths, and full events are excluded.",
+                    "The Agent returned the bounded SafetySnapshotPreviewDto preview.",
+                    new JsonObject
+                    {
+                        ["snapshotType"] = "pre-maintenance",
+                        ["ready"] = false,
+                        ["evidenceState"] = "unknown",
+                        ["includedEvidence"] = new JsonArray("safe identity", "service state"),
+                        ["excludedEvidence"] = new JsonArray("credentials", "raw configuration", "SQL"),
+                        ["blockers"] = new JsonArray("safe_evidence_unavailable"),
+                        ["retentionMinutes"] = 120,
+                        ["expiresAtUtc"] = "2030-01-01T00:00:00Z"
+                    });
+                break;
+            case ("POST", "/api/v1/safety-snapshots/capture"):
+                DocumentTypedMutation(operation, "Capture an authorized Safety Snapshot", "The Agent captured an atomic principal-scoped, integrity-protected SafetySnapshotDto.");
+                break;
+            case ("GET", "/api/v1/safety-snapshots/{snapshotId}/verify"):
+                DocumentProtectedRead(
+                    operation,
+                    "Verify a principal-scoped Safety Snapshot",
+                    "Rechecks the opaque snapshot identifier, principal binding, expiry, size bound, " +
+                    "and integrity hash before the snapshot can authorize repair.",
+                    "The Agent returned the typed SafetySnapshotVerificationDto verification result.",
+                    new JsonObject
+                    {
+                        ["snapshotId"] = "opaque-snapshot-id",
+                        ["state"] = "verified",
+                        ["verified"] = true,
+                        ["detail"] = "The snapshot is fresh and integrity verified."
+                    });
+                break;
+            case ("GET", "/api/v1/safety-snapshots/{snapshotId}"):
+                DocumentProtectedRead(
+                    operation,
+                    "Read a principal-scoped Safety Snapshot",
+                    "Returns only the safe snapshot projection for the authenticated principal. " +
+                    "Invalid, mismatched, corrupt, expired, and unavailable records fail closed.",
+                    "The Agent returned the typed SafetySnapshotDto projection.",
+                    new JsonObject
+                    {
+                        ["snapshotId"] = "opaque-snapshot-id",
+                        ["state"] = "verified",
+                        ["evidenceState"] = "healthy",
+                        ["detail"] = "The snapshot is fresh and integrity verified."
+                    });
+                SetResponseDescription(operation, "404", "The opaque snapshot identifier is unavailable for the authenticated principal.");
+                break;
+            case ("GET", "/api/v1/diagnostic-console/preview/{targetId}"):
+                DocumentProtectedRead(
+                    operation,
+                    "Preview a fixed Diagnostic Console run",
+                    "Previews only a logical target from the fixed Agent manifest. The executable, " +
+                    "arguments, working directory, child environment, timeout, and output bounds are " +
+                    "resolved server-side; arbitrary process execution is not accepted.",
+                    "The Agent returned the typed DiagnosticConsolePreviewDto preview.",
+                    new JsonObject
+                    {
+                        ["previewId"] = "opaque-preview-id",
+                        ["target"] = "branchServerApi",
+                        ["ready"] = false,
+                        ["state"] = "notAttempted",
+                        ["blockers"] = new JsonArray("console_executable_unavailable")
+                    });
+                break;
+            case ("POST", "/api/v1/diagnostic-console/runs"):
+                DocumentTypedMutation(operation, "Start an authorized fixed Diagnostic Console run", "The Agent accepted a fixed manifest diagnostic run with bounded, separately redacted output artifacts.");
+                break;
+            case ("GET", "/api/v1/diagnostic-console/runs/{operationId}"):
+                DocumentTypedOperation(operation, "Read one principal-scoped Diagnostic Console run", "The Agent returned the retained typed DiagnosticConsoleRunDto state and opaque artifact capabilities.");
+                break;
+            case ("GET", "/api/v1/packages/status"):
+                DocumentProtectedRead(
+                    operation,
+                    "Read the server-owned Agent package status",
+                    "Returns only safe installed-manifest metadata and truthful verification state. " +
+                    "Package paths, archives, private keys, and installer arguments are never exposed.",
+                    "The Agent returned the typed AgentPackageStatusDto status projection.",
+                    new JsonObject
+                    {
+                        ["verification"] = "unknown",
+                        ["state"] = "notAttempted",
+                        ["detail"] = "No verified server-owned package is available."
+                    });
+                break;
+            case ("GET", "/api/v1/packages/preview/{operationId}"):
+                DocumentProtectedRead(
+                    operation,
+                    "Preview a typed Agent package operation",
+                    "Reads only the Agent-owned package catalog and verifier. Preview does not stage, " +
+                    "activate, uninstall, register, or roll back a package.",
+                    "The Agent returned the typed AgentPackagePreviewDto preview.",
+                    new JsonObject
+                    {
+                        ["previewId"] = "opaque-preview-id",
+                        ["operation"] = "upgrade",
+                        ["ready"] = false,
+                        ["verification"] = "unknown",
+                        ["blockers"] = new JsonArray("package_unavailable")
+                    });
+                break;
+            case ("POST", "/api/v1/packages/operations"):
+                DocumentTypedMutation(operation, "Start an authorized typed Agent package operation", "The Agent accepted or safely rejected the typed package lifecycle request with truthful rollback and recovery state.");
+                break;
+            case ("GET", "/api/v1/packages/operations/{operationId}"):
+                DocumentTypedOperation(operation, "Read one principal-scoped Agent package operation", "The Agent returned the retained typed package lifecycle state and recovery evidence.");
+                break;
+            case ("GET", "/api/v1/repair/preview/{operationId}"):
+            case ("GET", "/api/v1/repair/preview/{operationId}/{snapshotId}"):
+                DocumentProtectedRead(
+                    operation,
+                    "Preview a typed Repair Installation operation",
+                    "Validates the server-owned package manifest, signature, checksum, compatibility, " +
+                    "archive, fixed installation boundary, required Safety Snapshot, capacity, and " +
+                    "rollback preconditions without changing the machine.",
+                    "The Agent returned the typed RepairPreviewDto precondition result.",
+                    new JsonObject
+                    {
+                        ["previewId"] = "opaque-preview-id",
+                        ["operation"] = "repair",
+                        ["ready"] = false,
+                        ["packageVerification"] = "unknown",
+                        ["blockers"] = new JsonArray("package_unavailable", "safety_snapshot_required")
+                    });
+                break;
+            case ("POST", "/api/v1/repair/operations"):
+                DocumentTypedMutation(operation, "Start an authorized typed repair operation", "The Agent accepted or safely rejected the typed repair request and reports activation, health, rollback, and recovery truth.");
+                break;
+            case ("GET", "/api/v1/repair/operations/{operationId}"):
+                DocumentTypedOperation(operation, "Read one principal-scoped repair operation", "The Agent returned the retained typed repair lifecycle state and recovery evidence.");
+                break;
+            case ("GET", "/api/v1/repair/guided/preview"):
+            case ("GET", "/api/v1/repair/guided/preview/{snapshotId}"):
+                DocumentProtectedRead(
+                    operation,
+                    "Preview Guided Repair checkpoints",
+                    "Returns the fixed typed checkpoint sequence and the next required precondition. " +
+                    "A recommendation never implies package staging, activation, or a machine mutation.",
+                    "The Agent returned the typed GuidedRepairDto checkpoint projection.",
+                    new JsonObject
+                    {
+                        ["guidedRepairId"] = "opaque-guided-repair-id",
+                        ["state"] = "preview",
+                        ["steps"] = new JsonArray(),
+                        ["detail"] = "A fresh verified snapshot is required before guided repair."
+                    });
+                break;
+            case ("GET", "/api/v1/repair/guided/{guidedRepairId}"):
+                DocumentTypedOperation(operation, "Read one principal-scoped Guided Repair sequence", "The Agent returned the retained typed GuidedRepairDto checkpoint state.");
+                break;
+            case ("POST", "/api/v1/repair/guided/steps"):
+                DocumentTypedMutation(operation, "Advance one authorized Guided Repair checkpoint", "The Agent advanced exactly one typed checkpoint or returned a safe blocked, failed, or recovery-required outcome.");
+                break;
         }
 
         return Task.CompletedTask;

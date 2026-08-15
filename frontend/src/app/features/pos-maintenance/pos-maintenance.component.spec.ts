@@ -148,6 +148,59 @@ describe('PosMaintenanceComponent', () => {
           { code: 'configuration-consistency', state: 'healthy', summary: 'Configuration is consistent.', checkedAtUtc: '2026-08-13T10:00:00Z', remediation: null }
         ]
       })),
+      getMainServerProfiles: vi.fn(() => of({
+        profiles: [{
+          profileId: 'main-server-testing',
+          environment: 'testing',
+          enabled: true,
+          binding: 'unavailable',
+          clientName: 'RMS+',
+          allowedReadOperations: ['branchStatus', 'installedBranch', 'installedPos'],
+          detail: 'Testing Main Server profile is available; discovery did not produce a safe bound endpoint.'
+        }],
+        activeProfileId: 'main-server-testing',
+        activeBinding: 'unavailable',
+        detail: 'Testing Main Server profile is available; no state read was attempted.'
+      })),
+      getMainServerState: vi.fn(() => of({
+        profileId: 'main-server-testing',
+        environment: 'testing',
+        binding: 'unavailable',
+        outcome: 'notAttempted',
+        branchCode: null,
+        posNumber: null,
+        clientName: null,
+        branchState: null,
+        posState: null,
+        detail: 'Main Server state is unavailable until safe endpoint binding succeeds.',
+        checkedAtUtc: '2026-08-13T10:00:00Z',
+        correlationId: 'test-correlation'
+      })),
+      getSafetySnapshotPreview: vi.fn(() => of({
+        snapshotType: 'pos-agent-safety',
+        ready: false,
+        evidenceState: 'unknown',
+        includedEvidence: ['safe identity', 'service state'],
+        excludedEvidence: ['credentials', 'raw configuration'],
+        blockers: ['Fresh verified evidence is not available.'],
+        retentionMinutes: 30,
+        expiresAtUtc: '2026-08-13T10:30:00Z'
+      })),
+      getAgentPackageStatus: vi.fn(() => of({
+        installedVersion: null,
+        previousVersion: null,
+        verification: 'unknown',
+        state: 'notAttempted',
+        manifest: null,
+        detail: 'No verified server-owned package is staged.'
+      })),
+      getGuidedRepairPreview: vi.fn(() => of({
+        guidedRepairId: '',
+        state: 'preview',
+        steps: [],
+        detail: 'Guided Repair requires a fresh verified Safety Snapshot.',
+        expiresAtUtc: '2026-08-13T10:30:00Z'
+      })),
       getServiceFailureAnalysis: vi.fn(() => of({
         serviceId: 'svc-0123456789abcdef',
         serviceDisplayName: 'RMS Branch Service',

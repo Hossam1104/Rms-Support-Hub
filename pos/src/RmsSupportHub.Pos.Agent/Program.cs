@@ -7,20 +7,27 @@ using Scalar.AspNetCore;
 using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Console;
 using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Device;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Endpoints;
+using RmsSupportHub.Pos.Agent.MainServer;
 using RmsSupportHub.Pos.Agent.MutationTokens;
+using RmsSupportHub.Pos.Agent.Packages;
+using RmsSupportHub.Pos.Agent.Repair;
 using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.Runtime;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Support;
+using RmsSupportHub.Pos.Agent.Snapshots;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Application.UseCases;
 using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Application.Maintenance;
+using RmsSupportHub.Pos.Application.Packages;
+using RmsSupportHub.Pos.Application.Repair;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
@@ -31,7 +38,10 @@ using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Diagnostics;
 using RmsSupportHub.Pos.Infrastructure.Databases;
 using RmsSupportHub.Pos.Infrastructure.Installation;
+using RmsSupportHub.Pos.Infrastructure.MainServer;
 using RmsSupportHub.Pos.Infrastructure.Http;
+using RmsSupportHub.Pos.Infrastructure.Packages;
+using RmsSupportHub.Pos.Infrastructure.Snapshots;
 using RmsSupportHub.Pos.Infrastructure.Smb;
 using RmsSupportHub.Pos.Infrastructure.Windows;
 
@@ -54,6 +64,7 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 builder.Services.AddSingleton(securityOptions);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(RuntimeRetentionPolicy.Default);
+builder.Services.AddSingleton<AgentScopedIdempotencyStore>();
 
 // The real process always uses Negotiate. IntegrationTest is a dedicated host environment used by
 // the test project to substitute a fake scheme because TestServer cannot perform SSPI handshakes;
@@ -119,7 +130,12 @@ builder.Services.AddSingleton<IMutationOperationRegistry>(new MutationOperationR
     DownloaderOperation.Descriptor,
     MaintenanceOperation.CleanupDescriptor,
     MaintenanceOperation.BranchResetDescriptor,
-    SupportBundleOperation.Descriptor
+    SupportBundleOperation.Descriptor,
+    SafetySnapshotOperation.Descriptor,
+    DiagnosticConsoleOperation.Descriptor,
+    AgentPackageOperation.Descriptor,
+    RepairOperation.Descriptor,
+    GuidedRepairOperation.Descriptor
 ]));
 
 builder.Services.AddOpenApi("v1", options =>
@@ -209,6 +225,54 @@ builder.Services.AddSingleton<RmsDatabaseIdempotencyStore>();
 builder.Services.AddSingleton<RmsDatabaseConcurrencyGate>();
 builder.Services.AddSingleton<IRmsPrivilegedAuditSink, InMemoryRmsAuditSink>();
 builder.Services.AddSingleton<RmsDatabaseOperationRuntime>();
+
+// Slice B server-owned Main Server profiles. The dedicated client is constructed separately
+// from the backup client so no browser-selected URL, header, or route can reach this boundary.
+builder.Services.AddSingleton(new MainServerProfileOptions());
+builder.Services.AddSingleton<IMainServerProfileCatalog, MainServerProfileCatalog>();
+builder.Services.AddSingleton<MainServerHttpClient>(_ => new MainServerHttpClient(new HttpClient()));
+builder.Services.AddSingleton<IMainServerReadOnlyClient>(services => services.GetRequiredService<MainServerHttpClient>());
+builder.Services.AddSingleton<MainServerService>();
+
+// Safe Diagnostic Console: all process details come from the fixed manifest and installation
+// discovery. The real runner is never selected by browser data and remains a testable seam.
+builder.Services.AddSingleton<IDiagnosticConsoleManifest, DiagnosticConsoleManifest>();
+builder.Services.AddSingleton<IDiagnosticConsolePolicy, DiagnosticConsolePolicy>();
+builder.Services.AddSingleton<IConstrainedDiagnosticProcessRunner, ConstrainedDiagnosticProcessRunner>();
+builder.Services.AddSingleton<IDiagnosticConsoleOutputRedactor, DiagnosticOutputRedactor>();
+builder.Services.AddSingleton(new DiagnosticConsoleOptions());
+builder.Services.AddSingleton<DiagnosticConsolePreviewStore>();
+builder.Services.AddSingleton<DiagnosticConsoleRunStore>();
+builder.Services.AddSingleton<DiagnosticConsoleRuntime>();
+
+// Safety snapshots are fixed-root, atomic, integrity-protected Agent records. Their evidence
+// source is composed from the existing safe Slice A diagnostics projection.
+builder.Services.AddSingleton(new SafetySnapshotOptions());
+builder.Services.AddSingleton<ISafetySnapshotStore, FileSafetySnapshotStore>();
+builder.Services.AddSingleton<ISafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
+builder.Services.AddSingleton<SafetySnapshotService>();
+
+// The package boundary reads only the Agent-owned catalog and delegates SCM, ACL, certificate,
+// activation, health, and rollback work to a typed platform seam. The default platform fails
+// closed for activation until the machine-owned implementation is provisioned.
+builder.Services.AddSingleton(new AgentPackageOptions());
+builder.Services.AddSingleton<IAgentPackagePolicy, AgentPackagePolicy>();
+builder.Services.AddSingleton<IAgentPackageCatalog, FileAgentPackageCatalog>();
+builder.Services.AddSingleton<IAgentPackageSignatureVerifier, MachineCertificatePackageSignatureVerifier>();
+builder.Services.AddSingleton<FileAgentPackageVerifier>();
+builder.Services.AddSingleton<IAgentPackageVerifier>(services => services.GetRequiredService<FileAgentPackageVerifier>());
+builder.Services.AddSingleton<IAgentPackageInstallationPlatform, WindowsAgentPackageInstallationPlatform>();
+builder.Services.AddSingleton<FileAgentPackageLifecycle>();
+builder.Services.AddSingleton<IAgentPackageLifecycle>(services => services.GetRequiredService<FileAgentPackageLifecycle>());
+builder.Services.AddSingleton<AgentPackagePreviewStore>();
+builder.Services.AddSingleton<AgentPackageOperationStore>();
+builder.Services.AddSingleton<AgentPackageService>();
+
+// Repair and Guided Repair reuse the same package lifecycle and snapshot verification boundary.
+builder.Services.AddSingleton<RepairPreviewStore>();
+builder.Services.AddSingleton<RepairOperationStore>();
+builder.Services.AddSingleton<GuidedRepairStore>();
+builder.Services.AddSingleton<RepairService>();
 
 var app = builder.Build();
 
@@ -373,6 +437,11 @@ app.MapRmsDatabaseEndpoints();
 app.MapDownloaderEndpoints();
 app.MapMaintenanceEndpoints();
 app.MapArtifactEndpoints();
+app.MapMainServerEndpoints();
+app.MapSafetySnapshotEndpoints();
+app.MapDiagnosticConsoleEndpoints();
+app.MapAgentPackageEndpoints();
+app.MapRepairEndpoints();
 
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment(AgentHostConstants.IntegrationTestEnvironment))

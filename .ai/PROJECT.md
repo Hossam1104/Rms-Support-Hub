@@ -4,8 +4,8 @@ Do not copy facts that can be cheaply discovered from the repository.
 ## Product and Business Boundaries
 - RMS+ Support Hub is an internal browser application hosting QA support tools;
   Online Orders compose/validate/send/inspect/cancel/resend pharmacy orders;
-  Prompt Studio generates locally; POS Maintenance is a direct, read-only
-  operational workspace backed by the local POS Agent.
+  Prompt Studio generates locally; POS Maintenance is a typed Agent-backed
+  operational workspace.
 - Implemented user-facing domains are UPC E-Commerce, GHC E-Commerce,
   GHC Uni-Commerce, and SQL-backed Order Requests. OMS and Call Center are
   registered unavailable stubs.
@@ -63,6 +63,7 @@ Do not copy facts that can be cheaply discovered from the repository.
  - The Agent also owns the typed RMS database recovery surface at `/api/v1/rms/databases/{branch|cashier}`. Backup and restore use canonical targets, Agent-owned roots, opaque approved artifacts, bounded native SQL, exact confirmation, target-specific service coordination, one-use mutation tokens, bounded idempotency/concurrency, and principal-scoped REST/SSE operation truth. The browser never supplies or receives a raw SQL/database/path/service capability.
  - The Agent composes the existing typed downloader and maintenance application services at `/api/v1/downloads/**`, `/api/v1/maintenance/**`, and `/api/v1/artifacts/{artifactId}`. Downloader configuration and credentials are projected from Agent-owned stores; branch selection, cleanup/reset policy, bounded operation state, one-use challenges/tokens, and opaque artifact capabilities are server-owned. Browser responses contain only logical branch/target state, stable safe codes, and principal-scoped opaque handles.
  - POS Slice A adds Agent-owned typed Health Check at `/api/v1/health/check`, bounded service-failure reads at `/api/v1/diagnostics/services/{serviceId}/failure`, principal-scoped Incident Timeline reads, and one-use-token Support Bundle generation at `/api/v1/support-bundles`. Diagnostic logs/events are fixed-root, allow-listed, bounded, and redacted; only authorized POST operation boundaries record timeline milestones.
+  - POS Slice B adds fixed Main Server profiles/read-only state, manifest-bound diagnostics, atomic principal-scoped snapshots, and typed package/repair/Guided Repair boundaries. State-changing workflows require fresh snapshots, confirmation, one-use auth/idempotency, verified manifests, and truthful health/rollback/recovery; validation never activates RMS packages or runs repair.
  - Fixed `RMS_Plus/ReleaseNumber.txt` is Product Release; Cashier UI `Settings:TheClient` is Client; component builds are drift evidence; the real manager SCM name is `RMSServiceManager`.
  - Main Server maintenance uses Agent-owned profiles bound to discovered Branch/POS; Angular supplies no URL/target, and every live mutation requires owner approval.
  - Device repair is typed local-package work; Main Server install/uninstall are state acknowledgements until evidence proves otherwise.

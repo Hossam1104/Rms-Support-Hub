@@ -52,6 +52,27 @@ public sealed class RouteSurfaceTests : IClassFixture<AgentWebApplicationFactory
         Assert.Contains("/api/v1/maintenance/operations/{operationId}", endpoints);
         Assert.Contains("/api/v1/maintenance/operations/{operationId}/events", endpoints);
         Assert.Contains("/api/v1/artifacts/{artifactId}", endpoints);
+        Assert.Contains("/api/v1/main-server/profiles", endpoints);
+        Assert.Contains("/api/v1/main-server/state", endpoints);
+        Assert.Contains("/api/v1/safety-snapshots/preview", endpoints);
+        Assert.Contains("/api/v1/safety-snapshots/capture", endpoints);
+        Assert.Contains("/api/v1/safety-snapshots/{snapshotId}/verify", endpoints);
+        Assert.Contains("/api/v1/safety-snapshots/{snapshotId}", endpoints);
+        Assert.Contains("/api/v1/diagnostic-console/preview/{targetId}", endpoints);
+        Assert.Contains("/api/v1/diagnostic-console/runs", endpoints);
+        Assert.Contains("/api/v1/diagnostic-console/runs/{operationId}", endpoints);
+        Assert.Contains("/api/v1/packages/status", endpoints);
+        Assert.Contains("/api/v1/packages/preview/{operationId}", endpoints);
+        Assert.Contains("/api/v1/packages/operations", endpoints);
+        Assert.Contains("/api/v1/packages/operations/{operationId}", endpoints);
+        Assert.Contains("/api/v1/repair/preview/{operationId}", endpoints);
+        Assert.Contains("/api/v1/repair/preview/{operationId}/{snapshotId}", endpoints);
+        Assert.Contains("/api/v1/repair/operations", endpoints);
+        Assert.Contains("/api/v1/repair/operations/{operationId}", endpoints);
+        Assert.Contains("/api/v1/repair/guided/preview", endpoints);
+        Assert.Contains("/api/v1/repair/guided/preview/{snapshotId}", endpoints);
+        Assert.Contains("/api/v1/repair/guided/{guidedRepairId}", endpoints);
+        Assert.Contains("/api/v1/repair/guided/steps", endpoints);
     }
 
     [Theory]

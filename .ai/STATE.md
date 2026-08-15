@@ -3,15 +3,16 @@
 - **Updated:** 2026-08-15
 - **Repository baseline:** PR #11 merged as `2bc8dfc`; POS Slice A PR #12
   merged as `fb71d01`.
-- **Current branch:** `main`, fast-forwarded to `origin/main` at `fb71d01` with
-  a clean worktree after the authorized delivery merges.
-- **Current outcome:** POS Slice A implementation and validation are complete;
-  no RMS executable, installer/uninstaller, database mutation, Production
-  action, or Main Server mutation was run.
-- **Next executable task:** after Slice A delivery, root `TASK.md` contains the
-  full Slice B implementation task for Main Server profiles, Safe Diagnostic
-  Console Run, Safety Snapshot, Repair/Guided Repair, and the real Agent
-  package boundary. Do not execute Slice B in the Slice A session.
+- **Slice B delivery:** The task-scoped Slice B work is delivered from feature
+  branch `agent/pos-slice-b` through a normal PR against `main`. `TASK.md` is
+  now the independent Claude Opus 5 security-review handoff.
+- **Current outcome:** POS Slice A and Slice B implementation and validation are
+  complete. No RMS executable, installer/uninstaller, repair, package
+  activation, database mutation, Production action, or Main Server mutation
+  was run.
+- **Next executable task:** after Slice B delivery is synchronized, perform the
+  independent security review specified in `TASK.md`. Slice C is out of scope
+  for the delivery session.
 
 ## Durable Slice A facts
 
@@ -36,31 +37,39 @@
 - The Angular POS workspace has the final compact header/peer-status rail,
   paired Branch/Cashier database cards, canonical three-service table,
   Health/Timeline/Bundle actions, bounded evidence panels, preserved PR #10
-  controls, and Slice B planned states. It uses design tokens and responsive
+  controls, and typed Slice B boundary panels. It uses design tokens and responsive
   desktop/tablet/narrow breakpoints.
 - Main Server integration remains GET-only and read-only. Secret-bearing
   inventory DTOs and the discovered Branch/POS PUT contracts are not proxied
   or invoked.
+- Slice B boundary details and route inventory are recorded in
+  `docs/POS_SLICE_B_BOUNDARY.md`.
 
 ## Validation evidence
 
 - POS Release build with `PosAgentSecurity__SupportHubOrigin` set and
   `-warnaserror` passed.
-- Full POS solution tests passed: Domain 9, Application 76, Infrastructure 83,
-  Agent integration 149 (317 total).
+- Full POS solution tests passed: Domain 9, Application 76, Infrastructure 87,
+  Agent integration 152 (324 total).
+- POS Release solution build passed with warnings treated as errors: 0
+  warnings, 0 errors.
 - Frontend tests passed: 56 files, 345 tests. Production frontend build passed.
-- POS OpenAPI/client generation passed twice; the second generated-client pass
-  was byte-stable. `git diff --check` passed.
+- POS OpenAPI contract tests passed (9 checks); client generation passed twice
+  with a byte-stable second pass. `git diff --check` passed.
+- Local runtime verification responded successfully at the frontend `4200`
+  root and backend `5200/api/modules/health`; those project-owned development
+  processes were left running.
 - The memory checker reports the pre-existing `AGENTS.md` 146-line budget
-  violation; all other checked memory files are within budget after the Slice B
-  task replacement. No generated/runtime paths are part of the source change.
+  violation; all other checked memory files are within budget. The repository
+  `scripts/build.ps1` gate remains red on two unrelated legacy backend tests
+  expecting 404 instead of the current 405 (190/192 passed). No
+  generated/runtime paths are part of the source change.
 
 ## Existing Main Server and runtime gates
 
-- Main Server Swagger evidence is read-only and environment-specific. Branch/POS
-  install-state PUTs have no proven package, operation, polling, cancellation,
-  idempotency, or rollback contract; Slice B must add an Agent-owned profile
-  boundary before any mutation is considered.
+- Main Server Swagger evidence remains read-only and environment-specific.
+  Slice B adds an Agent-owned fixed profile/read boundary; Branch/POS
+  install-state PUTs remain acknowledgements and are not invoked.
 - Testing is the only live environment. Production/customer deployment remains
   blocked on M-1/M-2, durable audit, package/ACL ownership, representative
   proof, Whites comparison, and independent review.

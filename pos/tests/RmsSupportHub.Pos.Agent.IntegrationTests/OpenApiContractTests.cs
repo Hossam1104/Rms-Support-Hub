@@ -31,6 +31,9 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/device/capabilities",
                 "/api/v1/device/connectivity",
                 "/api/v1/device/identity",
+                "/api/v1/diagnostic-console/preview/{targetId}",
+                "/api/v1/diagnostic-console/runs",
+                "/api/v1/diagnostic-console/runs/{operationId}",
                 "/api/v1/diagnostics/services/{serviceId}/failure",
                 "/api/v1/diagnostics/timeline",
                 "/api/v1/downloads/batches",
@@ -38,18 +41,36 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/downloads/operations/{operationId}",
                 "/api/v1/downloads/operations/{operationId}/events",
                 "/api/v1/health/check",
+                "/api/v1/main-server/profiles",
+                "/api/v1/main-server/state",
                 "/api/v1/maintenance/cleanup/execute",
                 "/api/v1/maintenance/cleanup/preview",
                 "/api/v1/maintenance/operations/{operationId}",
                 "/api/v1/maintenance/operations/{operationId}/events",
                 "/api/v1/maintenance/reset/execute",
                 "/api/v1/maintenance/reset/preview",
+                "/api/v1/packages/operations",
+                "/api/v1/packages/operations/{operationId}",
+                "/api/v1/packages/preview/{operationId}",
+                "/api/v1/packages/status",
+                "/api/v1/repair/guided/preview",
+                "/api/v1/repair/guided/preview/{snapshotId}",
+                "/api/v1/repair/guided/steps",
+                "/api/v1/repair/guided/{guidedRepairId}",
+                "/api/v1/repair/operations",
+                "/api/v1/repair/operations/{operationId}",
+                "/api/v1/repair/preview/{operationId}",
+                "/api/v1/repair/preview/{operationId}/{snapshotId}",
                 "/api/v1/rms/databases/{targetId}",
                 "/api/v1/rms/databases/{targetId}/backup",
                 "/api/v1/rms/databases/{targetId}/operations/{operationId}",
                 "/api/v1/rms/databases/{targetId}/operations/{operationId}/events",
                 "/api/v1/rms/databases/{targetId}/restore",
                 "/api/v1/rms/diagnostics",
+                "/api/v1/safety-snapshots/capture",
+                "/api/v1/safety-snapshots/preview",
+                "/api/v1/safety-snapshots/{snapshotId}",
+                "/api/v1/safety-snapshots/{snapshotId}/verify",
                 "/api/v1/security/mutation-token",
                 "/api/v1/services",
                 "/api/v1/services/{serviceId}/actions",
@@ -406,10 +427,33 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             ,"BranchResetPreviewDto"
             ,"BranchResetTablePreviewDto"
             ,"MaintenancePolicyRejectionDto"
-            ,"MaintenanceItemOutcomeDto"
-            ,"MaintenanceOperationOutcomeDto"
-            ,"MaintenanceOperationDto"
-        })
+             ,"MaintenanceItemOutcomeDto"
+             ,"MaintenanceOperationOutcomeDto"
+             ,"MaintenanceOperationDto"
+             ,"MainServerProfileDto"
+             ,"MainServerProfilesDto"
+             ,"MainServerStateEvidenceDto"
+             ,"SafetySnapshotCaptureRequestDto"
+             ,"SafetySnapshotPreviewDto"
+             ,"SafetySnapshotDto"
+             ,"SafetySnapshotVerificationDto"
+             ,"DiagnosticConsolePreviewDto"
+             ,"DiagnosticConsoleStartRequestDto"
+             ,"DiagnosticConsoleRunDto"
+             ,"DiagnosticConsoleResultDto"
+             ,"AgentPackageFileDto"
+             ,"AgentPackageManifestDto"
+             ,"AgentPackageStatusDto"
+             ,"AgentPackagePreviewDto"
+             ,"AgentPackageOperationRequestDto"
+             ,"AgentPackageOperationDto"
+             ,"RepairPreviewDto"
+             ,"RepairExecuteRequestDto"
+             ,"RepairOperationDto"
+             ,"GuidedRepairDto"
+             ,"GuidedRepairStepDto"
+             ,"GuidedRepairStepRequestDto"
+         })
         {
             var schema = schemas[schemaName]!.AsObject();
             Assert.False(string.IsNullOrWhiteSpace(schema["description"]?.GetValue<string>()), schemaName);

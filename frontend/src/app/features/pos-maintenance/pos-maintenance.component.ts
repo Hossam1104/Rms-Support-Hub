@@ -16,6 +16,20 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 
 type HealthStatus = components['schemas']['HealthStatusDto'];
 type HealthReport = components['schemas']['HealthReportDto'];
+type MainServerProfiles = components['schemas']['MainServerProfilesDto'];
+type MainServerState = components['schemas']['MainServerStateEvidenceDto'];
+type SafetySnapshotPreview = components['schemas']['SafetySnapshotPreviewDto'];
+type SafetySnapshot = components['schemas']['SafetySnapshotDto'];
+type DiagnosticConsoleTarget = components['schemas']['DiagnosticConsoleTargetDto'];
+type DiagnosticConsolePreview = components['schemas']['DiagnosticConsolePreviewDto'];
+type DiagnosticConsoleRun = components['schemas']['DiagnosticConsoleRunDto'];
+type AgentPackageStatus = components['schemas']['AgentPackageStatusDto'];
+type AgentPackagePreview = components['schemas']['AgentPackagePreviewDto'];
+type AgentPackageOperation = components['schemas']['AgentPackageOperationDto'];
+type RepairOperationKind = components['schemas']['RepairOperationKindDto'];
+type RepairPreview = components['schemas']['RepairPreviewDto'];
+type RepairOperation = components['schemas']['RepairOperationDto'];
+type GuidedRepair = components['schemas']['GuidedRepairDto'];
 type HealthState = components['schemas']['HealthState'];
 type HealthCheck = components['schemas']['HealthCheckDto'];
 type SessionInfo = components['schemas']['SessionInfoDto'];
@@ -60,6 +74,16 @@ type PendingMaintenanceAction = Readonly<{
   mode: 'cleanup' | 'branch-reset';
   challengeId: string;
   confirmationText: string;
+}>;
+type PendingSliceBAction = Readonly<{
+  kind: 'snapshot' | 'console' | 'package' | 'repair' | 'guided';
+  previewId?: string;
+  guidedRepairId?: string;
+  stepId?: string;
+  snapshotId?: string;
+  operationId?: string;
+  confirmationText: string;
+  message: string;
 }>;
 
 const POS_MAINTENANCE_TEMPLATE = `
@@ -188,19 +212,72 @@ const POS_MAINTENANCE_TEMPLATE = `
     </section>
 
     <section class="workspace-panel maintenance-panel" aria-labelledby="maintenance-title">
-      <div class="section-heading"><div><div class="section-kicker">04 / Operator actions</div><h2 id="maintenance-title">Maintenance</h2><p>Evidence-first actions remain available in Slice A. Repair and console execution are deliberately held for Slice B.</p></div></div>
+      <div class="section-heading"><div><div class="section-kicker">04 / Operator actions</div><h2 id="maintenance-title">Maintenance</h2><p>Slice A controls remain preserved. Slice B adds truthful server-owned previews for Main Server evidence, diagnostics, safety snapshots, package lifecycle, and repair.</p></div></div>
       <div class="action-grid action-grid--primary">
         <ui-button variant="primary" icon="bi-heart-pulse" [loading]="loadingHealth()" (pressed)="runHealthCheck()">Run Health Check</ui-button>
         <ui-button variant="secondary" icon="bi-activity" (pressed)="viewIncidentTimeline()">View Incident Timeline</ui-button>
         <ui-button variant="secondary" icon="bi-box-arrow-down" [loading]="generatingBundle()" [disabled]="!canOperate()" (pressed)="generateSupportBundle()">Generate Support Bundle</ui-button>
-        <ui-button variant="ghost" icon="bi-terminal" [disabled]="true">Safe Diagnostic Console Run <span class="planned-label">Planned — Slice B</span></ui-button>
       </div>
       @if (supportBundle(); as bundle) { <div class="result-strip" role="status"><strong>Support Bundle ready</strong><span>{{ bundle.artifact.displayName }} · {{ formatBytes(numberValue(bundle.artifact.sizeBytes)) }}</span><ui-button variant="ghost" size="sm" icon="bi-download" (pressed)="downloadArtifact(bundle.artifact.artifactId, bundle.artifact.displayName)">Download</ui-button></div> }
       <div class="operator-grid">
         <article class="operator-card"><div class="operator-card__heading"><div><div class="section-kicker">Preserved PR #10</div><h3>Downloader / Artifact</h3></div><app-status-badge label="Available" variant="success" role="status"></app-status-badge></div><p>Trigger the typed Downloader flow and download only server-registered opaque artifacts.</p><div class="branch-picker">@for (branch of downloaderBranches() || []; track branch.branchCode) { <label class="branch-chip"><input type="checkbox" [checked]="isBranchSelected(branch.branchCode)" (change)="toggleBranch(branch.branchCode)" />{{ branch.branchCode }}</label> } @empty { <span class="empty-copy">{{ readError('downloaderBranches') }}</span> }</div><ui-button variant="secondary" size="sm" icon="bi-cloud-download" [loading]="submittingDownloader()" [disabled]="!canOperate() || !selectedBranches().length" (pressed)="startDownloader()">Start Downloader</ui-button>@if (downloaderOperation(); as operation) { <p class="result-copy" role="status">{{ downloaderOperationLabel(operation) }}</p> }</article>
         <article class="operator-card"><div class="operator-card__heading"><div><div class="section-kicker">Preserved PR #10</div><h3>Cleanup / Branch Reset</h3></div><app-status-badge label="Available" variant="warning" role="status"></app-status-badge></div><p>Preview and confirm the existing policy-bound cleanup and branch reset workflows.</p><div class="action-row"><ui-button variant="secondary" size="sm" [loading]="previewingMaintenance() === 'cleanup'" [disabled]="!canOperate()" (pressed)="previewCleanup()">Preview Cleanup</ui-button><ui-button variant="danger" size="sm" [loading]="previewingMaintenance() === 'branch-reset'" [disabled]="!canOperate()" (pressed)="previewBranchReset()">Preview Branch Reset</ui-button></div>@if (cleanupPreview(); as preview) { <p class="result-copy">Cleanup: {{ preview.ready ? 'Ready for confirmation' : 'Rejected by policy' }}</p> } @if (branchResetPreview(); as preview) { <p class="result-copy">Branch reset: {{ preview.ready ? 'Ready for confirmation' : 'Rejected by policy' }}</p> }</article>
       </div>
-      <div class="planned-grid"><article><span class="section-kicker">Slice B</span><h3>Deployment</h3><p>Planned — Slice B</p></article><article><span class="section-kicker">Slice B</span><h3>Repair Installation</h3><p>Planned — Slice B</p></article><article><span class="section-kicker">Slice B</span><h3>Guided Repair</h3><p>Planned — Slice B</p></article></div>
+      <div class="slice-b-grid" aria-label="Slice B operator boundaries">
+        <article class="operator-card slice-b-card">
+          <div class="operator-card__heading"><div><div class="section-kicker">Read-only profile</div><h3>Main Server state</h3></div><app-status-badge [label]="mainServerBindingLabel(mainServerProfiles()?.activeBinding)" [variant]="mainServerBindingVariant(mainServerProfiles()?.activeBinding)" role="status"></app-status-badge></div>
+          <p>{{ mainServerDetail() }}</p>
+          @if (mainServerState(); as state) { <dl class="slice-b-facts"><div><dt>Environment</dt><dd>{{ state.environment }}</dd></div><div><dt>Branch / POS</dt><dd>{{ state.branchCode || 'Unavailable' }} / {{ state.posNumber || 'Unavailable' }}</dd></div><div><dt>Read outcome</dt><dd>{{ state.outcome }}</dd></div></dl> }
+          <p class="boundary-copy"><i class="bi bi-eye" aria-hidden="true"></i> Only fixed Agent-owned GET projections are permitted. Branch/POS installation-state PUT acknowledgements are not called.</p>
+        </article>
+
+        <article class="operator-card slice-b-card">
+          <div class="operator-card__heading"><div><div class="section-kicker">Before repair</div><h3>Safety Snapshot</h3></div><app-status-badge [label]="snapshotStateLabel(safetySnapshot())" [variant]="snapshotVariant(safetySnapshot())" role="status"></app-status-badge></div>
+          <p>{{ safetySnapshot()?.detail || safetySnapshotPreview()?.blockers?.[0] || 'Capture a fresh, integrity-protected evidence record before any package or repair operation.' }}</p>
+          <div class="action-row"><ui-button variant="secondary" size="sm" icon="bi-search" [disabled]="!canOperate()" (pressed)="previewSafetySnapshot()">Preview snapshot</ui-button><ui-button variant="primary" size="sm" icon="bi-shield-check" [loading]="capturingSafetySnapshot()" [disabled]="!canOperate() || !safetySnapshotPreview()?.ready" (pressed)="requestSafetySnapshotCapture()">Capture snapshot</ui-button></div>
+          @if (safetySnapshot(); as snapshot) { <p class="result-copy">Opaque snapshot {{ snapshot.snapshotId }} · expires {{ snapshot.expiresAtUtc }}</p> }
+          @if (safetySnapshotPreview()?.blockers?.length) { <ul class="slice-b-blockers">@for (blocker of safetySnapshotPreview()?.blockers || []; track blocker) { <li>{{ blocker }}</li> }</ul> }
+        </article>
+      </div>
+
+      <div class="slice-b-grid slice-b-grid--wide" aria-label="Slice B local diagnostic and package boundaries">
+        <article class="operator-card slice-b-card">
+          <div class="operator-card__heading"><div><div class="section-kicker">Fixed manifest</div><h3>Safe Diagnostic Console</h3></div><app-status-badge [label]="consoleStateLabel(consoleRun()?.outcome)" [variant]="consoleStateVariant(consoleRun()?.outcome)" role="status"></app-status-badge></div>
+          <p>Choose a logical target only. The Agent resolves the exact executable, arguments, working directory, empty environment, timeout, and output limits.</p>
+          <label class="slice-b-label" for="diagnostic-target">Logical target</label><select id="diagnostic-target" class="slice-b-select" [value]="consoleTarget()" (change)="setConsoleTarget($any($event.target).value)"><option value="branchServerApi">Branch Server API</option><option value="cashierServerApi">Cashier Server API</option><option value="serviceManager">RMS Services Manager</option><option value="cashierUi">Cashier UI</option></select>
+          <div class="action-row"><ui-button variant="secondary" size="sm" icon="bi-search" [loading]="previewingConsole()" [disabled]="!canOperate()" (pressed)="previewDiagnosticConsole()">Preview run</ui-button><ui-button variant="primary" size="sm" icon="bi-terminal" [loading]="startingConsole()" [disabled]="!canOperate() || !consolePreview()?.ready" (pressed)="requestDiagnosticConsoleRun()">Run diagnostics</ui-button></div>
+          @if (consolePreview(); as preview) { <p class="result-copy">{{ preview.displayName }} · {{ preview.ready ? 'Ready for exact confirmation' : preview.blockers.join(', ') }}</p> }
+          @if (consoleRun(); as run) { @if (run.result; as result) { <div class="artifact-actions">@if (result.stdoutArtifactId; as artifactId) { <button type="button" class="artifact-link" (click)="downloadArtifact(artifactId, 'diagnostic-stdout.txt')">Download stdout</button> } @if (result.stderrArtifactId; as artifactId) { <button type="button" class="artifact-link" (click)="downloadArtifact(artifactId, 'diagnostic-stderr.txt')">Download stderr</button> }<span>{{ result.stdoutLines + ' stdout lines · ' + result.stderrLines + ' stderr lines' }}</span></div> } }
+          <p class="boundary-copy"><i class="bi bi-lock" aria-hidden="true"></i> No shell, arbitrary path, arbitrary arguments, inherited secret environment, or user-selected process is exposed.</p>
+        </article>
+
+        <article class="operator-card slice-b-card">
+          <div class="operator-card__heading"><div><div class="section-kicker">Versioned boundary</div><h3>Agent Package</h3></div><app-status-badge [label]="packageStateLabel()" [variant]="packageStateVariant()" role="status"></app-status-badge></div>
+          <p>{{ packageStatus()?.detail || 'The Agent has not returned a server-owned package manifest.' }}</p>
+          @if (packageStatus()?.manifest; as manifest) { <dl class="slice-b-facts"><div><dt>Installed</dt><dd>{{ manifest.version }}</dd></div><div><dt>Service</dt><dd>{{ manifest.serviceDisplayName }}</dd></div><div><dt>Trust</dt><dd>{{ packageStatus()?.verification }}</dd></div></dl> }
+          <div class="action-row"><ui-button variant="secondary" size="sm" icon="bi-search" [loading]="previewingPackage()" [disabled]="!canOperate()" (pressed)="previewAgentPackage('upgrade')">Preview upgrade</ui-button><ui-button variant="primary" size="sm" icon="bi-box-seam" [loading]="startingPackage()" [disabled]="!canOperate() || !packagePreview()?.ready || !safetySnapshot()?.snapshotId" (pressed)="requestAgentPackageOperation()">Apply verified package</ui-button></div>
+          @if (packagePreview(); as preview) { <p class="result-copy">{{ preview.ready ? preview.effects.join(' · ') : preview.blockers.join(', ') }}</p> }
+          @if (packageOperation(); as operation) { <p class="result-copy" role="status">{{ operation.detail }} @if (operation.recoveryRequired) { <strong>Recovery required.</strong> }</p> }
+          <p class="boundary-copy"><i class="bi bi-shield-lock" aria-hidden="true"></i> Installation, upgrade, uninstall, rollback, service registration, ACL, certificate, and health actions remain Agent-owned and fail closed when trust is unavailable.</p>
+        </article>
+
+        <article class="operator-card slice-b-card">
+          <div class="operator-card__heading"><div><div class="section-kicker">Local repair</div><h3>Repair Installation</h3></div><app-status-badge [label]="repairStateLabel()" [variant]="repairStateVariant()" role="status"></app-status-badge></div>
+          <p>Repair is never inferred from a health recommendation. It requires a fresh verified snapshot, package identity/signature/checksum, capacity, explicit preview, exact confirmation, and one-use authorization.</p>
+          <div class="action-row"><ui-button variant="secondary" size="sm" icon="bi-search" [loading]="previewingRepair()" [disabled]="!canOperate()" (pressed)="previewRepairInstallation()">Preview repair</ui-button><ui-button variant="danger" size="sm" icon="bi-wrench-adjustable" [loading]="startingRepair()" [disabled]="!canOperate() || !repairPreview()?.ready" (pressed)="requestRepairInstallation()">Repair installation</ui-button></div>
+          @if (repairPreview(); as preview) { <p class="result-copy">{{ preview.ready ? preview.effects.join(' · ') : preview.blockers.join(', ') }}</p> }
+          @if (repairOperation(); as operation) { <p class="result-copy" role="status">{{ operation.detail }} @if (operation.rollbackAttempted) { <strong>{{ operation.rollbackSucceeded ? 'Rollback confirmed.' : 'Rollback not confirmed.' }}</strong> }</p> }
+          <p class="boundary-copy"><i class="bi bi-shield-check" aria-hidden="true"></i> This local typed boundary does not invoke Main Server installation-state acknowledgement routes.</p>
+        </article>
+
+        <article class="operator-card slice-b-card">
+          <div class="operator-card__heading"><div><div class="section-kicker">Coordinated checkpoints</div><h3>Guided Repair</h3></div><app-status-badge [label]="guidedRepair()?.state || 'Not started'" [variant]="guidedReadyStep() ? 'warning' : 'info'" role="status"></app-status-badge></div>
+          <p>{{ guidedRepair()?.detail || 'Load the fixed checkpoint sequence to see which typed precondition is next.' }}</p>
+          <div class="action-row"><ui-button variant="secondary" size="sm" icon="bi-list-check" [loading]="loadingGuidedRepair()" [disabled]="!canOperate()" (pressed)="previewGuidedRepair()">Load checkpoints</ui-button><ui-button variant="primary" size="sm" icon="bi-arrow-right-circle" [loading]="advancingGuidedRepair()" [disabled]="!canOperate() || !guidedReadyStep()" (pressed)="requestGuidedRepairAdvance()">Confirm next checkpoint</ui-button></div>
+          @if (guidedRepair(); as guided) { <div class="guided-steps">@for (step of guided.steps; track step.stepId) { <div class="guided-step" [class.guided-step--ready]="step.state === 'ready'"><span>{{ step.title }}</span><app-status-badge [label]="step.state" [variant]="step.state === 'completed' ? 'success' : step.state === 'blocked' ? 'warning' : step.state === 'ready' ? 'info' : 'info'" role="status"></app-status-badge></div> }</div> }
+          <p class="boundary-copy"><i class="bi bi-signpost-split" aria-hidden="true"></i> Checkpoints recommend and coordinate only fixed typed actions; a checkpoint cannot activate a package implicitly.</p>
+        </article>
+      </div>
     </section>
 
     <section class="workspace-panel advanced-panel" aria-labelledby="advanced-title">
@@ -214,6 +291,7 @@ const POS_MAINTENANCE_TEMPLATE = `
     @if (pendingAction(); as pending) { <app-confirm-dialog variant="danger" [title]="'Confirm ' + actionLabel(pending.action).toLowerCase() + ' service'" [message]="confirmationMessage(pending)" confirmLabel="Continue" cancelLabel="Cancel" (cancel)="cancelPendingAction()" (confirm)="executePendingAction()"></app-confirm-dialog> }
     @if (pendingDatabaseAction(); as pending) { <app-confirm-dialog variant="danger" [title]="'Restore ' + pending.displayName.toLowerCase() + '?'" [message]="databaseConfirmationMessage(pending)" [requireReason]="true" [requiredTypedValue]="pending.confirmationText" reasonLabel="Type the exact confirmation phrase" [reasonPlaceholder]="pending.confirmationText" confirmLabel="Restore database" cancelLabel="Cancel" (cancel)="cancelPendingDatabaseAction()" (confirm)="executePendingDatabaseRestore($event)"></app-confirm-dialog> }
     @if (pendingMaintenanceAction(); as pending) { <app-confirm-dialog variant="danger" [title]="pending.mode === 'cleanup' ? 'Confirm cleanup' : 'Confirm branch reset'" [message]="pending.mode === 'cleanup' ? 'The Agent will re-check its configured cleanup policy and may stop approved services before deleting approved targets.' : 'The Agent will re-check the configured branch and approved table scope before resetting data.'" [requireReason]="true" [requiredTypedValue]="pending.confirmationText" reasonLabel="Type the exact Agent confirmation phrase" [reasonPlaceholder]="pending.confirmationText" confirmLabel="Execute" cancelLabel="Cancel" (cancel)="cancelPendingMaintenance()" (confirm)="executePendingMaintenance($event)"></app-confirm-dialog> }
+    @if (pendingSliceBAction(); as pending) { <app-confirm-dialog variant="danger" [title]="pending.kind === 'snapshot' ? 'Capture Safety Snapshot' : pending.kind === 'console' ? 'Run fixed diagnostics' : pending.kind === 'package' ? 'Apply verified Agent package' : pending.kind === 'repair' ? 'Repair installation' : 'Confirm Guided Repair checkpoint'" [message]="pending.message" [requireReason]="true" [requiredTypedValue]="pending.confirmationText" reasonLabel="Type the exact Agent confirmation phrase" [reasonPlaceholder]="pending.confirmationText" confirmLabel="Continue" cancelLabel="Cancel" (cancel)="cancelPendingSliceBAction()" (confirm)="executePendingSliceBAction($event)"></app-confirm-dialog> }
   </main>
 `;
 
@@ -784,7 +862,7 @@ const POS_MAINTENANCE_TEMPLATE = `
     .boundary-banner__icon { display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center; border-radius: var(--radius-md); background: var(--surface-raised); color: var(--state-info-fg); }
     .boundary-banner h2 { margin-bottom: var(--space-2); }
     .boundary-banner p:last-child { max-width: 78ch; margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-normal); }
-    @media (max-width: 1000px) { .status-grid, .workspace-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1000px) { .status-grid, .workspace-grid, .operator-grid, .slice-b-grid, .slice-b-grid--wide { grid-template-columns: 1fr; } }
     @media (max-width: 680px) { .pos-page { padding-inline: var(--space-4); } .evidence-grid { grid-template-columns: 1fr; } .service-row { grid-template-columns: 1fr; align-items: flex-start; } .service-row__actions { justify-content: flex-start; } }
   `]
 })
@@ -830,6 +908,29 @@ export class PosMaintenanceComponent {
   readonly submittingDownloader = signal(false);
   readonly previewingMaintenance = signal<'cleanup' | 'branch-reset' | null>(null);
   readonly submittingMaintenance = signal(false);
+  readonly mainServerProfiles = signal<MainServerProfiles | null>(null);
+  readonly mainServerState = signal<MainServerState | null>(null);
+  readonly safetySnapshotPreview = signal<SafetySnapshotPreview | null>(null);
+  readonly safetySnapshot = signal<SafetySnapshot | null>(null);
+  readonly capturingSafetySnapshot = signal(false);
+  readonly consoleTarget = signal<DiagnosticConsoleTarget>('branchServerApi');
+  readonly consolePreview = signal<DiagnosticConsolePreview | null>(null);
+  readonly consoleRun = signal<DiagnosticConsoleRun | null>(null);
+  readonly previewingConsole = signal(false);
+  readonly startingConsole = signal(false);
+  readonly packageStatus = signal<AgentPackageStatus | null>(null);
+  readonly packagePreview = signal<AgentPackagePreview | null>(null);
+  readonly packageOperation = signal<AgentPackageOperation | null>(null);
+  readonly previewingPackage = signal(false);
+  readonly startingPackage = signal(false);
+  readonly repairPreview = signal<RepairPreview | null>(null);
+  readonly repairOperation = signal<RepairOperation | null>(null);
+  readonly previewingRepair = signal(false);
+  readonly startingRepair = signal(false);
+  readonly guidedRepair = signal<GuidedRepair | null>(null);
+  readonly loadingGuidedRepair = signal(false);
+  readonly advancingGuidedRepair = signal(false);
+  readonly pendingSliceBAction = signal<PendingSliceBAction | null>(null);
 
   private readonly errors = signal<Record<string, string>>({});
   private readonly actionOutcomes = signal<Record<string, ServiceActionResponse>>({});
@@ -969,6 +1070,257 @@ export class PosMaintenanceComponent {
     } finally {
       this.generatingBundle.set(false);
     }
+  }
+
+  async previewSafetySnapshot(): Promise<void> {
+    if (!this.canOperate() || this.capturingSafetySnapshot()) return;
+    const result = await this.settle(this.transport.getSafetySnapshotPreview());
+    if (result.ok) {
+      this.safetySnapshotPreview.set(result.value);
+      this.toast.showInfo(result.value.ready ? 'Safety Snapshot is ready for typed capture.' : 'Safety Snapshot remains blocked by current evidence.');
+    } else {
+      this.errors.update(errors => ({ ...errors, safetySnapshot: this.userFacingError(result.error) }));
+      this.toast.showError('Safety Snapshot preview could not be loaded.');
+    }
+  }
+
+  requestSafetySnapshotCapture(): void {
+    const preview = this.safetySnapshotPreview();
+    if (!this.canOperate() || !preview?.ready) return;
+    this.pendingSliceBAction.set({
+      kind: 'snapshot',
+      confirmationText: 'CAPTURE SAFETY SNAPSHOT',
+      message: 'The Agent will capture only the bounded safe identity, health, capacity, backup metadata, and drift evidence listed in the preview. No installer or Main Server mutation is involved.'
+    });
+  }
+
+  async previewDiagnosticConsole(): Promise<void> {
+    if (!this.canOperate() || this.previewingConsole()) return;
+    this.previewingConsole.set(true);
+    try {
+      const preview = await firstValueFrom(this.transport.getDiagnosticConsolePreview(this.consoleTarget()));
+      this.consolePreview.set(preview);
+      this.toast.showInfo(preview.ready ? 'The fixed diagnostic console preview is ready.' : 'The diagnostic console remains unavailable; no process can be started.');
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.previewingConsole.set(false);
+    }
+  }
+
+  requestDiagnosticConsoleRun(): void {
+    const preview = this.consolePreview();
+    if (!this.canOperate() || !preview?.ready || !preview.previewId) return;
+    this.pendingSliceBAction.set({
+      kind: 'console',
+      previewId: preview.previewId,
+      confirmationText: preview.confirmationPhrase,
+      message: 'Only the Agent manifest target, fixed diagnostic arguments, fixed working directory, empty child environment, and bounded redacted output are permitted.'
+    });
+  }
+
+  async previewAgentPackage(operation: components['schemas']['AgentPackageOperationKindDto'] = 'upgrade'): Promise<void> {
+    if (!this.canOperate() || this.previewingPackage()) return;
+    this.previewingPackage.set(true);
+    try {
+      const preview = await firstValueFrom(this.transport.getAgentPackagePreview(operation));
+      this.packagePreview.set(preview);
+      this.toast.showInfo(preview.ready ? 'The server-owned package preview is ready.' : 'No verified server-owned package operation is currently available.');
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.previewingPackage.set(false);
+    }
+  }
+
+  requestAgentPackageOperation(): void {
+    const preview = this.packagePreview();
+    if (!this.canOperate() || !preview?.ready || !preview.previewId) return;
+    this.pendingSliceBAction.set({
+      kind: 'package',
+      previewId: preview.previewId,
+      snapshotId: this.safetySnapshot()?.snapshotId || undefined,
+      confirmationText: preview.confirmationPhrase,
+      message: 'Package changes require a fresh verified Safety Snapshot. The Agent owns the exact package, service identity, ACL, certificate, activation, health, and rollback boundary.'
+    });
+  }
+
+  async previewRepairInstallation(): Promise<void> {
+    if (!this.canOperate() || this.previewingRepair()) return;
+    this.previewingRepair.set(true);
+    try {
+      const snapshotId = this.safetySnapshot()?.snapshotId;
+      const preview = await firstValueFrom(this.transport.getRepairPreview('repair', snapshotId || undefined));
+      this.repairPreview.set(preview);
+      this.toast.showInfo(preview.ready ? 'Repair Installation preview is ready.' : 'Repair Installation is blocked until all preconditions are verified.');
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.previewingRepair.set(false);
+    }
+  }
+
+  requestRepairInstallation(): void {
+    const preview = this.repairPreview();
+    if (!this.canOperate() || !preview?.ready || !preview.previewId) return;
+    this.pendingSliceBAction.set({
+      kind: 'repair',
+      previewId: preview.previewId,
+      snapshotId: preview.snapshot.snapshotId || undefined,
+      confirmationText: preview.confirmationPhrase,
+      message: 'Repair is local and Agent-owned. Main Server installation-state acknowledgements are not used as an installer. Activation will be reported only when typed health and rollback outcomes are confirmed.'
+    });
+  }
+
+  async previewGuidedRepair(): Promise<void> {
+    if (!this.canOperate() || this.loadingGuidedRepair()) return;
+    this.loadingGuidedRepair.set(true);
+    try {
+      const guided = await firstValueFrom(this.transport.getGuidedRepairPreview(this.safetySnapshot()?.snapshotId || undefined));
+      this.guidedRepair.set(guided);
+      this.toast.showInfo('Guided Repair checkpoints loaded; no repair action was started.');
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.loadingGuidedRepair.set(false);
+    }
+  }
+
+  requestGuidedRepairAdvance(): void {
+    const guided = this.guidedRepair();
+    const step = guided?.steps.find(candidate => candidate.state === 'ready');
+    if (!this.canOperate() || !guided?.guidedRepairId || !step?.requiresConfirmation || !step.confirmationPhrase) return;
+    this.pendingSliceBAction.set({
+      kind: 'guided',
+      guidedRepairId: guided.guidedRepairId,
+      stepId: step.stepId,
+      confirmationText: step.confirmationPhrase,
+      message: 'Guided Repair advances exactly one server-owned checkpoint. Package staging and activation are never inferred from a recommendation or a checkpoint click.'
+    });
+  }
+
+  cancelPendingSliceBAction(): void {
+    this.pendingSliceBAction.set(null);
+  }
+
+  async executePendingSliceBAction(confirmationText: string): Promise<void> {
+    const pending = this.pendingSliceBAction();
+    if (!pending || !this.canOperate()) {
+      this.pendingSliceBAction.set(null);
+      return;
+    }
+    if (confirmationText !== pending.confirmationText) {
+      this.toast.showError('Type the exact Agent confirmation phrase before continuing.');
+      return;
+    }
+
+    this.pendingSliceBAction.set(null);
+    try {
+      if (pending.kind === 'snapshot') {
+        this.capturingSafetySnapshot.set(true);
+        const issued = await firstValueFrom(this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.safetySnapshotCapture));
+        const snapshot = await firstValueFrom(this.transport.captureSafetySnapshot({ typedConfirmation: confirmationText, idempotencyKey: this.createIdempotencyKey() }, issued.token));
+        this.safetySnapshot.set(snapshot);
+        this.toast.showSuccess('Safety Snapshot captured and integrity protected by the Agent.');
+      } else if (pending.kind === 'console') {
+        this.startingConsole.set(true);
+        const issued = await firstValueFrom(this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.diagnosticConsoleRun));
+        const accepted = await firstValueFrom(this.transport.startDiagnosticConsoleRun({ previewId: pending.previewId!, typedConfirmation: confirmationText, idempotencyKey: this.createIdempotencyKey() }, issued.token));
+        this.consoleRun.set(await this.followDiagnosticConsoleRun(accepted));
+      } else if (pending.kind === 'package') {
+        this.startingPackage.set(true);
+        const issued = await firstValueFrom(this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.agentPackageOperation));
+        const accepted = await firstValueFrom(this.transport.startAgentPackageOperation({ previewId: pending.previewId!, typedConfirmation: confirmationText, idempotencyKey: this.createIdempotencyKey(), snapshotId: pending.snapshotId || null }, issued.token));
+        this.packageOperation.set(await this.followAgentPackageOperation(accepted));
+      } else if (pending.kind === 'repair') {
+        this.startingRepair.set(true);
+        const issued = await firstValueFrom(this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.repairOperation));
+        const accepted = await firstValueFrom(this.transport.startRepairOperation({ previewId: pending.previewId!, typedConfirmation: confirmationText, idempotencyKey: this.createIdempotencyKey(), snapshotId: pending.snapshotId || null }, issued.token));
+        this.repairOperation.set(await this.followRepairOperation(accepted));
+      } else {
+        this.advancingGuidedRepair.set(true);
+        const issued = await firstValueFrom(this.transport.issueMutationToken(POS_AGENT_OPERATION_IDS.guidedRepairCheckpoint));
+        const guided = await firstValueFrom(this.transport.advanceGuidedRepair({ guidedRepairId: pending.guidedRepairId!, stepId: pending.stepId!, typedConfirmation: confirmationText, idempotencyKey: this.createIdempotencyKey() }, issued.token));
+        this.guidedRepair.set(guided);
+        this.toast.showInfo(guided.detail);
+      }
+    } catch (error) {
+      this.toast.showError(this.operatorErrorMessage(classifyPosAgentError(error)));
+    } finally {
+      this.capturingSafetySnapshot.set(false);
+      this.startingConsole.set(false);
+      this.startingPackage.set(false);
+      this.startingRepair.set(false);
+      this.advancingGuidedRepair.set(false);
+    }
+  }
+
+  mainServerBindingLabel(binding: MainServerProfiles['activeBinding'] | undefined): string {
+    switch (binding) {
+      case 'bound': return 'Bound';
+      case 'mismatch': return 'Mismatch';
+      case 'ambiguous': return 'Ambiguous';
+      case 'unavailable': return 'Unavailable';
+      default: return 'Unknown';
+    }
+  }
+
+  mainServerBindingVariant(binding: MainServerProfiles['activeBinding'] | undefined): 'success' | 'warning' | 'danger' | 'info' {
+    return binding === 'bound' ? 'success' : binding === 'mismatch' || binding === 'ambiguous' ? 'danger' : binding === 'unavailable' ? 'warning' : 'info';
+  }
+
+  mainServerDetail(): string {
+    return this.mainServerState()?.detail || this.mainServerProfiles()?.detail || this.readError('mainServer');
+  }
+
+  snapshotStateLabel(snapshot: SafetySnapshot | null): string {
+    if (!snapshot) return this.safetySnapshotPreview()?.ready ? 'Ready to capture' : 'Not captured';
+    return snapshot.state === 'captured' || snapshot.state === 'verified' ? 'Verified evidence' : snapshot.state.replace(/([A-Z])/g, ' $1');
+  }
+
+  snapshotVariant(snapshot: SafetySnapshot | null): 'success' | 'warning' | 'danger' | 'info' {
+    if (snapshot?.state === 'captured' || snapshot?.state === 'verified') return 'success';
+    return this.safetySnapshotPreview()?.ready ? 'warning' : 'info';
+  }
+
+  consoleTargetLabel(target: DiagnosticConsoleTarget): string {
+    return target === 'branchServerApi' ? 'Branch Server API' : target === 'cashierServerApi' ? 'Cashier Server API' : target === 'serviceManager' ? 'RMS Services Manager' : 'Cashier UI';
+  }
+
+  setConsoleTarget(target: string): void {
+    if (target === 'branchServerApi' || target === 'cashierServerApi' || target === 'serviceManager' || target === 'cashierUi') {
+      this.consoleTarget.set(target);
+      this.consolePreview.set(null);
+    }
+  }
+
+  consoleStateLabel(state: DiagnosticConsoleRun['outcome'] | undefined): string {
+    return state ? state.replace(/([A-Z])/g, ' $1') : 'Not attempted';
+  }
+
+  consoleStateVariant(state: DiagnosticConsoleRun['outcome'] | undefined): 'success' | 'warning' | 'danger' | 'info' {
+    return state === 'succeeded' ? 'success' : state === 'partial' || state === 'timedOut' ? 'warning' : state === 'failed' || state === 'outcomeUnknown' ? 'danger' : 'info';
+  }
+
+  packageStateLabel(): string {
+    return this.packageStatus()?.verification === 'verified' ? 'Verified' : 'Unavailable / unverified';
+  }
+
+  packageStateVariant(): 'success' | 'warning' | 'danger' | 'info' {
+    return this.packageStatus()?.verification === 'verified' ? 'success' : this.packageStatus() ? 'warning' : 'info';
+  }
+
+  repairStateLabel(): string {
+    const preview = this.repairPreview();
+    return preview?.ready ? 'Ready after verified preconditions' : 'Blocked until preconditions pass';
+  }
+
+  repairStateVariant(): 'success' | 'warning' | 'danger' | 'info' {
+    return this.repairPreview()?.ready ? 'success' : this.repairPreview() ? 'warning' : 'info';
+  }
+
+  guidedReadyStep(): GuidedRepair['steps'][number] | null {
+    return this.guidedRepair()?.steps.find(step => step.state === 'ready') || null;
   }
 
   healthCheck(code: string): HealthCheck | null {
@@ -1576,6 +1928,36 @@ export class PosMaintenanceComponent {
     return current;
   }
 
+  private async followDiagnosticConsoleRun(accepted: DiagnosticConsoleRun): Promise<DiagnosticConsoleRun> {
+    let current = accepted;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (!['accepted', 'running'].includes(current.state)) return current;
+      await this.delay(250);
+      current = await firstValueFrom(this.transport.getDiagnosticConsoleRun(current.operationId));
+    }
+    return current;
+  }
+
+  private async followAgentPackageOperation(accepted: AgentPackageOperation): Promise<AgentPackageOperation> {
+    let current = accepted;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (!['accepted', 'staging', 'activating', 'verifying'].includes(current.state)) return current;
+      await this.delay(250);
+      current = await firstValueFrom(this.transport.getAgentPackageOperation(current.operationId));
+    }
+    return current;
+  }
+
+  private async followRepairOperation(accepted: RepairOperation): Promise<RepairOperation> {
+    let current = accepted;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (!['accepted', 'running'].includes(current.state)) return current;
+      await this.delay(250);
+      current = await firstValueFrom(this.transport.getRepairOperation(current.operationId));
+    }
+    return current;
+  }
+
   private applyDownloaderBranches(
     result: Settled<BranchCatalogEntry[]>,
     errors: Record<string, string>
@@ -1764,7 +2146,7 @@ export class PosMaintenanceComponent {
     this.refreshing.set(true);
     if (firstLoad) this.loading.set(true);
 
-    const [live, session, identity, connectivity, capabilities, configuration, services, rms, health, branchDatabase, cashierDatabase, downloaderBranches] = await Promise.all([
+    const [live, session, identity, connectivity, capabilities, configuration, services, rms, health, branchDatabase, cashierDatabase, downloaderBranches, mainServerProfiles, mainServerState, safetySnapshotPreview, packageStatus, guidedRepair] = await Promise.all([
       this.settle(this.transport.getLive()),
       this.settle(this.transport.getSession()),
       this.settle(this.transport.getDeviceIdentity()),
@@ -1776,7 +2158,12 @@ export class PosMaintenanceComponent {
       this.settle(this.transport.getHealthCheck()),
       this.settle(this.transport.getRmsDatabaseWorkspace('branch')),
       this.settle(this.transport.getRmsDatabaseWorkspace('cashier')),
-      this.settle(this.transport.getDownloaderBranches())
+      this.settle(this.transport.getDownloaderBranches()),
+      this.settle(this.transport.getMainServerProfiles()),
+      this.settle(this.transport.getMainServerState()),
+      this.settle(this.transport.getSafetySnapshotPreview()),
+      this.settle(this.transport.getAgentPackageStatus()),
+      this.settle(this.transport.getGuidedRepairPreview())
     ]);
 
     const nextErrors: Record<string, string> = {};
@@ -1792,6 +2179,11 @@ export class PosMaintenanceComponent {
     this.applyValue('branchDatabase', branchDatabase, this.branchDatabaseWorkspace, nextErrors);
     this.applyValue('cashierDatabase', cashierDatabase, this.cashierDatabaseWorkspace, nextErrors);
     this.applyDownloaderBranches(downloaderBranches, nextErrors);
+    this.applyValue('mainServer', mainServerProfiles, this.mainServerProfiles, nextErrors);
+    this.applyValue('mainServerState', mainServerState, this.mainServerState, nextErrors);
+    this.applyValue('safetySnapshot', safetySnapshotPreview, this.safetySnapshotPreview, nextErrors);
+    this.applyValue('packageStatus', packageStatus, this.packageStatus, nextErrors);
+    this.applyValue('guidedRepair', guidedRepair, this.guidedRepair, nextErrors);
     this.errors.set(nextErrors);
 
     const failedReads = Object.keys(nextErrors).filter(key => key !== 'agent' && key !== 'session');
