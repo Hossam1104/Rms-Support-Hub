@@ -564,6 +564,426 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/main-server/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read fixed Main Server profiles
+         * @description Returns only the server-owned Testing profile and disabled future Production profile. Branch/POS binding, credentials, free URLs, and arbitrary Main Server routes remain Agent-owned and are not exposed.
+         */
+        get: operations["GetMainServerProfiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/main-server/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read bound Main Server Branch and POS state
+         * @description Performs only typed, server-owned GET projections after Branch/POS identity and fixed profile binding succeed. Installation acknowledgements, credentials, free URLs, and generic proxy behavior are outside this read boundary.
+         */
+        get: operations["GetMainServerState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/safety-snapshots/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a pre-maintenance Safety Snapshot
+         * @description Returns the bounded evidence categories that would be captured before a local package or repair operation. Credentials, raw configuration, SQL, logs, private keys, arbitrary paths, and full events are excluded.
+         */
+        get: operations["PreviewSafetySnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/safety-snapshots/capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Capture an authorized Safety Snapshot
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["CaptureSafetySnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/safety-snapshots/{snapshotId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verify a principal-scoped Safety Snapshot
+         * @description Rechecks the opaque snapshot identifier, principal binding, expiry, size bound, and integrity hash before the snapshot can authorize repair.
+         */
+        get: operations["VerifySafetySnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/safety-snapshots/{snapshotId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a principal-scoped Safety Snapshot
+         * @description Returns only the safe snapshot projection for the authenticated principal. Invalid, mismatched, corrupt, expired, and unavailable records fail closed.
+         */
+        get: operations["GetSafetySnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnostic-console/preview/{targetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a fixed Diagnostic Console run
+         * @description Previews only a logical target from the fixed Agent manifest. The executable, arguments, working directory, child environment, timeout, and output bounds are resolved server-side; arbitrary process execution is not accepted.
+         */
+        get: operations["PreviewDiagnosticConsoleRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnostic-console/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an authorized fixed Diagnostic Console run
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["StartDiagnosticConsoleRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnostic-console/runs/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped Diagnostic Console run
+         * @description Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.
+         */
+        get: operations["GetDiagnosticConsoleRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the server-owned Agent package status
+         * @description Returns only safe installed-manifest metadata and truthful verification state. Package paths, archives, private keys, and installer arguments are never exposed.
+         */
+        get: operations["GetAgentPackageStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/preview/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a typed Agent package operation
+         * @description Reads only the Agent-owned package catalog and verifier. Preview does not stage, activate, uninstall, register, or roll back a package.
+         */
+        get: operations["PreviewAgentPackageOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an authorized typed Agent package operation
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["StartAgentPackageOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped Agent package operation
+         * @description Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.
+         */
+        get: operations["GetAgentPackageOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/preview/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a typed Repair Installation operation
+         * @description Validates the server-owned package manifest, signature, checksum, compatibility, archive, fixed installation boundary, required Safety Snapshot, capacity, and rollback preconditions without changing the machine.
+         */
+        get: operations["PreviewRepairWithoutSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/preview/{operationId}/{snapshotId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a typed Repair Installation operation
+         * @description Validates the server-owned package manifest, signature, checksum, compatibility, archive, fixed installation boundary, required Safety Snapshot, capacity, and rollback preconditions without changing the machine.
+         */
+        get: operations["PreviewRepairWithSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an authorized typed repair operation
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["StartRepairOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped repair operation
+         * @description Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.
+         */
+        get: operations["GetRepairOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/guided/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Guided Repair checkpoints
+         * @description Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.
+         */
+        get: operations["PreviewGuidedRepair"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/guided/preview/{snapshotId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Guided Repair checkpoints
+         * @description Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.
+         */
+        get: operations["PreviewGuidedRepairWithSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/guided/{guidedRepairId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one principal-scoped Guided Repair sequence
+         * @description Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.
+         */
+        get: operations["GetGuidedRepair"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repair/guided/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Advance one authorized Guided Repair checkpoint
+         * @description Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.
+         */
+        post: operations["AdvanceGuidedRepair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/identity": {
         parameters: {
             query?: never;
@@ -628,6 +1048,156 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Safe logical package-file metadata used for server-side checksum and size verification. */
+        AgentPackageFileDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            logicalName: string;
+            /**
+             * Format: int64
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            sizeBytes: number | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            sha256: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            required: boolean;
+        };
+        /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+        AgentPackageManifestDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            packageId: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            version: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            supportedOperatingSystem: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            supportedRuntime: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            serviceDisplayName: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            serviceIdentity: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            scmName: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            signatureAlgorithm: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            signerDisplayName: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            packageSha256: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            files: components["schemas"]["AgentPackageFileDto"][];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            aclRequirements: string[];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            certificateRequirements: string[];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            previousVersion: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            rollbackAvailable: boolean;
+        };
+        /** @description Principal-scoped package lifecycle state with activation, health, rollback, and recovery truth. */
+        AgentPackageOperationDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            operationId: string;
+            /** @description Typed package lifecycle operation selected by the server-owned policy. */
+            operation: components["schemas"]["AgentPackageOperationKindDto"];
+            /** @description Typed package lifecycle state. */
+            state: components["schemas"]["AgentPackageOperationStateDto"];
+            /** @description Typed package lifecycle outcome truth. */
+            outcome: components["schemas"]["AgentPackageOperationStateDto"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported progress percentage for the typed operation.
+             */
+            progressPercent: number | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stage: string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            rollbackAttempted: boolean;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            rollbackSucceeded: boolean;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            recoveryRequired: boolean;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            startedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            completedAtUtc: null | string;
+            /** @description Safe request correlation identifier for operator diagnostics. */
+            correlationId: string;
+        };
+        /**
+         * @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint.
+         * @enum {unknown}
+         */
+        AgentPackageOperationKindDto: "install" | "upgrade" | "uninstall" | "rollback" | "repair" | "health";
+        /** @description Typed request for one prior Agent package preview with exact confirmation and idempotency. */
+        AgentPackageOperationRequestDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            previewId: string;
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            snapshotId?: null | string;
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        AgentPackageOperationStateDto: "notAttempted" | "preview" | "accepted" | "staging" | "activating" | "verifying" | "completed" | "failed" | "rollbackSucceeded" | "rollbackFailed" | "recoveryRequired" | "outcomeUnknown";
+        /** @description Typed Agent package lifecycle preview with manifest verification and bounded effects/blockers. */
+        AgentPackagePreviewDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            previewId: string;
+            /** @description Typed package lifecycle operation selected by the server-owned policy. */
+            operation: components["schemas"]["AgentPackageOperationKindDto"];
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            ready: boolean;
+            /** @description Typed package signature, checksum, compatibility, and trust verification state. */
+            verification: components["schemas"]["AgentPackageVerificationStateDto"];
+            /** @description Safe verified package manifest projection, when available. */
+            manifest: null | components["schemas"]["AgentPackageManifestDto"];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            effects: string[];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            blockers: string[];
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            confirmationPhrase: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: string;
+        };
+        /** @description Safe server-owned Agent package status and truthful verification state. */
+        AgentPackageStatusDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            installedVersion: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            previousVersion: null | string;
+            /** @description Typed package signature, checksum, compatibility, and trust verification state. */
+            verification: components["schemas"]["AgentPackageVerificationStateDto"];
+            /** @description Typed installed package lifecycle state. */
+            state: components["schemas"]["AgentPackageOperationStateDto"];
+            /** @description Safe verified package manifest projection, when available. */
+            manifest: null | components["schemas"]["AgentPackageManifestDto"];
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        AgentPackageVerificationStateDto: "unverified" | "verified" | "rejected" | "unknown";
         /** @description Safe application/problem+json error contract. Code is a stable problem code and correlationId may identify the request; sensitive identity and machine details are not included. */
         AgentProblemDetailsDto: {
             /** @description Problem type identifier for the stable Agent error contract. */
@@ -807,6 +1377,138 @@ export interface components {
             /** @description Configured client/product label for the local device. */
             clientName: string;
         };
+        /** @description Preview of one fixed Agent diagnostic manifest target with bounded process and output policy. */
+        DiagnosticConsolePreviewDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            previewId: string;
+            /** @description Fixed server-owned diagnostic manifest target; no browser-selected executable or arguments are accepted. */
+            target: components["schemas"]["DiagnosticConsoleTargetDto"];
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            ready: boolean;
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            displayName: string;
+            /** @description Typed diagnostic preview state. */
+            state: components["schemas"]["DiagnosticConsoleRunStateDto"];
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            maxWallTimeSeconds: number | string;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            maxOutputBytes: number | string;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            maxOutputLines: number | string;
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            preconditions: string[];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            blockers: string[];
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            confirmationPhrase: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: string;
+        };
+        /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+        DiagnosticConsoleResultDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stdoutArtifactId: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stderrArtifactId: null | string;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            stdoutBytes: number | string;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            stderrBytes: number | string;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            stdoutLines: number | string;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            stderrLines: number | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            outputTruncated: boolean;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            redactionApplied: boolean;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            exitCode: null | number | string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /** @description Principal-scoped fixed diagnostic operation state with safe detail and opaque output artifacts. */
+        DiagnosticConsoleRunDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            operationId: string;
+            /** @description Fixed server-owned diagnostic manifest target used by this operation. */
+            target: components["schemas"]["DiagnosticConsoleTargetDto"];
+            /** @description Typed diagnostic operation lifecycle state. */
+            state: components["schemas"]["DiagnosticConsoleRunStateDto"];
+            /** @description Typed diagnostic operation outcome truth. */
+            outcome: components["schemas"]["DiagnosticConsoleRunStateDto"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported progress percentage for the typed operation.
+             */
+            progressPercent: number | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stage: string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            startedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            completedAtUtc: null | string;
+            /** @description Separate bounded stdout/stderr artifact metadata, when a result exists. */
+            result: null | components["schemas"]["DiagnosticConsoleResultDto"];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            errorCode: null | string;
+            /** @description Safe request correlation identifier for operator diagnostics. */
+            correlationId: string;
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        DiagnosticConsoleRunStateDto: "notAttempted" | "accepted" | "running" | "succeeded" | "failed" | "timedOut" | "cancelled" | "partial" | "outcomeUnknown";
+        /** @description Typed request for one prior fixed diagnostic preview. It contains no process path, shell, executable, argument, or environment input. */
+        DiagnosticConsoleStartRequestDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            previewId: string;
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
+        };
+        /**
+         * @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint.
+         * @enum {unknown}
+         */
+        DiagnosticConsoleTargetDto: "branchServerApi" | "cashierServerApi" | "serviceManager" | "cashierUi";
         /** @description Sanitized outcome for one requested downloader branch; artifactId is an opaque Agent capability. */
         DownloaderBranchOutcomeDto: {
             /** @description Logical branch code from the server-approved downloader selection. */
@@ -935,6 +1637,55 @@ export interface components {
          * @enum {unknown}
          */
         FreshnessState: "unknown" | "fresh" | "stale";
+        /** @description Fixed principal-scoped Guided Repair checkpoint sequence with explicit blocked and recovery states. */
+        GuidedRepairDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            guidedRepairId: string;
+            /** @description Typed Guided Repair workflow state; checkpoint progress never implies package activation. */
+            state: components["schemas"]["RepairOperationStateDto"];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            steps: components["schemas"]["GuidedRepairStepDto"][];
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: string;
+        };
+        /** @description One typed Guided Repair checkpoint. Advancing it never implies package activation. */
+        GuidedRepairStepDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stepId: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            title: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            description: string;
+            /** @description Typed Guided Repair checkpoint state. */
+            state: components["schemas"]["GuidedRepairStepStateDto"];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            requiresConfirmation: boolean;
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            confirmationPhrase: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            failureCode: null | string;
+        };
+        /** @description Typed request to advance one exact Guided Repair checkpoint with confirmation and idempotency. */
+        GuidedRepairStepRequestDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            guidedRepairId: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stepId: string;
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        GuidedRepairStepStateDto: "pending" | "ready" | "confirmed" | "completed" | "failed" | "blocked" | "recoveryRequired";
         /** @description One bounded read-only health result with an explicit unknown state. */
         HealthCheckDto: {
             /** @description Stable server-owned health check code. */
@@ -1005,6 +1756,81 @@ export interface components {
             operationId: null | string;
             /** @description Safe correlation identifier, when available. */
             correlationId: null | string;
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        MainServerBindingStateDto: "bound" | "unavailable" | "mismatch" | "ambiguous" | "unknown";
+        /**
+         * @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint.
+         * @enum {unknown}
+         */
+        MainServerEnvironmentDto: "testing" | "production";
+        /** @description Safe projection of one server-owned Main Server profile and its fixed logical read operations. */
+        MainServerProfileDto: {
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            profileId: string;
+            /** @description Server-owned Main Server environment selection; Production remains disabled until explicitly enabled by the server. */
+            environment: components["schemas"]["MainServerEnvironmentDto"];
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            enabled: boolean;
+            /** @description Server-owned Branch/POS binding state; the browser cannot provide a host, branch, POS, or endpoint override. */
+            binding: components["schemas"]["MainServerBindingStateDto"];
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            clientName: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            allowedReadOperations: components["schemas"]["MainServerReadOperationDto"][];
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /** @description Server-owned Testing and future Production Main Server profile projections. URLs, credentials, arbitrary routes, and installation acknowledgements are not returned. */
+        MainServerProfilesDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            profiles: components["schemas"]["MainServerProfileDto"][];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            activeProfileId: string;
+            /** @description Server-owned Branch/POS binding state for the active profile; the browser cannot provide a host, branch, POS, or endpoint override. */
+            activeBinding: components["schemas"]["MainServerBindingStateDto"];
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /** @enum {unknown} */
+        MainServerReadOperationDto: "branchStatus" | "installedBranch" | "installedPos";
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        MainServerReadOutcomeDto: "notAttempted" | "succeeded" | "actionRequired" | "outcomeUnknown";
+        /** @description Bounded Branch/POS Main Server state evidence with explicit binding and read outcome truth. */
+        MainServerStateEvidenceDto: {
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            profileId: string;
+            /** @description Server-owned Main Server environment associated with this state observation. */
+            environment: components["schemas"]["MainServerEnvironmentDto"];
+            /** @description Server-owned Branch/POS binding associated with this state observation. */
+            binding: components["schemas"]["MainServerBindingStateDto"];
+            /** @description Typed Main Server read outcome; unavailable or ambiguous responses remain explicit. */
+            outcome: components["schemas"]["MainServerReadOutcomeDto"];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            branchCode: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            posNumber: null | string;
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            clientName: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            branchState: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            posState: null | string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            checkedAtUtc: string;
+            /** @description Safe request correlation identifier for operator diagnostics. */
+            correlationId: string;
         };
         /** @description Sanitized maintenance item outcome with logical target identity and explicit recovery truth. */
         MaintenanceItemOutcomeDto: {
@@ -1162,6 +1988,89 @@ export interface components {
              * @description Configured downloader operation timeout in seconds.
              */
             timeoutSeconds: number | string;
+        };
+        /** @description Typed request for one prior repair preview. It contains no installer path, command, or Main Server mutation input. */
+        RepairExecuteRequestDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            previewId: string;
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            snapshotId?: null | string;
+        };
+        /** @description Principal-scoped repair lifecycle state with activation, health, rollback, and recovery truth. */
+        RepairOperationDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            operationId: string;
+            /** @description Typed repair operation selected by the server-owned policy. */
+            operation: components["schemas"]["RepairOperationKindDto"];
+            /** @description Typed repair lifecycle state. */
+            state: components["schemas"]["RepairOperationStateDto"];
+            /** @description Typed repair lifecycle outcome truth. */
+            outcome: components["schemas"]["RepairOperationStateDto"];
+            /**
+             * Format: int32
+             * @description Bounded server-reported progress percentage for the typed operation.
+             */
+            progressPercent: number | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            stage: string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            rollbackAttempted: boolean;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            rollbackSucceeded: boolean;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            recoveryRequired: boolean;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            startedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            completedAtUtc: null | string;
+            /** @description Safe request correlation identifier for operator diagnostics. */
+            correlationId: string;
+        };
+        /**
+         * @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint.
+         * @enum {unknown}
+         */
+        RepairOperationKindDto: "install" | "upgrade" | "uninstall" | "rollback" | "repair" | "guided";
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        RepairOperationStateDto: "notAttempted" | "preview" | "accepted" | "running" | "completed" | "failed" | "partial" | "rollbackSucceeded" | "rollbackFailed" | "recoveryRequired" | "outcomeUnknown";
+        /** @description Typed repair precondition preview bound to a fresh principal-scoped Safety Snapshot. */
+        RepairPreviewDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            previewId: string;
+            /** @description Typed repair operation selected by the server-owned policy. */
+            operation: components["schemas"]["RepairOperationKindDto"];
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            ready: boolean;
+            /** @description Typed package verification state required before repair can proceed. */
+            packageVerification: components["schemas"]["AgentPackageVerificationStateDto"];
+            /** @description Reference to the fresh principal-scoped Safety Snapshot required by this repair preview. */
+            snapshot: components["schemas"]["SafetySnapshotReferenceDto"];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            effects: string[];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            blockers: string[];
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            confirmationPhrase: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: string;
         };
         /** @description Server-owned comparison between an installed RMS component build and Product Release. */
         RmsComponentDriftDto: {
@@ -1453,6 +2362,172 @@ export interface components {
             cashierServerBuildNumber: null | string;
             /** @description Cashier UI BuildNumber selected from its installed appsettings. */
             cashierUiBuildNumber: null | string;
+        };
+        /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+        SafetySnapshotBackupEvidenceDto: {
+            state: components["schemas"]["SafetySnapshotEvidenceStateDto"];
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            approvedCount: number | string;
+            /**
+             * Format: date-time
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            latestCreatedAtUtc: null | string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+        SafetySnapshotCapacityEvidenceDto: {
+            state: components["schemas"]["SafetySnapshotEvidenceStateDto"];
+            /**
+             * Format: int64
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            availableBytes: null | number | string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /** @description Typed request to capture the bounded pre-maintenance Safety Snapshot. */
+        SafetySnapshotCaptureRequestDto: {
+            /** @description Exact server-owned typed confirmation value required for this workflow boundary. */
+            typedConfirmation: string;
+            /** @description Bounded caller-generated key used to prevent duplicate execution of the same typed request. */
+            idempotencyKey: string;
+        };
+        SafetySnapshotDatabaseEvidenceDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            databaseId: string;
+            /** @description Typed server-owned state classification; unknown and recovery states are preserved explicitly. */
+            state: string;
+            evidenceState: components["schemas"]["SafetySnapshotEvidenceStateDto"];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            identity: null | string;
+        };
+        /** @description Principal-scoped, integrity-protected safe maintenance evidence with expiry and typed state. */
+        SafetySnapshotDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            snapshotId: string;
+            /** @description Typed Safety Snapshot lifecycle state. */
+            state: components["schemas"]["SafetySnapshotStateDto"];
+            /** @description Typed pre-maintenance evidence availability classification. */
+            evidenceState: components["schemas"]["SafetySnapshotEvidenceStateDto"];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            branchCode: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            posNumber: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            installationGuid: null | string;
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            clientName: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            productRelease: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            packageVersion: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            packageHash: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            configurationFingerprint: string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            services: components["schemas"]["SafetySnapshotServiceEvidenceDto"][];
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            databases: components["schemas"]["SafetySnapshotDatabaseEvidenceDto"][];
+            /** @description Bounded storage-capacity evidence captured by the Agent. */
+            capacity: components["schemas"]["SafetySnapshotCapacityEvidenceDto"];
+            /** @description Bounded approved-backup evidence captured by the Agent. */
+            backups: components["schemas"]["SafetySnapshotBackupEvidenceDto"];
+            /** @description Safe request correlation identifier for operator diagnostics. */
+            correlationId: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            capturedAtUtc: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        SafetySnapshotEvidenceStateDto: "healthy" | "warning" | "actionRequired" | "unknown";
+        /** @description Preview of bounded pre-maintenance evidence. Credentials, raw configuration, SQL, logs, private keys, arbitrary paths, and full events are excluded. */
+        SafetySnapshotPreviewDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            snapshotType: string;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            ready: boolean;
+            /** @description Typed pre-maintenance evidence availability classification; unavailable evidence blocks repair. */
+            evidenceState: components["schemas"]["SafetySnapshotEvidenceStateDto"];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            includedEvidence: string[];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            excludedEvidence: string[];
+            /** @description Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted. */
+            blockers: string[];
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             */
+            retentionMinutes: number | string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: string;
+        };
+        /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+        SafetySnapshotReferenceDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            snapshotId: null | string;
+            /** @description Typed server-owned state classification; unknown and recovery states are preserved explicitly. */
+            state: string;
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            verified: boolean;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            expiresAtUtc: null | string;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+        };
+        SafetySnapshotServiceEvidenceDto: {
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            serviceId: string;
+            /** @description Typed server-owned state classification; unknown and recovery states are preserved explicitly. */
+            state: string;
+            evidenceState: components["schemas"]["SafetySnapshotEvidenceStateDto"];
+        };
+        /**
+         * @description Typed server-owned state classification; unknown and recovery states are preserved explicitly.
+         * @enum {unknown}
+         */
+        SafetySnapshotStateDto: "preview" | "captured" | "verified" | "stale" | "expired" | "mismatched" | "corrupt" | "unavailable" | "unknown";
+        /** @description Principal-scoped Safety Snapshot integrity, freshness, and authorization verification result. */
+        SafetySnapshotVerificationDto: {
+            /** @description Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow. */
+            snapshotId: string;
+            /** @description Typed Safety Snapshot verification state; stale, mismatched, or unverifiable evidence remains non-authorizing. */
+            state: components["schemas"]["SafetySnapshotStateDto"];
+            /** @description Boolean outcome or capability flag produced by the server-owned boundary. */
+            verified: boolean;
+            /** @description Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data. */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description UTC lifecycle timestamp produced and enforced by the Agent.
+             */
+            checkedAtUtc: string;
+            /** @description Safe request correlation identifier for operator diagnostics. */
+            correlationId: null | string;
         };
         /** @enum {unknown} */
         ServiceActionKind: "start" | "stop" | "restart";
@@ -3421,6 +4496,1145 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetMainServerProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the bounded MainServerProfilesDto profile projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "activeProfileId": "main-server-testing",
+                     *       "activeBinding": "unknown",
+                     *       "detail": "The active Testing profile remains server-owned."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MainServerProfilesDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetMainServerState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the bounded MainServerStateEvidenceDto state projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "profileId": "main-server-testing",
+                     *       "environment": "testing",
+                     *       "binding": "unknown",
+                     *       "outcome": "notAttempted",
+                     *       "detail": "Main Server state was not attempted because binding was not established."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MainServerStateEvidenceDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewSafetySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the bounded SafetySnapshotPreviewDto preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "snapshotType": "pre-maintenance",
+                     *       "ready": false,
+                     *       "evidenceState": "unknown",
+                     *       "includedEvidence": [
+                     *         "safe identity",
+                     *         "service state"
+                     *       ],
+                     *       "excludedEvidence": [
+                     *         "credentials",
+                     *         "raw configuration",
+                     *         "SQL"
+                     *       ],
+                     *       "blockers": [
+                     *         "safe_evidence_unavailable"
+                     *       ],
+                     *       "retentionMinutes": 120,
+                     *       "expiresAtUtc": "2030-01-01T00:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SafetySnapshotPreviewDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    CaptureSafetySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SafetySnapshotCaptureRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent captured an atomic principal-scoped, integrity-protected SafetySnapshotDto. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SafetySnapshotDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    VerifySafetySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed SafetySnapshotVerificationDto verification result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "snapshotId": "opaque-snapshot-id",
+                     *       "state": "verified",
+                     *       "verified": true,
+                     *       "detail": "The snapshot is fresh and integrity verified."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SafetySnapshotVerificationDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetSafetySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed SafetySnapshotDto projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "snapshotId": "opaque-snapshot-id",
+                     *       "state": "verified",
+                     *       "evidenceState": "healthy",
+                     *       "detail": "The snapshot is fresh and integrity verified."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SafetySnapshotDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque snapshot identifier is unavailable for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewDiagnosticConsoleRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed DiagnosticConsolePreviewDto preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "previewId": "opaque-preview-id",
+                     *       "target": "branchServerApi",
+                     *       "ready": false,
+                     *       "state": "notAttempted",
+                     *       "blockers": [
+                     *         "console_executable_unavailable"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DiagnosticConsolePreviewDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StartDiagnosticConsoleRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiagnosticConsoleStartRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent accepted a fixed manifest diagnostic run with bounded, separately redacted output artifacts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticConsoleRunDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetDiagnosticConsoleRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the retained typed DiagnosticConsoleRunDto state and opaque artifact capabilities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "opaque-operation-id",
+                     *       "state": "running",
+                     *       "progressPercent": 50
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DiagnosticConsoleRunDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetAgentPackageStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed AgentPackageStatusDto status projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "verification": "unknown",
+                     *       "state": "notAttempted",
+                     *       "detail": "No verified server-owned package is available."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AgentPackageStatusDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewAgentPackageOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed AgentPackagePreviewDto preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "previewId": "opaque-preview-id",
+                     *       "operation": "upgrade",
+                     *       "ready": false,
+                     *       "verification": "unknown",
+                     *       "blockers": [
+                     *         "package_unavailable"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AgentPackagePreviewDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StartAgentPackageOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPackageOperationRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent accepted or safely rejected the typed package lifecycle request with truthful rollback and recovery state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPackageOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetAgentPackageOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the retained typed package lifecycle state and recovery evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "opaque-operation-id",
+                     *       "state": "running",
+                     *       "progressPercent": 50
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AgentPackageOperationDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewRepairWithoutSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed RepairPreviewDto precondition result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "previewId": "opaque-preview-id",
+                     *       "operation": "repair",
+                     *       "ready": false,
+                     *       "packageVerification": "unknown",
+                     *       "blockers": [
+                     *         "package_unavailable",
+                     *         "safety_snapshot_required"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RepairPreviewDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewRepairWithSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+                snapshotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed RepairPreviewDto precondition result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "previewId": "opaque-preview-id",
+                     *       "operation": "repair",
+                     *       "ready": false,
+                     *       "packageVerification": "unknown",
+                     *       "blockers": [
+                     *         "package_unavailable",
+                     *         "safety_snapshot_required"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RepairPreviewDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StartRepairOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepairExecuteRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent accepted or safely rejected the typed repair request and reports activation, health, rollback, and recovery truth. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepairOperationDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetRepairOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the retained typed repair lifecycle state and recovery evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "opaque-operation-id",
+                     *       "state": "running",
+                     *       "progressPercent": 50
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RepairOperationDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewGuidedRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed GuidedRepairDto checkpoint projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "guidedRepairId": "opaque-guided-repair-id",
+                     *       "state": "preview",
+                     *       "steps": [],
+                     *       "detail": "A fresh verified snapshot is required before guided repair."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GuidedRepairDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewGuidedRepairWithSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the typed GuidedRepairDto checkpoint projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "guidedRepairId": "opaque-guided-repair-id",
+                     *       "state": "preview",
+                     *       "steps": [],
+                     *       "detail": "A fresh verified snapshot is required before guided repair."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GuidedRepairDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetGuidedRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guidedRepairId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the retained typed GuidedRepairDto checkpoint state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operationId": "opaque-operation-id",
+                     *       "state": "running",
+                     *       "progressPercent": 50
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GuidedRepairDto"];
+                };
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The opaque operation identifier is not retained for the authenticated principal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdvanceGuidedRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuidedRepairStepRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The Agent advanced exactly one typed checkpoint or returned a safe blocked, failed, or recovery-required outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidedRepairDto"];
+                };
+            };
+            /** @description The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge for this protected mutation. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
             };
         };
     };

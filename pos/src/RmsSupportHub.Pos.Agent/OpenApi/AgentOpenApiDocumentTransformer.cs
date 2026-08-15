@@ -294,6 +294,41 @@ public sealed class AgentOpenApiDocumentTransformer : IOpenApiDocumentTransforme
         SetPropertyDescription(document, "MaintenanceOperationDto", "state", "Current maintenance REST/SSE lifecycle state.");
         SetPropertyDescription(document, "MaintenanceOperationDto", "outcome", "Maintenance outcome truth; OutcomeUnknown requires recovery inspection before retry.");
         SetPropertyDescription(document, "MaintenanceOperationDto", "maintenanceOutcome", "Sanitized logical item outcomes and recovery truth, when available.");
+        SetPropertyDescription(document, "MainServerProfileDto", "environment", "Server-owned Main Server environment selection; Production remains disabled until explicitly enabled by the server.");
+        SetPropertyDescription(document, "MainServerProfileDto", "binding", "Server-owned Branch/POS binding state; the browser cannot provide a host, branch, POS, or endpoint override.");
+        SetPropertyDescription(document, "MainServerProfilesDto", "activeBinding", "Server-owned Branch/POS binding state for the active profile; the browser cannot provide a host, branch, POS, or endpoint override.");
+        SetPropertyDescription(document, "MainServerStateEvidenceDto", "environment", "Server-owned Main Server environment associated with this state observation.");
+        SetPropertyDescription(document, "MainServerStateEvidenceDto", "binding", "Server-owned Branch/POS binding associated with this state observation.");
+        SetPropertyDescription(document, "MainServerStateEvidenceDto", "outcome", "Typed Main Server read outcome; unavailable or ambiguous responses remain explicit.");
+        SetPropertyDescription(document, "SafetySnapshotPreviewDto", "evidenceState", "Typed pre-maintenance evidence availability classification; unavailable evidence blocks repair.");
+        SetPropertyDescription(document, "SafetySnapshotDto", "state", "Typed Safety Snapshot lifecycle state.");
+        SetPropertyDescription(document, "SafetySnapshotDto", "evidenceState", "Typed pre-maintenance evidence availability classification.");
+        SetPropertyDescription(document, "SafetySnapshotDto", "capacity", "Bounded storage-capacity evidence captured by the Agent.");
+        SetPropertyDescription(document, "SafetySnapshotDto", "backups", "Bounded approved-backup evidence captured by the Agent.");
+        SetPropertyDescription(document, "SafetySnapshotVerificationDto", "state", "Typed Safety Snapshot verification state; stale, mismatched, or unverifiable evidence remains non-authorizing.");
+        SetPropertyDescription(document, "DiagnosticConsolePreviewDto", "target", "Fixed server-owned diagnostic manifest target; no browser-selected executable or arguments are accepted.");
+        SetPropertyDescription(document, "DiagnosticConsolePreviewDto", "state", "Typed diagnostic preview state.");
+        SetPropertyDescription(document, "DiagnosticConsoleRunDto", "target", "Fixed server-owned diagnostic manifest target used by this operation.");
+        SetPropertyDescription(document, "DiagnosticConsoleRunDto", "state", "Typed diagnostic operation lifecycle state.");
+        SetPropertyDescription(document, "DiagnosticConsoleRunDto", "outcome", "Typed diagnostic operation outcome truth.");
+        SetPropertyDescription(document, "DiagnosticConsoleRunDto", "result", "Separate bounded stdout/stderr artifact metadata, when a result exists.");
+        SetPropertyDescription(document, "AgentPackageStatusDto", "verification", "Typed package signature, checksum, compatibility, and trust verification state.");
+        SetPropertyDescription(document, "AgentPackageStatusDto", "state", "Typed installed package lifecycle state.");
+        SetPropertyDescription(document, "AgentPackageStatusDto", "manifest", "Safe verified package manifest projection, when available.");
+        SetPropertyDescription(document, "AgentPackagePreviewDto", "operation", "Typed package lifecycle operation selected by the server-owned policy.");
+        SetPropertyDescription(document, "AgentPackagePreviewDto", "verification", "Typed package signature, checksum, compatibility, and trust verification state.");
+        SetPropertyDescription(document, "AgentPackagePreviewDto", "manifest", "Safe verified package manifest projection, when available.");
+        SetPropertyDescription(document, "AgentPackageOperationDto", "operation", "Typed package lifecycle operation selected by the server-owned policy.");
+        SetPropertyDescription(document, "AgentPackageOperationDto", "state", "Typed package lifecycle state.");
+        SetPropertyDescription(document, "AgentPackageOperationDto", "outcome", "Typed package lifecycle outcome truth.");
+        SetPropertyDescription(document, "RepairPreviewDto", "operation", "Typed repair operation selected by the server-owned policy.");
+        SetPropertyDescription(document, "RepairPreviewDto", "packageVerification", "Typed package verification state required before repair can proceed.");
+        SetPropertyDescription(document, "RepairPreviewDto", "snapshot", "Reference to the fresh principal-scoped Safety Snapshot required by this repair preview.");
+        SetPropertyDescription(document, "RepairOperationDto", "operation", "Typed repair operation selected by the server-owned policy.");
+        SetPropertyDescription(document, "RepairOperationDto", "state", "Typed repair lifecycle state.");
+        SetPropertyDescription(document, "RepairOperationDto", "outcome", "Typed repair lifecycle outcome truth.");
+        SetPropertyDescription(document, "GuidedRepairDto", "state", "Typed Guided Repair workflow state; checkpoint progress never implies package activation.");
+        SetPropertyDescription(document, "GuidedRepairStepDto", "state", "Typed Guided Repair checkpoint state.");
     }
 
     private static void SetSchemaDescription(

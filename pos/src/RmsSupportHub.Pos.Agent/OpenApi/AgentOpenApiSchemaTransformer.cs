@@ -2,14 +2,19 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using RmsSupportHub.Pos.Contracts.V1.Common;
+using RmsSupportHub.Pos.Contracts.V1.Console;
 using RmsSupportHub.Pos.Contracts.V1.Configuration;
 using RmsSupportHub.Pos.Contracts.V1.Device;
 using RmsSupportHub.Pos.Contracts.V1.Downloader;
+using RmsSupportHub.Pos.Contracts.V1.MainServer;
 using RmsSupportHub.Pos.Contracts.V1.Maintenance;
+using RmsSupportHub.Pos.Contracts.V1.Packages;
+using RmsSupportHub.Pos.Contracts.V1.Repair;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Services;
 using RmsSupportHub.Pos.Contracts.V1.Session;
+using RmsSupportHub.Pos.Contracts.V1.Snapshots;
 
 namespace RmsSupportHub.Pos.Agent;
 
@@ -145,6 +150,55 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Retained cleanup or branch-reset outcome evidence without raw paths, service names, SQL, credentials, or exception text.",
             (var value, null) when value == typeof(MaintenanceOperationDto) =>
                 "Principal-scoped maintenance progress and outcome with logical targets and recovery truth.",
+            (var value, null) when value == typeof(MainServerProfilesDto) =>
+                "Server-owned Testing and future Production Main Server profile projections. URLs, " +
+                "credentials, arbitrary routes, and installation acknowledgements are not returned.",
+            (var value, null) when value == typeof(MainServerProfileDto) =>
+                "Safe projection of one server-owned Main Server profile and its fixed logical read operations.",
+            (var value, null) when value == typeof(MainServerStateEvidenceDto) =>
+                "Bounded Branch/POS Main Server state evidence with explicit binding and read outcome truth.",
+            (var value, null) when value == typeof(SafetySnapshotPreviewDto) =>
+                "Preview of bounded pre-maintenance evidence. Credentials, raw configuration, SQL, logs, " +
+                "private keys, arbitrary paths, and full events are excluded.",
+            (var value, null) when value == typeof(SafetySnapshotDto) =>
+                "Principal-scoped, integrity-protected safe maintenance evidence with expiry and typed state.",
+            (var value, null) when value == typeof(SafetySnapshotVerificationDto) =>
+                "Principal-scoped Safety Snapshot integrity, freshness, and authorization verification result.",
+            (var value, null) when value == typeof(DiagnosticConsolePreviewDto) =>
+                "Preview of one fixed Agent diagnostic manifest target with bounded process and output policy.",
+            (var value, null) when value == typeof(DiagnosticConsoleStartRequestDto) =>
+                "Typed request for one prior fixed diagnostic preview. It contains no process path, shell, " +
+                "executable, argument, or environment input.",
+            (var value, null) when value == typeof(DiagnosticConsoleRunDto) =>
+                "Principal-scoped fixed diagnostic operation state with safe detail and opaque output artifacts.",
+            (var value, null) when value == typeof(DiagnosticConsoleResultDto) =>
+                "Bounded diagnostic result metadata. Standard output and error remain separate opaque artifacts.",
+            (var value, null) when value == typeof(AgentPackageStatusDto) =>
+                "Safe server-owned Agent package status and truthful verification state.",
+            (var value, null) when value == typeof(AgentPackageManifestDto) =>
+                "Safe package manifest projection without archive paths, private keys, or installer arguments.",
+            (var value, null) when value == typeof(AgentPackageFileDto) =>
+                "Safe logical package-file metadata used for server-side checksum and size verification.",
+            (var value, null) when value == typeof(AgentPackagePreviewDto) =>
+                "Typed Agent package lifecycle preview with manifest verification and bounded effects/blockers.",
+            (var value, null) when value == typeof(AgentPackageOperationRequestDto) =>
+                "Typed request for one prior Agent package preview with exact confirmation and idempotency.",
+            (var value, null) when value == typeof(AgentPackageOperationDto) =>
+                "Principal-scoped package lifecycle state with activation, health, rollback, and recovery truth.",
+            (var value, null) when value == typeof(RepairPreviewDto) =>
+                "Typed repair precondition preview bound to a fresh principal-scoped Safety Snapshot.",
+            (var value, null) when value == typeof(RepairExecuteRequestDto) =>
+                "Typed request for one prior repair preview. It contains no installer path, command, or Main Server mutation input.",
+            (var value, null) when value == typeof(RepairOperationDto) =>
+                "Principal-scoped repair lifecycle state with activation, health, rollback, and recovery truth.",
+            (var value, null) when value == typeof(GuidedRepairDto) =>
+                "Fixed principal-scoped Guided Repair checkpoint sequence with explicit blocked and recovery states.",
+            (var value, null) when value == typeof(GuidedRepairStepDto) =>
+                "One typed Guided Repair checkpoint. Advancing it never implies package activation.",
+            (var value, null) when value == typeof(GuidedRepairStepRequestDto) =>
+                "Typed request to advance one exact Guided Repair checkpoint with confirmation and idempotency.",
+            (var value, null) when value == typeof(SafetySnapshotCaptureRequestDto) =>
+                "Typed request to capture the bounded pre-maintenance Safety Snapshot.",
             _ => schema.Description
         };
 
@@ -152,6 +206,10 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
         if (propertyDescription is not null)
         {
             schema.Description = propertyDescription;
+        }
+        else if (IsSliceBType(type) && propertyName is not null)
+        {
+            schema.Description = SliceBPropertyDescription(propertyName);
         }
 
         return Task.CompletedTask;
@@ -596,4 +654,38 @@ public sealed class AgentOpenApiSchemaTransformer : IOpenApiSchemaTransformer
                 "Sanitized Cashier database diagnostic for RmsCashierSrv.",
             _ => null
         };
+
+    private static bool IsSliceBType(Type type) =>
+        type.Namespace is "RmsSupportHub.Pos.Contracts.V1.MainServer"
+            or "RmsSupportHub.Pos.Contracts.V1.Console"
+            or "RmsSupportHub.Pos.Contracts.V1.Packages"
+            or "RmsSupportHub.Pos.Contracts.V1.Repair"
+            or "RmsSupportHub.Pos.Contracts.V1.Snapshots";
+
+    private static string SliceBPropertyDescription(string propertyName) => propertyName switch
+    {
+        "previewId" or "operationId" or "guidedRepairId" or "snapshotId" =>
+            "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow.",
+        "idempotencyKey" =>
+            "Bounded caller-generated key used to prevent duplicate execution of the same typed request.",
+        "state" or "outcome" or "binding" or "activeBinding" or "verification" or "evidenceState" =>
+            "Typed server-owned state classification; unknown and recovery states are preserved explicitly.",
+        "detail" =>
+            "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data.",
+        "blockers" or "preconditions" or "effects" or "includedEvidence" or "excludedEvidence" =>
+            "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted.",
+        "confirmationPhrase" or "typedConfirmation" =>
+            "Exact server-owned typed confirmation value required for this workflow boundary.",
+        "expiresAtUtc" or "capturedAtUtc" or "checkedAtUtc" or "startedAtUtc" or "completedAtUtc" =>
+            "UTC lifecycle timestamp produced and enforced by the Agent.",
+        "correlationId" =>
+            "Safe request correlation identifier for operator diagnostics.",
+        "progressPercent" =>
+            "Bounded server-reported progress percentage for the typed operation.",
+        "target" or "displayName" or "clientName" or "profileId" or "environment" or "operation" =>
+            "Server-owned logical label or profile value; it is not a browser-selected path or endpoint.",
+        "ready" or "verified" or "enabled" or "rollbackAttempted" or "rollbackSucceeded" or "recoveryRequired" =>
+            "Boolean outcome or capability flag produced by the server-owned boundary.",
+        _ => "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+    };
 }

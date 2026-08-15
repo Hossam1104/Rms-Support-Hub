@@ -7,15 +7,22 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using RmsSupportHub.Pos.Agent;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Console;
 using RmsSupportHub.Pos.Agent.MutationTokens;
+using RmsSupportHub.Pos.Agent.Packages;
+using RmsSupportHub.Pos.Agent.Repair;
 using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 using RmsSupportHub.Pos.Agent.Runtime;
+using RmsSupportHub.Pos.Agent.Snapshots;
 using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Packages;
+using RmsSupportHub.Pos.Infrastructure.Snapshots;
+using RmsSupportHub.Pos.Infrastructure.Installation;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
@@ -103,6 +110,14 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IRmsInstallationDiscovery>();
             services.AddSingleton<IRmsInstallationDiscovery>(new InMemoryRmsInstallationDiscovery());
+            services.RemoveAll<RmsInstallationOptions>();
+            services.AddSingleton(new RmsInstallationOptions
+            {
+                BranchServerDirectory = Path.Combine(_databaseStorageRoot, "branch-server"),
+                CashierServerDirectory = Path.Combine(_databaseStorageRoot, "cashier-server"),
+                ServicesManagerDirectory = Path.Combine(_databaseStorageRoot, "services-manager"),
+                CashierUiDirectory = Path.Combine(_databaseStorageRoot, "cashier-ui")
+            });
             services.RemoveAll<IRmsDiagnosticEvidenceReader>();
             services.AddSingleton<IRmsDiagnosticEvidenceReader, InMemoryRmsDiagnosticEvidenceReader>();
             services.RemoveAll<IRmsDatabaseConnectionStringSource>();
@@ -119,6 +134,17 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
             {
                 BundleRootPath = Path.Combine(_databaseStorageRoot, "bundles")
             });
+            services.RemoveAll<SafetySnapshotOptions>();
+            services.AddSingleton(new SafetySnapshotOptions
+            {
+                RootDirectory = Path.Combine(_databaseStorageRoot, "snapshots")
+            });
+            services.RemoveAll<AgentPackageOptions>();
+            services.AddSingleton(new AgentPackageOptions
+            {
+                PackageRoot = Path.Combine(_databaseStorageRoot, "packages"),
+                InstallationRoot = Path.Combine(_databaseStorageRoot, "agent-installation")
+            });
             services.RemoveAll<IRmsDatabaseSqlOperations>();
             services.AddSingleton<IRmsDatabaseSqlOperations, InMemoryRmsDatabaseSqlOperations>();
 
@@ -132,6 +158,11 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
                 MaintenanceOperation.CleanupDescriptor,
                 MaintenanceOperation.BranchResetDescriptor,
                 SupportBundleOperation.Descriptor,
+                SafetySnapshotOperation.Descriptor,
+                DiagnosticConsoleOperation.Descriptor,
+                AgentPackageOperation.Descriptor,
+                RepairOperation.Descriptor,
+                GuidedRepairOperation.Descriptor,
                 new MutationOperationDescriptor("integration.test-mutation", "PUT")
             ]));
         });

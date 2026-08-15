@@ -4,6 +4,21 @@ export const POS_AGENT_PATHS = {
   live: '/health/live',
   ready: '/health/ready',
   healthCheck: '/api/v1/health/check',
+  mainServerProfiles: '/api/v1/main-server/profiles',
+  mainServerState: '/api/v1/main-server/state',
+  safetySnapshotPreview: '/api/v1/safety-snapshots/preview',
+  safetySnapshotCapture: '/api/v1/safety-snapshots/capture',
+  safetySnapshots: '/api/v1/safety-snapshots',
+  diagnosticConsolePreview: '/api/v1/diagnostic-console/preview',
+  diagnosticConsoleRuns: '/api/v1/diagnostic-console/runs',
+  packageStatus: '/api/v1/packages/status',
+  packagePreview: '/api/v1/packages/preview',
+  packageOperations: '/api/v1/packages/operations',
+  repairPreview: '/api/v1/repair/preview',
+  repairOperations: '/api/v1/repair/operations',
+  guidedRepairPreview: '/api/v1/repair/guided/preview',
+  guidedRepair: '/api/v1/repair/guided',
+  guidedRepairSteps: '/api/v1/repair/guided/steps',
   session: '/api/v1/session',
   mutationToken: '/api/v1/security/mutation-token',
   deviceIdentity: '/api/v1/device/identity',
@@ -34,7 +49,12 @@ export const POS_AGENT_OPERATION_IDS = {
   downloaderBatchTrigger: 'downloader.batch.trigger',
   maintenanceCleanup: 'maintenance.cleanup.execute',
   maintenanceBranchReset: 'maintenance.branch-reset.execute',
-  supportBundleGenerate: 'support.bundle.generate'
+  supportBundleGenerate: 'support.bundle.generate',
+  safetySnapshotCapture: 'safety-snapshot.capture',
+  diagnosticConsoleRun: 'diagnostic-console.run.start',
+  agentPackageOperation: 'agent-package.operation.execute',
+  repairOperation: 'repair.installation.execute',
+  guidedRepairCheckpoint: 'repair.guided.checkpoint'
 } as const;
 
 export const POS_AGENT_MUTATION_TOKEN_HEADER = 'X-RMS-Mutation-Token' as const;

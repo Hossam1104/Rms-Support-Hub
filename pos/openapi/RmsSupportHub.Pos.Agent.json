@@ -2233,6 +2233,1311 @@
         ]
       }
     },
+    "/api/v1/main-server/profiles": {
+      "get": {
+        "tags": [
+          "Main Server"
+        ],
+        "summary": "Read fixed Main Server profiles",
+        "description": "Returns only the server-owned Testing profile and disabled future Production profile. Branch/POS binding, credentials, free URLs, and arbitrary Main Server routes remain Agent-owned and are not exposed.",
+        "operationId": "GetMainServerProfiles",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the bounded MainServerProfilesDto profile projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MainServerProfilesDto"
+                },
+                "example": {
+                  "activeProfileId": "main-server-testing",
+                  "activeBinding": "unknown",
+                  "detail": "The active Testing profile remains server-owned."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/main-server/state": {
+      "get": {
+        "tags": [
+          "Main Server"
+        ],
+        "summary": "Read bound Main Server Branch and POS state",
+        "description": "Performs only typed, server-owned GET projections after Branch/POS identity and fixed profile binding succeed. Installation acknowledgements, credentials, free URLs, and generic proxy behavior are outside this read boundary.",
+        "operationId": "GetMainServerState",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the bounded MainServerStateEvidenceDto state projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MainServerStateEvidenceDto"
+                },
+                "example": {
+                  "profileId": "main-server-testing",
+                  "environment": "testing",
+                  "binding": "unknown",
+                  "outcome": "notAttempted",
+                  "detail": "Main Server state was not attempted because binding was not established."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety-snapshots/preview": {
+      "get": {
+        "tags": [
+          "Safety Snapshot"
+        ],
+        "summary": "Preview a pre-maintenance Safety Snapshot",
+        "description": "Returns the bounded evidence categories that would be captured before a local package or repair operation. Credentials, raw configuration, SQL, logs, private keys, arbitrary paths, and full events are excluded.",
+        "operationId": "PreviewSafetySnapshot",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the bounded SafetySnapshotPreviewDto preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySnapshotPreviewDto"
+                },
+                "example": {
+                  "snapshotType": "pre-maintenance",
+                  "ready": false,
+                  "evidenceState": "unknown",
+                  "includedEvidence": [
+                    "safe identity",
+                    "service state"
+                  ],
+                  "excludedEvidence": [
+                    "credentials",
+                    "raw configuration",
+                    "SQL"
+                  ],
+                  "blockers": [
+                    "safe_evidence_unavailable"
+                  ],
+                  "retentionMinutes": 120,
+                  "expiresAtUtc": "2030-01-01T00:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety-snapshots/capture": {
+      "post": {
+        "tags": [
+          "Safety Snapshot"
+        ],
+        "summary": "Capture an authorized Safety Snapshot",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "CaptureSafetySnapshot",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SafetySnapshotCaptureRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent captured an atomic principal-scoped, integrity-protected SafetySnapshotDto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySnapshotDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety-snapshots/{snapshotId}/verify": {
+      "get": {
+        "tags": [
+          "Safety Snapshot"
+        ],
+        "summary": "Verify a principal-scoped Safety Snapshot",
+        "description": "Rechecks the opaque snapshot identifier, principal binding, expiry, size bound, and integrity hash before the snapshot can authorize repair.",
+        "operationId": "VerifySafetySnapshot",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed SafetySnapshotVerificationDto verification result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySnapshotVerificationDto"
+                },
+                "example": {
+                  "snapshotId": "opaque-snapshot-id",
+                  "state": "verified",
+                  "verified": true,
+                  "detail": "The snapshot is fresh and integrity verified."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety-snapshots/{snapshotId}": {
+      "get": {
+        "tags": [
+          "Safety Snapshot"
+        ],
+        "summary": "Read a principal-scoped Safety Snapshot",
+        "description": "Returns only the safe snapshot projection for the authenticated principal. Invalid, mismatched, corrupt, expired, and unavailable records fail closed.",
+        "operationId": "GetSafetySnapshot",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed SafetySnapshotDto projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySnapshotDto"
+                },
+                "example": {
+                  "snapshotId": "opaque-snapshot-id",
+                  "state": "verified",
+                  "evidenceState": "healthy",
+                  "detail": "The snapshot is fresh and integrity verified."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque snapshot identifier is unavailable for the authenticated principal."
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/diagnostic-console/preview/{targetId}": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Preview a fixed Diagnostic Console run",
+        "description": "Previews only a logical target from the fixed Agent manifest. The executable, arguments, working directory, child environment, timeout, and output bounds are resolved server-side; arbitrary process execution is not accepted.",
+        "operationId": "PreviewDiagnosticConsoleRun",
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed DiagnosticConsolePreviewDto preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticConsolePreviewDto"
+                },
+                "example": {
+                  "previewId": "opaque-preview-id",
+                  "target": "branchServerApi",
+                  "ready": false,
+                  "state": "notAttempted",
+                  "blockers": [
+                    "console_executable_unavailable"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/diagnostic-console/runs": {
+      "post": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Start an authorized fixed Diagnostic Console run",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "StartDiagnosticConsoleRun",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiagnosticConsoleStartRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent accepted a fixed manifest diagnostic run with bounded, separately redacted output artifacts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticConsoleRunDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/diagnostic-console/runs/{operationId}": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Read one principal-scoped Diagnostic Console run",
+        "description": "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.",
+        "operationId": "GetDiagnosticConsoleRun",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the retained typed DiagnosticConsoleRunDto state and opaque artifact capabilities.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticConsoleRunDto"
+                },
+                "example": {
+                  "operationId": "opaque-operation-id",
+                  "state": "running",
+                  "progressPercent": 50
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/status": {
+      "get": {
+        "tags": [
+          "Agent Package"
+        ],
+        "summary": "Read the server-owned Agent package status",
+        "description": "Returns only safe installed-manifest metadata and truthful verification state. Package paths, archives, private keys, and installer arguments are never exposed.",
+        "operationId": "GetAgentPackageStatus",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed AgentPackageStatusDto status projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPackageStatusDto"
+                },
+                "example": {
+                  "verification": "unknown",
+                  "state": "notAttempted",
+                  "detail": "No verified server-owned package is available."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/preview/{operationId}": {
+      "get": {
+        "tags": [
+          "Agent Package"
+        ],
+        "summary": "Preview a typed Agent package operation",
+        "description": "Reads only the Agent-owned package catalog and verifier. Preview does not stage, activate, uninstall, register, or roll back a package.",
+        "operationId": "PreviewAgentPackageOperation",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed AgentPackagePreviewDto preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPackagePreviewDto"
+                },
+                "example": {
+                  "previewId": "opaque-preview-id",
+                  "operation": "upgrade",
+                  "ready": false,
+                  "verification": "unknown",
+                  "blockers": [
+                    "package_unavailable"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/operations": {
+      "post": {
+        "tags": [
+          "Agent Package"
+        ],
+        "summary": "Start an authorized typed Agent package operation",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "StartAgentPackageOperation",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPackageOperationRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent accepted or safely rejected the typed package lifecycle request with truthful rollback and recovery state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPackageOperationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/operations/{operationId}": {
+      "get": {
+        "tags": [
+          "Agent Package"
+        ],
+        "summary": "Read one principal-scoped Agent package operation",
+        "description": "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.",
+        "operationId": "GetAgentPackageOperation",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the retained typed package lifecycle state and recovery evidence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPackageOperationDto"
+                },
+                "example": {
+                  "operationId": "opaque-operation-id",
+                  "state": "running",
+                  "progressPercent": 50
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/preview/{operationId}": {
+      "get": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Preview a typed Repair Installation operation",
+        "description": "Validates the server-owned package manifest, signature, checksum, compatibility, archive, fixed installation boundary, required Safety Snapshot, capacity, and rollback preconditions without changing the machine.",
+        "operationId": "PreviewRepairWithoutSnapshot",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed RepairPreviewDto precondition result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairPreviewDto"
+                },
+                "example": {
+                  "previewId": "opaque-preview-id",
+                  "operation": "repair",
+                  "ready": false,
+                  "packageVerification": "unknown",
+                  "blockers": [
+                    "package_unavailable",
+                    "safety_snapshot_required"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/preview/{operationId}/{snapshotId}": {
+      "get": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Preview a typed Repair Installation operation",
+        "description": "Validates the server-owned package manifest, signature, checksum, compatibility, archive, fixed installation boundary, required Safety Snapshot, capacity, and rollback preconditions without changing the machine.",
+        "operationId": "PreviewRepairWithSnapshot",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed RepairPreviewDto precondition result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairPreviewDto"
+                },
+                "example": {
+                  "previewId": "opaque-preview-id",
+                  "operation": "repair",
+                  "ready": false,
+                  "packageVerification": "unknown",
+                  "blockers": [
+                    "package_unavailable",
+                    "safety_snapshot_required"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/operations": {
+      "post": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Start an authorized typed repair operation",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "StartRepairOperation",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepairExecuteRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent accepted or safely rejected the typed repair request and reports activation, health, rollback, and recovery truth.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairOperationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/operations/{operationId}": {
+      "get": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Read one principal-scoped repair operation",
+        "description": "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.",
+        "operationId": "GetRepairOperation",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the retained typed repair lifecycle state and recovery evidence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairOperationDto"
+                },
+                "example": {
+                  "operationId": "opaque-operation-id",
+                  "state": "running",
+                  "progressPercent": 50
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/guided/preview": {
+      "get": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Preview Guided Repair checkpoints",
+        "description": "Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.",
+        "operationId": "PreviewGuidedRepair",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed GuidedRepairDto checkpoint projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedRepairDto"
+                },
+                "example": {
+                  "guidedRepairId": "opaque-guided-repair-id",
+                  "state": "preview",
+                  "steps": [ ],
+                  "detail": "A fresh verified snapshot is required before guided repair."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/guided/preview/{snapshotId}": {
+      "get": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Preview Guided Repair checkpoints",
+        "description": "Returns the fixed typed checkpoint sequence and the next required precondition. A recommendation never implies package staging, activation, or a machine mutation.",
+        "operationId": "PreviewGuidedRepairWithSnapshot",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the typed GuidedRepairDto checkpoint projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedRepairDto"
+                },
+                "example": {
+                  "guidedRepairId": "opaque-guided-repair-id",
+                  "state": "preview",
+                  "steps": [ ],
+                  "detail": "A fresh verified snapshot is required before guided repair."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/guided/{guidedRepairId}": {
+      "get": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Read one principal-scoped Guided Repair sequence",
+        "description": "Reads principal-scoped, sanitized progress and outcome for one retained Agent operation. Operation IDs and artifact capabilities are opaque; raw paths, credentials, SQL, service names, and exception text never cross the response boundary.",
+        "operationId": "GetGuidedRepair",
+        "parameters": [
+          {
+            "name": "guidedRepairId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agent returned the retained typed GuidedRepairDto checkpoint state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedRepairDto"
+                },
+                "example": {
+                  "operationId": "opaque-operation-id",
+                  "state": "running",
+                  "progressPercent": 50
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The opaque operation identifier is not retained for the authenticated principal."
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repair/guided/steps": {
+      "post": {
+        "tags": [
+          "Repair"
+        ],
+        "summary": "Advance one authorized Guided Repair checkpoint",
+        "description": "Accepts only a bounded typed request after server-owned validation. Destructive or side-effecting dispatch requires the exact-origin, administrator, one-use method/path mutation-token, challenge/confirmation, and idempotency boundaries; ambiguous outcomes are retained and never retried automatically.",
+        "operationId": "AdvanceGuidedRepair",
+        "requestBody": {
+          "description": "The browser supplies only logical IDs, exact confirmation where required, and a bounded idempotency key. Server-owned paths, credentials, SQL, and service targets are not accepted.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuidedRepairStepRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The Agent advanced exactly one typed checkpoint or returned a safe blocked, failed, or recovery-required outcome.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedRepairDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/device/identity": {
       "get": {
         "tags": [
@@ -2466,6 +3771,402 @@
   },
   "components": {
     "schemas": {
+      "AgentPackageFileDto": {
+        "required": [
+          "logicalName",
+          "sizeBytes",
+          "sha256",
+          "required"
+        ],
+        "type": "object",
+        "properties": {
+          "logicalName": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int64"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          }
+        },
+        "description": "Safe logical package-file metadata used for server-side checksum and size verification."
+      },
+      "AgentPackageManifestDto": {
+        "required": [
+          "packageId",
+          "version",
+          "supportedOperatingSystem",
+          "supportedRuntime",
+          "serviceDisplayName",
+          "serviceIdentity",
+          "scmName",
+          "signatureAlgorithm",
+          "signerDisplayName",
+          "packageSha256",
+          "files",
+          "aclRequirements",
+          "certificateRequirements",
+          "previousVersion",
+          "rollbackAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "version": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "supportedOperatingSystem": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "supportedRuntime": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "serviceDisplayName": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "serviceIdentity": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "scmName": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "signatureAlgorithm": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "signerDisplayName": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "packageSha256": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentPackageFileDto"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "aclRequirements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "certificateRequirements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "previousVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "rollbackAvailable": {
+            "type": "boolean",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          }
+        },
+        "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+      },
+      "AgentPackageOperationDto": {
+        "required": [
+          "operationId",
+          "operation",
+          "state",
+          "outcome",
+          "progressPercent",
+          "stage",
+          "detail",
+          "rollbackAttempted",
+          "rollbackSucceeded",
+          "recoveryRequired",
+          "startedAtUtc",
+          "completedAtUtc",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "operation": {
+            "description": "Typed package lifecycle operation selected by the server-owned policy.",
+            "$ref": "#/components/schemas/AgentPackageOperationKindDto"
+          },
+          "state": {
+            "description": "Typed package lifecycle state.",
+            "$ref": "#/components/schemas/AgentPackageOperationStateDto"
+          },
+          "outcome": {
+            "description": "Typed package lifecycle outcome truth.",
+            "$ref": "#/components/schemas/AgentPackageOperationStateDto"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported progress percentage for the typed operation.",
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          },
+          "rollbackAttempted": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "rollbackSucceeded": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "recoveryRequired": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "startedAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "completedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for operator diagnostics."
+          }
+        },
+        "description": "Principal-scoped package lifecycle state with activation, health, rollback, and recovery truth."
+      },
+      "AgentPackageOperationKindDto": {
+        "enum": [
+          "install",
+          "upgrade",
+          "uninstall",
+          "rollback",
+          "repair",
+          "health"
+        ],
+        "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+      },
+      "AgentPackageOperationRequestDto": {
+        "required": [
+          "previewId",
+          "typedConfirmation",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          },
+          "snapshotId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          }
+        },
+        "description": "Typed request for one prior Agent package preview with exact confirmation and idempotency."
+      },
+      "AgentPackageOperationStateDto": {
+        "enum": [
+          "notAttempted",
+          "preview",
+          "accepted",
+          "staging",
+          "activating",
+          "verifying",
+          "completed",
+          "failed",
+          "rollbackSucceeded",
+          "rollbackFailed",
+          "recoveryRequired",
+          "outcomeUnknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "AgentPackagePreviewDto": {
+        "required": [
+          "previewId",
+          "operation",
+          "ready",
+          "verification",
+          "manifest",
+          "effects",
+          "blockers",
+          "confirmationPhrase",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "operation": {
+            "description": "Typed package lifecycle operation selected by the server-owned policy.",
+            "$ref": "#/components/schemas/AgentPackageOperationKindDto"
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "verification": {
+            "description": "Typed package signature, checksum, compatibility, and trust verification state.",
+            "$ref": "#/components/schemas/AgentPackageVerificationStateDto"
+          },
+          "manifest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AgentPackageManifestDto"
+              }
+            ],
+            "description": "Safe verified package manifest projection, when available."
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "confirmationPhrase": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          }
+        },
+        "description": "Typed Agent package lifecycle preview with manifest verification and bounded effects/blockers."
+      },
+      "AgentPackageStatusDto": {
+        "required": [
+          "installedVersion",
+          "previousVersion",
+          "verification",
+          "state",
+          "manifest",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "installedVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "previousVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "verification": {
+            "description": "Typed package signature, checksum, compatibility, and trust verification state.",
+            "$ref": "#/components/schemas/AgentPackageVerificationStateDto"
+          },
+          "state": {
+            "description": "Typed installed package lifecycle state.",
+            "$ref": "#/components/schemas/AgentPackageOperationStateDto"
+          },
+          "manifest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AgentPackageManifestDto"
+              }
+            ],
+            "description": "Safe verified package manifest projection, when available."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Safe server-owned Agent package status and truthful verification state."
+      },
+      "AgentPackageVerificationStateDto": {
+        "enum": [
+          "unverified",
+          "verified",
+          "rejected",
+          "unknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
       "AgentProblemDetailsDto": {
         "required": [
           "type",
@@ -2939,6 +4640,320 @@
         },
         "description": "Safe server-owned branch, POS, release, and client identity. It contains no Windows SID, credential, or unrestricted host path."
       },
+      "DiagnosticConsolePreviewDto": {
+        "required": [
+          "previewId",
+          "target",
+          "ready",
+          "displayName",
+          "state",
+          "maxWallTimeSeconds",
+          "maxOutputBytes",
+          "maxOutputLines",
+          "preconditions",
+          "blockers",
+          "confirmationPhrase",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "target": {
+            "description": "Fixed server-owned diagnostic manifest target; no browser-selected executable or arguments are accepted.",
+            "$ref": "#/components/schemas/DiagnosticConsoleTargetDto"
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+          },
+          "state": {
+            "description": "Typed diagnostic preview state.",
+            "$ref": "#/components/schemas/DiagnosticConsoleRunStateDto"
+          },
+          "maxWallTimeSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "maxOutputBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "maxOutputLines": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "preconditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "confirmationPhrase": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          }
+        },
+        "description": "Preview of one fixed Agent diagnostic manifest target with bounded process and output policy."
+      },
+      "DiagnosticConsoleResultDto": {
+        "required": [
+          "stdoutArtifactId",
+          "stderrArtifactId",
+          "stdoutBytes",
+          "stderrBytes",
+          "stdoutLines",
+          "stderrLines",
+          "outputTruncated",
+          "redactionApplied",
+          "exitCode",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "stdoutArtifactId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "stderrArtifactId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "stdoutBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "stderrBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "stdoutLines": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "stderrLines": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "outputTruncated": {
+            "type": "boolean",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "redactionApplied": {
+            "type": "boolean",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "exitCode": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+      },
+      "DiagnosticConsoleRunDto": {
+        "required": [
+          "operationId",
+          "target",
+          "state",
+          "outcome",
+          "progressPercent",
+          "stage",
+          "detail",
+          "startedAtUtc",
+          "completedAtUtc",
+          "result",
+          "errorCode",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "target": {
+            "description": "Fixed server-owned diagnostic manifest target used by this operation.",
+            "$ref": "#/components/schemas/DiagnosticConsoleTargetDto"
+          },
+          "state": {
+            "description": "Typed diagnostic operation lifecycle state.",
+            "$ref": "#/components/schemas/DiagnosticConsoleRunStateDto"
+          },
+          "outcome": {
+            "description": "Typed diagnostic operation outcome truth.",
+            "$ref": "#/components/schemas/DiagnosticConsoleRunStateDto"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported progress percentage for the typed operation.",
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          },
+          "startedAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "completedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DiagnosticConsoleResultDto"
+              }
+            ],
+            "description": "Separate bounded stdout/stderr artifact metadata, when a result exists."
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for operator diagnostics."
+          }
+        },
+        "description": "Principal-scoped fixed diagnostic operation state with safe detail and opaque output artifacts."
+      },
+      "DiagnosticConsoleRunStateDto": {
+        "enum": [
+          "notAttempted",
+          "accepted",
+          "running",
+          "succeeded",
+          "failed",
+          "timedOut",
+          "cancelled",
+          "partial",
+          "outcomeUnknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "DiagnosticConsoleStartRequestDto": {
+        "required": [
+          "previewId",
+          "typedConfirmation",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          }
+        },
+        "description": "Typed request for one prior fixed diagnostic preview. It contains no process path, shell, executable, argument, or environment input."
+      },
+      "DiagnosticConsoleTargetDto": {
+        "enum": [
+          "branchServerApi",
+          "cashierServerApi",
+          "serviceManager",
+          "cashierUi"
+        ],
+        "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+      },
       "DownloaderBranchOutcomeDto": {
         "required": [
           "branchCode",
@@ -3278,6 +5293,132 @@
         ],
         "description": "Freshness classification for this observation; it is never collapsed into a bare online boolean."
       },
+      "GuidedRepairDto": {
+        "required": [
+          "guidedRepairId",
+          "state",
+          "steps",
+          "detail",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "guidedRepairId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "state": {
+            "description": "Typed Guided Repair workflow state; checkpoint progress never implies package activation.",
+            "$ref": "#/components/schemas/RepairOperationStateDto"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuidedRepairStepDto"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          }
+        },
+        "description": "Fixed principal-scoped Guided Repair checkpoint sequence with explicit blocked and recovery states."
+      },
+      "GuidedRepairStepDto": {
+        "required": [
+          "stepId",
+          "title",
+          "description",
+          "state",
+          "requiresConfirmation",
+          "confirmationPhrase",
+          "failureCode"
+        ],
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "title": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "description": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "state": {
+            "description": "Typed Guided Repair checkpoint state.",
+            "$ref": "#/components/schemas/GuidedRepairStepStateDto"
+          },
+          "requiresConfirmation": {
+            "type": "boolean",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "confirmationPhrase": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "failureCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          }
+        },
+        "description": "One typed Guided Repair checkpoint. Advancing it never implies package activation."
+      },
+      "GuidedRepairStepRequestDto": {
+        "required": [
+          "guidedRepairId",
+          "stepId",
+          "typedConfirmation",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "guidedRepairId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "stepId": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          }
+        },
+        "description": "Typed request to advance one exact Guided Repair checkpoint with confirmation and idempotency."
+      },
+      "GuidedRepairStepStateDto": {
+        "enum": [
+          "pending",
+          "ready",
+          "confirmed",
+          "completed",
+          "failed",
+          "blocked",
+          "recoveryRequired"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
       "HealthCheckDto": {
         "required": [
           "code",
@@ -3455,6 +5596,200 @@
           }
         },
         "description": "One safe event in the bounded principal-scoped incident timeline."
+      },
+      "MainServerBindingStateDto": {
+        "enum": [
+          "bound",
+          "unavailable",
+          "mismatch",
+          "ambiguous",
+          "unknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "MainServerEnvironmentDto": {
+        "enum": [
+          "testing",
+          "production"
+        ],
+        "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+      },
+      "MainServerProfileDto": {
+        "required": [
+          "profileId",
+          "environment",
+          "enabled",
+          "binding",
+          "clientName",
+          "allowedReadOperations",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+          },
+          "environment": {
+            "description": "Server-owned Main Server environment selection; Production remains disabled until explicitly enabled by the server.",
+            "$ref": "#/components/schemas/MainServerEnvironmentDto"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "binding": {
+            "description": "Server-owned Branch/POS binding state; the browser cannot provide a host, branch, POS, or endpoint override.",
+            "$ref": "#/components/schemas/MainServerBindingStateDto"
+          },
+          "clientName": {
+            "type": "string",
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+          },
+          "allowedReadOperations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MainServerReadOperationDto"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Safe projection of one server-owned Main Server profile and its fixed logical read operations."
+      },
+      "MainServerProfilesDto": {
+        "required": [
+          "profiles",
+          "activeProfileId",
+          "activeBinding",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "profiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MainServerProfileDto"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "activeProfileId": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "activeBinding": {
+            "description": "Server-owned Branch/POS binding state for the active profile; the browser cannot provide a host, branch, POS, or endpoint override.",
+            "$ref": "#/components/schemas/MainServerBindingStateDto"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Server-owned Testing and future Production Main Server profile projections. URLs, credentials, arbitrary routes, and installation acknowledgements are not returned."
+      },
+      "MainServerReadOperationDto": {
+        "enum": [
+          "branchStatus",
+          "installedBranch",
+          "installedPos"
+        ]
+      },
+      "MainServerReadOutcomeDto": {
+        "enum": [
+          "notAttempted",
+          "succeeded",
+          "actionRequired",
+          "outcomeUnknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "MainServerStateEvidenceDto": {
+        "required": [
+          "profileId",
+          "environment",
+          "binding",
+          "outcome",
+          "branchCode",
+          "posNumber",
+          "clientName",
+          "branchState",
+          "posState",
+          "detail",
+          "checkedAtUtc",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+          },
+          "environment": {
+            "description": "Server-owned Main Server environment associated with this state observation.",
+            "$ref": "#/components/schemas/MainServerEnvironmentDto"
+          },
+          "binding": {
+            "description": "Server-owned Branch/POS binding associated with this state observation.",
+            "$ref": "#/components/schemas/MainServerBindingStateDto"
+          },
+          "outcome": {
+            "description": "Typed Main Server read outcome; unavailable or ambiguous responses remain explicit.",
+            "$ref": "#/components/schemas/MainServerReadOutcomeDto"
+          },
+          "branchCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "posNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "clientName": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+          },
+          "branchState": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "posState": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for operator diagnostics."
+          }
+        },
+        "description": "Bounded Branch/POS Main Server state evidence with explicit binding and read outcome truth."
       },
       "MaintenanceItemOutcomeDto": {
         "required": [
@@ -3858,6 +6193,206 @@
           }
         },
         "description": "Redacted DB Downloader settings with secret-presence metadata only."
+      },
+      "RepairExecuteRequestDto": {
+        "required": [
+          "previewId",
+          "typedConfirmation",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          },
+          "snapshotId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          }
+        },
+        "description": "Typed request for one prior repair preview. It contains no installer path, command, or Main Server mutation input."
+      },
+      "RepairOperationDto": {
+        "required": [
+          "operationId",
+          "operation",
+          "state",
+          "outcome",
+          "progressPercent",
+          "stage",
+          "detail",
+          "rollbackAttempted",
+          "rollbackSucceeded",
+          "recoveryRequired",
+          "startedAtUtc",
+          "completedAtUtc",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "operation": {
+            "description": "Typed repair operation selected by the server-owned policy.",
+            "$ref": "#/components/schemas/RepairOperationKindDto"
+          },
+          "state": {
+            "description": "Typed repair lifecycle state.",
+            "$ref": "#/components/schemas/RepairOperationStateDto"
+          },
+          "outcome": {
+            "description": "Typed repair lifecycle outcome truth.",
+            "$ref": "#/components/schemas/RepairOperationStateDto"
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Bounded server-reported progress percentage for the typed operation.",
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          },
+          "rollbackAttempted": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "rollbackSucceeded": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "recoveryRequired": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "startedAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "completedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for operator diagnostics."
+          }
+        },
+        "description": "Principal-scoped repair lifecycle state with activation, health, rollback, and recovery truth."
+      },
+      "RepairOperationKindDto": {
+        "enum": [
+          "install",
+          "upgrade",
+          "uninstall",
+          "rollback",
+          "repair",
+          "guided"
+        ],
+        "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+      },
+      "RepairOperationStateDto": {
+        "enum": [
+          "notAttempted",
+          "preview",
+          "accepted",
+          "running",
+          "completed",
+          "failed",
+          "partial",
+          "rollbackSucceeded",
+          "rollbackFailed",
+          "recoveryRequired",
+          "outcomeUnknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "RepairPreviewDto": {
+        "required": [
+          "previewId",
+          "operation",
+          "ready",
+          "packageVerification",
+          "snapshot",
+          "effects",
+          "blockers",
+          "confirmationPhrase",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "operation": {
+            "description": "Typed repair operation selected by the server-owned policy.",
+            "$ref": "#/components/schemas/RepairOperationKindDto"
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "packageVerification": {
+            "description": "Typed package verification state required before repair can proceed.",
+            "$ref": "#/components/schemas/AgentPackageVerificationStateDto"
+          },
+          "snapshot": {
+            "description": "Reference to the fresh principal-scoped Safety Snapshot required by this repair preview.",
+            "$ref": "#/components/schemas/SafetySnapshotReferenceDto"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "confirmationPhrase": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          }
+        },
+        "description": "Typed repair precondition preview bound to a fresh principal-scoped Safety Snapshot."
       },
       "RmsComponentDriftDto": {
         "required": [
@@ -4633,6 +7168,438 @@
         },
         "description": "Build metadata for the installed RMS components."
       },
+      "SafetySnapshotBackupEvidenceDto": {
+        "required": [
+          "state",
+          "approvedCount",
+          "latestCreatedAtUtc",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/SafetySnapshotEvidenceStateDto"
+          },
+          "approvedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "latestCreatedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+      },
+      "SafetySnapshotCapacityEvidenceDto": {
+        "required": [
+          "state",
+          "availableBytes",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/SafetySnapshotEvidenceStateDto"
+          },
+          "availableBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int64"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+      },
+      "SafetySnapshotCaptureRequestDto": {
+        "required": [
+          "typedConfirmation",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "typedConfirmation": {
+            "type": "string",
+            "description": "Exact server-owned typed confirmation value required for this workflow boundary."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Bounded caller-generated key used to prevent duplicate execution of the same typed request."
+          }
+        },
+        "description": "Typed request to capture the bounded pre-maintenance Safety Snapshot."
+      },
+      "SafetySnapshotDatabaseEvidenceDto": {
+        "required": [
+          "databaseId",
+          "state",
+          "evidenceState",
+          "identity"
+        ],
+        "type": "object",
+        "properties": {
+          "databaseId": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "state": {
+            "type": "string",
+            "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+          },
+          "evidenceState": {
+            "$ref": "#/components/schemas/SafetySnapshotEvidenceStateDto"
+          },
+          "identity": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          }
+        }
+      },
+      "SafetySnapshotDto": {
+        "required": [
+          "snapshotId",
+          "state",
+          "evidenceState",
+          "branchCode",
+          "posNumber",
+          "installationGuid",
+          "clientName",
+          "productRelease",
+          "packageVersion",
+          "packageHash",
+          "configurationFingerprint",
+          "services",
+          "databases",
+          "capacity",
+          "backups",
+          "correlationId",
+          "capturedAtUtc",
+          "expiresAtUtc",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshotId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "state": {
+            "description": "Typed Safety Snapshot lifecycle state.",
+            "$ref": "#/components/schemas/SafetySnapshotStateDto"
+          },
+          "evidenceState": {
+            "description": "Typed pre-maintenance evidence availability classification.",
+            "$ref": "#/components/schemas/SafetySnapshotEvidenceStateDto"
+          },
+          "branchCode": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "posNumber": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "installationGuid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "clientName": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
+          },
+          "productRelease": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "packageVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "packageHash": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "configurationFingerprint": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SafetySnapshotServiceEvidenceDto"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "databases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SafetySnapshotDatabaseEvidenceDto"
+            },
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "capacity": {
+            "description": "Bounded storage-capacity evidence captured by the Agent.",
+            "$ref": "#/components/schemas/SafetySnapshotCapacityEvidenceDto"
+          },
+          "backups": {
+            "description": "Bounded approved-backup evidence captured by the Agent.",
+            "$ref": "#/components/schemas/SafetySnapshotBackupEvidenceDto"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Safe request correlation identifier for operator diagnostics."
+          },
+          "capturedAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Principal-scoped, integrity-protected safe maintenance evidence with expiry and typed state."
+      },
+      "SafetySnapshotEvidenceStateDto": {
+        "enum": [
+          "healthy",
+          "warning",
+          "actionRequired",
+          "unknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "SafetySnapshotPreviewDto": {
+        "required": [
+          "snapshotType",
+          "ready",
+          "evidenceState",
+          "includedEvidence",
+          "excludedEvidence",
+          "blockers",
+          "retentionMinutes",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshotType": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "evidenceState": {
+            "description": "Typed pre-maintenance evidence availability classification; unavailable evidence blocks repair.",
+            "$ref": "#/components/schemas/SafetySnapshotEvidenceStateDto"
+          },
+          "includedEvidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "excludedEvidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bounded server-owned logical evidence or precondition labels; raw machine targets are omitted."
+          },
+          "retentionMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32"
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          }
+        },
+        "description": "Preview of bounded pre-maintenance evidence. Credentials, raw configuration, SQL, logs, private keys, arbitrary paths, and full events are excluded."
+      },
+      "SafetySnapshotReferenceDto": {
+        "required": [
+          "snapshotId",
+          "state",
+          "verified",
+          "expiresAtUtc",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshotId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "state": {
+            "type": "string",
+            "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "expiresAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          }
+        },
+        "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+      },
+      "SafetySnapshotServiceEvidenceDto": {
+        "required": [
+          "serviceId",
+          "state",
+          "evidenceState"
+        ],
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "state": {
+            "type": "string",
+            "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+          },
+          "evidenceState": {
+            "$ref": "#/components/schemas/SafetySnapshotEvidenceStateDto"
+          }
+        }
+      },
+      "SafetySnapshotStateDto": {
+        "enum": [
+          "preview",
+          "captured",
+          "verified",
+          "stale",
+          "expired",
+          "mismatched",
+          "corrupt",
+          "unavailable",
+          "unknown"
+        ],
+        "description": "Typed server-owned state classification; unknown and recovery states are preserved explicitly."
+      },
+      "SafetySnapshotVerificationDto": {
+        "required": [
+          "snapshotId",
+          "state",
+          "verified",
+          "detail",
+          "checkedAtUtc",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshotId": {
+            "type": "string",
+            "description": "Opaque Agent-issued identifier scoped to the authenticated principal and typed workflow."
+          },
+          "state": {
+            "description": "Typed Safety Snapshot verification state; stale, mismatched, or unverifiable evidence remains non-authorizing.",
+            "$ref": "#/components/schemas/SafetySnapshotStateDto"
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Boolean outcome or capability flag produced by the server-owned boundary."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe operator detail without credentials, raw paths, SQL, shell text, private keys, or exception data."
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "description": "UTC lifecycle timestamp produced and enforced by the Agent.",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe request correlation identifier for operator diagnostics."
+          }
+        },
+        "description": "Principal-scoped Safety Snapshot integrity, freshness, and authorization verification result."
+      },
       "ServiceActionKind": {
         "enum": [
           "start",
@@ -4954,6 +7921,18 @@
     },
     {
       "name": "Artifacts"
+    },
+    {
+      "name": "Main Server"
+    },
+    {
+      "name": "Safety Snapshot"
+    },
+    {
+      "name": "Agent Package"
+    },
+    {
+      "name": "Repair"
     },
     {
       "name": "Device"
