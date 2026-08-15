@@ -214,11 +214,22 @@ Describe 'Testing startup self-elevation boundary' {
     }
 
     It 'quotes a script path that contains spaces' {
-        # The repository itself lives under a path with a space, so this is the
-        # real failure the owner hit rather than a synthetic case.
-        ($startupScript.IndexOf(' ') -ge 0) | Should Be $true
-        $arguments = New-PosSelfElevationArgumentList -ScriptPath $startupScript -IUnderstandTestingOnly $true -SupportHubOrigin ''
-        $arguments[5] | Should Be ('"{0}"' -f $startupScript)
+        # The owner's repository lives under a path with a space, but a CI
+        # checkout does not, so the space is staged rather than assumed.
+        $spacedRoot = Join-Path ([IO.Path]::GetTempPath()) ('RMS Support Hub {0}' -f [guid]::NewGuid())
+        New-Item -ItemType Directory -Path $spacedRoot -Force | Out-Null
+        try {
+            $spacedScript = Join-Path $spacedRoot 'start-pos-agent-testing.ps1'
+            Copy-Item -LiteralPath $startupScript -Destination $spacedScript -Force
+            $spacedScript.IndexOf(' ') -ge 0 | Should Be $true
+
+            $arguments = New-PosSelfElevationArgumentList -ScriptPath $spacedScript -IUnderstandTestingOnly $true -SupportHubOrigin ''
+
+            $arguments[4] | Should Be '-File'
+            $arguments[5] | Should Be ('"{0}"' -f $spacedScript)
+        } finally {
+            Remove-Item -LiteralPath $spacedRoot -Recurse -Force
+        }
     }
 
     It 'refuses to re-launch any script other than the Testing startup script' {
