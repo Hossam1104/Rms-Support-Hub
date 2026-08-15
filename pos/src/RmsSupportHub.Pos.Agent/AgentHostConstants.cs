@@ -6,6 +6,12 @@ namespace RmsSupportHub.Pos.Agent;
 /// </summary>
 public static class AgentHostConstants
 {
+    public const string ProductId = "RmsSupportAgent";
+
+    public const string PermanentServiceName = "RmsSupportAgent";
+
+    public const string ServiceDisplayName = "RMS Support Agent";
+
     public const string CanonicalHost = "rms-pos-agent.localhost";
 
     public const int Port = 5001;

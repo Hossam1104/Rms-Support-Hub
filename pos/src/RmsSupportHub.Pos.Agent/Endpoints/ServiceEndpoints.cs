@@ -1,9 +1,12 @@
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Services;
+using RmsSupportHub.Pos.Domain.Interfaces;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Endpoints;
 
@@ -39,6 +42,7 @@ public static class ServiceEndpoints
                     ServiceActionRuntime runtime,
                     IncidentTimelineService timeline,
                     IAgentPrincipalSidResolver principalSidResolver,
+                    IAgentAuditSink audit,
                     CancellationToken cancellationToken) =>
                 {
                     var result = await runtime.ExecuteAsync(
@@ -49,6 +53,16 @@ public static class ServiceEndpoints
 
                     if (result.Response is { } response)
                     {
+                        audit.Record(new AgentAuditEvent(
+                            DateTimeOffset.UtcNow,
+                            context.User.Identity?.Name ?? "authenticated Windows operator",
+                            "service-control",
+                            serviceId,
+                            CorrelationIdContext.TryGet(context) ?? response.CorrelationId,
+                            response.Outcome.ToString(),
+                            response.Code,
+                            typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+                            null));
                         IncidentTimelineRecorder.Record(
                             context,
                             timeline,

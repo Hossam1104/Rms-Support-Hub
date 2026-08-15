@@ -184,6 +184,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rms/operational-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read fixed-root RMS storage and update health
+         * @description Reads only the server-owned RMS setup, download, release-repository, data, log, and sensitive attachment roots. The response contains bounded aggregate counts, sizes, ages, capacity, Product Release, and package health. It never returns a path, filename, attachment content, patient identity, insurance identity, raw log, registry export, or browser-selected filesystem scope.
+         */
+        get: operations["GetRmsOperationalHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/diagnostics/services/{serviceId}/failure": {
         parameters: {
             query?: never;
@@ -1094,6 +1114,20 @@ export interface components {
             previousVersion: null | string;
             /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
             rollbackAvailable: boolean;
+            /**
+             * Format: int32
+             * @description Safe server-owned Slice B field; unrestricted machine details are not exposed.
+             * @default 1
+             */
+            schemaVersion: number | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            productId?: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            architecture?: null | string;
+            /** @description Safe server-owned Slice B field; unrestricted machine details are not exposed. */
+            releaseChannel?: null | string;
+            /** @description Server-owned logical label or profile value; it is not a browser-selected path or endpoint. */
+            environment?: null | string;
         };
         /** @description Principal-scoped package lifecycle state with activation, health, rollback, and recovery truth. */
         AgentPackageOperationDto: {
@@ -2323,6 +2357,28 @@ export interface components {
             /** @description TCP reachability evidence only; application health is not inferred. */
             reachability: components["schemas"]["EvidenceDto"];
         };
+        RmsFixedRootHealthDto: {
+            rootId: string;
+            displayName: string;
+            state: components["schemas"]["RmsFixedRootStateDto"];
+            exists: boolean;
+            accessible: boolean;
+            /** Format: int32 */
+            fileCount: number | string;
+            /** Format: int64 */
+            totalBytes: number | string;
+            /** Format: date-time */
+            oldestFileUtc: null | string;
+            /** Format: date-time */
+            newestFileUtc: null | string;
+            /** Format: int64 */
+            freeBytes: null | number | string;
+            /** Format: int64 */
+            totalCapacityBytes: null | number | string;
+            detail: string;
+        };
+        /** @enum {unknown} */
+        RmsFixedRootStateDto: "healthy" | "missing" | "inaccessible" | "stale" | "unknown";
         /** @description Safe installed RMS identity and consistency evidence. */
         RmsInstallationDto: {
             /** @description Whether known RMS installation metadata or component files were detected. */
@@ -2358,6 +2414,25 @@ export interface components {
             /** @description Bounded per-component comparison against Product Release. */
             componentDrift: components["schemas"]["RmsComponentDriftDto"][];
         };
+        RmsInsuranceAttachmentHealthDto: {
+            root: components["schemas"]["RmsFixedRootHealthDto"];
+            /** Format: int32 */
+            attachmentCount: number | string;
+            /** Format: int64 */
+            totalBytes: number | string;
+            /** Format: date-time */
+            oldestAttachmentUtc: null | string;
+            /** Format: date-time */
+            newestAttachmentUtc: null | string;
+            detail: string;
+        };
+        RmsOperationalHealthDto: {
+            fixedRoots: components["schemas"]["RmsFixedRootHealthDto"][];
+            updates: components["schemas"]["RmsUpdateHealthDto"];
+            insuranceAttachments: components["schemas"]["RmsInsuranceAttachmentHealthDto"];
+            /** Format: date-time */
+            checkedAtUtc: string;
+        };
         /** @description Bounded capacity evidence for the Agent-approved database storage root. */
         RmsStorageHealthDto: {
             /** @description Health classification of the approved storage root. */
@@ -2373,6 +2448,15 @@ export interface components {
             freshness: components["schemas"]["FreshnessState"];
             /** @description Safe capacity summary. */
             summary: string;
+        };
+        RmsUpdateHealthDto: {
+            setupRoot: components["schemas"]["RmsFixedRootHealthDto"];
+            downloadsRoot: components["schemas"]["RmsFixedRootHealthDto"];
+            releaseRepositoryRoot: components["schemas"]["RmsFixedRootHealthDto"];
+            productRelease: null | string;
+            releaseFileAvailable: boolean;
+            packageState: string;
+            detail: string;
         };
         /** @description Build metadata for the installed RMS components. */
         RmsVersionDto: {
@@ -3359,6 +3443,95 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["RmsDiagnosticsDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetRmsOperationalHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the sanitized RmsOperationalHealthDto aggregate model. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "fixedRoots": [
+                     *         {
+                     *           "rootId": "rms-setup",
+                     *           "state": "healthy",
+                     *           "fileCount": 12,
+                     *           "totalBytes": 4096,
+                     *           "lastWriteUtc": "2030-01-01T00:00:00Z",
+                     *           "detail": "The fixed RMS setup root is readable within bounded limits."
+                     *         }
+                     *       ],
+                     *       "update": {
+                     *         "productRelease": "5.7.4",
+                     *         "packageState": "notInstalled",
+                     *         "available": false,
+                     *         "detail": "No server-approved update package is staged."
+                     *       },
+                     *       "insuranceAttachments": {
+                     *         "state": "healthy",
+                     *         "fileCount": 0,
+                     *         "totalBytes": 0,
+                     *         "detail": "No attachment content or identity was returned."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsOperationalHealthDto"];
                 };
             };
             /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */

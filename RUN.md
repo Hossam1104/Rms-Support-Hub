@@ -15,6 +15,23 @@ dotnet run --project .\src\RmsSupportHub.Api --no-launch-profile --urls "http://
 
 The API will be available at `http://localhost:5200`.
 
+## POS Maintenance console
+
+The POS route is available only through the exact secure Testing handoff. The
+local HTTP development origin is intentionally not an Agent origin. On an
+authorized Testing machine, use the bounded provisioning/runtime scripts:
+
+```powershell
+cd "D:\AI Tools\DBS\Rms-Support-Hub"
+.\scripts\bootstrap-rms-support-agent.ps1 -Status
+.\scripts\bootstrap-rms-support-agent.ps1 -PlanOnly -Channel Testing
+```
+
+The first command is read-only. The second prints the package, browser,
+certificate, migration, and lifecycle plan without writing SCM, registry,
+certificate, or RMS state. Live Testing provisioning requires the explicit
+Testing-only flow and elevation; never run it against Production.
+
 ## Frontend — PowerShell window 2
 
 ```powershell

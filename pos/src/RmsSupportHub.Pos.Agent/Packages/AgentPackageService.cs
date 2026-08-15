@@ -188,6 +188,7 @@ public sealed class AgentPackageService(
     AgentScopedIdempotencyStore idempotency,
     IPrivilegedMutationLease privilegedLease,
     IncidentTimelineService timeline,
+    IAgentAuditSink audit,
     TimeProvider clock)
 {
     private const string IdempotencyScope = "agent-package.operation";
@@ -433,6 +434,17 @@ public sealed class AgentPackageService(
                 CompletedAtUtc = completed
             });
 
+            audit.Record(new AgentAuditEvent(
+                completed,
+                principalSid,
+                "agent-package." + preview.Operation,
+                AgentPackageOperation.OperationId,
+                correlationId,
+                result.State.ToString(),
+                result.RecoveryRequired ? "recovery_required" : null,
+                typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+                null));
+
             timeline.Record(
                 principalSid,
                 "AgentPackage",
@@ -463,7 +475,12 @@ public sealed class AgentPackageService(
             manifest.AclRequirements,
             manifest.CertificateRequirements,
             manifest.PreviousVersion,
-            manifest.RollbackAvailable);
+            manifest.RollbackAvailable,
+            manifest.SchemaVersion,
+            manifest.ProductId,
+            manifest.Architecture,
+            manifest.ReleaseChannel,
+            manifest.Environment);
 
     private static string[] EffectsFor(AgentPackageOperationKind operation) => operation switch
     {

@@ -1,5 +1,21 @@
 # POS Maintenance Cross-Project Integration Plan
 
+## Slice C implementation rebaseline — 2026-08-16
+
+The destination implementation now includes the permanent `RmsSupportAgent`
+service contract, safe historical-service migration assessment, one-UAC
+onboarding bootstrap, deterministic silent lifecycle boundary, package trust
+and installed-file verification, managed browser/certificate policy seams,
+durable audit, fixed RMS aggregate health, safe Support Bundle, and the
+redesigned POS Maintenance console. Read the current state in
+[`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md).
+
+This plan remains the cross-project architecture record. Its earlier Slice C
+roadmap and open-gate language is historical; implementation does not equal
+Production/customer approval. Enterprise signing/PKI/policy rollout, elevated
+representative evidence, fleet comparison, and the independent final review
+remain open.
+
 ## Current product rebaseline — 2026-08-15
 
 The runtime/API reconnaissance in
@@ -17,27 +33,15 @@ owner-provided Swagger base differ; future API access therefore uses
 Agent-owned allow-listed client profiles and discovered local Branch/POS
 binding, never a browser URL or target.
 
-The remaining product is intentionally three large vertical slices rather than
-INT-style micro-milestones:
-
-1. final operator workspace, Health/Failure Analyzer, bounded logs/events,
-   database/capacity evidence, Support Bundle, and Incident Timeline;
-2. typed Main Server profiles/install-state operations, Safety Snapshot, Safe
-   Diagnostic Console Run, Repair/Guided Repair, and the real Agent package;
-3. M-1/M-2, durable Production audit, fleet/representative proof, Whites
-   comparison, and independent Claude Opus 5 High review.
-
-Slices 1 and 2 are historical planning labels. Their confined process launch,
-remote credentials/mutations, installer rollback, and package ownership
-boundaries are now represented by the current typed implementation. Root
-`TASK.md` is the focused independent security re-review prompt. The current
-security remediation and its exact retained
-preview contract are recorded below; the remaining Production/fleet work is
-the bounded Slice C contract in
-[`POS_SLICE_C_REQUIREMENTS.md`](POS_SLICE_C_REQUIREMENTS.md). Read-only Main
-Server discovery remains authorized when side-effect-free; retained previews
-are typed POSTs and every live Main Server mutation requires explicit owner
-approval before invocation.
+The earlier three large vertical slices are historical planning labels. Their
+confined process launch, remote credentials/mutations, installer rollback,
+package ownership, audit, fixed-root health, Support Bundle, and operator UI
+boundaries are now represented by the current typed implementation described in
+[`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md). Root
+`TASK.md` is the next independent Production/Fleet security review prompt.
+Read-only Main Server discovery remains authorized when side-effect-free;
+retained previews are typed POSTs and every live Main Server mutation requires
+explicit owner approval before invocation.
 
 ## Slice B security remediation rebaseline - 2026-08-15
 
@@ -211,7 +215,7 @@ source baseline; the source repository remained read-only and unchanged.
 
 | Area | Canonical decision |
 | --- | --- |
-| Privileged boundary | A separate Windows `RmsSupportHub.Pos.Agent` process owns privileged POS work. |
+| Privileged boundary | A separate Windows `RmsSupportAgent` process owns privileged POS work; historical host names are migration inputs only. |
 | Browser transport | The final Support Hub Angular application talks directly over trusted HTTPS using HTTP/1.1 only to the Agent's loopback origin. `RmsSupportHub.Api` is not in this privileged request path. |
 | Loopback security | The Agent binds only to loopback through a fixed hostname and fixed port. It never widens to LAN access, discovers services, listens on `0.0.0.0`, or relies on a certificate-warning bypass. |
 | Browser permission | Local Network Access (LNA), a versioned Chrome/Edge policy matrix, managed exact-origin allowlisting, and first-run/revocation UX are part of the architecture. Denial makes POS unavailable. |

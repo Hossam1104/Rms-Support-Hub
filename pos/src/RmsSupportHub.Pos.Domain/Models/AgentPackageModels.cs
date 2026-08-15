@@ -60,7 +60,12 @@ public sealed record AgentPackageManifest(
     IReadOnlyList<string> CertificateRequirements,
     string? PreviousVersion,
     bool RollbackAvailable,
-    long PackageSizeBytes);
+    long PackageSizeBytes,
+    int SchemaVersion = 1,
+    string? ProductId = null,
+    string? Architecture = null,
+    string? ReleaseChannel = null,
+    string? Environment = null);
 
 public sealed record AgentPackageValidationResult(
     AgentPackageVerificationState State,

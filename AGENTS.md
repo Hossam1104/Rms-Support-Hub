@@ -4,13 +4,11 @@ This file is the canonical instruction source for Codex, Claude, and Kimi.
 Claude loads it through `CLAUDE.md`. Do not duplicate these instructions elsewhere.
 
 ## Shared-brain principle
-
 The shared brain is the repository, Git, `TASK.md`, and the concise files under `.ai/`.
 Chat transcripts and hidden model reasoning are not project records.
 Never ask another model to reconstruct the project from previous conversations.
 
 ## Mandatory startup
-
 For any task:
 
 1. Read `TASK.md`.
@@ -56,8 +54,6 @@ The role is declared in `TASK.md`:
 - `Review`: inspect the task-related diff and tests only; do not modify unless requested.
 - `Test`: validate the changed scope and report evidence.
 
-Small, well-scoped tasks should use one model only. Use multiple models only when the task benefits from a separate planning, implementation, or review checkpoint.
-
 ## Execution rules
 
 - Work only within the requested scope.
@@ -66,7 +62,6 @@ Small, well-scoped tasks should use one model only. Use multiple models only whe
 - Do not paste large files into project-memory documents.
 - Do not store raw logs, complete diffs, test output, credentials, URLs with secrets, connection strings, or personal data in `.ai/`.
 - Do not commit, push, deploy, or run destructive commands unless explicitly requested.
-- For minor uncertainty, make the safest reversible assumption and record it in the handoff only if another model needs it.
 - Ask the user only for a material business decision, unavailable access, or unsafe/destructive action.
 
 ## Validation
@@ -109,17 +104,16 @@ responded.
   sessions. Do not leave completed prompts in the active documentation tree.
 - Record completed milestones concisely in `.ai/HISTORY.md` with commit or
   validation evidence.
-- Archive a completed plan under `.ai/archive/` only when it has lasting audit
-  value; otherwise delete it. Executed prompt runners normally belong only in
-  Git history.
-- After moving or deleting a plan, update live documentation links so current
-  contracts never depend on archived prompts.
+- Archive completed plans only when they have lasting audit value; otherwise
+  delete them, and update live links after moving or deleting one. Prompt
+  runners normally belong only in Git history.
 
 After completed work:
 
-- Update `.ai/STATE.md` only with durable current facts; replace outdated text rather than appending history.
+- Update `.ai/STATE.md` with durable current facts, replacing outdated text.
 - Set `.ai/HANDOFF.md` to `Empty`.
-- Update `.ai/PROJECT.md` only when stable architecture, commands, integrations, or non-obvious conventions changed.
+- Update `.ai/PROJECT.md` only when stable architecture, commands, integrations,
+  or non-obvious conventions changed.
 - Update `.ai/DECISIONS.md` only for a lasting decision. Put detailed rationale in one ADR under `.ai/decisions/`.
 - Move a large completed plan to `.ai/archive/` only when it has audit value; otherwise delete it.
 

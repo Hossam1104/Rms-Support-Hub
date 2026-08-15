@@ -811,6 +811,94 @@
         ]
       }
     },
+    "/api/v1/rms/operational-health": {
+      "get": {
+        "tags": [
+          "RMS Diagnostics"
+        ],
+        "summary": "Read fixed-root RMS storage and update health",
+        "description": "Reads only the server-owned RMS setup, download, release-repository, data, log, and sensitive attachment roots. The response contains bounded aggregate counts, sizes, ages, capacity, Product Release, and package health. It never returns a path, filename, attachment content, patient identity, insurance identity, raw log, registry export, or browser-selected filesystem scope.",
+        "operationId": "GetRmsOperationalHealth",
+        "responses": {
+          "200": {
+            "description": "The Agent returned the sanitized RmsOperationalHealthDto aggregate model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmsOperationalHealthDto"
+                },
+                "example": {
+                  "fixedRoots": [
+                    {
+                      "rootId": "rms-setup",
+                      "state": "healthy",
+                      "fileCount": 12,
+                      "totalBytes": 4096,
+                      "lastWriteUtc": "2030-01-01T00:00:00Z",
+                      "detail": "The fixed RMS setup root is readable within bounded limits."
+                    }
+                  ],
+                  "update": {
+                    "productRelease": "5.7.4",
+                    "packageState": "notInstalled",
+                    "available": false,
+                    "detail": "No server-approved update package is staged."
+                  },
+                  "insuranceAttachments": {
+                    "state": "healthy",
+                    "fileCount": 0,
+                    "totalBytes": 0,
+                    "detail": "No attachment content or identity was returned."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "The request host is not accepted.",
+                  "status": 400,
+                  "code": "host_rejected",
+                  "correlationId": "example-correlation-id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details.",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Negotiate challenge emitted by the Windows authentication middleware.",
+                "schema": {
+                  "type": "string",
+                  "example": "Negotiate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
+          },
+          "500": {
+            "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/diagnostics/services/{serviceId}/failure": {
       "get": {
         "tags": [
@@ -3955,6 +4043,44 @@
           "rollbackAvailable": {
             "type": "boolean",
             "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "schemaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed.",
+            "format": "int32",
+            "default": 1
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "architecture": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "releaseChannel": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
+          },
+          "environment": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Server-owned logical label or profile value; it is not a browser-selected path or endpoint."
           }
         },
         "description": "Safe server-owned Slice B field; unrestricted machine details are not exposed."
@@ -7090,6 +7216,100 @@
         },
         "description": "Main-server configuration and reachability evidence."
       },
+      "RmsFixedRootHealthDto": {
+        "required": [
+          "rootId",
+          "displayName",
+          "state",
+          "exists",
+          "accessible",
+          "fileCount",
+          "totalBytes",
+          "oldestFileUtc",
+          "newestFileUtc",
+          "freeBytes",
+          "totalCapacityBytes",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "rootId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RmsFixedRootStateDto"
+          },
+          "exists": {
+            "type": "boolean"
+          },
+          "accessible": {
+            "type": "boolean"
+          },
+          "fileCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "oldestFileUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "newestFileUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "freeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "totalCapacityBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "RmsFixedRootStateDto": {
+        "enum": [
+          "healthy",
+          "missing",
+          "inaccessible",
+          "stale",
+          "unknown"
+        ]
+      },
       "RmsInstallationDto": {
         "required": [
           "installed",
@@ -7211,6 +7431,82 @@
         },
         "description": "Safe installed RMS identity and consistency evidence."
       },
+      "RmsInsuranceAttachmentHealthDto": {
+        "required": [
+          "root",
+          "attachmentCount",
+          "totalBytes",
+          "oldestAttachmentUtc",
+          "newestAttachmentUtc",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "root": {
+            "$ref": "#/components/schemas/RmsFixedRootHealthDto"
+          },
+          "attachmentCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "oldestAttachmentUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "newestAttachmentUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "RmsOperationalHealthDto": {
+        "required": [
+          "fixedRoots",
+          "updates",
+          "insuranceAttachments",
+          "checkedAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "fixedRoots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RmsFixedRootHealthDto"
+            }
+          },
+          "updates": {
+            "$ref": "#/components/schemas/RmsUpdateHealthDto"
+          },
+          "insuranceAttachments": {
+            "$ref": "#/components/schemas/RmsInsuranceAttachmentHealthDto"
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "RmsStorageHealthDto": {
         "required": [
           "state",
@@ -7249,6 +7545,44 @@
           }
         },
         "description": "Bounded capacity evidence for the Agent-approved database storage root."
+      },
+      "RmsUpdateHealthDto": {
+        "required": [
+          "setupRoot",
+          "downloadsRoot",
+          "releaseRepositoryRoot",
+          "productRelease",
+          "releaseFileAvailable",
+          "packageState",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "setupRoot": {
+            "$ref": "#/components/schemas/RmsFixedRootHealthDto"
+          },
+          "downloadsRoot": {
+            "$ref": "#/components/schemas/RmsFixedRootHealthDto"
+          },
+          "releaseRepositoryRoot": {
+            "$ref": "#/components/schemas/RmsFixedRootHealthDto"
+          },
+          "productRelease": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseFileAvailable": {
+            "type": "boolean"
+          },
+          "packageState": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
       },
       "RmsVersionDto": {
         "required": [

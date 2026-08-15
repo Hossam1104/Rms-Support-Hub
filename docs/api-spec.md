@@ -208,3 +208,31 @@ drawer surfaces.
 
 - `GET /api/modules/{key}/order-history` and `POST /api/modules/{key}/order-history/{id}/cancel` — the local JSON-file order-history store (`OrderHistoryService`/`OrderHistoryEntry`) is gone; section 5 above, reading the real `OrderRequests` table, is its replacement. No `order_history_*.json` files existed on disk at the time of removal (confirmed via a repo-wide search), so there was nothing to archive.
 - `POST /api/modules/upc_ecommerce/validation/search` and `GET /api/modules/upc_ecommerce/validation/order/{orderNumber}` (`ValidationController`/`IOrderValidationRepository`/`UpcOrderValidationRepository`) — this path read `RequestOrderHeaders` first and never surfaced `ResponseJson`/`ExceptionMessage`; superseded by section 5.
+
+---
+
+## POS Agent boundary (Slice C)
+
+The privileged POS surface is a separate Windows host, not an endpoint in the
+Support Hub API composition root. The permanent product/service identity is
+`RmsSupportAgent`, hosted at the exact secure Testing origin
+`https://rms-pos-agent.localhost:5001`. The browser reaches it directly with
+Negotiate and the explicit cross-origin antiforgery contract; the Hub API is
+not a privileged relay.
+
+The current read-side operational contract is:
+
+- **`GET /api/v1/rms/operational-health`** — authenticated, bounded summaries
+  for the fixed RMS roots, update/release state, and insurance-attachment
+  aggregate. It never returns raw paths, filenames, log contents, or attachment
+  bytes.
+- **`GET /health/live`** and **`GET /health/ready`** — host health probes.
+- Support-bundle and mutation routes remain Agent-owned and require their
+  existing session, antiforgery, capability, and one-use mutation controls.
+
+The source of truth for the versioned Agent schema is
+`pos/openapi/RmsSupportHub.Pos.Agent.json`; the Angular client under
+`frontend/src/app/core/pos-agent/generated/` is regenerated from that document
+and must not be hand-edited. Package, certificate, browser-policy, migration,
+and audit behavior is documented in
+`docs/POS_SLICE_C_IMPLEMENTATION.md`.

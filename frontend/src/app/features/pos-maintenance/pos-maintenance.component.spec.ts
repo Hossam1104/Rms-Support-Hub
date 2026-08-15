@@ -155,6 +155,40 @@ describe('PosMaintenanceComponent', () => {
         },
         services: []
       })),
+      getRmsOperationalHealth: vi.fn(() => of({
+        fixedRoots: [{
+          rootId: 'rms-setup',
+          displayName: 'RMS setup',
+          state: 'healthy',
+          exists: true,
+          accessible: true,
+          fileCount: 12,
+          totalBytes: 4096,
+          oldestFileUtc: '2026-08-13T09:00:00Z',
+          newestFileUtc: '2026-08-13T10:00:00Z',
+          freeBytes: 100000,
+          totalCapacityBytes: 1000000,
+          detail: 'The fixed RMS setup root is readable within bounded limits.'
+        }],
+        updates: {
+          setupRoot: {} as never,
+          downloadsRoot: {} as never,
+          releaseRepositoryRoot: {} as never,
+          productRelease: '2026.08',
+          releaseFileAvailable: true,
+          packageState: 'notInstalled',
+          detail: 'No server-approved update package is staged.'
+        },
+        insuranceAttachments: {
+          root: {} as never,
+          attachmentCount: 0,
+          totalBytes: 0,
+          oldestAttachmentUtc: null,
+          newestAttachmentUtc: null,
+          detail: 'No attachment content or identity was returned.'
+        },
+        checkedAtUtc: '2026-08-13T10:00:00Z'
+      })),
       getHealthCheck: vi.fn(() => of({
         overallState: 'healthy',
         summary: 'POS health checks are healthy.',

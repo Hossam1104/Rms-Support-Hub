@@ -64,6 +64,7 @@ type MaintenanceOperation = components['schemas']['MaintenanceOperationDto'];
 type ServiceFailureAnalysis = components['schemas']['ServiceFailureAnalysisDto'];
 type IncidentTimeline = components['schemas']['IncidentTimelineDto'];
 type SupportBundle = components['schemas']['SupportBundleDto'];
+type RmsOperationalHealth = components['schemas']['RmsOperationalHealthDto'];
 
 @Injectable({ providedIn: 'root' })
 export class PosAgentTransportService {
@@ -325,6 +326,15 @@ export class PosAgentTransportService {
   getRmsDiagnostics(): Observable<RmsDiagnostics> {
     return this.http
       .get<RmsDiagnostics>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.rmsDiagnostics}`, {
+        headers: this.jsonHeaders,
+        withCredentials: true
+      })
+      .pipe(catchError(error => throwError(() => classifyPosAgentError(error))));
+  }
+
+  getRmsOperationalHealth(): Observable<RmsOperationalHealth> {
+    return this.http
+      .get<RmsOperationalHealth>(`${POS_AGENT_ORIGIN}${POS_AGENT_PATHS.rmsOperationalHealth}`, {
         headers: this.jsonHeaders,
         withCredentials: true
       })

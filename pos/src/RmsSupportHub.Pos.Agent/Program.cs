@@ -34,6 +34,7 @@ using RmsSupportHub.Pos.Contracts.V1.Session;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Infrastructure.Backups;
+using RmsSupportHub.Pos.Infrastructure.Audit;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Diagnostics;
 using RmsSupportHub.Pos.Infrastructure.Databases;
@@ -56,7 +57,7 @@ var securityOptions = builder.Configuration
     .Get<AgentSecurityOptions>() ?? new AgentSecurityOptions();
 securityOptions.Validate();
 
-builder.Host.UseWindowsService(options => options.ServiceName = "RmsSupportHub.Pos.Agent");
+builder.Host.UseWindowsService(options => options.ServiceName = AgentProductIdentity.PermanentServiceName);
 
 builder.WebHost.ConfigureKestrel((context, options) =>
     LoopbackBinding.Configure(options, context.Configuration, context.HostingEnvironment));
@@ -164,11 +165,14 @@ builder.Services.AddSingleton<IRmsSqlReadOnlyProbe, SqlClientReadOnlyProbe>();
 builder.Services.AddSingleton<IRmsDatabaseDiagnostics, RmsDatabaseDiagnostics>();
 builder.Services.AddSingleton(new RmsDiagnosticEvidenceOptions());
 builder.Services.AddSingleton<IRmsDiagnosticEvidenceReader, WindowsRmsDiagnosticEvidenceReader>();
+builder.Services.AddSingleton(new RmsFixedHealthOptions());
+builder.Services.AddSingleton<IRmsFixedHealthReader, WindowsRmsFixedHealthReader>();
 builder.Services.AddSingleton<ServiceFailureAnalyzer>();
 builder.Services.AddSingleton<IncidentTimelineStore>();
 builder.Services.AddSingleton<IncidentTimelineService>();
 builder.Services.AddSingleton<RmsConnectivityDiagnostics>();
 builder.Services.AddSingleton<RmsDiagnosticsService>();
+builder.Services.AddSingleton<RmsOperationalHealthService>();
 builder.Services.AddSingleton<RmsDatabaseHealthService>();
 builder.Services.AddSingleton<PosHealthService>();
 builder.Services.AddSingleton(new SupportBundleOptions());
@@ -224,7 +228,11 @@ builder.Services.AddSingleton<IRmsDatabaseWorkflow, RmsDatabaseWorkflowService>(
 builder.Services.AddSingleton<RmsDatabaseOperationStore>();
 builder.Services.AddSingleton<RmsDatabaseIdempotencyStore>();
 builder.Services.AddSingleton<RmsDatabaseConcurrencyGate>();
-builder.Services.AddSingleton<IRmsPrivilegedAuditSink, InMemoryRmsAuditSink>();
+builder.Services.AddSingleton(new AgentAuditOptions());
+builder.Services.AddSingleton<FileAgentAuditSink>();
+builder.Services.AddSingleton<IAgentAuditSink>(services => services.GetRequiredService<FileAgentAuditSink>());
+builder.Services.AddSingleton<IAgentAuditReader>(services => services.GetRequiredService<FileAgentAuditSink>());
+builder.Services.AddSingleton<IRmsPrivilegedAuditSink>(services => services.GetRequiredService<FileAgentAuditSink>());
 builder.Services.AddSingleton<RmsDatabaseOperationRuntime>();
 
 // Slice B server-owned Main Server profiles. The dedicated client is constructed separately

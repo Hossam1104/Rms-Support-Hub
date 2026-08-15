@@ -37,7 +37,14 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
         if (!string.Equals(manifest.SupportedOperatingSystem, "Windows", StringComparison.OrdinalIgnoreCase)) blockers.Add("os_not_supported");
         if (!string.Equals(manifest.SupportedRuntime, "net10.0-windows", StringComparison.OrdinalIgnoreCase)) blockers.Add("runtime_not_supported");
         if (!string.Equals(manifest.ServiceIdentity, "LocalSystem", StringComparison.Ordinal)) blockers.Add("service_identity_invalid");
-        if (!string.Equals(manifest.ScmName, "RmsSupportHub.Pos.Agent", StringComparison.Ordinal)) blockers.Add("scm_name_invalid");
+        if (!string.Equals(manifest.ServiceDisplayName, AgentProductIdentity.ServiceDisplayName, StringComparison.Ordinal)) blockers.Add("service_display_name_invalid");
+        if (!string.Equals(manifest.ScmName, AgentProductIdentity.PermanentServiceName, StringComparison.Ordinal)) blockers.Add("scm_name_invalid");
+        if (manifest.SchemaVersion != 1) blockers.Add("package_schema_invalid");
+        if (!string.Equals(manifest.ProductId, AgentProductIdentity.ProductId, StringComparison.Ordinal)) blockers.Add("product_identity_invalid");
+        if (!IsSupportedArchitecture(manifest.Architecture ?? string.Empty)) blockers.Add("architecture_invalid");
+        if (!IsSupportedChannel(manifest.ReleaseChannel ?? string.Empty)) blockers.Add("release_channel_invalid");
+        if (!IsSupportedEnvironment(manifest.Environment ?? string.Empty)) blockers.Add("environment_invalid");
+        if (!string.Equals(manifest.ReleaseChannel, manifest.Environment, StringComparison.Ordinal)) blockers.Add("channel_environment_mismatch");
         if (!string.Equals(manifest.SignatureAlgorithm, "SHA256withRSA", StringComparison.Ordinal)) blockers.Add("signature_algorithm_invalid");
         if (string.IsNullOrWhiteSpace(manifest.SignerDisplayName) || manifest.SignerDisplayName.Length > 128) blockers.Add("signer_invalid");
         if (!IsSha256(manifest.PackageSha256)) blockers.Add("package_hash_invalid");
@@ -59,6 +66,7 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
             if (!SafeToken.IsMatch(logicalName) || !logicalNames.Add(logicalName)) blockers.Add("file_logical_name_invalid");
             var normalizedRelativePath = file.RelativePath?.Replace('\\', '/') ?? string.Empty;
             if (!IsSafeRelativePath(file.RelativePath) || !relativePaths.Add(normalizedRelativePath)) blockers.Add("file_path_invalid");
+            if (string.Equals(normalizedRelativePath, "manifest.json", StringComparison.OrdinalIgnoreCase)) blockers.Add("file_path_reserved");
             if (file.SizeBytes is < 0 or > MaxFileBytes) blockers.Add("file_size_invalid");
             if (!IsSha256(file.Sha256)) blockers.Add("file_hash_invalid");
             totalBytes = totalBytes > MaxPackageBytes - Math.Max(0, file.SizeBytes)
@@ -87,4 +95,13 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
 
     private static bool IsSha256(string? value) =>
         value is { Length: 64 } && value.All(Uri.IsHexDigit);
+
+    private static bool IsSupportedArchitecture(string value) =>
+        value is "x64" or "arm64";
+
+    private static bool IsSupportedChannel(string value) =>
+        value is AgentProductIdentity.ReleaseChannelTesting or AgentProductIdentity.ReleaseChannelProduction;
+
+    private static bool IsSupportedEnvironment(string value) =>
+        value is AgentProductIdentity.EnvironmentTesting or AgentProductIdentity.EnvironmentProduction;
 }

@@ -44,6 +44,9 @@ type ServiceActionOutcome = components['schemas']['ServiceActionOutcome'];
 type ServiceActionResponse = components['schemas']['ServiceActionResponseDto'];
 type Evidence = components['schemas']['EvidenceDto'];
 type RmsDiagnostics = components['schemas']['RmsDiagnosticsDto'];
+type RmsOperationalHealth = components['schemas']['RmsOperationalHealthDto'];
+type RmsFixedRootHealth = components['schemas']['RmsFixedRootHealthDto'];
+type RmsFixedRootState = components['schemas']['RmsFixedRootStateDto'];
 type RmsDatabaseDiagnostic = components['schemas']['RmsDatabaseDiagnosticDto'];
 type RmsEndpointDiagnostic = components['schemas']['RmsEndpointDiagnosticDto'];
 type RmsDatabaseTarget = components['schemas']['RmsDatabaseTarget'];
@@ -106,6 +109,29 @@ const POS_MAINTENANCE_TEMPLATE = `
         Refresh
       </ui-button>
     </app-page-header>
+
+    <section class="ops-command-center" aria-labelledby="ops-command-center-title">
+      <div class="ops-command-center__signal">
+        <div class="section-kicker">RMS Support Agent / Local operations</div>
+        <div class="ops-command-center__headline">
+          <div>
+            <h2 id="ops-command-center-title">A clear lane from signal to action</h2>
+            <p>Read the machine-owned evidence first. Every action below stays typed, bounded, and visible before it can cross the Agent boundary.</p>
+          </div>
+          <div class="ops-status-orbit" [class.ops-status-orbit--healthy]="health()?.overallState === 'healthy'" [class.ops-status-orbit--warning]="health()?.overallState === 'warning'" [class.ops-status-orbit--danger]="health()?.overallState === 'actionRequired'" role="status" aria-live="polite">
+            <span class="ops-status-orbit__ring" aria-hidden="true"><span></span></span>
+            <span class="ops-status-orbit__copy"><small>Current lane</small><strong>{{ healthStateLabel(health()?.overallState) }}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="ops-command-center__metrics" role="list" aria-label="POS Agent command metrics">
+        <div class="ops-metric" role="listitem"><span class="ops-metric__index">01</span><span class="ops-metric__label">Agent</span><strong>{{ agentStatusLabel() }}</strong><small>{{ agentVersion() }} / API {{ apiVersion() }}</small></div>
+        <div class="ops-metric" role="listitem"><span class="ops-metric__index">02</span><span class="ops-metric__label">Product Release</span><strong>{{ productRelease() }}</strong><small>{{ rmsDiagnostics()?.installation?.installationMode || 'Awaiting installation evidence' }}</small></div>
+        <div class="ops-metric" role="listitem"><span class="ops-metric__index">03</span><span class="ops-metric__label">Root coverage</span><strong>{{ operationalRootSummary() }}</strong><small>Fixed roots / bounded aggregate reads</small></div>
+        <div class="ops-metric" role="listitem"><span class="ops-metric__index">04</span><span class="ops-metric__label">Attachment aggregate</span><strong>{{ operationalAttachmentSummary() }}</strong><small>No patient or insurance identity leaves the Agent</small></div>
+      </div>
+      <div class="ops-command-center__scope"><i class="bi bi-shield-check" aria-hidden="true"></i><span><strong>Safe scope:</strong> fixed RMS roots, typed diagnostics, allow-listed services, and opaque Agent operations.</span><span class="ops-command-center__timestamp">{{ health()?.checkedAtUtc ? ('Last signal ' + formatSignalTime(health()?.checkedAtUtc)) : 'Waiting for first signal' }}</span></div>
+    </section>
 
     <section class="peer-status" aria-labelledby="peer-status-title">
       <div class="section-kicker">Operator workspace</div>
@@ -178,6 +204,35 @@ const POS_MAINTENANCE_TEMPLATE = `
           <div class="evidence-block evidence-block--wide"><h3>Consistency</h3><div class="warning-list">@for (warning of rmsDiagnostics()?.installation?.consistency?.warnings || []; track warning) { <span>{{ warning }}</span> } @empty { <span>Known duplicated values are consistent or no warning was returned.</span> }</div></div>
         </div>
       </details>
+    </section>
+
+    <section class="workspace-panel operational-health-panel" aria-labelledby="operational-health-title">
+      <div class="section-heading">
+        <div><div class="section-kicker">01A / Storage signal</div><h2 id="operational-health-title">Fixed-root operational health</h2><p>Aggregate evidence for RMS setup, update, data, log, and attachment roots. Names, paths, file content, and identity-bearing attachment details stay on the machine.</p></div>
+        <app-status-badge [label]="operationalHealthLabel()" [variant]="operationalHealthVariant()" role="status"></app-status-badge>
+      </div>
+      @if (operationalHealth(); as operational) {
+        <div class="operational-health-layout">
+          <div class="root-signal-list" aria-label="Fixed RMS root health">
+            @for (root of operational.fixedRoots; track root.rootId) {
+              <article class="root-signal" [class.root-signal--warning]="root.state === 'stale' || root.state === 'inaccessible'" [class.root-signal--danger]="root.state === 'missing'">
+                <div class="root-signal__heading"><div><span class="root-signal__id">{{ root.rootId }}</span><h3>{{ root.displayName }}</h3></div><app-status-badge [label]="rootStateLabel(root.state)" [variant]="rootStateVariant(root.state)" role="status"></app-status-badge></div>
+                <div class="root-signal__facts"><span><strong>{{ numberValue(root.fileCount).toLocaleString() }}</strong> files</span><span><strong>{{ formatBytes(numberValue(root.totalBytes)) }}</strong> observed</span><span><strong>{{ root.newestFileUtc ? formatSignalTime(root.newestFileUtc) : 'No timestamp' }}</strong> newest write</span></div>
+                <p>{{ root.detail }}</p>
+              </article>
+            } @empty {
+              <p class="empty-copy">{{ readError('operationalHealth') }}</p>
+            }
+          </div>
+          <aside class="operational-health-rail" aria-label="Update and attachment aggregates">
+            <div class="health-rail-card"><span class="health-rail-card__label">Update lane</span><strong>{{ operational.updates.productRelease || 'Release unavailable' }}</strong><app-status-badge [label]="operational.updates.packageState" [variant]="updateStateVariant(operational.updates.packageState)" role="status"></app-status-badge><p>{{ operational.updates.detail }}</p></div>
+            <div class="health-rail-card health-rail-card--quiet"><span class="health-rail-card__label">Insurance attachments</span><strong>{{ numberValue(operational.insuranceAttachments.attachmentCount).toLocaleString() }} / {{ formatBytes(numberValue(operational.insuranceAttachments.totalBytes)) }}</strong><span class="health-rail-card__subline">aggregate files / bytes</span><p>{{ operational.insuranceAttachments.detail }}</p></div>
+          </aside>
+        </div>
+        <p class="operational-health-footer"><i class="bi bi-clock-history" aria-hidden="true"></i> Checked {{ formatSignalTime(operational.checkedAtUtc) }} · bounded to the server-owned root catalog · no arbitrary browser filesystem scope.</p>
+      } @else {
+        <p class="empty-copy">{{ readError('operationalHealth') }}</p>
+      }
     </section>
 
     <section class="workspace-panel database-panel" aria-labelledby="database-title">
@@ -883,6 +938,7 @@ export class PosMaintenanceComponent implements OnDestroy {
   readonly configuration = signal<RedactedConfiguration | null>(null);
   readonly services = signal<ServiceSummary[] | null>(null);
   readonly rmsDiagnostics = signal<RmsDiagnostics | null>(null);
+  readonly operationalHealth = signal<RmsOperationalHealth | null>(null);
   readonly health = signal<HealthReport | null>(null);
   readonly failureAnalysis = signal<ServiceFailureAnalysis | null>(null);
   readonly timeline = signal<IncidentTimeline | null>(null);
@@ -1369,6 +1425,69 @@ export class PosMaintenanceComponent implements OnDestroy {
       case 'actionRequired': return 'danger';
       default: return 'info';
     }
+  }
+
+  operationalHealthLabel(): string {
+    const roots = this.operationalHealth()?.fixedRoots || [];
+    if (!roots.length) return 'Awaiting signal';
+    return roots.some(root => root.state === 'missing' || root.state === 'inaccessible')
+      ? 'Action required'
+      : roots.some(root => root.state === 'stale' || root.state === 'unknown')
+        ? 'Review evidence'
+        : 'Within bounds';
+  }
+
+  operationalHealthVariant(): 'success' | 'warning' | 'danger' | 'info' {
+    const roots = this.operationalHealth()?.fixedRoots || [];
+    if (!roots.length) return 'info';
+    return roots.some(root => root.state === 'missing' || root.state === 'inaccessible')
+      ? 'danger'
+      : roots.some(root => root.state === 'stale' || root.state === 'unknown')
+        ? 'warning'
+        : 'success';
+  }
+
+  operationalRootSummary(): string {
+    const roots = this.operationalHealth()?.fixedRoots || [];
+    if (!roots.length) return '— / —';
+    const healthy = roots.filter(root => root.state === 'healthy').length;
+    return `${healthy} / ${roots.length}`;
+  }
+
+  operationalAttachmentSummary(): string {
+    const attachment = this.operationalHealth()?.insuranceAttachments;
+    return attachment ? `${this.numberValue(attachment.attachmentCount).toLocaleString()} files` : 'Awaiting signal';
+  }
+
+  rootStateLabel(state: RmsFixedRootState): string {
+    switch (state) {
+      case 'healthy': return 'Healthy';
+      case 'missing': return 'Missing';
+      case 'inaccessible': return 'Inaccessible';
+      case 'stale': return 'Stale';
+      default: return 'Unknown';
+    }
+  }
+
+  rootStateVariant(state: RmsFixedRootState): 'success' | 'warning' | 'danger' | 'info' {
+    switch (state) {
+      case 'healthy': return 'success';
+      case 'missing': return 'danger';
+      case 'inaccessible':
+      case 'stale': return 'warning';
+      default: return 'info';
+    }
+  }
+
+  updateStateVariant(state: string): 'success' | 'warning' | 'danger' | 'info' {
+    const normalized = state.toLowerCase();
+    return normalized.includes('available') || normalized.includes('installed') ? 'success'
+      : normalized.includes('unavailable') || normalized.includes('error') ? 'danger'
+        : 'warning';
+  }
+
+  formatSignalTime(value: string | null | undefined): string {
+    return value ? this.formatDate(value) : 'Unavailable';
   }
 
   consistencyHeaderLabel(): string {
@@ -2172,7 +2291,7 @@ export class PosMaintenanceComponent implements OnDestroy {
     this.refreshing.set(true);
     if (firstLoad) this.loading.set(true);
 
-    const [live, session, identity, connectivity, capabilities, configuration, services, rms, health, branchDatabase, cashierDatabase, downloaderBranches, mainServerProfiles, mainServerState, safetySnapshotPreview, packageStatus, guidedRepair] = await Promise.all([
+    const [live, session, identity, connectivity, capabilities, configuration, services, rms, operationalHealth, health, branchDatabase, cashierDatabase, downloaderBranches, mainServerProfiles, mainServerState, safetySnapshotPreview, packageStatus, guidedRepair] = await Promise.all([
       this.settle(this.transport.getLive()),
       this.settle(this.transport.getSession()),
       this.settle(this.transport.getDeviceIdentity()),
@@ -2181,6 +2300,7 @@ export class PosMaintenanceComponent implements OnDestroy {
       this.settle(this.transport.getConfiguration()),
       this.settle(this.transport.getServices()),
       this.settle(this.transport.getRmsDiagnostics()),
+      this.settle(this.transport.getRmsOperationalHealth()),
       this.settle(this.transport.getHealthCheck()),
       this.settle(this.transport.getRmsDatabaseWorkspace('branch')),
       this.settle(this.transport.getRmsDatabaseWorkspace('cashier')),
@@ -2203,6 +2323,7 @@ export class PosMaintenanceComponent implements OnDestroy {
     this.applyValue('configuration', configuration, this.configuration, nextErrors);
     this.applyValue('services', services, this.services, nextErrors);
     this.applyValue('rms', rms, this.rmsDiagnostics, nextErrors);
+    this.applyValue('operationalHealth', operationalHealth, this.operationalHealth, nextErrors);
     this.applyValue('health', health, this.health, nextErrors);
     this.applyValue('branchDatabase', branchDatabase, this.branchDatabaseWorkspace, nextErrors);
     this.applyValue('cashierDatabase', cashierDatabase, this.cashierDatabaseWorkspace, nextErrors);

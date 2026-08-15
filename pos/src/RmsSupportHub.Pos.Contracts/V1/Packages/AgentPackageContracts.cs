@@ -57,7 +57,17 @@ public sealed record AgentPackageManifestDto(
     IReadOnlyList<string> AclRequirements,
     IReadOnlyList<string> CertificateRequirements,
     string? PreviousVersion,
-    bool RollbackAvailable);
+    bool RollbackAvailable,
+    /// <summary>Version of the server-owned package manifest schema.</summary>
+    int SchemaVersion = 1,
+    /// <summary>Immutable product identity; Production packages must be RMS Support Agent packages.</summary>
+    string? ProductId = null,
+    /// <summary>Machine architecture declared by the package.</summary>
+    string? Architecture = null,
+    /// <summary>Release channel such as Testing or Production.</summary>
+    string? ReleaseChannel = null,
+    /// <summary>Environment for which the package was built.</summary>
+    string? Environment = null);
 
 public sealed record AgentPackageStatusDto(
     string? InstalledVersion,
