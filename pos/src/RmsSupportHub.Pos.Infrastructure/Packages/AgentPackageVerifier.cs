@@ -109,68 +109,13 @@ public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSi
         var configured = options.GetConfiguredThumbprint(channel);
         if (configured is not null) return configured;
 
-        try
+        var loader = new MachineAgentTrustConfigurationLoader();
+        if (loader.TryLoad(options.TrustConfigurationPath, out var configuration, out _) && configuration is not null)
         {
-            var path = options.TrustConfigurationPath;
-            if (!File.Exists(path)
-                || File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)
-                || new FileInfo(path).Length is <= 0 or > 16 * 1024)
-            {
-                return null;
-            }
-
-            // The trust configuration file is machine-owned and never provisioned by this
-            // application. Its ownership/ACL boundary must be verified before any value inside it is
-            // trusted -- a writable trust configuration must never become authority.
-            if (!ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(path)) return null;
-
-            using var document = JsonDocument.Parse(File.ReadAllText(path));
-            if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
-
-            if (!TryReadConfiguredThumbprint(document.RootElement, "productionSignerThumbprint", out var production)
-                || !TryReadConfiguredThumbprint(document.RootElement, "testingSignerThumbprint", out var testing))
-            {
-                return null;
-            }
-
-            try
-            {
-                AgentPackageTrustOptions.ValidateDistinctThumbprints(production, testing);
-            }
-            catch (ArgumentException)
-            {
-                return null;
-            }
-
-            return channel == "Production" ? production : testing;
+            return configuration.GetConfiguredThumbprint(channel);
         }
-        catch (JsonException)
-        {
-            return null;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
 
-    private static bool TryReadConfiguredThumbprint(
-        JsonElement root,
-        string propertyName,
-        out string? normalized)
-    {
-        normalized = null;
-        if (!root.TryGetProperty(propertyName, out var value)) return true;
-        if (value.ValueKind != JsonValueKind.String) return false;
-
-        var raw = value.GetString();
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-        normalized = AgentPackageTrustOptions.Normalize(raw);
-        return normalized is not null;
+        return null;
     }
 }
 

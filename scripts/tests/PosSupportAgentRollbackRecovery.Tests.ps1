@@ -227,10 +227,10 @@ Describe 'RMS Support Agent trust-control file ACL boundary (Section 8 parity)' 
             $file = Join-Path $target 'package-trust.json'
             Set-Content -LiteralPath $file -Value '{}' -Encoding UTF8
             Protect-RmsTestControlFile -Path $file
-            New-Item -ItemType Junction -Path $link -Target $target -Force | Out-Null
+            cmd.exe /c "mklink /J `"$link`" `"$target`"" | Out-Null
             Test-RmsSupportAgentControlFileTrust -Path (Join-Path $link 'package-trust.json') | Should Be $false
         } finally {
-            try { Remove-Item -LiteralPath $link -Force -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+            try { [System.IO.Directory]::Delete($link) } catch { }
             Remove-Item -LiteralPath $root -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
             Remove-Item -LiteralPath $target -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
         }
@@ -244,10 +244,10 @@ Describe 'RMS Support Agent trust-control file ACL boundary (Section 8 parity)' 
             New-RmsProtectedOwnedAclDirectory -Path $target | Out-Null
             Set-Content -LiteralPath $file -Value '{}' -Encoding UTF8
             Protect-RmsTestControlFile -Path $file
-            New-Item -ItemType Junction -Path $link -Target $target -Force | Out-Null
+            cmd.exe /c "mklink /J `"$link`" `"$target`"" | Out-Null
             Test-RmsSupportAgentControlFileTrust -Path (Join-Path $link 'package-trust.json') | Should Be $false
         } finally {
-            try { Remove-Item -LiteralPath $link -Force -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+            try { [System.IO.Directory]::Delete($link) } catch { }
             Remove-Item -LiteralPath $target -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
         }
     }

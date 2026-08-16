@@ -48,10 +48,12 @@
 - Production and Testing signer pins are normalized and must be distinct in
   both C# and PowerShell. Equal, malformed, missing, or ambiguous trust values
   fail closed before either pin becomes authority.
-- Lifecycle mutation mode comes from protected machine-owned `deploymentMode`;
-  public `-Channel` is only an optional assertion. Missing/malformed mode,
-  caller mismatch, package relabeling, and environment fallback cannot select
-  Testing on a Production-bound machine.
+- Lifecycle mutation mode in both C# and PowerShell comes exclusively from the
+  protected machine-owned `package-trust.json` `deploymentMode` snapshot
+  (`AgentMachineTrustConfiguration`, `MachineAgentTrustConfigurationLoader`).
+  Process config (`PosAgent:ReleaseChannel`), `IConfiguration`, environment
+  variables, appsettings, and host environment cannot decide or alter trust mode;
+  `PosAgent:ReleaseChannel` is rejected on startup.
 - Certificate readiness carries typed actual CNG key-file ACL evidence,
   including Microsoft provider, machine-key, non-exportable policy, fixed key
   root, protected owner/ACL, and explicit LocalSystem read access. Admin-only
@@ -94,9 +96,9 @@
 ## Validation evidence
 
 - POS Release build: 0 warnings, 0 errors with `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`.
-- POS solution tests: 362 passed, 0 failed (Domain 12, Application 82,
-  Infrastructure 115, Agent integration 153), including correlation and
-  real-seam rollback coverage.
+- POS solution tests: 399 passed, 0 failed (Domain 12, Application 82,
+  Infrastructure 147, Agent integration 158), including C# machine trust
+  loader, ACL/reparse, and composition fallback rejection coverage.
 - PowerShell quality: 29 tracked scripts/modules parsed with no dangling
   operator continuations. Full Pester suite: 153 passed, 0 failed, including
   33 trust/mode/ACL/key/rollback tests in `PosSupportAgentRollbackRecovery.Tests.ps1`.
@@ -104,12 +106,7 @@
   failed; `.\scripts\build.ps1` (backend test + Release build + frontend
   production build) passed end-to-end; backend Release build was 0 warnings,
   0 errors.
-- Frontend: production build succeeds; `frontend/` has no diff on this
-  branch. `npm test` shows two pre-existing, branch-unrelated flaky/timeout
-  failures (`flat-order.component.spec.ts`,
-  `pos-maintenance.component.spec.ts`, `NG0406`/5000ms timeout), reproduced
-  identically across three separate runs including one fully isolated run;
-  not caused by or fixable within this scope.
+- Frontend: production build succeeds; `frontend/` has no diff on this branch.
 
 ## Runtime and delivery gates
 

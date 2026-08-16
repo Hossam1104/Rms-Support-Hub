@@ -7,16 +7,18 @@ namespace RmsSupportHub.Pos.Infrastructure.Packages;
 /// </summary>
 public sealed class AgentPackageTrustOptions
 {
-    public string? ProductionSignerThumbprint { get; init; }
-
-    public string? TestingSignerThumbprint { get; init; }
-
-    public string TrustConfigurationPath { get; init; } = Path.Combine(
+    public static readonly string DefaultTrustConfigurationPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "DBS",
         "RmsSupportAgent",
         "Trust",
         "package-trust.json");
+
+    public string? ProductionSignerThumbprint { get; init; }
+
+    public string? TestingSignerThumbprint { get; init; }
+
+    public string TrustConfigurationPath { get; init; } = DefaultTrustConfigurationPath;
 
     public bool RequireTrustedChain { get; init; } = true;
 

@@ -16,33 +16,32 @@ Review-only boundary: do not modify source/tests/artifacts/docs, `.ai/`, Git, se
 5. Inspect only the scoped implementation, tests, docs, and task diff. Do not read `.ai/archive/`, old transcripts, full Git history, or unrelated source.
 
 ## Scoped review set
-- Docs: `docs/POS_SLICE_C_IMPLEMENTATION.md`, `docs/POS_SLICE_C_REQUIREMENTS.md`, `docs/POS_MAINTENANCE_INTEGRATION_READINESS.md`, `docs/POS_MAINTENANCE_MIGRATION_INTAKE.md`, `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`, `docs/POS_SLICE_B_BOUNDARY.md`, `docs/api-spec.md`, and `pos/openapi/`.
-- Scripts/tests: `scripts/PosSupportAgentDeployment.psm1`, `scripts/publish-rms-support-agent-package.ps1`, `scripts/install-rms-support-agent.ps1`, `scripts/bootstrap-rms-support-agent.ps1`, and relevant `scripts/tests/`.
-- Domain/application: `AgentPackageModels.cs`, `AgentProductIdentity.cs`, `AgentPackagePolicy.cs`, `AgentPackageCanonicalizer.cs`, and `AgentPackageVersion.cs`.
-- Infrastructure: `AgentPackageVerifier.cs`, `AgentPackageLifecycle.cs`, `AgentPackageOptions.cs`, `AgentPackageTrustOptions.cs`, `AgentCertificatePrerequisite.cs`, `AgentPackageLifecycleStateStore.cs`, `WindowsAgentServiceController.cs`, Agent package/audit DI/service files, and focused trust/lifecycle tests.
+- Docs: `docs/POS_SLICE_C_IMPLEMENTATION.md`, `docs/POS_SLICE_C_REQUIREMENTS.md`, `docs/POS_MAINTENANCE_INTEGRATION_READINESS.md`, `docs/POS_MAINTENANCE_MIGRATION_INTAKE.md`, `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`, `docs/POS_SLICE_B_BOUNDARY.md`, `docs/api-spec.md`, `pos/openapi/`.
+- Scripts/tests: `scripts/PosSupportAgentDeployment.psm1`, `scripts/publish-rms-support-agent-package.ps1`, `scripts/install-rms-support-agent.ps1`, `scripts/bootstrap-rms-support-agent.ps1`, and `scripts/tests/`.
+- POS Domain/App: `AgentPackageModels.cs`, `AgentProductIdentity.cs`, `AgentPackagePolicy.cs`, `AgentPackageCanonicalizer.cs`, `AgentPackageVersion.cs`.
+- POS Infra: `AgentMachineTrustConfiguration.cs`, `MachineAgentTrustConfigurationLoader.cs`, `AgentPackageVerifier.cs`, `AgentPackageLifecycle.cs`, `AgentPackageOptions.cs`, `AgentPackageTrustOptions.cs`, `AgentCertificatePrerequisite.cs`, `AgentPackageLifecycleStateStore.cs`, `WindowsAgentServiceController.cs`, and focused tests.
 
 ## Review gates
 ### 1. Permanent identity and migration
-Verify the sole permanent identity is `RmsSupportAgent` / `RMS Support Agent`, with the exact fixed description, `LocalSystem`, and automatic start. Historical services are inputs only; ownership is independently proved before adoption/removal, unknown same-name conflicts fail closed, migration is idempotent, and `RMS.BranchService`, `RMS.CashierService`, and `RMSServiceManager` are never controlled or deleted.
+Verify sole permanent identity `RmsSupportAgent` / `RMS Support Agent`, fixed description, `LocalSystem`, automatic start. Historical services are inputs only; ownership proved before adoption/removal, unknown conflicts fail closed, migration idempotent, and `RMS.BranchService`, `RMS.CashierService`, `RMSServiceManager` never controlled/deleted.
 
 ### 2. Signer trust and canonical envelope
-Verify a package cannot select its signer. Production and Testing use separate machine-owned pins; Production always requires Code Signing EKU, Digital Signature usage where present, valid dates, strict chain validation, and Online revocation. Testing cannot satisfy Production and no no-chain seam can downgrade Production. Check LocalMachine source, fixed trust config, ACL/reparse handling, safe failures, and that signer metadata is not trust authority.
-Verify C# and PowerShell canonical envelopes are deterministic and parity-compatible. They must bind product/schema/service metadata, version/platform, channel/environment, archive hash/size, sorted exact file paths/logical names/sizes/hashes/required flags, ACL/certificate requirements, and rollback fields; JSON order and culture must not affect signatures. Publication is bounded and atomic and never exports or commits a private key.
+Verify package cannot select signer. Production/Testing use separate machine-owned pins; Production requires Code Signing EKU, valid dates, strict chain, Online revocation. Testing cannot satisfy Production; no no-chain seam can downgrade Production. C#/PowerShell envelopes are deterministic, length-delimited, and bind metadata/hash/files/ACLs/channel. Publication never exports/commits private keys.
 
 ### 3. Install, upgrade, repair, rollback, health, uninstall
-Review `Status`, `PlanOnly`, `Install`, `Upgrade`, `Repair`, `Rollback`, and `Uninstall`: fixed bounded roots/parameters; at most one UAC elevation; silent noninteractive operation; distinct trust/conflict/elevation/validation/busy/recovery outcomes; and no bypass of trust, ownership, certificate, or ACL gates. Confirm exact archive/file-set extraction, reparse/traversal rejection, staging re-verification, atomic checkpoints, recovery-required interruption behavior, previous payload/manifest/archive retention, semantic-version rules, trusted rollback, health-gated commit, safe idempotency, and uninstall limited to the owned service/install root while retaining audit, trust, browser policy, and enterprise certificate state. No arbitrary SCM, registry, certificate, RMS, Main Server, database, Production, or customer mutation may be input-reachable.
+Review `Status`, `PlanOnly`, `Install`, `Upgrade`, `Repair`, `Rollback`, `Uninstall`: bounded roots/parameters; single UAC elevation; silent operation; distinct outcomes; no trust/ACL bypass. Exact extraction, reparse/traversal rejection, staging re-verification, atomic checkpoints, recovery-required on interruption, previous payload/archive retention, trusted rollback, health-gated commit, safe idempotency, and uninstall retaining audit/trust/policy.
 
 ### 4. Windows service and certificate platform
-Confirm typed SCM access is fixed to `RmsSupportAgent`; binary path is one quoted approved executable with no arguments; display/description/account/start type/state/restart recovery are verified; and no generic service/path control exists. Confirm the read-only HTTPS prerequisite requires exact `rms-pos-agent.localhost` in LocalMachine, Microsoft Software Key Storage Provider, non-exportable key, Server Authentication EKU, valid dates, private-key access, and explicit local or enterprise ownership. Uninstall/rollback must not remove enterprise certificates.
+SCM access fixed to `RmsSupportAgent`; binary path is single quoted approved executable; display/account/recovery verified. HTTPS prerequisite requires `rms-pos-agent.localhost` SAN in LocalMachine, Microsoft KSP, non-exportable key, Server Auth EKU, LocalSystem key-file ACL proof, local/enterprise marker.
 
 ### 5. Health, audit, and H-1/H-2/H-3
-Re-check H-1 bounded redaction/quarantine, H-2 fixed service-owned roots, and H-3 machine-wide mutation serialization across API, C#, and PowerShell. Terminal success requires HTTPS `/health/live` and `/health/ready` on the exact loopback origin with no redirect or TLS bypass. Audit is bounded, sanitized, restart-readable JSONL distinguishing attempted, accepted, completed, failed, rollback-succeeded, rollback-failed, unknown, and recovery-required outcomes, without paths, credentials, raw logs, or private material.
+Re-check H-1 redaction, H-2 fixed roots, H-3 mutation lease across API/C#/PowerShell. Terminal success requires HTTPS `/health/live` and `/health/ready` loopback 200 without redirects. Audit is bounded, sanitized JSONL distinguishing attempted/completed/failed/recovery outcomes without secrets.
 
 ### 6. Existing Agent/API and repository boundaries
-Confirm direct browser-to-Agent transport remains exact-origin HTTPS/HTTP/1.1/Negotiate with server-derived authorization and typed one-use mutation controls; the Hub API is not a privileged relay; dependencies remain Domain/Application -> Infrastructure -> Agent composition; OpenAPI/client artifacts are synchronized; and SQL/payload contracts were not guessed or changed by lifecycle work.
+Direct browser-to-Agent transport remains exact loopback HTTPS/HTTP/1.1/Negotiate with server-derived auth; Hub API is not a relay; dependencies Core -> Data -> API / Domain/App -> Infra -> Agent; OpenAPI/client synchronized; contracts verified against fixtures.
 
 ### 7. Browser, RMS, UI, and release evidence
-Re-check exact Hub/Agent origins, no wildcard or `DisableLoopbackCheck`, supported Chrome/Edge branches, unrelated policy preservation, fixed RMS health/insurance boundaries, Support Bundle redaction, operations-console accessibility, token-only styles, reduced-motion behavior, and unchanged direct Agent handoff. Separate repository implementation/tests from unavailable Production signer, enterprise PKI, elevated Windows activation, fleet/managed policy, Whites comparison, customer approval, and Production/customer execution evidence.
+Exact origins, no wildcard, supported browsers, fixed RMS health/insurance boundaries, Support Bundle redaction, accessible token-only UI, unchanged direct handoff. Separate repo tests from unavailable Production signer, PKI, elevated Windows activation, fleet policy, and customer approval.
 
 ## PR #21 remediation re-review points
 
@@ -51,10 +50,14 @@ The next independent Terra HIGH review must explicitly re-check these points:
 
 1. Production and Testing signer pins are distinct after canonical
    normalization, and equal/case/whitespace variants fail closed.
-2. Machine-owned release/deployment mode is the only lifecycle authority;
-   caller-selected `-Channel Testing` is never a Production downgrade.
+2. Machine-owned release/deployment mode (`package-trust.json` `deploymentMode`)
+   is the only lifecycle authority in both C# and PowerShell
+   (`AgentMachineTrustConfiguration`, `MachineAgentTrustConfigurationLoader`,
+   `Get-RmsSupportAgentMachineTrustConfiguration`); caller-selected `-Channel Testing`
+   or process config is never a Production downgrade.
 3. Missing, malformed, or invalid mode cannot fall back to Testing, a caller
-   assertion, an environment variable, or package metadata.
+   assertion, process config, an environment variable, or package metadata.
+   Obsolete `PosAgent:ReleaseChannel` is rejected on Agent startup.
 4. Every security-control file has fixed-path, bounded-size, no-reparse,
    trusted-owner, protected-ACL, and no-unsafe-allow validation.
 5. Every ancestor from the control file to the defined service-owned security

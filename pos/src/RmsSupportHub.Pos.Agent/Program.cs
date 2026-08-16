@@ -272,25 +272,46 @@ builder.Services.AddSingleton<ISafetySnapshotStore, FileSafetySnapshotStore>();
 builder.Services.AddSingleton<ISafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
 builder.Services.AddSingleton<SafetySnapshotService>();
 
-// The package boundary reads only the Agent-owned catalog. The release channel is selected by
-// trusted process configuration: Testing hosts are Testing-only and every other host defaults to
-// Production. Signer pins, certificate selection, SCM, ACL, activation, health, and rollback
-// work are machine-owned typed seams; no package or browser request can replace them.
-var configuredPackageChannel = builder.Configuration["PosAgent:ReleaseChannel"];
-var packageOptions = new AgentPackageOptions
+// Package lifecycle trust is determined exclusively by the machine-owned, ACL-protected
+// package-trust.json deploymentMode. Neither IConfiguration, environment variables, nor
+// the host environment may select or override this mode.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["PosAgent:ReleaseChannel"]))
 {
-    ReleaseChannel = string.IsNullOrWhiteSpace(configuredPackageChannel)
-        ? (builder.Environment.IsEnvironment("Testing") ? AgentProductIdentity.ReleaseChannelTesting : AgentProductIdentity.ReleaseChannelProduction)
-        : configuredPackageChannel
-};
-packageOptions.Validate();
-if (builder.Environment.IsEnvironment("Testing") != string.Equals(packageOptions.ReleaseChannel, AgentProductIdentity.ReleaseChannelTesting, StringComparison.Ordinal))
-{
-    throw new InvalidOperationException("PosAgent:ReleaseChannel must match the trusted Testing process environment.");
+    throw new InvalidOperationException(
+        "PosAgent:ReleaseChannel is obsolete and rejected. Agent package deployment mode is determined exclusively by the machine-owned package-trust.json deploymentMode.");
 }
 
+var trustConfigurationPath = builder.Configuration["PosAgent:TrustConfigurationPath"];
+var trustLoader = new MachineAgentTrustConfigurationLoader();
+var isDesignTimeOpenApi = AppDomain.CurrentDomain.GetAssemblies().Any(a =>
+    a.GetName().Name?.Contains("ApiDescription", StringComparison.OrdinalIgnoreCase) == true
+    || a.GetName().Name?.Contains("GetDocument", StringComparison.OrdinalIgnoreCase) == true);
+var machineTrust = isDesignTimeOpenApi && !File.Exists(trustConfigurationPath ?? MachineAgentTrustConfigurationLoader.DefaultTrustConfigurationPath)
+    ? new AgentMachineTrustConfiguration(
+        AgentProductIdentity.ReleaseChannelProduction,
+        "1111111111111111111111111111111111111111",
+        "2222222222222222222222222222222222222222",
+        trustConfigurationPath ?? MachineAgentTrustConfigurationLoader.DefaultTrustConfigurationPath)
+    : trustLoader.Load(trustConfigurationPath);
+
+var packageOptions = new AgentPackageOptions
+{
+    ReleaseChannel = machineTrust.DeploymentMode
+};
+packageOptions.Validate();
+
+var trustOptions = new AgentPackageTrustOptions
+{
+    ProductionSignerThumbprint = machineTrust.ProductionSignerThumbprint,
+    TestingSignerThumbprint = machineTrust.TestingSignerThumbprint,
+    TrustConfigurationPath = machineTrust.TrustConfigurationPath
+};
+trustOptions.Validate();
+
+builder.Services.AddSingleton(machineTrust);
+builder.Services.AddSingleton<IAgentMachineTrustConfigurationLoader>(trustLoader);
 builder.Services.AddSingleton(packageOptions);
-builder.Services.AddSingleton(new AgentPackageTrustOptions());
+builder.Services.AddSingleton(trustOptions);
 builder.Services.AddSingleton<IAgentPackageSignerCertificateSource, LocalMachineAgentPackageSignerCertificateSource>();
 builder.Services.AddSingleton<IAgentPackageSignerTrustValidator, X509ChainAgentPackageSignerTrustValidator>();
 builder.Services.AddSingleton<IAgentPackagePolicy, AgentPackagePolicy>();

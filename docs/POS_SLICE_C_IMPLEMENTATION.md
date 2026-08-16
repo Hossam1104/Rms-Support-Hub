@@ -88,10 +88,13 @@ the PowerShell lifecycle:
   distinct. Equal pins, malformed pins, a Testing signer on a Production
   package, and any missing Production pin fail closed before trust authority is
   selected.
-- Lifecycle mutations use `deploymentMode` from the protected machine-owned
-  trust control file as the release authority. The public `-Channel` value is
-  optional caller assertion only; a mismatch, missing/malformed mode, invalid
-  trust file, or caller/environment/package attempt to switch modes is rejected.
+- Lifecycle mutations in both PowerShell and C# use `deploymentMode` from the
+  protected machine-owned trust control file (`package-trust.json`) as the release
+  authority (`AgentMachineTrustConfiguration`, `MachineAgentTrustConfigurationLoader`,
+  `Get-RmsSupportAgentMachineTrustConfiguration`). Process configuration
+  (`PosAgent:ReleaseChannel`), `IConfiguration`, environment variables, appsettings,
+  and the host environment cannot select, alter, or downgrade trust mode.
+  The obsolete `PosAgent:ReleaseChannel` setting is rejected on Agent startup.
 - `package-trust.json`, `agent-certificate.json`, and `lifecycle-state.json`
   are bounded, fixed-name, non-reparse control files. The file owner and ACL,
   plus every non-reparse ancestor back to the fixed service-owned security root,
@@ -163,14 +166,13 @@ fleet or customer approval:
 
 | Evidence class | Current state |
 | --- | --- |
-| Implemented | Slice C contracts, canonical package trust, machine-owned release mode, control-file and LocalSystem key ACL boundaries, typed Windows lifecycle, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
-| Automated tested | C# signer separation (6), certificate policy (6), audit correlation (1), POS solution (362), PowerShell trust/mode/ACL/key/rollback focus (33), full Pester (153), backend (194), and `build.ps1` all pass; the POS origin is supplied for Release validation. |
+| Implemented | Slice C contracts, canonical package trust, machine-owned release mode in C# and PowerShell, control-file and LocalSystem key ACL boundaries, typed Windows lifecycle, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
+| Automated tested | C# machine trust unit and integration tests (37), signer separation (6), certificate policy (6), audit correlation (1), POS solution (399), PowerShell trust/mode/ACL/key/rollback focus (33), full Pester (153), backend (194), and `build.ps1` all pass; the POS origin is supplied for Release validation. |
 | Testing live-proven | Existing historical INT-13 evidence remains valid for the earlier Testing service model; this session did not claim a new elevated run. |
 | Production signed | Not claimed. No representative Production signer, package publication, PKI issuance/renewal/revocation, or Production execution evidence is in this session. |
 | Representative-machine proven | Not claimed. The current shell is not Administrator and no Production registry, certificate, SCM, RMS, Main Server, or database mutation was performed. |
 | Fleet proven | Not claimed. Managed browser policy, fleet enrollment, inventory, and rollout evidence remain external gates. |
 | Customer approved | Not claimed. Customer approval and the final independent Slice C review remain release gates. |
-
 The next task is the full independent Production/Fleet Security and
 Release-Readiness Review described in the root `TASK.md`. It must inspect the
 delivered foundation and classify each remaining machine, CI, fleet, and

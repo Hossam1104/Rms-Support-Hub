@@ -59,11 +59,14 @@ rules already recorded in [`POS_SLICE_B_BOUNDARY.md`](POS_SLICE_B_BOUNDARY.md).
   canonically normalized, and unequal. Missing or malformed Production pins,
   equal pins, Testing-signer/Production-package combinations, and any
   chain-bypass seam used for Production must fail closed.
-- Lifecycle mutations must derive the effective release mode from a protected,
-  fixed-path machine deployment configuration. A caller `-Channel` value may
-  be an assertion only; it must never select, downgrade, or relabel the mode.
-  Missing, malformed, or untrusted mode configuration must not fall back to
-  Testing, package metadata, or an environment-variable override.
+- Lifecycle mutations in both C# and PowerShell must derive the effective
+  release mode exclusively from a protected, fixed-path machine deployment
+  configuration (`package-trust.json` `deploymentMode`). A caller `-Channel`
+  value or `PosAgent:ReleaseChannel` configuration must never select, downgrade,
+  or relabel the mode; `PosAgent:ReleaseChannel` is obsolete and rejected.
+  Missing, malformed, or untrusted mode configuration must fail closed and
+  must not fall back to Testing, package metadata, appsettings, or an
+  environment-variable / host-environment override.
 - Every security-control file must prove fixed path, bounded size, no reparse,
   trusted owner, protected ACL, and no unsafe broad allow rule. Every ancestor
   to the named service-owned security root requires the same ownership/ACL/
