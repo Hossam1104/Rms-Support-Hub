@@ -1,7 +1,11 @@
-using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text.Json;
+using RmsSupportHub.Pos.Application.Packages;
+using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
+using RmsSupportHub.Pos.Infrastructure.Windows;
 
 namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
@@ -14,24 +18,588 @@ public interface IAgentPackageInstallationPlatform
     Task<bool> VerifyHealthAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default);
 
     Task<bool> RollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default);
+
+    // These overloads preserve the original test seam while giving the production platform the
+    // operation kind needed for install/upgrade/repair/uninstall/rollback transition rules.
+    Task<bool> PrepareAsync(AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken = default) => PrepareAsync(manifest, cancellationToken);
+
+    Task<bool> ActivateAsync(string stagedRoot, AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken = default) => ActivateAsync(stagedRoot, manifest, cancellationToken);
+
+    Task<bool> RollbackAsync(AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken = default) => RollbackAsync(manifest, cancellationToken);
 }
 
-/// <summary>Conservative platform seam; real service/ACL/certificate ownership is injected here.</summary>
-public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInstallationPlatform
+public interface IAgentHealthProbe
 {
-    public Task<bool> PrepareAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(true);
+    Task<bool> ProbeAsync(CancellationToken cancellationToken = default);
+}
 
-    public Task<bool> ActivateAsync(string stagedRoot, AgentPackageManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(false);
+public sealed class LoopbackAgentHealthProbe : IAgentHealthProbe
+{
+    public async Task<bool> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        if (!OperatingSystem.IsWindows()) return false;
 
-    public Task<bool> VerifyHealthAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(5) };
+        foreach (var path in new[] { "/health/live", "/health/ready" })
+        {
+            using var response = await client.GetAsync(
+                new Uri("https://rms-pos-agent.localhost:5001" + path),
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+            if (response.StatusCode != HttpStatusCode.OK) return false;
+        }
 
-    public Task<bool> RollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        return true;
+    }
 }
 
 /// <summary>
-/// Versioned package boundary. It can stage only exact manifest files under the fixed Agent root,
-/// verifies each hash again, and reports rollback/recovery truth. Activation is delegated to the
-/// typed platform seam and is never inferred from staging success.
+/// Real Windows activation platform. Every mutation is tied to the fixed Agent identity, a
+/// verified installed manifest, a durable checkpoint, and the typed SCM/certificate seams.
+/// </summary>
+public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInstallationPlatform
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly AgentPackageOptions options;
+    private readonly IAgentPackageVerifier verifier;
+    private readonly IAgentServiceLifecycleController serviceController;
+    private readonly IAgentCertificatePrerequisite certificatePrerequisite;
+    private readonly AgentPackageLifecycleStateStore stateStore;
+    private readonly IAgentHealthProbe healthProbe;
+
+    public WindowsAgentPackageInstallationPlatform()
+        : this(
+            new AgentPackageOptions(),
+            new FileAgentPackageVerifier(
+                new AgentPackageOptions(),
+                new AgentPackagePolicy(),
+                new MachineCertificatePackageSignatureVerifier()),
+            new WindowsAgentServiceController(),
+            new MachineAgentCertificatePrerequisite(),
+            new AgentPackageLifecycleStateStore(new AgentPackageOptions()),
+            new LoopbackAgentHealthProbe())
+    {
+    }
+
+    public WindowsAgentPackageInstallationPlatform(
+        AgentPackageOptions options,
+        IAgentPackageVerifier verifier,
+        IAgentServiceLifecycleController serviceController,
+        IAgentCertificatePrerequisite certificatePrerequisite,
+        AgentPackageLifecycleStateStore stateStore,
+        IAgentHealthProbe healthProbe)
+    {
+        this.options = options ?? throw new ArgumentNullException(nameof(options));
+        this.verifier = verifier ?? throw new ArgumentNullException(nameof(verifier));
+        this.serviceController = serviceController ?? throw new ArgumentNullException(nameof(serviceController));
+        this.certificatePrerequisite = certificatePrerequisite ?? throw new ArgumentNullException(nameof(certificatePrerequisite));
+        this.stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
+        this.healthProbe = healthProbe ?? throw new ArgumentNullException(nameof(healthProbe));
+    }
+
+    public string LastFailureCode { get; private set; } = "none";
+
+    public Task<bool> PrepareAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default) =>
+        PrepareAsync(manifest, AgentPackageOperationKind.Install, cancellationToken);
+
+    public async Task<bool> PrepareAsync(
+        AgentPackageManifest manifest,
+        AgentPackageOperationKind operation,
+        CancellationToken cancellationToken = default)
+    {
+        LastFailureCode = "none";
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            options.EnsureStorageProvisioned();
+            if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal)) return Fail("package_channel_not_configured");
+            var checkpoint = stateStore.Read();
+            if (stateStore.HasUnreadableState || checkpoint is not null) return Fail("recovery_required");
+
+            var installed = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
+            var service = serviceController.ReadPermanent();
+            if (service is not null
+                && (installed is null || !await IsOwnedServiceAsync(service, installed, cancellationToken).ConfigureAwait(false)))
+            {
+                return Fail("service_ownership_conflict");
+            }
+
+            if (operation == AgentPackageOperationKind.Uninstall)
+            {
+                return installed is null || await VerifyCurrentInstallAsync(installed, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (operation == AgentPackageOperationKind.Health) return installed is not null;
+
+            if (installed is not null)
+            {
+                if (!await VerifyCurrentInstallAsync(installed, cancellationToken).ConfigureAwait(false)) return false;
+                if (!ValidateTransition(operation, installed.Version, manifest.Version, out var transitionFailure)) return Fail(transitionFailure);
+            }
+            else if (operation is AgentPackageOperationKind.Upgrade or AgentPackageOperationKind.Repair or AgentPackageOperationKind.Rollback)
+            {
+                return Fail("installed_package_missing");
+            }
+            else if (Directory.EnumerateFileSystemEntries(options.InstallationRoot).Any())
+            {
+                return Fail("installation_ownership_unproven");
+            }
+
+            if (!certificatePrerequisite.IsSatisfied(manifest, out var certificateFailure))
+            {
+                return Fail(certificateFailure);
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Fail("platform_preparation_unknown");
+        }
+    }
+
+    public Task<bool> ActivateAsync(string stagedRoot, AgentPackageManifest manifest, CancellationToken cancellationToken = default) =>
+        ActivateAsync(stagedRoot, manifest, AgentPackageOperationKind.Install, cancellationToken);
+
+    public async Task<bool> ActivateAsync(
+        string stagedRoot,
+        AgentPackageManifest manifest,
+        AgentPackageOperationKind operation,
+        CancellationToken cancellationToken = default)
+    {
+        LastFailureCode = "none";
+        if (operation == AgentPackageOperationKind.Uninstall) return await UninstallAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal)) return Fail("package_channel_not_configured");
+            if (!OperatingSystem.IsWindows()) return Fail("windows_platform_required");
+            if (!IsSafeStagingRoot(stagedRoot) || !Directory.Exists(stagedRoot)) return Fail("staging_root_invalid");
+            if (!await VerifyStagedRootAsync(stagedRoot, manifest, cancellationToken).ConfigureAwait(false)) return Fail("staged_package_mismatch");
+
+            var installed = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
+            var service = serviceController.ReadPermanent();
+            if (service is not null
+                && (installed is null || !await IsOwnedServiceAsync(service, installed, cancellationToken).ConfigureAwait(false)))
+            {
+                return Fail("service_ownership_conflict");
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var operationId = Guid.NewGuid().ToString("N");
+            stateStore.Write(new(operationId, operation, AgentPackageLifecyclePhase.Prepared, manifest.PackageId, manifest.Version, installed?.Version, now, now, null, false));
+            await WriteManifestAsync(stagedRoot, manifest, cancellationToken).ConfigureAwait(false);
+            stateStore.Write(ReadState(operationId, operation, AgentPackageLifecyclePhase.Staged, manifest, installed));
+
+            if (installed is not null && operation != AgentPackageOperationKind.Rollback)
+            {
+                if (!await PreserveRollbackAsync(installed, cancellationToken).ConfigureAwait(false)) return FailAndCheckpoint("rollback_preservation_failed");
+                stateStore.Write(ReadState(operationId, operation, AgentPackageLifecyclePhase.PreviousPreserved, manifest, installed));
+            }
+
+            if (installed is not null && !StopOwnedServiceBeforeReplacement(cancellationToken)) return FailAndCheckpoint("owned_service_stop_failed");
+
+            if (!ReplaceInstallation(stagedRoot, cancellationToken)) return FailAndCheckpoint("installation_activation_failed");
+            stateStore.Write(ReadState(operationId, operation, AgentPackageLifecyclePhase.Activated, manifest, installed));
+
+            var executable = GetExecutablePath(manifest);
+            if (executable is null || !serviceController.EnsureConfigured(executable)) return FailAndCheckpoint("service_configuration_failed");
+            if (!serviceController.Start(cancellationToken)) return FailAndCheckpoint("owned_service_start_failed");
+            stateStore.Write(ReadState(operationId, operation, AgentPackageLifecyclePhase.HealthChecking, manifest, installed));
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            LastFailureCode = "activation_cancelled";
+            return false;
+        }
+        catch
+        {
+            return FailAndCheckpoint("activation_unknown");
+        }
+    }
+
+    public async Task<bool> VerifyHealthAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var installed = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
+            if (installed is null || !ManifestEquivalent(installed, manifest)) return Fail("installed_manifest_mismatch");
+            var service = serviceController.ReadPermanent();
+            if (service is null || !await IsOwnedServiceAsync(service, installed, cancellationToken).ConfigureAwait(false)) return Fail("service_ownership_unproven");
+            if (serviceController.GetStatus() != ServiceStatus.Running) return Fail("service_not_running");
+            if (!certificatePrerequisite.IsSatisfied(manifest, out var certificateFailure)) return Fail(certificateFailure);
+            if (!await healthProbe.ProbeAsync(cancellationToken).ConfigureAwait(false)) return Fail("agent_health_failed");
+            stateStore.Clear();
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Fail("health_verification_unknown");
+        }
+    }
+
+    public Task<bool> RollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default) =>
+        RollbackAsync(manifest, AgentPackageOperationKind.Rollback, cancellationToken);
+
+    public async Task<bool> RollbackAsync(
+        AgentPackageManifest manifest,
+        AgentPackageOperationKind operation,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal)) return Fail("package_channel_not_configured");
+            var rollbackManifest = await ReadManifestAsync(Path.Combine(options.RollbackRoot, "manifest.json"), cancellationToken).ConfigureAwait(false);
+            if (rollbackManifest is null || !ManifestEquivalent(rollbackManifest, manifest)) return Fail("rollback_manifest_mismatch");
+            var rollbackVerification = await verifier.VerifyRollbackAsync(rollbackManifest, cancellationToken).ConfigureAwait(false);
+            if (rollbackVerification.State != AgentPackageVerificationState.Verified) return Fail("rollback_trust_failed");
+            if (!Directory.Exists(options.RollbackPayloadRoot) || HasReparsePoint(options.RollbackPayloadRoot)) return Fail("rollback_payload_unavailable");
+
+            var current = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
+            var service = serviceController.ReadPermanent();
+            if (service is not null
+                && (current is null || !await IsOwnedServiceAsync(service, current, cancellationToken).ConfigureAwait(false))) return Fail("service_ownership_conflict");
+            if (!StopOwnedServiceBeforeReplacement(cancellationToken)) return Fail("owned_service_stop_failed");
+
+            if (Directory.Exists(options.InstallationRoot))
+            {
+                if (HasReparsePoint(options.InstallationRoot)) return Fail("installation_reparse_point");
+                Directory.Delete(options.InstallationRoot, recursive: true);
+            }
+
+            if (!CopyDirectoryExact(options.RollbackPayloadRoot, options.InstallationRoot, cancellationToken)) return Fail("rollback_copy_failed");
+            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.InstallationRoot);
+            var executable = GetExecutablePath(rollbackManifest);
+            if (executable is null) return Fail("rollback_executable_invalid");
+            if (!certificatePrerequisite.IsSatisfied(rollbackManifest, out var certificateFailure)) return Fail(certificateFailure);
+            if (!serviceController.EnsureConfigured(executable) || !serviceController.Start(cancellationToken)) return Fail("rollback_service_activation_failed");
+            stateStore.Clear();
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Fail("rollback_unknown");
+        }
+    }
+
+    private async Task<bool> UninstallAsync(CancellationToken cancellationToken)
+    {
+        var installed = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
+        if (installed is null) return true;
+        var service = serviceController.ReadPermanent();
+        if (service is null || !await IsOwnedServiceAsync(service, installed, cancellationToken).ConfigureAwait(false)) return Fail("service_ownership_conflict");
+        if (!await VerifyCurrentInstallAsync(installed, cancellationToken).ConfigureAwait(false)) return false;
+        if (!StopOwnedServiceBeforeReplacement(cancellationToken)) return Fail("owned_service_stop_failed");
+        if (!serviceController.Delete(cancellationToken)) return Fail("owned_service_delete_failed");
+        if (HasReparsePoint(options.InstallationRoot)) return Fail("installation_reparse_point");
+        if (Directory.Exists(options.InstallationRoot)) Directory.Delete(options.InstallationRoot, recursive: true);
+        // Audit, trust, browser policy, and enterprise certificates survive local uninstall.
+        stateStore.Clear();
+        return true;
+    }
+
+    private async Task<bool> VerifyCurrentInstallAsync(AgentPackageManifest installed, CancellationToken cancellationToken)
+    {
+        var result = await verifier.VerifyInstalledAsync(installed, cancellationToken).ConfigureAwait(false);
+        if (result.State != AgentPackageVerificationState.Verified)
+        {
+            LastFailureCode = result.Blockers.FirstOrDefault() ?? "installed_package_unverified";
+            return false;
+        }
+
+        var service = serviceController.ReadPermanent();
+        return service is null || await IsOwnedServiceAsync(service, installed, cancellationToken).ConfigureAwait(false);
+    }
+
+    private bool StopOwnedServiceBeforeReplacement(CancellationToken cancellationToken)
+    {
+        return serviceController.GetStatus() switch
+        {
+            ServiceStatus.Stopped or ServiceStatus.NotFound => true,
+            ServiceStatus.Running or ServiceStatus.Transitioning => serviceController.Stop(cancellationToken),
+            _ => false
+        };
+    }
+
+    private async Task<bool> IsOwnedServiceAsync(AgentServiceEvidence evidence, AgentPackageManifest manifest, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var expectedExecutable = GetExecutablePath(manifest);
+        if (expectedExecutable is null
+            || evidence.HasArguments != false
+            || !string.Equals(evidence.ServiceName, AgentProductIdentity.PermanentServiceName, StringComparison.Ordinal)
+            || !string.Equals(evidence.DisplayName, AgentProductIdentity.ServiceDisplayName, StringComparison.Ordinal)
+            || !string.Equals(evidence.Description, AgentProductIdentity.ServiceDescription, StringComparison.Ordinal)
+            || !string.Equals(evidence.ServiceAccount, "LocalSystem", StringComparison.OrdinalIgnoreCase)
+            || (evidence.StartType is not null && evidence.StartType is not ("2" or "Auto"))
+            || !string.Equals(Path.GetFullPath(evidence.BinaryPath ?? string.Empty), Path.GetFullPath(expectedExecutable), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var binaryHash = await ComputeHashAsync(expectedExecutable, cancellationToken).ConfigureAwait(false);
+        var assessment = AgentOwnershipPolicy.AssessPermanent(
+            evidence with
+            {
+                PackageId = manifest.PackageId,
+                PackageVersion = manifest.Version,
+                OwnershipMarker = AgentProductIdentity.ProductId,
+                BinarySha256 = binaryHash
+            },
+            options.InstallationRoot,
+            manifest.PackageId,
+            manifest.Version);
+        return assessment.State == AgentResourceOwnershipState.Owned;
+    }
+
+    private async Task<bool> PreserveRollbackAsync(AgentPackageManifest installed, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (HasReparsePoint(options.RollbackRoot)) return false;
+            if (Directory.Exists(options.RollbackPayloadRoot)) Directory.Delete(options.RollbackPayloadRoot, recursive: true);
+            var rollbackManifestPath = Path.Combine(options.RollbackRoot, "manifest.json");
+            if (File.Exists(rollbackManifestPath)) File.Delete(rollbackManifestPath);
+            var rollbackArchive = Path.Combine(options.RollbackRoot, installed.PackageId + "-" + installed.Version + ".zip");
+            if (File.Exists(rollbackArchive)) File.Delete(rollbackArchive);
+            if (!CopyDirectoryExact(options.InstallationRoot, options.RollbackPayloadRoot, cancellationToken)) return false;
+            await WriteManifestAsync(options.RollbackPayloadRoot, installed, cancellationToken).ConfigureAwait(false);
+            var availableArchive = Path.Combine(options.AvailableRoot, installed.PackageId + "-" + installed.Version + ".zip");
+            if (!File.Exists(availableArchive) || HasReparsePoint(availableArchive)) return false;
+            File.Copy(availableArchive, rollbackArchive, overwrite: false);
+            await WriteManifestAsync(options.RollbackRoot, installed, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool ReplaceInstallation(string stagedRoot, CancellationToken cancellationToken)
+    {
+        if (Directory.Exists(options.InstallationRoot))
+        {
+            if (HasReparsePoint(options.InstallationRoot)) return false;
+            Directory.Delete(options.InstallationRoot, recursive: true);
+        }
+
+        if (!CopyDirectoryExact(stagedRoot, options.InstallationRoot, cancellationToken)) return false;
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.InstallationRoot);
+        return true;
+    }
+
+    private async Task<bool> VerifyStagedRootAsync(string stagedRoot, AgentPackageManifest manifest, CancellationToken cancellationToken)
+    {
+        var expected = manifest.Files.Select(file => file.RelativePath.Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var actual = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in Directory.EnumerateFileSystemEntries(stagedRoot, "*", SearchOption.AllDirectories))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (HasReparsePoint(entry)) return false;
+            if (Directory.Exists(entry)) continue;
+            var relative = Path.GetRelativePath(stagedRoot, entry).Replace('\\', '/');
+            if (!expected.Contains(relative) || !actual.Add(relative)) return false;
+        }
+
+        if (!expected.SetEquals(actual)) return false;
+        foreach (var file in manifest.Files)
+        {
+            var path = Path.GetFullPath(Path.Combine(stagedRoot, file.RelativePath));
+            if (!path.StartsWith(Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagedRoot)) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(path)
+                || new FileInfo(path).Length != file.SizeBytes
+                || !string.Equals(await ComputeHashAsync(path, cancellationToken).ConfigureAwait(false), file.Sha256, StringComparison.OrdinalIgnoreCase)) return false;
+        }
+
+        return true;
+    }
+
+    private async Task<AgentPackageManifest?> ReadInstalledManifestAsync(CancellationToken cancellationToken) =>
+        await ReadManifestAsync(Path.Combine(options.InstallationRoot, "manifest.json"), cancellationToken).ConfigureAwait(false);
+
+    private static async Task<AgentPackageManifest?> ReadManifestAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!File.Exists(path)
+                || File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)
+                || new FileInfo(path).Length is <= 0 or > 1024 * 1024) return null;
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return await JsonSerializer.DeserializeAsync<AgentPackageManifest>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task WriteManifestAsync(string root, AgentPackageManifest manifest, CancellationToken cancellationToken)
+    {
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(root);
+        var path = Path.Combine(root, "manifest.json");
+        var temporary = path + ".tmp";
+        await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(manifest, JsonOptions), cancellationToken).ConfigureAwait(false);
+        if (File.GetAttributes(temporary).HasFlag(FileAttributes.ReparsePoint)) throw new IOException("The manifest became a reparse point.");
+        File.Move(temporary, path, overwrite: true);
+    }
+
+    private static bool CopyDirectoryExact(string sourceRoot, string destinationRoot, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (HasReparsePoint(sourceRoot)) return false;
+            Directory.CreateDirectory(destinationRoot);
+            foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (HasReparsePoint(directory)) return false;
+                Directory.CreateDirectory(Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, directory)));
+            }
+
+            foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (HasReparsePoint(file)) return false;
+                var target = Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, file));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(file, target, overwrite: false);
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private string? GetExecutablePath(AgentPackageManifest manifest)
+    {
+        var executable = manifest.Files
+            .Where(file => file.RelativePath.IndexOfAny(['/', '\\']) < 0)
+            .Where(file => AgentProductIdentity.AllowedExecutableNames.Contains(file.RelativePath))
+            .ToArray();
+        return executable.Length == 1 ? Path.Combine(options.InstallationRoot, executable[0].RelativePath) : null;
+    }
+
+    private static bool ValidateTransition(AgentPackageOperationKind operation, string current, string incoming, out string failure)
+    {
+        failure = "none";
+        if (!AgentPackageVersion.TryParse(current, out _) || !AgentPackageVersion.TryParse(incoming, out _))
+        {
+            failure = "package_version_invalid";
+            return false;
+        }
+
+        var comparison = AgentPackageVersion.Compare(incoming, current);
+        if (operation is AgentPackageOperationKind.Install or AgentPackageOperationKind.Upgrade && comparison < 0) { failure = "unsupported_downgrade"; return false; }
+        if (operation == AgentPackageOperationKind.Rollback && comparison >= 0) { failure = "rollback_version_invalid"; return false; }
+        if (operation == AgentPackageOperationKind.Repair && comparison != 0) { failure = "repair_version_mismatch"; return false; }
+        return true;
+    }
+
+    private AgentPackageLifecycleState ReadState(
+        string operationId,
+        AgentPackageOperationKind operation,
+        AgentPackageLifecyclePhase phase,
+        AgentPackageManifest manifest,
+        AgentPackageManifest? installed,
+        string? failureCode = null,
+        bool recoveryRequired = false) =>
+        new(operationId, operation, phase, manifest.PackageId, manifest.Version, installed?.Version, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, failureCode, recoveryRequired);
+
+    private bool Fail(string failureCode)
+    {
+        LastFailureCode = failureCode;
+        return false;
+    }
+
+    private bool FailAndCheckpoint(string failureCode)
+    {
+        LastFailureCode = failureCode;
+        try
+        {
+            var state = stateStore.Read();
+            if (state is not null)
+            {
+                stateStore.Write(state with
+                {
+                    Phase = AgentPackageLifecyclePhase.RecoveryRequired,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow,
+                    FailureCode = failureCode,
+                    RecoveryRequired = true
+                });
+            }
+        }
+        catch
+        {
+            LastFailureCode = "recovery_state_unavailable";
+        }
+
+        return false;
+    }
+
+    private static bool ManifestEquivalent(AgentPackageManifest left, AgentPackageManifest right) =>
+        string.Equals(left.Signature, right.Signature, StringComparison.Ordinal)
+        && AgentPackageCanonicalizer.Canonicalize(left).AsSpan().SequenceEqual(AgentPackageCanonicalizer.Canonicalize(right));
+
+    private bool IsSafeStagingRoot(string path)
+    {
+        try
+        {
+            var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+            var parent = Path.TrimEndingDirectorySeparator(Path.GetFullPath(options.StagingRoot));
+            return root.StartsWith(parent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !root.Contains("..", StringComparison.Ordinal)
+                && !HasReparsePoint(root);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool HasReparsePoint(string path)
+    {
+        try { return File.Exists(path) || Directory.Exists(path) ? File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint) : true; }
+        catch { return true; }
+    }
+
+    private static async Task<string> ComputeHashAsync(string path, CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
+    }
+}
+
+/// <summary>
+/// Versioned package boundary. It extracts only exact signed files, re-verifies the staged tree,
+/// and delegates activation/health/rollback truth to the typed platform.
 /// </summary>
 public sealed class FileAgentPackageLifecycle(
     AgentPackageOptions options,
@@ -41,118 +609,131 @@ public sealed class FileAgentPackageLifecycle(
     public async Task<AgentPackageExecutionResult> ExecuteAsync(AgentPackageExecutionRequest request, CancellationToken cancellationToken = default)
     {
         options.EnsureStorageProvisioned();
-        var validation = request.Operation == AgentPackageOperationKind.Uninstall
-            ? await verifier.VerifyInstalledAsync(request.Manifest, cancellationToken).ConfigureAwait(false)
-            : await verifier.VerifyAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
+        var validation = request.Operation switch
+        {
+            AgentPackageOperationKind.Uninstall => await verifier.VerifyInstalledAsync(request.Manifest, cancellationToken).ConfigureAwait(false),
+            AgentPackageOperationKind.Rollback => await verifier.VerifyRollbackAsync(request.Manifest, cancellationToken).ConfigureAwait(false),
+            _ => await verifier.VerifyAsync(request.Manifest, cancellationToken).ConfigureAwait(false)
+        };
         if (validation.State != AgentPackageVerificationState.Verified) return new(AgentPackageOperationState.Failed, false, false, false, validation.Detail);
 
-        var stagingRoot = Path.Combine(options.PackageRoot, "staging", Guid.NewGuid().ToString("N"));
+        if (request.Operation == AgentPackageOperationKind.Health)
+        {
+            var healthy = await platform.VerifyHealthAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
+            return healthy
+                ? new(AgentPackageOperationState.Completed, false, false, false, "The Agent health endpoints and owned service state are healthy.")
+                : new(AgentPackageOperationState.Failed, false, false, false, "The Agent health prerequisite could not be verified.");
+        }
+
+        var stagingRoot = Path.Combine(options.StagingRoot, request.Operation.ToString().ToLowerInvariant() + "-" + Guid.NewGuid().ToString("N"));
+        var activationAttempted = false;
         try
         {
-            if (!await platform.PrepareAsync(request.Manifest, cancellationToken).ConfigureAwait(false)) return new(AgentPackageOperationState.Failed, false, false, true, "The Agent platform precondition failed; package activation was not attempted.");
+            if (!await platform.PrepareAsync(request.Manifest, request.Operation, cancellationToken).ConfigureAwait(false)) return new(AgentPackageOperationState.RecoveryRequired, false, false, true, "The Agent platform precondition failed; package activation was not attempted.");
             ServiceOwnedDirectoryProvisioner.EnsureProvisioned(stagingRoot);
             if (request.Operation != AgentPackageOperationKind.Uninstall)
             {
-                await ExtractExactFilesAsync(verifier.ArchivePath(request.Manifest), stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false);
+                var archive = request.Operation == AgentPackageOperationKind.Rollback ? verifier.RollbackArchivePath(request.Manifest) : verifier.ArchivePath(request.Manifest);
+                await ExtractExactFilesAsync(archive, stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false);
+                if (!await VerifyStagedFilesAsync(stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false)) throw new InvalidDataException("The staged package changed after extraction.");
             }
-            if (!await platform.ActivateAsync(stagingRoot, request.Manifest, cancellationToken).ConfigureAwait(false))
+
+            activationAttempted = true;
+            if (!await platform.ActivateAsync(stagingRoot, request.Manifest, request.Operation, cancellationToken).ConfigureAwait(false))
             {
-                var rollback = await platform.RollbackAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
-                return rollback
-                    ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Activation failed; the prior Agent package was restored.")
-                    : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Activation failed and rollback could not be confirmed; recovery is required.");
+                var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+                return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Activation failed; the prior Agent package was restored and verified by the platform.") : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Activation failed and rollback could not be confirmed; recovery is required.");
+            }
+
+            if (request.Operation == AgentPackageOperationKind.Uninstall)
+            {
+                return new(AgentPackageOperationState.Completed, false, false, false, "The owned Agent service and installation were removed; durable audit and external certificate state were retained.");
             }
 
             if (!await platform.VerifyHealthAsync(request.Manifest, cancellationToken).ConfigureAwait(false))
             {
-                var rollback = await platform.RollbackAsync(request.Manifest, cancellationToken).ConfigureAwait(false);
-                return rollback
-                    ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Post-activation health failed; the prior Agent package was restored.")
-                    : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Post-activation health failed and rollback could not be confirmed; recovery is required.");
+                var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+                return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Post-activation health failed; the prior Agent package was restored and verified.") : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Post-activation health failed and rollback could not be confirmed; recovery is required.");
             }
 
             return new(AgentPackageOperationState.Completed, false, false, false, "The verified Agent package was activated and health was confirmed.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            var rollback = await SafeRollbackAsync(request.Manifest, CancellationToken.None).ConfigureAwait(false);
-            return rollback
-                ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Package activation was cancelled; the prior package was restored.")
-                : new(AgentPackageOperationState.RecoveryRequired, true, false, true, "Package activation was cancelled and recovery could not be confirmed.");
+            if (!activationAttempted) return new(AgentPackageOperationState.Failed, false, false, false, "Package staging was cancelled before activation began.");
+            var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+            return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Package activation was cancelled; the prior package was restored.") : new(AgentPackageOperationState.RecoveryRequired, true, false, true, "Package activation was cancelled and recovery could not be confirmed.");
         }
         catch
         {
-            var rollback = await SafeRollbackAsync(request.Manifest, CancellationToken.None).ConfigureAwait(false);
-            return rollback
-                ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Package activation failed; the prior package was restored.")
-                : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Package activation failed and rollback could not be confirmed; recovery is required.");
+            if (!activationAttempted) return new(AgentPackageOperationState.Failed, false, false, false, "Package staging failed before activation began.");
+            var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+            return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Package activation failed; the prior package was restored.") : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Package activation failed and rollback could not be confirmed; recovery is required.");
         }
         finally
         {
-            try { if (Directory.Exists(stagingRoot)) Directory.Delete(stagingRoot, recursive: true); } catch { }
+            try { if (Directory.Exists(stagingRoot) && !HasReparsePoint(stagingRoot)) Directory.Delete(stagingRoot, recursive: true); } catch { }
         }
+    }
+
+    private async Task<bool> SafeRollbackAsync(AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken)
+    {
+        try { return await platform.RollbackAsync(manifest, operation, cancellationToken).ConfigureAwait(false); } catch { return false; }
     }
 
     private static async Task ExtractExactFilesAsync(string archivePath, string stagingRoot, AgentPackageManifest manifest, CancellationToken cancellationToken)
     {
+        using var archive = System.IO.Compression.ZipFile.OpenRead(archivePath);
         var expected = manifest.Files.ToDictionary(file => file.RelativePath.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using var archive = ZipFile.OpenRead(archivePath);
         if (archive.Entries.Count != expected.Count) throw new InvalidDataException("The package archive contains an unexpected file set.");
         foreach (var entry in archive.Entries)
         {
             var normalized = entry.FullName.Replace('\\', '/');
-            if (IsArchiveLink(entry)
-                || normalized.StartsWith("/", StringComparison.Ordinal)
-                || normalized.Split('/').Any(segment => segment is "" or "." or "..")
-                || !seen.Add(normalized)
-                || !expected.TryGetValue(normalized, out var file)) throw new InvalidDataException("The package archive contains an unsafe or unexpected path.");
+            if (IsArchiveLink(entry) || normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/').Any(segment => segment is "" or "." or "..") || !seen.Add(normalized) || !expected.TryGetValue(normalized, out var file)) throw new InvalidDataException("The package archive contains an unsafe or unexpected path.");
             var target = Path.GetFullPath(Path.Combine(stagingRoot, normalized));
             var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagingRoot)) + Path.DirectorySeparatorChar;
             if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("The package archive escaped the staging root.");
             var targetDirectory = Path.GetDirectoryName(target)!;
             Directory.CreateDirectory(targetDirectory);
-            if (HasReparsePointOnPath(stagingRoot, targetDirectory) || File.Exists(target) && IsReparsePoint(target))
-            {
-                throw new InvalidDataException("The package staging path contains a reparse point.");
-            }
-            await using (var source = entry.Open())
-            await using (var destination = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            if (HasReparsePoint(targetDirectory)) throw new InvalidDataException("The package staging path contains a reparse point.");
+            using (var source = entry.Open())
+            using (var destination = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 await CopyExactAsync(source, destination, file.SizeBytes, cancellationToken).ConfigureAwait(false);
             }
-            if (IsReparsePoint(target)) throw new InvalidDataException("The staged package file became a reparse point.");
-            var actualSize = new FileInfo(target).Length;
-            if (actualSize != file.SizeBytes || !string.Equals(await ComputeHashAsync(target, cancellationToken).ConfigureAwait(false), file.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("The staged package file did not match its manifest.");
+            var stagedHash = await ComputeHashAsync(target, cancellationToken).ConfigureAwait(false);
+            if (HasReparsePoint(target) || new FileInfo(target).Length != file.SizeBytes || !string.Equals(stagedHash, file.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("The staged package file did not match its manifest.");
         }
+    }
 
-        if (seen.Count != expected.Count) throw new InvalidDataException("The package archive did not contain every manifest file.");
+    private static async Task<bool> VerifyStagedFilesAsync(string root, AgentPackageManifest manifest, CancellationToken cancellationToken)
+    {
+        var expected = manifest.Files.Select(file => file.RelativePath.Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var actual = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Select(path => Path.GetRelativePath(root, path).Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!expected.SetEquals(actual)) return false;
+        foreach (var file in manifest.Files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var path = Path.Combine(root, file.RelativePath);
+            if (new FileInfo(path).Length != file.SizeBytes || !string.Equals(await ComputeHashAsync(path, cancellationToken).ConfigureAwait(false), file.Sha256, StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
     }
 
     private static async Task CopyExactAsync(Stream source, Stream destination, long declaredSize, CancellationToken cancellationToken)
     {
-        if (declaredSize < 0) throw new InvalidDataException("The package manifest declared a negative file size.");
         var buffer = new byte[64 * 1024];
         long copied = 0;
         while (true)
         {
             var read = await source.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (read == 0) break;
-            if (copied > declaredSize - read)
-            {
-                throw new InvalidDataException("The package archive streamed beyond the declared manifest size.");
-            }
-
+            if (copied > declaredSize - read) throw new InvalidDataException("The package archive streamed beyond its declared file size.");
             await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             copied += read;
         }
-
-        if (copied != declaredSize) throw new InvalidDataException("The package archive ended before the declared manifest size.");
-    }
-
-    private async Task<bool> SafeRollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken)
-    {
-        try { return await platform.RollbackAsync(manifest, cancellationToken).ConfigureAwait(false); } catch { return false; }
+        if (copied != declaredSize) throw new InvalidDataException("The package archive ended before its declared file size.");
     }
 
     private static async Task<string> ComputeHashAsync(string path, CancellationToken cancellationToken)
@@ -161,39 +742,11 @@ public sealed class FileAgentPackageLifecycle(
         return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
     }
 
-    private static bool IsArchiveLink(ZipArchiveEntry entry)
-    {
-        const int UnixFileTypeMask = 0xF000;
-        const int UnixSymbolicLink = 0xA000;
-        return ((entry.ExternalAttributes >> 16) & UnixFileTypeMask) == UnixSymbolicLink;
-    }
+    private static bool IsArchiveLink(System.IO.Compression.ZipArchiveEntry entry) => ((entry.ExternalAttributes >> 16) & 0xF000) == 0xA000;
 
-    private static bool HasReparsePointOnPath(string root, string targetDirectory)
+    private static bool HasReparsePoint(string path)
     {
-        try
-        {
-            var current = Path.GetFullPath(targetDirectory);
-            var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-            while (current.Length >= normalizedRoot.Length)
-            {
-                if (Directory.Exists(current) && File.GetAttributes(current).HasFlag(FileAttributes.ReparsePoint)) return true;
-                if (string.Equals(current, normalizedRoot, StringComparison.OrdinalIgnoreCase)) return false;
-                var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
-                if (string.IsNullOrWhiteSpace(parent) || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase)) return false;
-                current = parent;
-            }
-        }
-        catch
-        {
-            return true;
-        }
-
-        return true;
-    }
-
-    private static bool IsReparsePoint(string path)
-    {
-        try { return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint); }
+        try { return File.Exists(path) || Directory.Exists(path) ? File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint) : true; }
         catch { return true; }
     }
 }

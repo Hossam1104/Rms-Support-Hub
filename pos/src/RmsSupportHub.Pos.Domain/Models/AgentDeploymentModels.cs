@@ -19,7 +19,15 @@ public sealed record AgentServiceEvidence(
     string? PackageVersion,
     string? OwnershipMarker,
     string? BinarySha256,
-    AgentResourceOwnershipState State);
+    AgentResourceOwnershipState State)
+{
+    /// <summary>SCM configuration evidence; these properties are not browser transport fields.</summary>
+    public string? ServiceAccount { get; init; }
+
+    public string? StartType { get; init; }
+
+    public bool? HasArguments { get; init; }
+}
 
 public sealed record AgentOwnershipAssessment(
     AgentResourceOwnershipState State,

@@ -1,46 +1,62 @@
 # Current Project State
 
 - **Updated:** 2026-08-16
-- **Active branch:** `main`, synchronized with `origin/main`.
-- **Status:** Baseline routing and POS test hygiene complete; Production/fleet
-  lifecycle platform remains open for GPT-5.6 Luna Max HIGH.
-- **Next task:** `TASK.md` remains the full GPT-5.6 Terra HIGH independent
-  Production/fleet review prompt awaiting Luna Max HIGH execution.
+- **Active branch:** `feat/pos-production-agent-lifecycle`, based on merged
+  Slice C baseline `0b380ef`.
+- **Status:** Production-capable Agent package trust and lifecycle implementation
+  is complete in the scoped repository. External Production, PKI, fleet, and
+  customer evidence remains open.
+- **Next task:** replace `TASK.md` with the full GPT-5.6 Terra HIGH independent
+  Production/fleet security and release-readiness review prompt.
 
 ## Durable implementation facts
 
-- Routing hygiene: `backend/src/RmsSupportHub.Api/Program.cs` uses
-  `app.MapFallback("{*path:nonfile}", ...)` without restrictive HTTP verb
-  metadata so unknown or retired `/api/**` endpoints return HTTP 404 across all
-  methods (GET, POST, PUT, DELETE, PATCH) rather than returning 405 Method Not
-  Allowed from SPA fallback method constraints. Angular deep links continue to
-  serve the SPA shell on GET/HEAD.
-- Frontend test hygiene: `prompt-storage.service.spec.ts` wraps prototype spies
-  in `try...finally` with `afterEach` restoration and `localStorage.clear()`;
-  `pos-maintenance.component.spec.ts` invokes `TestBed.resetTestingModule()` in
-  `afterEach` to guarantee deterministic Vitest worker isolation.
-- The permanent product, SCM service, and ownership identity is
-  `RmsSupportAgent`; display name is `RMS Support Agent`. The two historical
-  Testing service names are migration inputs only. RMS product services,
-  including `RMSServiceManager`, are never adopted or removed.
-- Slice C code is verified; elevated Testing Agent startup, machine
-  certificate/browser policy proof, fleet enrollment, enterprise PKI approval,
-  Production signing, Whites comparison, and customer approval are not claimed
-  and remain gated for Luna Max HIGH.
+- The permanent product and SCM identity is `RmsSupportAgent`, display name
+  `RMS Support Agent`, description `Local diagnostics, maintenance and repair
+  agent for RMS Support Hub`, and account `LocalSystem`. Historical Testing
+  services are migration inputs only; RMS product services are never adopted,
+  removed, or controlled.
+- Package publication is controlled by
+  `scripts/publish-rms-support-agent-package.ps1`. It reads a bounded publish
+  directory, signs a deterministic UTF-8 length-delimited envelope with a
+  pinned `Cert:\LocalMachine\My` Code Signing certificate, and never exports
+  private key material.
+- C# and PowerShell trust paths independently bind channel/environment,
+  machine-owned signer pins, archive hash/size, exact sorted file metadata,
+  service identity, ACL/certificate requirements, and rollback metadata.
+  Production cannot use the Testing signer or the injected no-chain seam.
+- The typed Windows lifecycle uses the machine-wide
+  `Global\RmsSupportHub.Pos.Agent.PrivilegedMutationLease`, fixed ACL roots,
+  atomic lifecycle checkpoints, retained trusted rollback payload/archive,
+  exact SCM configuration and bounded restart recovery actions. Terminal
+  activation requires both `https://rms-pos-agent.localhost:5001/health/live`
+  and `/health/ready` to return 200 over HTTPS without redirect following.
+- The certificate prerequisite is read-only and requires the exact
+  `rms-pos-agent.localhost` SAN, LocalMachine store, Microsoft Software Key
+  Storage Provider, non-exportable key, Server Authentication EKU, private-key
+  access, and a local or enterprise ownership marker. Enterprise certificates
+  are never removed by the Agent lifecycle.
+- `TASK.md` is intentionally left as the next independent Terra review prompt;
+  this implementation turn does not claim representative-machine elevation,
+  Production signing/PKI, fleet enrollment, or customer approval.
 
 ## Validation evidence
 
-- Backend tests: 194 passed, 0 failed (`RmsSupportHub.Tests`).
-- POS tests: Domain 12, Application 80, Infrastructure 94, Agent integration
-  152; 338 passed, 0 failed.
-- Broad build (`scripts/build.ps1`): passed with 0 warnings and 0 errors.
-- Frontend tests: 58 files / 363 tests passed across three consecutive full runs
-  with zero worker exits or test failures.
-- Frontend production build: passed cleanly (`108.55 kB` raw POS lazy chunk).
-- Repository memory: `check_memory.py` and `git diff --check` pass.
+- POS Release build: 0 warnings, 0 errors with
+  `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`.
+- POS solution tests: 345 passed, 0 failed (Domain 12, Application 80,
+  Infrastructure 101, Agent integration 152).
+- Focused package trust/lifecycle tests: 7 passed, 0 failed.
+- PowerShell quality: 28 tracked scripts/modules parsed with no dangling
+  operator continuations. Full Pester suite: 120 passed, 0 failed after the
+  new package trust/lifecycle coverage.
+- Existing backend/frontend baseline remains unchanged by this scoped task;
+  no new frontend or backend source was modified.
 
 ## Runtime and delivery gates
 
-- Local development environment verified with `scripts/dev.ps1`.
-- `http://localhost:4200/` and `http://localhost:5200/api/modules/health`
-  probed and responding.
+- No Production, customer, RMS, Main Server, database, registry, certificate
+  store, SCM, browser policy, or live package activation mutation was executed.
+- No private key was exported or committed. A real representative-machine
+  activation still requires separately authorized Testing evidence followed by
+  independent Production/PKI/fleet/customer review.

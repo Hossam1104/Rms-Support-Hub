@@ -30,10 +30,15 @@ public sealed class AgentPackageOptions
 
     public string StagingRoot => Path.Combine(PackageRoot, "staging");
 
+    public string LifecycleStatePath => Path.Combine(PackageRoot, "lifecycle-state.json");
+
+    public string RollbackPayloadRoot => Path.Combine(RollbackRoot, "payload");
+
     public void Validate()
     {
         ValidateFixedPath(PackageRoot, "A fixed package root is required.");
         ValidateFixedPath(InstallationRoot, "A fixed installation root is required.");
+        if (Path.IsPathRooted(LifecycleStatePath) is false) throw new ArgumentException("The lifecycle state path must remain beneath the package root.");
         if (!string.Equals(ServiceName, AgentProductIdentity.PermanentServiceName, StringComparison.Ordinal)) throw new ArgumentException("The Agent service identity is fixed.");
         if (!string.Equals(ProductId, AgentProductIdentity.ProductId, StringComparison.Ordinal)) throw new ArgumentException("The Agent product identity is fixed.");
         if (ReleaseChannel is not (AgentProductIdentity.ReleaseChannelTesting or AgentProductIdentity.ReleaseChannelProduction)) throw new ArgumentException("The Agent release channel is invalid.");

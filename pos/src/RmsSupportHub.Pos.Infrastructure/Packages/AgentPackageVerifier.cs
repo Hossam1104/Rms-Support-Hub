@@ -1,5 +1,8 @@
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Security;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using RmsSupportHub.Pos.Application.Packages;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
@@ -11,13 +14,211 @@ public interface IAgentPackageSignatureVerifier
     Task<bool> VerifyAsync(AgentPackageManifest manifest, string archivePath, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Default verifier fails closed until a trusted machine-owned signing certificate is provisioned.</summary>
+/// <summary>
+/// Verifies the manifest's canonical signature with a signer pinned by machine-owned trust
+/// configuration. The manifest never selects a certificate, and the archive itself is bound by
+/// the signed package hash in the canonical envelope.
+/// </summary>
 public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSignatureVerifier
 {
+    private static readonly Regex StrictBase64 = new("^[A-Za-z0-9+/]+={0,2}$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private readonly AgentPackageTrustOptions options;
+    private readonly IAgentPackageSignerCertificateSource certificateSource;
+    private readonly IAgentPackageSignerTrustValidator trustValidator;
+
+    public MachineCertificatePackageSignatureVerifier()
+        : this(new AgentPackageTrustOptions(), new LocalMachineAgentPackageSignerCertificateSource(), new X509ChainAgentPackageSignerTrustValidator())
+    {
+    }
+
+    public MachineCertificatePackageSignatureVerifier(
+        AgentPackageTrustOptions options,
+        IAgentPackageSignerCertificateSource certificateSource,
+        IAgentPackageSignerTrustValidator trustValidator)
+    {
+        this.options = options ?? throw new ArgumentNullException(nameof(options));
+        this.certificateSource = certificateSource ?? throw new ArgumentNullException(nameof(certificateSource));
+        this.trustValidator = trustValidator ?? throw new ArgumentNullException(nameof(trustValidator));
+        this.options.Validate();
+    }
+
     public Task<bool> VerifyAsync(AgentPackageManifest manifest, string archivePath, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(manifest);
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(false);
+
+        try
+        {
+            if (!string.Equals(manifest.SignatureAlgorithm, "SHA256withRSA", StringComparison.Ordinal)
+                || string.IsNullOrWhiteSpace(manifest.ReleaseChannel)
+                || !string.Equals(manifest.ReleaseChannel, manifest.Environment, StringComparison.Ordinal)
+                || string.IsNullOrWhiteSpace(manifest.Signature)
+                || manifest.Signature.Length > 16 * 1024
+                || manifest.Signature.Length % 4 != 0
+                || !StrictBase64.IsMatch(manifest.Signature))
+            {
+                return Task.FromResult(false);
+            }
+
+            var thumbprint = ResolveThumbprint(manifest.ReleaseChannel);
+            if (thumbprint is null) return Task.FromResult(false);
+
+            using var certificate = certificateSource.Find(thumbprint);
+            if (certificate is null
+                || !string.Equals(AgentPackageTrustOptions.Normalize(certificate.Thumbprint), thumbprint, StringComparison.Ordinal))
+            {
+                return Task.FromResult(false);
+            }
+
+            // Production always requires the explicit chain/revocation decision. The option is
+            // only a narrowly injected Testing/test seam and cannot downgrade Production.
+            var requireTrustedChain = string.Equals(manifest.ReleaseChannel, AgentProductIdentity.ReleaseChannelProduction, StringComparison.Ordinal)
+                || options.RequireTrustedChain;
+            if (!trustValidator.IsTrusted(certificate, requireTrustedChain, out _)) return Task.FromResult(false);
+
+            byte[] signature;
+            try
+            {
+                signature = Convert.FromBase64String(manifest.Signature);
+            }
+            catch (FormatException)
+            {
+                return Task.FromResult(false);
+            }
+
+            if (signature.Length is 0 or > 16 * 1024) return Task.FromResult(false);
+            using var rsa = certificate.GetRSAPublicKey();
+            if (rsa is null) return Task.FromResult(false);
+
+            var payload = AgentPackageCanonicalizer.Canonicalize(manifest);
+            return Task.FromResult(rsa.VerifyData(payload, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Task.FromResult(false);
+        }
+    }
+
+    private string? ResolveThumbprint(string channel)
+    {
+        var configured = options.GetConfiguredThumbprint(channel);
+        if (configured is not null) return configured;
+
+        try
+        {
+            var path = options.TrustConfigurationPath;
+            if (!File.Exists(path)
+                || File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)
+                || new FileInfo(path).Length is <= 0 or > 16 * 1024)
+            {
+                return null;
+            }
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
+            var property = channel == "Production" ? "productionSignerThumbprint" : "testingSignerThumbprint";
+            return document.RootElement.TryGetProperty(property, out var value)
+                ? AgentPackageTrustOptions.Normalize(value.GetString())
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+}
+
+public sealed class LocalMachineAgentPackageSignerCertificateSource : IAgentPackageSignerCertificateSource
+{
+    public X509Certificate2? Find(string thumbprint)
+    {
+        var normalized = AgentPackageTrustOptions.Normalize(thumbprint);
+        if (normalized is null || !OperatingSystem.IsWindows()) return null;
+
+        try
+        {
+            using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
+            foreach (var certificate in store.Certificates)
+            {
+                if (string.Equals(AgentPackageTrustOptions.Normalize(certificate.Thumbprint), normalized, StringComparison.Ordinal))
+                {
+                    return new X509Certificate2(certificate);
+                }
+            }
+        }
+        catch (CryptographicException)
+        {
+        }
+        catch (SecurityException)
+        {
+        }
+
+        return null;
+    }
+}
+
+public sealed class X509ChainAgentPackageSignerTrustValidator : IAgentPackageSignerTrustValidator
+{
+    private const string CodeSigningEku = "1.3.6.1.5.5.7.3.3";
+
+    public bool IsTrusted(X509Certificate2 certificate, bool requireTrustedChain, out string failureCode)
+    {
+        failureCode = "unknown";
+        var now = DateTimeOffset.UtcNow.UtcDateTime;
+        if (certificate.NotBefore.ToUniversalTime() > now || certificate.NotAfter.ToUniversalTime() < now)
+        {
+            failureCode = "signer_expired_or_not_yet_valid";
+            return false;
+        }
+
+        var eku = certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>().FirstOrDefault();
+        if (eku is null || !eku.EnhancedKeyUsages.Cast<Oid>().Any(usage => string.Equals(usage.Value, CodeSigningEku, StringComparison.Ordinal)))
+        {
+            failureCode = "signer_code_signing_eku_missing";
+            return false;
+        }
+
+        var keyUsage = certificate.Extensions.OfType<X509KeyUsageExtension>().FirstOrDefault();
+        if (keyUsage is not null && !keyUsage.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature))
+        {
+            failureCode = "signer_digital_signature_usage_missing";
+            return false;
+        }
+
+        if (!requireTrustedChain)
+        {
+            // This switch is intended only for an explicit injected Testing/test certificate seam;
+            // it still requires a valid, purpose-constrained certificate and never enables a
+            // Production fallback.
+            failureCode = "testing_chain_not_required";
+            return true;
+        }
+
+        using var chain = new X509Chain();
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
+        chain.ChainPolicy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
+        chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+        if (!chain.Build(certificate))
+        {
+            failureCode = "signer_chain_untrusted_or_revoked";
+            return false;
+        }
+
+        failureCode = "trusted";
+        return true;
     }
 }
 
@@ -31,9 +232,32 @@ public sealed class FileAgentPackageVerifier(
     public async Task<AgentPackageValidationResult> VerifyAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default)
     {
         options.EnsureStorageProvisioned();
+        if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal))
+        {
+            return new(AgentPackageVerificationState.Rejected, ["package_channel_not_configured"], "The package release channel is not enabled for this Agent instance.");
+        }
         var policyResult = policy.ValidateManifest(manifest);
         if (policyResult.State != AgentPackageVerificationState.Verified) return policyResult;
-        var archivePath = ArchivePath(manifest);
+        return await VerifyArtifactAsync(manifest, ArchivePath(manifest), cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<AgentPackageValidationResult> VerifyRollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default)
+    {
+        options.EnsureStorageProvisioned();
+        if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal))
+        {
+            return new(AgentPackageVerificationState.Rejected, ["package_channel_not_configured"], "The package release channel is not enabled for this Agent instance.");
+        }
+        var policyResult = policy.ValidateManifest(manifest);
+        if (policyResult.State != AgentPackageVerificationState.Verified) return policyResult;
+        return await VerifyArtifactAsync(manifest, RollbackArchivePath(manifest), cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<AgentPackageValidationResult> VerifyArtifactAsync(
+        AgentPackageManifest manifest,
+        string archivePath,
+        CancellationToken cancellationToken)
+    {
         try
         {
             if (!File.Exists(archivePath)
@@ -53,6 +277,10 @@ public sealed class FileAgentPackageVerifier(
     public async Task<AgentPackageValidationResult> VerifyInstalledAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default)
     {
         options.EnsureStorageProvisioned();
+        if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal))
+        {
+            return new(AgentPackageVerificationState.Rejected, ["package_channel_not_configured"], "The package release channel is not enabled for this Agent instance.");
+        }
         var policyResult = policy.ValidateManifest(manifest);
         if (policyResult.State != AgentPackageVerificationState.Verified) return policyResult;
 
@@ -155,7 +383,10 @@ public sealed class FileAgentPackageVerifier(
     }
 
     public string ArchivePath(AgentPackageManifest manifest) =>
-        Path.Combine(options.PackageRoot, "available", manifest.PackageId + "-" + manifest.Version + ".zip");
+        Path.Combine(options.AvailableRoot, manifest.PackageId + "-" + manifest.Version + ".zip");
+
+    public string RollbackArchivePath(AgentPackageManifest manifest) =>
+        Path.Combine(options.RollbackRoot, manifest.PackageId + "-" + manifest.Version + ".zip");
 
     private static async Task<string> ComputeHashAsync(string path, CancellationToken cancellationToken)
     {
@@ -207,6 +438,7 @@ public sealed class FileAgentPackageVerifier(
             || !string.Equals(left.SupportedOperatingSystem, right.SupportedOperatingSystem, StringComparison.Ordinal)
             || !string.Equals(left.SupportedRuntime, right.SupportedRuntime, StringComparison.Ordinal)
             || !string.Equals(left.ServiceDisplayName, right.ServiceDisplayName, StringComparison.Ordinal)
+            || !string.Equals(left.ServiceDescription ?? AgentProductIdentity.ServiceDescription, right.ServiceDescription ?? AgentProductIdentity.ServiceDescription, StringComparison.Ordinal)
             || !string.Equals(left.ServiceIdentity, right.ServiceIdentity, StringComparison.Ordinal)
             || !string.Equals(left.ScmName, right.ScmName, StringComparison.Ordinal)
             || !string.Equals(left.SignatureAlgorithm, right.SignatureAlgorithm, StringComparison.Ordinal)
@@ -220,19 +452,16 @@ public sealed class FileAgentPackageVerifier(
             || left.SchemaVersion != right.SchemaVersion
             || !string.Equals(left.PreviousVersion, right.PreviousVersion, StringComparison.Ordinal)
             || left.RollbackAvailable != right.RollbackAvailable
-            || left.PackageSizeBytes != right.PackageSizeBytes
-            || !(left.AclRequirements ?? []).SequenceEqual(right.AclRequirements ?? [], StringComparer.Ordinal)
-            || !(left.CertificateRequirements ?? []).SequenceEqual(right.CertificateRequirements ?? [], StringComparer.Ordinal))
+            || left.PackageSizeBytes != right.PackageSizeBytes)
         {
             return false;
         }
 
-        var leftFiles = left.Files
-            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        var rightFiles = right.Files
-            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return leftFiles.SequenceEqual(rightFiles);
+        return (left.AclRequirements ?? []).OrderBy(value => value, StringComparer.Ordinal)
+                   .SequenceEqual((right.AclRequirements ?? []).OrderBy(value => value, StringComparer.Ordinal), StringComparer.Ordinal)
+            && (left.CertificateRequirements ?? []).OrderBy(value => value, StringComparer.Ordinal)
+                   .SequenceEqual((right.CertificateRequirements ?? []).OrderBy(value => value, StringComparer.Ordinal), StringComparer.Ordinal)
+            && left.Files.OrderBy(file => file.RelativePath, StringComparer.Ordinal)
+                   .SequenceEqual(right.Files.OrderBy(file => file.RelativePath, StringComparer.Ordinal));
     }
 }

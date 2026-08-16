@@ -26,8 +26,10 @@ one-use mutation tokens, principal-scoped idempotency, and the global
 `Global\RmsSupportHub.Pos.Agent.PrivilegedMutationLease` remain in force. The
 Support Hub API is not a privileged relay.
 
-The deployment foundation is deliberately fail-closed where this repository
-does not contain machine-owned Production trust material:
+The deployment implementation is fail-closed at each machine-owned boundary.
+Repository code does not contain private keys or customer/Production evidence;
+the real lifecycle becomes executable only when the operator provisions the
+fixed LocalMachine trust and certificate material described below:
 
 - `scripts/PosSupportAgentDeployment.psm1` is the shared contract for identity,
   package validation, ownership/migration assessment, browser policy, certificate
@@ -35,10 +37,23 @@ does not contain machine-owned Production trust material:
 - `scripts/bootstrap-rms-support-agent.ps1` provides one bounded UAC handoff for
   unmanaged onboarding. It never recursively elevates or hides a declined UAC
   request.
+- `scripts/publish-rms-support-agent-package.ps1` is the package-publication
+  boundary. It packages only a bounded publish directory, computes the archive
+  hash/size and exact file list, signs the deterministic canonical envelope
+  with a pinned `Cert:\LocalMachine\My` code-signing certificate, and never
+  exports or writes a private key.
 - `scripts/install-rms-support-agent.ps1` provides `Install`, `Upgrade`,
-  `Repair`, `Uninstall`, `Rollback`, and `Status` modes. `-PlanOnly` and
-  `-Status` are non-mutating; lifecycle mutation exits with trust failure until
-  an approved package source and signer are provisioned.
+  `Repair`, `Uninstall`, `Rollback`, and read-only `Status` modes. `-PlanOnly`
+  and `-Status` are non-mutating. Mutation verifies the channel-specific
+  signer thumbprint, Code Signing EKU, online chain/revocation policy,
+  archive hash/size, exact archive file set, service ownership, certificate
+  prerequisite, and both fixed health endpoints before reporting completion;
+  absent or invalid machine trust still fails closed before SCM mutation.
+- The typed C# platform mirrors the same boundary: LocalMachine-pinned
+  signer resolution, deterministic length-delimited envelope signing,
+  bounded staging, durable atomic checkpoints, retained rollback payload and
+  archive, exact `RmsSupportAgent` SCM configuration, bounded restart recovery
+  actions, fixed ACLs, certificate policy, and terminal live/ready health.
 - Known historical services (`RmsSupportHub.Pos.Agent` and
   `RmsSupportHub.Pos.Int13.TestService`) can be considered only with matching
   path, display identity, package/marker evidence, and known Testing marker.
@@ -47,8 +62,11 @@ does not contain machine-owned Production trust material:
   RMS product services and are outside the migration catalog.
 - Package policy requires schema 1, product identity, x64/arm64 architecture,
   matching channel/environment, Windows/net10.0-windows, LocalSystem, fixed
-  service identity, SHA-256 metadata, bounded file manifests, and trusted
-  signing evidence. Installed verification compares the complete manifest and
+  service identity/description, SHA-256 metadata, bounded file manifests, and
+  trusted signing evidence. The signed canonical envelope binds package
+  metadata, archive hash/size, exact sorted files, ACL requirements,
+  certificate requirements, release channel, and rollback metadata; JSON
+  property order is not a trust input. Installed verification compares the complete manifest and
   exact owned file set, rejects reserved control files and reparse points, and
   re-hashes every installed file.
 - The certificate policy requires the exact `rms-pos-agent.localhost` SAN,
@@ -110,8 +128,8 @@ fleet or customer approval:
 
 | Evidence class | Current state |
 | --- | --- |
-| Implemented | Slice C contracts, policies, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
-| CI/local validated | POS Release build/tests, frontend tests/build, PowerShell parse/Pester, and generated OpenAPI/client checks pass when the documented Testing origin is supplied. |
+| Implemented | Slice C contracts, canonical package trust, publication boundary, typed Windows lifecycle, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
+| CI/local validated | POS Release build/tests, focused package trust/lifecycle tests, frontend tests/build, PowerShell parse/Pester, and generated OpenAPI/client checks pass when the documented Testing origin is supplied. |
 | Testing live-proven | Existing historical INT-13 evidence remains valid for the earlier Testing service model; this session did not claim a new elevated run. |
 | Production representative-machine proven | Not claimed. The current shell is not Administrator and no Production registry, certificate, SCM, RMS, Main Server, or database mutation was performed. |
 | Customer/fleet approved | Not claimed. Enterprise package signing, package publication, managed policy deployment, PKI issuance/renewal/revocation, and final independent Slice C review remain release gates. |

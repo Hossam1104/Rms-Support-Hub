@@ -272,15 +272,37 @@ builder.Services.AddSingleton<ISafetySnapshotStore, FileSafetySnapshotStore>();
 builder.Services.AddSingleton<ISafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
 builder.Services.AddSingleton<SafetySnapshotService>();
 
-// The package boundary reads only the Agent-owned catalog and delegates SCM, ACL, certificate,
-// activation, health, and rollback work to a typed platform seam. The default platform fails
-// closed for activation until the machine-owned implementation is provisioned.
-builder.Services.AddSingleton(new AgentPackageOptions());
+// The package boundary reads only the Agent-owned catalog. The release channel is selected by
+// trusted process configuration: Testing hosts are Testing-only and every other host defaults to
+// Production. Signer pins, certificate selection, SCM, ACL, activation, health, and rollback
+// work are machine-owned typed seams; no package or browser request can replace them.
+var configuredPackageChannel = builder.Configuration["PosAgent:ReleaseChannel"];
+var packageOptions = new AgentPackageOptions
+{
+    ReleaseChannel = string.IsNullOrWhiteSpace(configuredPackageChannel)
+        ? (builder.Environment.IsEnvironment("Testing") ? AgentProductIdentity.ReleaseChannelTesting : AgentProductIdentity.ReleaseChannelProduction)
+        : configuredPackageChannel
+};
+packageOptions.Validate();
+if (builder.Environment.IsEnvironment("Testing") != string.Equals(packageOptions.ReleaseChannel, AgentProductIdentity.ReleaseChannelTesting, StringComparison.Ordinal))
+{
+    throw new InvalidOperationException("PosAgent:ReleaseChannel must match the trusted Testing process environment.");
+}
+
+builder.Services.AddSingleton(packageOptions);
+builder.Services.AddSingleton(new AgentPackageTrustOptions());
+builder.Services.AddSingleton<IAgentPackageSignerCertificateSource, LocalMachineAgentPackageSignerCertificateSource>();
+builder.Services.AddSingleton<IAgentPackageSignerTrustValidator, X509ChainAgentPackageSignerTrustValidator>();
 builder.Services.AddSingleton<IAgentPackagePolicy, AgentPackagePolicy>();
 builder.Services.AddSingleton<IAgentPackageCatalog, FileAgentPackageCatalog>();
 builder.Services.AddSingleton<IAgentPackageSignatureVerifier, MachineCertificatePackageSignatureVerifier>();
 builder.Services.AddSingleton<FileAgentPackageVerifier>();
 builder.Services.AddSingleton<IAgentPackageVerifier>(services => services.GetRequiredService<FileAgentPackageVerifier>());
+builder.Services.AddSingleton(new AgentCertificatePrerequisiteOptions { Thumbprint = securityOptions.CertificateThumbprint });
+builder.Services.AddSingleton<IAgentCertificatePrerequisite, MachineAgentCertificatePrerequisite>();
+builder.Services.AddSingleton<IAgentServiceLifecycleController, WindowsAgentServiceController>();
+builder.Services.AddSingleton<AgentPackageLifecycleStateStore>();
+builder.Services.AddSingleton<IAgentHealthProbe, LoopbackAgentHealthProbe>();
 builder.Services.AddSingleton<IAgentPackageInstallationPlatform, WindowsAgentPackageInstallationPlatform>();
 builder.Services.AddSingleton<FileAgentPackageLifecycle>();
 builder.Services.AddSingleton<IAgentPackageLifecycle>(services => services.GetRequiredService<FileAgentPackageLifecycle>());

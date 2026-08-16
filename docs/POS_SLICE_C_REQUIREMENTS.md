@@ -1,8 +1,11 @@
 # POS Slice C Requirements
 
-Status: implementation foundation delivered 2026-08-16. This document remains
-the acceptance checklist; current delivered behavior and evidence classification
-are summarized in [`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md).
+Status: implementation delivered 2026-08-16. This document remains the
+acceptance checklist and evidence gate; current delivered behavior and
+evidence classification are summarized in
+[`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md). Real
+machine-owned Production trust, certificate, fleet, and customer evidence are
+still release gates and are not claimed by repository tests.
 
 The repository contains the permanent service/deployment contract, bounded
 legacy migration policy, one-UAC onboarding bootstrap, silent lifecycle

@@ -13,7 +13,16 @@ public sealed record AgentAuditEvent(
     string Outcome,
     string? FailureCode,
     string ProductVersion,
-    string? BuildId);
+    string? BuildId)
+{
+    public string? PackageId { get; init; }
+
+    public string? PackageVersion { get; init; }
+
+    public string? TrustResult { get; init; }
+
+    public string? RecoveryState { get; init; }
+}
 
 public interface IAgentAuditSink
 {
