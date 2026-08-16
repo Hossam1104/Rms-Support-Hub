@@ -28,11 +28,17 @@ public sealed class AgentPackageOptions
 
     public string RollbackRoot => Path.Combine(PackageRoot, "rollback");
 
+    /// <summary>
+    /// Bounded, one-operation retention slot for the CURRENT trusted package, preserved only while
+    /// an explicit Rollback is destructively mutating the installation. It exists solely so a failed
+    /// explicit rollback can restore the pre-rollback version instead of retrying the same target
+    /// that just failed. It is cleared after that specific recovery succeeds.
+    /// </summary>
+    public string RecoveryRoot => Path.Combine(PackageRoot, "recovery");
+
     public string StagingRoot => Path.Combine(PackageRoot, "staging");
 
     public string LifecycleStatePath => Path.Combine(PackageRoot, "lifecycle-state.json");
-
-    public string RollbackPayloadRoot => Path.Combine(RollbackRoot, "payload");
 
     public void Validate()
     {
@@ -56,6 +62,7 @@ public sealed class AgentPackageOptions
         ServiceOwnedDirectoryProvisioner.EnsureProvisioned(PackageRoot);
         ServiceOwnedDirectoryProvisioner.EnsureProvisioned(AvailableRoot);
         ServiceOwnedDirectoryProvisioner.EnsureProvisioned(RollbackRoot);
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(RecoveryRoot);
         ServiceOwnedDirectoryProvisioner.EnsureProvisioned(StagingRoot);
         ServiceOwnedDirectoryProvisioner.EnsureProvisioned(InstallationRoot);
     }

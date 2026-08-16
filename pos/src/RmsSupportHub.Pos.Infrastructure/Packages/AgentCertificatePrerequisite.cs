@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using RmsSupportHub.Pos.Application.Packages;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 
 namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
@@ -155,6 +156,11 @@ public sealed class MachineAgentCertificatePrerequisite : IAgentCertificatePrere
             {
                 return null;
             }
+
+            // The certificate configuration file is machine-owned and never provisioned by this
+            // application. Its ownership/ACL boundary must be verified before any value inside it is
+            // trusted -- a writable configuration must never become authority.
+            if (!ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(options.ConfigurationPath)) return null;
 
             using var document = JsonDocument.Parse(File.ReadAllText(options.ConfigurationPath));
             return document.RootElement.TryGetProperty("certificateThumbprint", out var value)

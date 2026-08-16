@@ -86,6 +86,82 @@ public static class ServiceOwnedDirectoryProvisioner
         }
     }
 
+    /// <summary>
+    /// Read-only trust check for a machine-owned control file (package-trust.json,
+    /// agent-certificate.json, lifecycle-state.json) that this application never provisions itself --
+    /// it is expected to already exist, placed by deployment/installer tooling running with
+    /// administrative rights. Unlike <see cref="EnsureProvisioned"/>, this never creates or mutates
+    /// the ACL; it only verifies the file's existing directory boundary is reparse-free and owned by
+    /// BUILTIN\Administrators or LocalSystem with a protected ACL that grants no broader allow rule
+    /// (no ordinary Users/Everyone/Authenticated Users write access), so an unsafe writable
+    /// configuration can never become trust authority. Callers must reject the control file's
+    /// contents when this returns false, before parsing anything security-sensitive from it.
+    /// </summary>
+    public static bool IsTrustedControlFile(string filePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !Path.IsPathFullyQualified(filePath) || filePath.Any(char.IsControl) || HasParentTraversal(filePath)) return false;
+            if (!OperatingSystem.IsWindows()) return false;
+
+            var fullPath = Path.GetFullPath(filePath);
+            if (!File.Exists(fullPath) || File.GetAttributes(fullPath).HasFlag(FileAttributes.ReparsePoint)) return false;
+
+            var directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return false;
+
+            var current = directory;
+            while (!string.IsNullOrWhiteSpace(current) && Directory.Exists(current))
+            {
+                if (new DirectoryInfo(current).Attributes.HasFlag(FileAttributes.ReparsePoint)) return false;
+                var parent = Directory.GetParent(current)?.FullName;
+                if (parent is null || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase)) break;
+                current = parent;
+            }
+
+            return IsAclBoundaryTrusted(directory);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsAclBoundaryTrusted(string directoryPath)
+    {
+        try
+        {
+            var directoryInfo = new DirectoryInfo(directoryPath);
+            if (directoryInfo.Attributes.HasFlag(FileAttributes.ReparsePoint)) return false;
+
+            // The same narrow %TEMP%-scoped escape hatch EnsureProvisioned already grants a
+            // disposable test fixture: it never widens what production accepts (real control files
+            // live under %ProgramData%\DBS, never %TEMP%), and only applies when the boundary is
+            // owned by the current identity with an otherwise-protected, otherwise-untrusted-rule-free
+            // ACL -- the same shape EnsureProvisioned itself would have applied.
+            var allowTemporaryTestIdentity = IsTemporaryTestPath(directoryPath);
+            var currentSid = allowTemporaryTestIdentity ? WindowsIdentity.GetCurrent().User : null;
+
+            var security = directoryInfo.GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
+            var owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            var ownerTrusted = IsTrustedIdentity(owner, administrators, system)
+                || (allowTemporaryTestIdentity && owner is not null && owner == currentSid);
+            if (!ownerTrusted || !security.AreAccessRulesProtected) return false;
+
+            var rules = security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
+                .Cast<FileSystemAccessRule>();
+            return !rules.Any(rule => rule.AccessControlType == AccessControlType.Allow
+                && !IsTrustedIdentity(rule.IdentityReference as SecurityIdentifier, administrators, system)
+                && !(allowTemporaryTestIdentity && rule.IdentityReference == currentSid));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static void ApplyRestrictedAcl(string path, bool allowTemporaryTestIdentity)
     {
         var directoryInfo = new DirectoryInfo(path);

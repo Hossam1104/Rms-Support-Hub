@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using RmsSupportHub.Pos.Application.Packages;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 
 namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
@@ -117,6 +118,11 @@ public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSi
             {
                 return null;
             }
+
+            // The trust configuration file is machine-owned and never provisioned by this
+            // application. Its ownership/ACL boundary must be verified before any value inside it is
+            // trusted -- a writable trust configuration must never become authority.
+            if (!ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(path)) return null;
 
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
@@ -253,6 +259,18 @@ public sealed class FileAgentPackageVerifier(
         return await VerifyArtifactAsync(manifest, RollbackArchivePath(manifest), cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<AgentPackageValidationResult> VerifyRecoveryAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default)
+    {
+        options.EnsureStorageProvisioned();
+        if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal))
+        {
+            return new(AgentPackageVerificationState.Rejected, ["package_channel_not_configured"], "The package release channel is not enabled for this Agent instance.");
+        }
+        var policyResult = policy.ValidateManifest(manifest);
+        if (policyResult.State != AgentPackageVerificationState.Verified) return policyResult;
+        return await VerifyArtifactAsync(manifest, RecoveryArchivePath(manifest), cancellationToken).ConfigureAwait(false);
+    }
+
     private async Task<AgentPackageValidationResult> VerifyArtifactAsync(
         AgentPackageManifest manifest,
         string archivePath,
@@ -387,6 +405,9 @@ public sealed class FileAgentPackageVerifier(
 
     public string RollbackArchivePath(AgentPackageManifest manifest) =>
         Path.Combine(options.RollbackRoot, manifest.PackageId + "-" + manifest.Version + ".zip");
+
+    public string RecoveryArchivePath(AgentPackageManifest manifest) =>
+        Path.Combine(options.RecoveryRoot, manifest.PackageId + "-" + manifest.Version + ".zip");
 
     private static async Task<string> ComputeHashAsync(string path, CancellationToken cancellationToken)
     {

@@ -138,6 +138,15 @@ public interface IAgentPackageVerifier
     Task<AgentPackageValidationResult> VerifyRollbackAsync(
         AgentPackageManifest manifest,
         CancellationToken cancellationToken = default) => VerifyAsync(manifest, cancellationToken);
+
+    /// <summary>
+    /// Verifies a package retained in the bounded recovery slot (the CURRENT package preserved
+    /// before a destructive explicit Rollback) against the same signed-manifest and archive trust
+    /// rules as any other activation source.
+    /// </summary>
+    Task<AgentPackageValidationResult> VerifyRecoveryAsync(
+        AgentPackageManifest manifest,
+        CancellationToken cancellationToken = default) => VerifyAsync(manifest, cancellationToken);
 }
 
 public interface IAgentPackageLifecycle

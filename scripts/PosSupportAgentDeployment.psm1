@@ -35,6 +35,7 @@ function Get-RmsSupportAgentDeploymentContract {
         StatePath = Join-Path $env:ProgramData 'DBS\RmsSupportAgent\Packages\lifecycle-state.json'
         AvailableRoot = Join-Path $env:ProgramData 'DBS\RmsSupportAgent\Packages\available'
         RollbackRoot = Join-Path $env:ProgramData 'DBS\RmsSupportAgent\Packages\rollback'
+        RecoveryRoot = Join-Path $env:ProgramData 'DBS\RmsSupportAgent\Packages\recovery'
         StagingRoot = Join-Path $env:ProgramData 'DBS\RmsSupportAgent\Packages\staging'
         InstalledManifestPath = Join-Path $env:ProgramFiles 'DBS\RmsSupportAgent\manifest.json'
         CanonicalAgentOrigin = $script:CanonicalAgentOrigin
@@ -364,6 +365,47 @@ function Get-RmsCanonicalPackagePayload {
     return ,([Text.Encoding]::UTF8.GetBytes((Get-RmsCanonicalPackagePayloadText -Manifest $Manifest)))
 }
 
+function Test-RmsSupportAgentControlFileTrust {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+
+    # Machine-owned trust control files (package-trust.json, agent-certificate.json) are never
+    # provisioned by this application. Their ownership/ACL boundary must be verified BEFORE any
+    # value inside them is trusted -- a writable configuration must never become authority. This is
+    # read-only: it never mutates an ACL to make an untrusted boundary pass.
+    try {
+        if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+        $directory = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Path))
+        if ([IO.File]::GetAttributes($Path).HasFlag([IO.FileAttributes]::ReparsePoint) -or
+            [IO.File]::GetAttributes($directory).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $false }
+
+        # The same narrow %TEMP%-scoped escape hatch the C# ServiceOwnedDirectoryProvisioner grants a
+        # disposable test fixture: it never widens what production accepts (real control files live
+        # under %ProgramData%\DBS, never %TEMP%), and only applies when the boundary is owned by the
+        # current identity with an otherwise-protected, otherwise-untrusted-rule-free ACL.
+        $temporaryTestRoot = [IO.Path]::GetFullPath($env:TEMP)
+        $allowTemporaryTestIdentity = [IO.Path]::GetFullPath($directory).StartsWith($temporaryTestRoot, [StringComparison]::OrdinalIgnoreCase)
+        $currentSid = if ($allowTemporaryTestIdentity) { ([Security.Principal.WindowsIdentity]::GetCurrent()).User } else { $null }
+
+        $acl = Get-Acl -LiteralPath $directory
+        $administrators = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
+        $system = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::LocalSystemSid, $null)
+        $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier])
+        $ownerTrusted = ($owner -eq $administrators -or $owner -eq $system) -or ($allowTemporaryTestIdentity -and $owner -eq $currentSid)
+        if (-not $ownerTrusted -or -not $acl.AreAccessRulesProtected) { return $false }
+
+        foreach ($rule in $acl.Access) {
+            if ($rule.AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow) { continue }
+            $identity = try { $rule.IdentityReference.Translate([Security.Principal.SecurityIdentifier]) } catch { $null }
+            if ($null -eq $identity) { return $false }
+            if ($identity -eq $administrators -or $identity -eq $system) { continue }
+            if ($allowTemporaryTestIdentity -and $identity -eq $currentSid) { continue }
+            return $false
+        }
+        return $true
+    } catch { return $false }
+}
+
 function Get-RmsSupportAgentSignerCertificate {
     [CmdletBinding()]
     param(
@@ -374,6 +416,7 @@ function Get-RmsSupportAgentSignerCertificate {
     if (-not (Test-Path -LiteralPath $Contract.TrustConfigurationPath -PathType Leaf)) { return $null }
     if ([IO.File]::GetAttributes($Contract.TrustConfigurationPath).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $null }
     if ((Get-Item -LiteralPath $Contract.TrustConfigurationPath).Length -gt 16KB) { return $null }
+    if (-not (Test-RmsSupportAgentControlFileTrust -Path $Contract.TrustConfigurationPath)) { return $null }
 
     try { $trust = Get-Content -Raw -LiteralPath $Contract.TrustConfigurationPath | ConvertFrom-Json } catch { return $null }
     $property = if ($Channel -eq 'Production') { 'productionSignerThumbprint' } else { 'testingSignerThumbprint' }
@@ -408,24 +451,27 @@ function Test-RmsSupportAgentPackageTrust {
     param(
         [Parameter(Mandatory)][ValidateSet('Testing', 'Production')][string]$Channel,
         [Parameter(Mandatory)][psobject]$Contract,
-        [switch]$Rollback
+        [switch]$Rollback,
+        [string]$SlotRoot
     )
 
     $blockers = [System.Collections.Generic.List[string]]::new()
-    $manifestPath = if ($Rollback) { Join-Path $Contract.RollbackRoot 'manifest.json' } else { Join-Path $Contract.AvailableRoot 'manifest.json' }
+    # SlotRoot lets automatic rollback/recovery point this same trust check at an arbitrary retained
+    # slot (RollbackRoot or RecoveryRoot) rather than only the two fixed roots -Rollback distinguishes.
+    $effectiveRoot = if ($SlotRoot) { $SlotRoot } elseif ($Rollback) { $Contract.RollbackRoot } else { $Contract.AvailableRoot }
+    $manifestPath = Join-Path $effectiveRoot 'manifest.json'
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf) -or [IO.File]::GetAttributes($manifestPath).HasFlag([IO.FileAttributes]::ReparsePoint)) {
         return [pscustomobject]@{ Valid = $false; Blockers = @('package_manifest_unavailable'); Manifest = $null; ArchivePath = $null; SignerThumbprint = $null }
     }
 
     try { $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json } catch { return [pscustomobject]@{ Valid = $false; Blockers = @('package_manifest_invalid'); Manifest = $null; ArchivePath = $null; SignerThumbprint = $null } }
     try { $policy = Test-RmsSupportAgentPackageManifest -Manifest $manifest -Channel $Channel -CryptographicSignature } catch { return [pscustomobject]@{ Valid = $false; Blockers = @('package_manifest_invalid'); Manifest = $manifest; ArchivePath = $null; SignerThumbprint = $null } }
-    $blockers.AddRange(@($policy.Blockers))
+    $blockers.AddRange([string[]]@($policy.Blockers))
     if (-not $policy.Valid) {
         return [pscustomobject]@{ Valid = $false; Blockers = @($blockers | Select-Object -Unique); Manifest = $manifest; ArchivePath = $null; SignerThumbprint = $null }
     }
     $archiveName = "$($manifest.PackageId)-$($manifest.Version).zip"
-    $archiveRoot = if ($Rollback) { $Contract.RollbackRoot } else { $Contract.AvailableRoot }
-    $archivePath = Join-Path $archiveRoot $archiveName
+    $archivePath = Join-Path $effectiveRoot $archiveName
     if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf) -or [IO.File]::GetAttributes($archivePath).HasFlag([IO.FileAttributes]::ReparsePoint)) { [void]$blockers.Add('package_artifact_unavailable') }
     else {
         $archive = Get-Item -LiteralPath $archivePath
@@ -441,7 +487,7 @@ function Test-RmsSupportAgentPackageTrust {
             if ([string]::IsNullOrWhiteSpace($signatureText) -or $signatureText.Length % 4 -ne 0 -or $signatureText -notmatch '^[A-Za-z0-9+/]+={0,2}$') { throw 'signature_invalid' }
             $signature = [Convert]::FromBase64String($signatureText)
             $payload = Get-RmsCanonicalPackagePayload -Manifest $manifest
-            $rsa = $certificate.GetRSAPublicKey()
+            $rsa = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPublicKey($certificate)
             try {
                 if (-not $rsa.VerifyData($payload, $signature, [Security.Cryptography.HashAlgorithmName]::SHA256, [Security.Cryptography.RSASignaturePadding]::Pkcs1)) { [void]$blockers.Add('package_signature_mismatch') }
             } finally { if ($null -ne $rsa) { $rsa.Dispose() } }
@@ -651,6 +697,7 @@ function Test-RmsSupportAgentCertificatePrerequisite {
 
     if (-not (Test-Path -LiteralPath $Contract.CertificateConfigurationPath -PathType Leaf)) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_thumbprint_unconfigured' } }
     if ([IO.File]::GetAttributes($Contract.CertificateConfigurationPath).HasFlag([IO.FileAttributes]::ReparsePoint)) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_reparse_point' } }
+    if (-not (Test-RmsSupportAgentControlFileTrust -Path $Contract.CertificateConfigurationPath)) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_untrusted_boundary' } }
     try { $config = Get-Content -Raw -LiteralPath $Contract.CertificateConfigurationPath | ConvertFrom-Json } catch { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_invalid' } }
     $thumbprint = if ($null -ne $config.PSObject.Properties['certificateThumbprint']) { ([string]$config.certificateThumbprint -replace '\s', '').ToUpperInvariant() } else { $null }
     if ($thumbprint -notmatch '^[0-9A-F]{40}$') { return [pscustomobject]@{ Valid = $false; Code = 'certificate_thumbprint_invalid' } }
@@ -704,7 +751,8 @@ function Expand-RmsSupportAgentPackage {
             $relative = $entry.FullName.Replace('\', '/')
             if ($relative.StartsWith('/') -or @($relative.Split('/') | Where-Object { $_ -in @('', '.', '..') }).Count -gt 0 -or -not $seen.Add($relative) -or -not $expected.ContainsKey($relative)) { throw 'The package archive contains an unsafe path.' }
             $target = [IO.Path]::GetFullPath((Join-Path $Destination $relative))
-            $root = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($Destination)) + '\'
+            $destinationFull = [IO.Path]::GetFullPath($Destination)
+            $root = if ($destinationFull.EndsWith('\')) { $destinationFull } else { $destinationFull + '\' }
             if (-not $target.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw 'The package archive escaped the staging root.' }
             $directory = [IO.Path]::GetDirectoryName($target)
             if ((Test-Path -LiteralPath $directory -PathType Container) -and [IO.File]::GetAttributes($directory).HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'The package staging directory is a reparse point.' }
@@ -823,6 +871,104 @@ function Remove-RmsSupportAgentService {
     if ($result.ExitCode -ne 0) { throw 'The owned Agent service could not be removed.' }
 }
 
+function Save-RmsSupportAgentRetainedSlot {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$SlotRoot,
+        [Parameter(Mandatory)][psobject]$Contract,
+        [Parameter(Mandatory)][psobject]$Manifest
+    )
+
+    # Retains only the signed manifest and the already-verified available-package archive -- never a
+    # raw copy of the live installation directory. Restoration always re-extracts and re-verifies
+    # these exact bytes, so the retained slot itself carries no activation authority.
+    try {
+        if (Test-Path -LiteralPath $SlotRoot -PathType Container) {
+            if ([IO.File]::GetAttributes($SlotRoot).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $false }
+            Get-ChildItem -LiteralPath $SlotRoot -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        } else {
+            New-Item -ItemType Directory -Path $SlotRoot -Force | Out-Null
+        }
+
+        $availableArchive = Join-Path $Contract.AvailableRoot "$($Manifest.PackageId)-$($Manifest.Version).zip"
+        if (-not (Test-Path -LiteralPath $availableArchive -PathType Leaf) -or [IO.File]::GetAttributes($availableArchive).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $false }
+        Copy-Item -LiteralPath $availableArchive -Destination (Join-Path $SlotRoot ([IO.Path]::GetFileName($availableArchive))) -Force
+        $Manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $SlotRoot 'manifest.json') -Encoding UTF8
+        return $true
+    } catch { return $false }
+}
+
+function Restore-RmsSupportAgentRetainedSlot {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][psobject]$Contract,
+        [Parameter(Mandatory)][ValidateSet('Install', 'Upgrade', 'Repair', 'Rollback')][string]$FailedOperation,
+        [Parameter(Mandatory)][ValidateSet('Testing', 'Production')][string]$Channel
+    )
+
+    # Restores a retained package after a failed operation. A failed Install/Upgrade/Repair restores
+    # the retained PREVIOUS package from RollbackRoot; a failed explicit Rollback restores the
+    # retained CURRENT (pre-rollback) package from the separate bounded RecoveryRoot. Neither slot is
+    # ever selected using the failed operation's own incoming manifest; the durable checkpoint's
+    # PreviousVersion is the only trusted anchor for "what should be restored", and the exact bytes
+    # activated are always re-extracted from the retained signed archive into a brand-new staging
+    # directory and re-verified -- never copied from a raw persisted payload directory. Restoration is
+    # not terminal until it passes the same live health gate as a forward activation; on any failure
+    # the checkpoint is left in place as recovery evidence, never cleared.
+    $restoreStage = $null
+    try {
+        $checkpoint = try { Get-RmsSupportAgentLifecycleState -Contract $Contract } catch { $null }
+        if ($null -eq $checkpoint -or [string]::IsNullOrWhiteSpace([string]$checkpoint.PreviousVersion)) {
+            return [pscustomobject]@{ Succeeded = $false; Code = 'rollback_target_unconfirmed' }
+        }
+
+        $slotRoot = if ($FailedOperation -eq 'Rollback') { $Contract.RecoveryRoot } else { $Contract.RollbackRoot }
+        $trust = Test-RmsSupportAgentPackageTrust -Channel $Channel -Contract $Contract -SlotRoot $slotRoot
+        if (-not $trust.Valid -or $null -eq $trust.Manifest -or [string]$trust.Manifest.Version -ne [string]$checkpoint.PreviousVersion) {
+            return [pscustomobject]@{ Succeeded = $false; Code = 'rollback_trust_failed' }
+        }
+
+        $restoreStage = Join-Path $Contract.StagingRoot ('restore-' + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $restoreStage -Force | Out-Null
+        Expand-RmsSupportAgentPackage -ArchivePath $trust.ArchivePath -Destination $restoreStage -Manifest $trust.Manifest
+        $trust.Manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $restoreStage 'manifest.json') -Encoding UTF8
+
+        $currentManifest = if (Test-Path -LiteralPath $Contract.InstalledManifestPath -PathType Leaf) { try { Get-Content -Raw -LiteralPath $Contract.InstalledManifestPath | ConvertFrom-Json } catch { $null } } else { $null }
+        $service = Get-RmsSupportAgentServiceEvidence -Contract $Contract
+        if ($null -ne $service -and ($null -eq $currentManifest -or -not (Test-RmsSupportAgentServiceOwnership -Evidence $service -Contract $Contract -ExpectedPackageId ([string]$currentManifest.PackageId) -ExpectedVersion ([string]$currentManifest.Version)).Owned)) {
+            return [pscustomobject]@{ Succeeded = $false; Code = 'service_ownership_conflict' }
+        }
+
+        Stop-RmsSupportAgentService
+        if (Test-Path -LiteralPath $Contract.InstallRoot -PathType Container) { Remove-Item -LiteralPath $Contract.InstallRoot -Recurse -Force }
+        Copy-RmsSupportAgentOwnedDirectory -Source $restoreStage -Destination $Contract.InstallRoot
+
+        $executable = @($trust.Manifest.Files | Where-Object { $_.RelativePath -notmatch '[\\/]' -and $script:AllowedExecutableNames -contains $_.RelativePath })
+        if ($executable.Count -ne 1) { return [pscustomobject]@{ Succeeded = $false; Code = 'rollback_executable_invalid' } }
+        Ensure-RmsSupportAgentService -ExecutablePath (Join-Path $Contract.InstallRoot $executable[0].RelativePath)
+
+        $certificate = Test-RmsSupportAgentCertificatePrerequisite -Contract $Contract
+        if (-not $certificate.Valid) { return [pscustomobject]@{ Succeeded = $false; Code = $certificate.Code } }
+
+        Start-RmsSupportAgentService
+
+        # Terminal success requires the same restored-manifest, ownership, running-status, certificate,
+        # and live HTTPS health truth as any forward activation -- files copied and the service starting
+        # are not, by themselves, a successful rollback.
+        if (-not (Test-RmsSupportAgentHealth)) { return [pscustomobject]@{ Succeeded = $false; Code = 'agent_health_failed' } }
+
+        Clear-RmsSupportAgentLifecycleState -Contract $Contract
+        if ($FailedOperation -eq 'Rollback' -and (Test-Path -LiteralPath $Contract.RecoveryRoot -PathType Container)) {
+            try { Get-ChildItem -LiteralPath $Contract.RecoveryRoot -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } catch { }
+        }
+        return [pscustomobject]@{ Succeeded = $true; Code = 'rollback_succeeded'; Manifest = $trust.Manifest }
+    } catch {
+        return [pscustomobject]@{ Succeeded = $false; Code = 'rollback_unknown' }
+    } finally {
+        if ($null -ne $restoreStage -and (Test-Path -LiteralPath $restoreStage -PathType Container)) { Remove-Item -LiteralPath $restoreStage -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+
 function Add-RmsSupportAgentAuditEvent {
     [CmdletBinding()]
     param(
@@ -885,12 +1031,21 @@ function Invoke-RmsSupportAgentLifecycle {
     $lease = $null
     $stage = $null
     $manifest = $null
-    $rollbackManifest = $null
     $rollbackAttempted = $false
     try {
         try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'started' -PackageId '' -PackageVersion '' -FailureCode '' -RecoveryState 'not_required' } catch { }
         $existingState = Get-RmsSupportAgentLifecycleState -Contract $contract
-        if ($null -ne $existingState) { return [pscustomobject]@{ State = 'RecoveryRequired'; Code = 'recovery_required'; Detail = 'An incomplete lifecycle checkpoint exists. Recovery must be resolved before another mutation.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
+        if ($null -ne $existingState) {
+            # A checkpoint left behind before any destructive mutation began (staging only, not yet
+            # activated, not flagged as needing recovery) is safe to auto-clear and retry. Anything
+            # past that point -- or already marked RecoveryRequired -- must never be auto-deleted; it
+            # is the only durable evidence of an unresolved prior mutation.
+            if (-not $existingState.RecoveryRequired -and [string]$existingState.Phase -in @('Prepared', 'Staged')) {
+                Clear-RmsSupportAgentLifecycleState -Contract $contract
+            } else {
+                return [pscustomobject]@{ State = 'RecoveryRequired'; Code = 'recovery_required'; Detail = 'An incomplete lifecycle checkpoint exists. Recovery must be resolved before another mutation.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
+        }
 
         $trust = if ($Mode -eq 'Rollback') { Test-RmsSupportAgentPackageTrust -Channel $Channel -Contract $contract -Rollback } else { Test-RmsSupportAgentPackageTrust -Channel $Channel -Contract $contract }
         if ($Mode -ne 'Uninstall' -and -not $trust.Valid) { return [pscustomobject]@{ State = 'Failed'; Code = 'trust_rejected'; Detail = ($trust.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false } }
@@ -965,17 +1120,16 @@ function Invoke-RmsSupportAgentLifecycle {
 
         $installedManifest = if (Test-Path -LiteralPath $contract.InstalledManifestPath -PathType Leaf) { Get-Content -Raw -LiteralPath $contract.InstalledManifestPath | ConvertFrom-Json } else { $null }
         if ($null -ne $installedManifest) {
-            if ($Mode -ne 'Rollback') {
-                $rollbackAttempted = $true
-                if (Test-Path -LiteralPath $contract.RollbackRoot -PathType Container) { Remove-Item -LiteralPath (Join-Path $contract.RollbackRoot 'payload') -Recurse -Force -ErrorAction SilentlyContinue }
-                if (-not (Test-Path -LiteralPath $contract.RollbackRoot -PathType Container)) { New-Item -ItemType Directory -Path $contract.RollbackRoot -Force | Out-Null }
-                Copy-RmsSupportAgentOwnedDirectory -Source $contract.InstallRoot -Destination (Join-Path $contract.RollbackRoot 'payload')
-                $installedManifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $contract.RollbackRoot 'manifest.json') -Encoding UTF8
-                $previousArchive = Join-Path $contract.AvailableRoot "$($installedManifest.PackageId)-$($installedManifest.Version).zip"
-                if (-not (Test-Path -LiteralPath $previousArchive -PathType Leaf)) { throw 'The prior trusted package archive is unavailable for rollback.' }
-                Copy-Item -LiteralPath $previousArchive -Destination (Join-Path $contract.RollbackRoot ([IO.Path]::GetFileName($previousArchive))) -Force
-                $state.PreviousVersion = $installedManifest.Version; $state.Phase = 'PreviousPreserved'; $state.UpdatedAtUtc = [DateTimeOffset]::UtcNow; Write-RmsSupportAgentLifecycleState -Contract $contract -State $state
-            }
+            # Upgrade/Repair/Install-over-existing retain the PREVIOUS package in RollbackRoot so a
+            # failed activation can restore it. An explicit Rollback instead retains the CURRENT
+            # package into the separate bounded RecoveryRoot, so a failed rollback can restore the
+            # version it was rolling back from instead of retrying the same failed target. Either way
+            # only the signed manifest and its already-verified available archive are retained -- never
+            # a raw copy of the live installation directory.
+            $rollbackAttempted = $true
+            $retainSlotRoot = if ($Mode -eq 'Rollback') { $contract.RecoveryRoot } else { $contract.RollbackRoot }
+            if (-not (Save-RmsSupportAgentRetainedSlot -SlotRoot $retainSlotRoot -Contract $contract -Manifest $installedManifest)) { throw 'The prior trusted package could not be retained for rollback or recovery.' }
+            $state.PreviousVersion = $installedManifest.Version; $state.Phase = 'PreviousPreserved'; $state.UpdatedAtUtc = [DateTimeOffset]::UtcNow; Write-RmsSupportAgentLifecycleState -Contract $contract -State $state
             Stop-RmsSupportAgentService
         }
 
@@ -997,16 +1151,13 @@ function Invoke-RmsSupportAgentLifecycle {
     } catch {
         $failure = $_.Exception.Message
         try {
-            if ($rollbackAttempted -and (Test-Path -LiteralPath (Join-Path $contract.RollbackRoot 'payload') -PathType Container)) {
-                Stop-RmsSupportAgentService
-                if (Test-Path -LiteralPath $contract.InstallRoot -PathType Container) { Remove-Item -LiteralPath $contract.InstallRoot -Recurse -Force }
-                Copy-RmsSupportAgentOwnedDirectory -Source (Join-Path $contract.RollbackRoot 'payload') -Destination $contract.InstallRoot
-                $rollbackManifest = Get-Content -Raw -LiteralPath (Join-Path $contract.RollbackRoot 'manifest.json') | ConvertFrom-Json
-                $rollbackExe = @($rollbackManifest.Files | Where-Object { $_.RelativePath -notmatch '[\\/]' -and $script:AllowedExecutableNames -contains $_.RelativePath })
-                if ($rollbackExe.Count -eq 1) { Ensure-RmsSupportAgentService -ExecutablePath (Join-Path $contract.InstallRoot $rollbackExe[0].RelativePath); Start-RmsSupportAgentService }
-                Clear-RmsSupportAgentLifecycleState -Contract $contract
-                Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'rollback_succeeded' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovered'
-                return [pscustomobject]@{ State = 'RollbackSucceeded'; Code = 'rollback_succeeded'; Detail = 'Activation failed and the prior trusted installation was restored.'; RollbackAttempted = $true; RollbackSucceeded = $true }
+            if ($rollbackAttempted) {
+                $restore = Restore-RmsSupportAgentRetainedSlot -Contract $contract -FailedOperation $Mode -Channel $Channel
+                if ($restore.Succeeded) {
+                    Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'rollback_succeeded' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovered'
+                    return [pscustomobject]@{ State = 'RollbackSucceeded'; Code = 'rollback_succeeded'; Detail = 'Activation failed; the prior trusted installation was restored and its own health was independently confirmed.'; RollbackAttempted = $true; RollbackSucceeded = $true }
+                }
+                $failure = $failure + '; rollback_failed:' + $restore.Code
             }
         } catch { $failure = $failure + '; rollback_failed' }
         try {
@@ -1033,7 +1184,10 @@ Export-ModuleMember -Function @(
     'Get-RmsCanonicalPackagePayloadText',
     'Test-RmsSupportAgentPackageTrust',
     'Test-RmsSupportAgentInstalledIntegrity',
+    'Test-RmsSupportAgentControlFileTrust',
     'Get-RmsSupportAgentServiceEvidence',
     'Get-RmsSupportAgentLifecycleState',
+    'Save-RmsSupportAgentRetainedSlot',
+    'Restore-RmsSupportAgentRetainedSlot',
     'Invoke-RmsSupportAgentLifecycle'
 )

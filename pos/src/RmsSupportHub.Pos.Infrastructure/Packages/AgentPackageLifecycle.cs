@@ -17,15 +17,16 @@ public interface IAgentPackageInstallationPlatform
 
     Task<bool> VerifyHealthAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default);
 
-    Task<bool> RollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default);
+    // Rollback never takes the failed operation's incoming manifest as a trust or identity input.
+    // The platform independently resolves which retained slot (rollback vs. recovery) and which
+    // durable checkpoint identity to restore, based only on the operation that failed.
+    Task<bool> RollbackAsync(AgentPackageOperationKind failedOperation, CancellationToken cancellationToken = default);
 
-    // These overloads preserve the original test seam while giving the production platform the
-    // operation kind needed for install/upgrade/repair/uninstall/rollback transition rules.
+    // This overload preserves the original test seam while giving the production platform the
+    // operation kind needed for install/upgrade/repair/uninstall transition rules.
     Task<bool> PrepareAsync(AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken = default) => PrepareAsync(manifest, cancellationToken);
 
     Task<bool> ActivateAsync(string stagedRoot, AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken = default) => ActivateAsync(stagedRoot, manifest, cancellationToken);
-
-    Task<bool> RollbackAsync(AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken = default) => RollbackAsync(manifest, cancellationToken);
 }
 
 public interface IAgentHealthProbe
@@ -114,8 +115,19 @@ public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInsta
         {
             options.EnsureStorageProvisioned();
             if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal)) return Fail("package_channel_not_configured");
+            if (stateStore.HasUnreadableState) return Fail("recovery_required");
             var checkpoint = stateStore.Read();
-            if (stateStore.HasUnreadableState || checkpoint is not null) return Fail("recovery_required");
+            if (checkpoint is not null)
+            {
+                // A checkpoint left in Prepared/Staged never reached a destructive mutation of the
+                // live installation, so it is safe to abandon and clear automatically. Anything at or
+                // past Activated -- or already flagged RecoveryRequired -- stays fail-closed: only a
+                // verified rollback/recovery outcome may resolve it.
+                var safeToAutoClear = !checkpoint.RecoveryRequired
+                    && checkpoint.Phase is AgentPackageLifecyclePhase.Prepared or AgentPackageLifecyclePhase.Staged;
+                if (!safeToAutoClear) return Fail("recovery_required");
+                stateStore.Clear();
+            }
 
             var installed = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
             var service = serviceController.ReadPermanent();
@@ -197,9 +209,16 @@ public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInsta
             await WriteManifestAsync(stagedRoot, manifest, cancellationToken).ConfigureAwait(false);
             stateStore.Write(ReadState(operationId, operation, AgentPackageLifecyclePhase.Staged, manifest, installed));
 
-            if (installed is not null && operation != AgentPackageOperationKind.Rollback)
+            if (installed is not null)
             {
-                if (!await PreserveRollbackAsync(installed, cancellationToken).ConfigureAwait(false)) return FailAndCheckpoint("rollback_preservation_failed");
+                // Upgrade/Repair/Install-over-existing retain the PREVIOUS package so a failed
+                // activation can restore it. An explicit Rollback instead retains the CURRENT
+                // package into a separate bounded recovery slot, so a failed rollback can restore
+                // the version it was rolling back from instead of retrying the same failed target.
+                var preserved = operation == AgentPackageOperationKind.Rollback
+                    ? await PreserveRecoveryAsync(installed, cancellationToken).ConfigureAwait(false)
+                    : await PreserveRollbackAsync(installed, cancellationToken).ConfigureAwait(false);
+                if (!preserved) return FailAndCheckpoint(operation == AgentPackageOperationKind.Rollback ? "recovery_preservation_failed" : "rollback_preservation_failed");
                 stateStore.Write(ReadState(operationId, operation, AgentPackageLifecyclePhase.PreviousPreserved, manifest, installed));
             }
 
@@ -249,43 +268,71 @@ public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInsta
         }
     }
 
-    public Task<bool> RollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default) =>
-        RollbackAsync(manifest, AgentPackageOperationKind.Rollback, cancellationToken);
-
-    public async Task<bool> RollbackAsync(
-        AgentPackageManifest manifest,
-        AgentPackageOperationKind operation,
-        CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Restores a retained PREVIOUS package after a failed operation. The failed operation's own
+    /// (incoming) manifest is never consulted here -- that was the root cause of a real upgrade
+    /// rollback always failing closed as a manifest mismatch. Instead the retained slot and the
+    /// durable checkpoint's <see cref="AgentPackageLifecycleState.PreviousVersion"/> together define
+    /// what "the previous trusted package" means, and the exact bytes activated are re-extracted from
+    /// the retained signed archive and re-verified, never copied from a raw persisted payload
+    /// directory. A restore is not terminal until it passes the same health gate as a forward
+    /// activation; on any failure the checkpoint is preserved as recovery evidence, never cleared.
+    /// </summary>
+    public async Task<bool> RollbackAsync(AgentPackageOperationKind failedOperation, CancellationToken cancellationToken = default)
     {
+        var restoreStagingRoot = Path.Combine(options.StagingRoot, "restore-" + Guid.NewGuid().ToString("N"));
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!string.Equals(manifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal)) return Fail("package_channel_not_configured");
-            var rollbackManifest = await ReadManifestAsync(Path.Combine(options.RollbackRoot, "manifest.json"), cancellationToken).ConfigureAwait(false);
-            if (rollbackManifest is null || !ManifestEquivalent(rollbackManifest, manifest)) return Fail("rollback_manifest_mismatch");
-            var rollbackVerification = await verifier.VerifyRollbackAsync(rollbackManifest, cancellationToken).ConfigureAwait(false);
-            if (rollbackVerification.State != AgentPackageVerificationState.Verified) return Fail("rollback_trust_failed");
-            if (!Directory.Exists(options.RollbackPayloadRoot) || HasReparsePoint(options.RollbackPayloadRoot)) return Fail("rollback_payload_unavailable");
+
+            // A failed explicit Rollback restores the CURRENT (pre-rollback) package from the bounded
+            // recovery slot. Every other failed operation restores the retained PREVIOUS package from
+            // the rollback slot. Neither slot is ever selected or matched using the failed operation's
+            // incoming manifest.
+            var slotRoot = failedOperation == AgentPackageOperationKind.Rollback ? options.RecoveryRoot : options.RollbackRoot;
+
+            var checkpoint = stateStore.Read();
+            if (checkpoint is null || string.IsNullOrWhiteSpace(checkpoint.PreviousVersion)) return Fail("rollback_target_unconfirmed");
+
+            var retainedManifest = await ReadManifestAsync(Path.Combine(slotRoot, "manifest.json"), cancellationToken).ConfigureAwait(false);
+            if (retainedManifest is null || !string.Equals(retainedManifest.Version, checkpoint.PreviousVersion, StringComparison.Ordinal)) return FailAndCheckpoint("rollback_manifest_mismatch");
+            if (!string.Equals(retainedManifest.ReleaseChannel, options.ReleaseChannel, StringComparison.Ordinal)) return FailAndCheckpoint("package_channel_not_configured");
+
+            var verification = failedOperation == AgentPackageOperationKind.Rollback
+                ? await verifier.VerifyRecoveryAsync(retainedManifest, cancellationToken).ConfigureAwait(false)
+                : await verifier.VerifyRollbackAsync(retainedManifest, cancellationToken).ConfigureAwait(false);
+            if (verification.State != AgentPackageVerificationState.Verified) return FailAndCheckpoint("rollback_trust_failed");
+
+            // Re-extract the exact verified bytes into a brand-new unique staging directory rather
+            // than trusting any previously copied directory: this closes the TOCTOU gap between "the
+            // signed artifact" and "the bytes actually activated."
+            var archivePath = Path.Combine(slotRoot, retainedManifest.PackageId + "-" + retainedManifest.Version + ".zip");
+            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(restoreStagingRoot);
+            await AgentPackageArchiveStaging.ExtractExactFilesAsync(archivePath, restoreStagingRoot, retainedManifest, cancellationToken).ConfigureAwait(false);
+            if (!await AgentPackageArchiveStaging.VerifyStagedFilesAsync(restoreStagingRoot, retainedManifest, cancellationToken).ConfigureAwait(false)) return FailAndCheckpoint("rollback_staged_mismatch");
+            // Written only after the exact staged file-set is verified, so the strict manifest/file-set
+            // comparison above is never polluted by this control file, and the restored installation
+            // carries the same retained, re-verified manifest the post-restore health gate checks against.
+            await WriteManifestAsync(restoreStagingRoot, retainedManifest, cancellationToken).ConfigureAwait(false);
 
             var current = await ReadInstalledManifestAsync(cancellationToken).ConfigureAwait(false);
             var service = serviceController.ReadPermanent();
             if (service is not null
-                && (current is null || !await IsOwnedServiceAsync(service, current, cancellationToken).ConfigureAwait(false))) return Fail("service_ownership_conflict");
-            if (!StopOwnedServiceBeforeReplacement(cancellationToken)) return Fail("owned_service_stop_failed");
+                && (current is null || !await IsOwnedServiceAsync(service, current, cancellationToken).ConfigureAwait(false))) return FailAndCheckpoint("service_ownership_conflict");
+            if (!StopOwnedServiceBeforeReplacement(cancellationToken)) return FailAndCheckpoint("owned_service_stop_failed");
+            if (!ReplaceInstallation(restoreStagingRoot, cancellationToken)) return FailAndCheckpoint("rollback_activation_failed");
 
-            if (Directory.Exists(options.InstallationRoot))
-            {
-                if (HasReparsePoint(options.InstallationRoot)) return Fail("installation_reparse_point");
-                Directory.Delete(options.InstallationRoot, recursive: true);
-            }
+            var executable = GetExecutablePath(retainedManifest);
+            if (executable is null) return FailAndCheckpoint("rollback_executable_invalid");
+            if (!certificatePrerequisite.IsSatisfied(retainedManifest, out var certificateFailure)) return FailAndCheckpoint(certificateFailure);
+            if (!serviceController.EnsureConfigured(executable) || !serviceController.Start(cancellationToken)) return FailAndCheckpoint("rollback_service_activation_failed");
 
-            if (!CopyDirectoryExact(options.RollbackPayloadRoot, options.InstallationRoot, cancellationToken)) return Fail("rollback_copy_failed");
-            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.InstallationRoot);
-            var executable = GetExecutablePath(rollbackManifest);
-            if (executable is null) return Fail("rollback_executable_invalid");
-            if (!certificatePrerequisite.IsSatisfied(rollbackManifest, out var certificateFailure)) return Fail(certificateFailure);
-            if (!serviceController.EnsureConfigured(executable) || !serviceController.Start(cancellationToken)) return Fail("rollback_service_activation_failed");
-            stateStore.Clear();
+            // Terminal success requires the same restored-manifest, ownership, running-status,
+            // certificate, and live HTTPS health truth as any forward activation -- files copied and
+            // StartService succeeding are not, by themselves, a successful rollback.
+            if (!await VerifyHealthAsync(retainedManifest, cancellationToken).ConfigureAwait(false)) return FailAndCheckpoint(LastFailureCode);
+
+            if (failedOperation == AgentPackageOperationKind.Rollback) TryCleanupRetainedSlot(options.RecoveryRoot);
             return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -294,7 +341,11 @@ public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInsta
         }
         catch
         {
-            return Fail("rollback_unknown");
+            return FailAndCheckpoint("rollback_unknown");
+        }
+        finally
+        {
+            try { if (Directory.Exists(restoreStagingRoot) && !HasReparsePoint(restoreStagingRoot)) Directory.Delete(restoreStagingRoot, recursive: true); } catch { }
         }
     }
 
@@ -368,27 +419,57 @@ public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInsta
         return assessment.State == AgentResourceOwnershipState.Owned;
     }
 
-    private async Task<bool> PreserveRollbackAsync(AgentPackageManifest installed, CancellationToken cancellationToken)
+    // Retains the PREVIOUS package for automatic rollback of a failed Install/Upgrade/Repair.
+    private Task<bool> PreserveRollbackAsync(AgentPackageManifest installed, CancellationToken cancellationToken) =>
+        PreserveRetainedSlotAsync(options.RollbackRoot, installed, cancellationToken);
+
+    // Retains the CURRENT package for recovery from a failed explicit Rollback. Bounded to a single
+    // fixed service-owned root; the prior contents of the slot are always discarded first, so it can
+    // only ever hold the most recent one-operation recovery source.
+    private Task<bool> PreserveRecoveryAsync(AgentPackageManifest installed, CancellationToken cancellationToken) =>
+        PreserveRetainedSlotAsync(options.RecoveryRoot, installed, cancellationToken);
+
+    /// <summary>
+    /// Retains only the signed manifest and the already-verified available-package archive -- never a
+    /// raw copy of the live installation directory. Restoration always re-extracts and re-verifies
+    /// these exact bytes, so the retained slot itself carries no activation authority.
+    /// </summary>
+    private async Task<bool> PreserveRetainedSlotAsync(string slotRoot, AgentPackageManifest installed, CancellationToken cancellationToken)
     {
         try
         {
-            if (HasReparsePoint(options.RollbackRoot)) return false;
-            if (Directory.Exists(options.RollbackPayloadRoot)) Directory.Delete(options.RollbackPayloadRoot, recursive: true);
-            var rollbackManifestPath = Path.Combine(options.RollbackRoot, "manifest.json");
-            if (File.Exists(rollbackManifestPath)) File.Delete(rollbackManifestPath);
-            var rollbackArchive = Path.Combine(options.RollbackRoot, installed.PackageId + "-" + installed.Version + ".zip");
-            if (File.Exists(rollbackArchive)) File.Delete(rollbackArchive);
-            if (!CopyDirectoryExact(options.InstallationRoot, options.RollbackPayloadRoot, cancellationToken)) return false;
-            await WriteManifestAsync(options.RollbackPayloadRoot, installed, cancellationToken).ConfigureAwait(false);
+            if (Directory.Exists(slotRoot) && HasReparsePoint(slotRoot)) return false;
+            var manifestPath = Path.Combine(slotRoot, "manifest.json");
+            if (File.Exists(manifestPath)) File.Delete(manifestPath);
+            var archivePath = Path.Combine(slotRoot, installed.PackageId + "-" + installed.Version + ".zip");
+            if (File.Exists(archivePath)) File.Delete(archivePath);
             var availableArchive = Path.Combine(options.AvailableRoot, installed.PackageId + "-" + installed.Version + ".zip");
             if (!File.Exists(availableArchive) || HasReparsePoint(availableArchive)) return false;
-            File.Copy(availableArchive, rollbackArchive, overwrite: false);
-            await WriteManifestAsync(options.RollbackRoot, installed, cancellationToken).ConfigureAwait(false);
+            File.Copy(availableArchive, archivePath, overwrite: false);
+            await WriteManifestAsync(slotRoot, installed, cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Clears a retained slot's manifest and archive after it has been successfully used for
+    /// recovery. Only ever called after a terminal, health-verified success -- never speculatively.
+    /// </summary>
+    private static void TryCleanupRetainedSlot(string slotRoot)
+    {
+        try
+        {
+            if (!Directory.Exists(slotRoot) || HasReparsePoint(slotRoot)) return;
+            foreach (var file in Directory.EnumerateFiles(slotRoot)) File.Delete(file);
+        }
+        catch
+        {
+            // Best-effort cleanup only; a leftover retained slot is inert until the next preservation
+            // overwrites it, and is never itself trusted as activation authority.
         }
     }
 
@@ -641,7 +722,7 @@ public sealed class FileAgentPackageLifecycle(
             activationAttempted = true;
             if (!await platform.ActivateAsync(stagingRoot, request.Manifest, request.Operation, cancellationToken).ConfigureAwait(false))
             {
-                var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+                var rollback = await SafeRollbackAsync(request.Operation, CancellationToken.None).ConfigureAwait(false);
                 return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Activation failed; the prior Agent package was restored and verified by the platform.") : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Activation failed and rollback could not be confirmed; recovery is required.");
             }
 
@@ -652,7 +733,7 @@ public sealed class FileAgentPackageLifecycle(
 
             if (!await platform.VerifyHealthAsync(request.Manifest, cancellationToken).ConfigureAwait(false))
             {
-                var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+                var rollback = await SafeRollbackAsync(request.Operation, CancellationToken.None).ConfigureAwait(false);
                 return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Post-activation health failed; the prior Agent package was restored and verified.") : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Post-activation health failed and rollback could not be confirmed; recovery is required.");
             }
 
@@ -661,13 +742,13 @@ public sealed class FileAgentPackageLifecycle(
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             if (!activationAttempted) return new(AgentPackageOperationState.Failed, false, false, false, "Package staging was cancelled before activation began.");
-            var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+            var rollback = await SafeRollbackAsync(request.Operation, CancellationToken.None).ConfigureAwait(false);
             return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Package activation was cancelled; the prior package was restored.") : new(AgentPackageOperationState.RecoveryRequired, true, false, true, "Package activation was cancelled and recovery could not be confirmed.");
         }
         catch
         {
             if (!activationAttempted) return new(AgentPackageOperationState.Failed, false, false, false, "Package staging failed before activation began.");
-            var rollback = await SafeRollbackAsync(request.Manifest, request.Operation, CancellationToken.None).ConfigureAwait(false);
+            var rollback = await SafeRollbackAsync(request.Operation, CancellationToken.None).ConfigureAwait(false);
             return rollback ? new(AgentPackageOperationState.RollbackSucceeded, true, true, false, "Package activation failed; the prior package was restored.") : new(AgentPackageOperationState.RollbackFailed, true, false, true, "Package activation failed and rollback could not be confirmed; recovery is required.");
         }
         finally
@@ -676,12 +757,29 @@ public sealed class FileAgentPackageLifecycle(
         }
     }
 
-    private async Task<bool> SafeRollbackAsync(AgentPackageManifest manifest, AgentPackageOperationKind operation, CancellationToken cancellationToken)
+    private async Task<bool> SafeRollbackAsync(AgentPackageOperationKind failedOperation, CancellationToken cancellationToken)
     {
-        try { return await platform.RollbackAsync(manifest, operation, cancellationToken).ConfigureAwait(false); } catch { return false; }
+        try { return await platform.RollbackAsync(failedOperation, cancellationToken).ConfigureAwait(false); } catch { return false; }
     }
 
-    private static async Task ExtractExactFilesAsync(string archivePath, string stagingRoot, AgentPackageManifest manifest, CancellationToken cancellationToken)
+    private static Task ExtractExactFilesAsync(string archivePath, string stagingRoot, AgentPackageManifest manifest, CancellationToken cancellationToken) =>
+        AgentPackageArchiveStaging.ExtractExactFilesAsync(archivePath, stagingRoot, manifest, cancellationToken);
+
+    private static Task<bool> VerifyStagedFilesAsync(string root, AgentPackageManifest manifest, CancellationToken cancellationToken) =>
+        AgentPackageArchiveStaging.VerifyStagedFilesAsync(root, manifest, cancellationToken);
+
+    private static bool HasReparsePoint(string path) => AgentPackageArchiveStaging.HasReparsePoint(path);
+}
+
+/// <summary>
+/// Shared exact-archive-extraction and staged-file verification, used both for forward package
+/// activation and for re-extracting a retained rollback/recovery archive. Centralizing this keeps the
+/// same reparse/traversal/exact-file-set/hash rules in force everywhere bytes are staged for
+/// activation, instead of trusting a previously copied directory.
+/// </summary>
+internal static class AgentPackageArchiveStaging
+{
+    public static async Task ExtractExactFilesAsync(string archivePath, string stagingRoot, AgentPackageManifest manifest, CancellationToken cancellationToken)
     {
         using var archive = System.IO.Compression.ZipFile.OpenRead(archivePath);
         var expected = manifest.Files.ToDictionary(file => file.RelativePath.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase);
@@ -707,7 +805,7 @@ public sealed class FileAgentPackageLifecycle(
         }
     }
 
-    private static async Task<bool> VerifyStagedFilesAsync(string root, AgentPackageManifest manifest, CancellationToken cancellationToken)
+    public static async Task<bool> VerifyStagedFilesAsync(string root, AgentPackageManifest manifest, CancellationToken cancellationToken)
     {
         var expected = manifest.Files.Select(file => file.RelativePath.Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var actual = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Select(path => Path.GetRelativePath(root, path).Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -744,7 +842,7 @@ public sealed class FileAgentPackageLifecycle(
 
     private static bool IsArchiveLink(System.IO.Compression.ZipArchiveEntry entry) => ((entry.ExternalAttributes >> 16) & 0xF000) == 0xA000;
 
-    private static bool HasReparsePoint(string path)
+    public static bool HasReparsePoint(string path)
     {
         try { return File.Exists(path) || Directory.Exists(path) ? File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint) : true; }
         catch { return true; }

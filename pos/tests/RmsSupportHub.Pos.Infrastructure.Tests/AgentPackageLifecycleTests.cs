@@ -116,7 +116,7 @@ public sealed class AgentPackageLifecycleTests
             return Task.FromResult(HealthResult);
         }
 
-        public Task<bool> RollbackAsync(AgentPackageManifest manifest, CancellationToken cancellationToken = default)
+        public Task<bool> RollbackAsync(AgentPackageOperationKind failedOperation, CancellationToken cancellationToken = default)
         {
             RolledBack = true;
             return Task.FromResult(RollbackResult);
