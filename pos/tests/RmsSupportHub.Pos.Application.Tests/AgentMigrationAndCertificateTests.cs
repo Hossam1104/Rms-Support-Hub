@@ -70,7 +70,8 @@ public sealed class AgentMigrationAndCertificateTests
             AgentCertificatePolicy.ExpectedOwnershipMarker,
             now.AddDays(-1),
             now.AddDays(60),
-            "LocalMachine");
+            "LocalMachine",
+            TrustedPrivateKeyEvidence());
 
         var assessment = new AgentCertificatePolicy().Assess(valid, now);
 
@@ -95,4 +96,63 @@ public sealed class AgentMigrationAndCertificateTests
 
         Assert.False(new AgentCertificatePolicy().CanRemove(evidence, "AABB"));
     }
+
+    [Fact]
+    public void CertificatePolicyRejectsAdminOnlyPrivateKeyProof()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var evidence = new AgentCertificateEvidence(
+            "AABB",
+            "rms-pos-agent.localhost",
+            true,
+            AgentCertificatePolicy.ExpectedProvider,
+            false,
+            true,
+            AgentCertificatePolicy.ExpectedOwnershipMarker,
+            now.AddDays(-1),
+            now.AddDays(60),
+            "LocalMachine",
+            TrustedPrivateKeyEvidence() with { LocalSystemReadAccess = false });
+
+        var assessment = new AgentCertificatePolicy().Assess(evidence, now);
+
+        Assert.False(assessment.Valid);
+        Assert.Equal("local_system_private_key_access_unproven", assessment.Code);
+    }
+
+    [Fact]
+    public void CertificatePolicyRejectsBroadPrivateKeyAllowRuleEvidence()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var evidence = new AgentCertificateEvidence(
+            "AABB",
+            "rms-pos-agent.localhost",
+            true,
+            AgentCertificatePolicy.ExpectedProvider,
+            false,
+            true,
+            AgentCertificatePolicy.ExpectedOwnershipMarker,
+            now.AddDays(-1),
+            now.AddDays(60),
+            "LocalMachine",
+            TrustedPrivateKeyEvidence() with { HasUnsafeAllowRules = true });
+
+        var assessment = new AgentCertificatePolicy().Assess(evidence, now);
+
+        Assert.False(assessment.Valid);
+        Assert.Equal("local_system_private_key_access_unproven", assessment.Code);
+    }
+
+    private static AgentPrivateKeySecurityEvidence TrustedPrivateKeyEvidence() =>
+        new(
+            IsMachineKey: true,
+            IsCngKey: true,
+            ProviderName: AgentCertificatePolicy.ExpectedProvider,
+            IsExportable: false,
+            KeyFileExists: true,
+            KeyFileIsReparsePoint: false,
+            OwnerTrusted: true,
+            AccessRulesProtected: true,
+            LocalSystemReadAccess: true,
+            HasUnsafeAllowRules: false);
 }

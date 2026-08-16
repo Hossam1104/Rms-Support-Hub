@@ -76,6 +76,29 @@ public static class AgentLegacyServiceCatalog
     }
 }
 
+public sealed record AgentPrivateKeySecurityEvidence(
+    bool IsMachineKey,
+    bool IsCngKey,
+    string? ProviderName,
+    bool IsExportable,
+    bool KeyFileExists,
+    bool KeyFileIsReparsePoint,
+    bool OwnerTrusted,
+    bool AccessRulesProtected,
+    bool LocalSystemReadAccess,
+    bool HasUnsafeAllowRules)
+{
+    public bool IsTrusted => IsMachineKey
+        && IsCngKey
+        && !IsExportable
+        && KeyFileExists
+        && !KeyFileIsReparsePoint
+        && OwnerTrusted
+        && AccessRulesProtected
+        && LocalSystemReadAccess
+        && !HasUnsafeAllowRules;
+}
+
 public sealed record AgentCertificateEvidence(
     string? Thumbprint,
     string? DnsName,
@@ -86,7 +109,8 @@ public sealed record AgentCertificateEvidence(
     string? OwnershipMarker,
     DateTimeOffset NotBeforeUtc,
     DateTimeOffset NotAfterUtc,
-    string StoreLocation);
+    string StoreLocation,
+    AgentPrivateKeySecurityEvidence? PrivateKeySecurity = null);
 
 public sealed record AgentCertificateAssessment(
     bool Valid,

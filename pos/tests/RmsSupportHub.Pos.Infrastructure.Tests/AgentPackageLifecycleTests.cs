@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Packages;
 
 namespace RmsSupportHub.Pos.Infrastructure.Tests;
@@ -10,7 +11,7 @@ public sealed class AgentPackageLifecycleTests
     [Fact]
     public void LifecycleCheckpointTreatsCorruptionAsRecoveryRequired()
     {
-        var root = Path.Combine(Path.GetTempPath(), "rms-agent-checkpoint-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-checkpoint-" + Guid.NewGuid().ToString("N"));
         try
         {
             var options = new AgentPackageOptions
@@ -20,6 +21,7 @@ public sealed class AgentPackageLifecycleTests
             };
             options.EnsureStorageProvisioned();
             File.WriteAllText(options.LifecycleStatePath, "not-json");
+            ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(options.LifecycleStatePath);
 
             var store = new AgentPackageLifecycleStateStore(options);
 
@@ -28,6 +30,7 @@ public sealed class AgentPackageLifecycleTests
 
             store.Clear();
             File.WriteAllText(options.LifecycleStatePath, "null");
+            ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(options.LifecycleStatePath);
             var nullStateStore = new AgentPackageLifecycleStateStore(options);
             Assert.Null(nullStateStore.Read());
             Assert.True(nullStateStore.HasUnreadableState);
@@ -140,7 +143,7 @@ public sealed class AgentPackageLifecycleTests
 
         public static PackageFixture Create(bool unsafeArchive = false)
         {
-            var root = Path.Combine(Path.GetTempPath(), "rms-agent-lifecycle-" + Guid.NewGuid().ToString("N"));
+            var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-lifecycle-" + Guid.NewGuid().ToString("N"));
             var options = new AgentPackageOptions
             {
                 PackageRoot = Path.Combine(root, "packages"),

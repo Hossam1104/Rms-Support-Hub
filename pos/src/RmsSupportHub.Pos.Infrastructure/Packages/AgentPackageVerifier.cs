@@ -126,10 +126,23 @@ public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSi
 
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
-            var property = channel == "Production" ? "productionSignerThumbprint" : "testingSignerThumbprint";
-            return document.RootElement.TryGetProperty(property, out var value)
-                ? AgentPackageTrustOptions.Normalize(value.GetString())
-                : null;
+
+            if (!TryReadConfiguredThumbprint(document.RootElement, "productionSignerThumbprint", out var production)
+                || !TryReadConfiguredThumbprint(document.RootElement, "testingSignerThumbprint", out var testing))
+            {
+                return null;
+            }
+
+            try
+            {
+                AgentPackageTrustOptions.ValidateDistinctThumbprints(production, testing);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+
+            return channel == "Production" ? production : testing;
         }
         catch (JsonException)
         {
@@ -143,6 +156,21 @@ public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSi
         {
             return null;
         }
+    }
+
+    private static bool TryReadConfiguredThumbprint(
+        JsonElement root,
+        string propertyName,
+        out string? normalized)
+    {
+        normalized = null;
+        if (!root.TryGetProperty(propertyName, out var value)) return true;
+        if (value.ValueKind != JsonValueKind.String) return false;
+
+        var raw = value.GetString();
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        normalized = AgentPackageTrustOptions.Normalize(raw);
+        return normalized is not null;
     }
 }
 

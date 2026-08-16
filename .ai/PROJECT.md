@@ -50,26 +50,24 @@ Do not copy facts that can be cheaply discovered from the repository.
   service names, machine-pinned package trust with a deterministic canonical
   envelope, a controlled LocalMachine signing/publication boundary, a typed
   checkpointed Windows install/upgrade/repair/rollback/uninstall lifecycle,
-  fail-closed certificate/browser-policy contracts, bounded durable JSONL
-  audit, fixed RMS-root health, update state, and insurance-attachment
-  aggregate contracts. The installer/bootstrap scripts execute only after
-  trust, ownership, certificate, ACL, and health prerequisites are proved;
+  machine-owned release mode with distinct Production/Testing signer pins,
+  file-and-ancestor ACL/owner/reparse verification for security-control files,
+  actual LocalSystem CNG key-file evidence, fail-closed certificate/browser-
+  policy contracts, bounded durable JSONL audit, fixed RMS-root health, update
+  state, and insurance-attachment aggregate contracts. Installer/bootstrap scripts execute only after trust, ownership, certificate, ACL, and health prerequisites are proved;
   absent evidence fails closed and no Production/customer mutation is claimed.
 - POS Slice B adds fixed Main Server profiles/read-only state, manifest-bound
   diagnostics, atomic principal-scoped snapshots, and typed package/repair/
   Guided Repair boundaries. State-changing workflows require fresh snapshots,
   confirmation, one-use auth/idempotency, verified manifests, and truthful
-  health/rollback/recovery; validation never activates RMS packages or runs
-  repair.
+  health/rollback/recovery; validation never activates RMS packages or runs repair.
 - Fixed `RMS_Plus/ReleaseNumber.txt` is Product Release, Cashier UI `Settings:TheClient` is Client, component builds are drift evidence, and the real manager SCM name is `RMSServiceManager`. Main Server maintenance uses Agent-owned profiles bound to discovered Branch/POS; Angular supplies no URL/target, and live mutation requires owner approval.
 - Device repair is typed local-package work; Main Server install/uninstall are state acknowledgements until evidence proves otherwise. The canonical Testing POS entry is `https://support-hub.integration.test:4443/tools/pos-maintenance`; the Hub card opens it and the route guard rejects wrong-origin direct loads.
 - Slice B security remediation uses fixed provisioned service-owned roots, a
   machine-wide privileged mutation lease, bounded fail-closed redaction, and
   typed POST previews. The fixed RMS source catalog and sanitized registry
-  allow-list are documented in
-  `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`; Slice C requirements
-  are in `docs/POS_SLICE_C_REQUIREMENTS.md`; the implemented foundation and
-  remaining evidence gates are in `docs/POS_SLICE_C_IMPLEMENTATION.md`.
+   allow-list are documented in `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`; Slice C requirements are in `docs/POS_SLICE_C_REQUIREMENTS.md`; the implemented foundation and remaining evidence gates are in
+   `docs/POS_SLICE_C_IMPLEMENTATION.md`.
 ## Build and Validation Entry Points
 - Full gate: `.\scripts\build.ps1` - backend tests, Release build, and the
   Angular production build in sequence.
@@ -91,12 +89,13 @@ Do not copy facts that can be cheaply discovered from the repository.
   then `npm --prefix frontend run generate:pos-agent-client`. Output is under
   `frontend/src/app/core/pos-agent/generated/` and is not edited manually.
 - POS deployment planning: `scripts/bootstrap-rms-support-agent.ps1
--Status` is read-only and `-PlanOnly -Channel Testing` prints the bounded
-  package, migration, browser, certificate, and lifecycle plan. Package
-  publication uses `scripts/publish-rms-support-agent-package.ps1` with a
-  LocalMachine code-signing key; trusted process configuration maps the
-   `Testing` environment to Testing and all other hosts to Production. Production
-   trust, PKI, fleet enrollment, and elevated Testing evidence are separate gates.
+  -Status` is read-only and `-PlanOnly` prints the bounded package, migration,
+  browser, certificate, and lifecycle plan. An optional `-Channel` is only a
+  caller assertion; lifecycle mutations derive the effective mode from the
+  protected machine-owned deployment configuration. Package publication uses
+  `scripts/publish-rms-support-agent-package.ps1` with a LocalMachine
+  code-signing key; Production trust, PKI, fleet enrollment, and elevated
+  Testing evidence are separate gates.
  - POS restore/build/tests: `dotnet restore pos/RmsSupportHub.Pos.slnx`; `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo --warnaserror`; `dotnet test pos/RmsSupportHub.Pos.slnx --nologo`; the focused project commands remain available for diagnosis; `dotnet publish pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj -c Release -r win-x64 --self-contained false --no-restore --nologo`.
 - INT-13C Testing provisioning: run `scripts/setup-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false` and `scripts/remove-pos-agent-testing.ps1 -IUnderstandTestingOnly -WhatIf -Confirm:$false` only on the authorized Testing machine. Exact browser/IWA policy logic is in `scripts/PosAgentWindowsProvisioning.psm1`; the task-scoped normal-user browser evidence launcher is `scripts/invoke-pos-browser-evidence.ps1` and uses `tools/pos-browser-evidence`.
 - INT-13D Testing runtime uses exact `https://support-hub.integration.test:4443` and `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly` (self-elevates through UAC unless `-NoSelfElevate`); it rebuilds and stages the current Angular/API runtime, binds owned PID, listener, content root, certificate, and build identity in state, refuses an unowned :4443 listener, and verifies the served build identity, index, and main bundle before reporting success. Runtime ownership and build-identity helpers are in `scripts/PosSupportHubRuntime.psm1`; the served identity document is produced by `frontend/scripts/build-identity.mjs`.

@@ -1,7 +1,9 @@
 using System.Formats.Asn1;
+using System.Security.AccessControl;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Text.Json;
 using RmsSupportHub.Pos.Application.Packages;
 using RmsSupportHub.Pos.Domain.Models;
@@ -42,6 +44,99 @@ public interface IAgentCertificatePrerequisite
     bool IsSatisfied(AgentPackageManifest manifest, out string failureCode);
 }
 
+public interface IAgentPrivateKeySecurityInspector
+{
+    AgentPrivateKeySecurityEvidence Inspect(X509Certificate2 certificate);
+}
+
+/// <summary>
+/// Inspects the actual machine CNG key file security descriptor. Administrator access to the
+/// certificate in the current process is not treated as proof that LocalSystem can read the key.
+/// </summary>
+public sealed class WindowsCngPrivateKeySecurityInspector : IAgentPrivateKeySecurityInspector
+{
+    public AgentPrivateKeySecurityEvidence Inspect(X509Certificate2 certificate)
+    {
+        var invalid = new AgentPrivateKeySecurityEvidence(false, false, null, true, false, false, false, false, false, true);
+        if (!OperatingSystem.IsWindows()) return invalid;
+
+        try
+        {
+            using var rsa = certificate.GetRSAPrivateKey();
+            if (rsa is not RSACng cng) return invalid;
+            var key = cng.Key;
+            var providerName = key?.Provider?.Provider;
+            var isMachineKey = key?.IsMachineKey == true;
+            var isExportable = key is null || key.ExportPolicy.HasFlag(CngExportPolicies.AllowExport);
+            if (key is null || string.IsNullOrWhiteSpace(key.UniqueName))
+            {
+                return new(isMachineKey, true, providerName, isExportable, false, false, false, false, false, true);
+            }
+
+            var keyRoot = Path.GetFullPath(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Microsoft",
+                "Crypto",
+                "Keys"));
+            var keyFilePath = Path.GetFullPath(Path.Combine(keyRoot, key.UniqueName));
+            if (!IsWithinRoot(keyFilePath, keyRoot)
+                || !File.Exists(keyFilePath))
+            {
+                return new(isMachineKey, true, providerName, isExportable, false, false, false, false, false, true);
+            }
+
+            var attributes = File.GetAttributes(keyFilePath);
+            var reparse = attributes.HasFlag(FileAttributes.ReparsePoint);
+            if (reparse) return new(isMachineKey, true, providerName, isExportable, true, true, false, false, false, true);
+
+            var security = new FileInfo(keyFilePath).GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
+            var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            var owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            var ownerTrusted = owner == administrators || owner == system;
+            var rules = security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
+                .Cast<FileSystemAccessRule>()
+                .ToArray();
+            var unsafeAllow = rules.Any(rule => rule.AccessControlType == AccessControlType.Allow
+                && rule.IdentityReference is SecurityIdentifier identity
+                && identity != administrators
+                && identity != system);
+            var localSystemRead = rules.Any(rule => rule.IdentityReference == system
+                && rule.AccessControlType == AccessControlType.Allow
+                && GrantsPrivateKeyRead(rule.FileSystemRights));
+
+            return new(
+                isMachineKey,
+                true,
+                providerName,
+                isExportable,
+                true,
+                false,
+                ownerTrusted,
+                security.AreAccessRulesProtected,
+                localSystemRead,
+                unsafeAllow);
+        }
+        catch
+        {
+            return invalid;
+        }
+    }
+
+    private static bool GrantsPrivateKeyRead(FileSystemRights rights) =>
+        rights.HasFlag(FileSystemRights.Read)
+        || rights.HasFlag(FileSystemRights.ReadAndExecute)
+        || rights.HasFlag(FileSystemRights.FullControl);
+
+    private static bool IsWithinRoot(string path, string root)
+    {
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        var normalizedPath = Path.GetFullPath(path);
+        return normalizedPath.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+            || normalizedPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
 /// <summary>
 /// Reads only the deployment-selected LocalMachine certificate. It does not issue, import, bind,
 /// replace, or remove certificates; enterprise-owned certificates remain enterprise-owned.
@@ -53,15 +148,24 @@ public sealed class MachineAgentCertificatePrerequisite : IAgentCertificatePrere
     public const string OwnershipMarkerOid = "1.3.6.1.4.1.55555.1.1";
 
     private readonly AgentCertificatePrerequisiteOptions options;
+    private readonly IAgentPrivateKeySecurityInspector privateKeySecurityInspector;
 
     public MachineAgentCertificatePrerequisite()
-        : this(new AgentCertificatePrerequisiteOptions())
+        : this(new AgentCertificatePrerequisiteOptions(), new WindowsCngPrivateKeySecurityInspector())
     {
     }
 
     public MachineAgentCertificatePrerequisite(AgentCertificatePrerequisiteOptions options)
+        : this(options, new WindowsCngPrivateKeySecurityInspector())
+    {
+    }
+
+    public MachineAgentCertificatePrerequisite(
+        AgentCertificatePrerequisiteOptions options,
+        IAgentPrivateKeySecurityInspector privateKeySecurityInspector)
     {
         this.options = options ?? throw new ArgumentNullException(nameof(options));
+        this.privateKeySecurityInspector = privateKeySecurityInspector ?? throw new ArgumentNullException(nameof(privateKeySecurityInspector));
         this.options.Validate();
     }
 
@@ -96,7 +200,8 @@ public sealed class MachineAgentCertificatePrerequisite : IAgentCertificatePrere
             }
 
             var now = DateTimeOffset.UtcNow;
-            var evidence = ToEvidence(certificate);
+            var privateKeySecurity = privateKeySecurityInspector.Inspect(certificate);
+            var evidence = ToEvidence(certificate, privateKeySecurity);
             var assessment = new AgentCertificatePolicy().Assess(evidence, now);
             if (!assessment.Valid)
             {
@@ -113,12 +218,6 @@ public sealed class MachineAgentCertificatePrerequisite : IAgentCertificatePrere
             if (!HasServerAuthenticationEku(certificate))
             {
                 failureCode = "server_authentication_eku_missing";
-                return false;
-            }
-
-            if (!HasLocalSystemPrivateKeyAccess(certificate))
-            {
-                failureCode = "local_system_private_key_access_unproven";
                 return false;
             }
 
@@ -173,46 +272,21 @@ public sealed class MachineAgentCertificatePrerequisite : IAgentCertificatePrere
         }
     }
 
-    private static AgentCertificateEvidence ToEvidence(X509Certificate2 certificate) =>
+    private static AgentCertificateEvidence ToEvidence(
+        X509Certificate2 certificate,
+        AgentPrivateKeySecurityEvidence privateKeySecurity) =>
         new(
             certificate.Thumbprint,
             HasExactDnsSan(certificate, "rms-pos-agent.localhost") ? "rms-pos-agent.localhost" : null,
             certificate.HasPrivateKey,
-            GetProvider(certificate),
-            IsExportable(certificate),
+            privateKeySecurity.ProviderName,
+            privateKeySecurity.IsExportable,
             HasServerAuthenticationEku(certificate),
             GetOwnershipMarker(certificate),
             certificate.NotBefore.ToUniversalTime(),
             certificate.NotAfter.ToUniversalTime(),
-            "LocalMachine");
-
-    private static string? GetProvider(X509Certificate2 certificate)
-    {
-        try
-        {
-            using var rsa = certificate.GetRSAPrivateKey();
-            if (rsa is not RSACng cng) return null;
-            var key = cng.Key;
-            return key is null ? null : key.Provider?.Provider;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static bool IsExportable(X509Certificate2 certificate)
-    {
-        try
-        {
-            using var rsa = certificate.GetRSAPrivateKey();
-            return rsa is RSACng cng && cng.Key.ExportPolicy.HasFlag(CngExportPolicies.AllowExport);
-        }
-        catch
-        {
-            return true;
-        }
-    }
+            "LocalMachine",
+            privateKeySecurity);
 
     private static string? GetOwnershipMarker(X509Certificate2 certificate)
     {
@@ -226,22 +300,6 @@ public sealed class MachineAgentCertificatePrerequisite : IAgentCertificatePrere
         catch
         {
             return null;
-        }
-    }
-
-    private static bool HasLocalSystemPrivateKeyAccess(X509Certificate2 certificate)
-    {
-        try
-        {
-            using var rsa = certificate.GetRSAPrivateKey();
-            if (rsa is not RSACng cng) return false;
-            var key = cng.Key;
-            _ = key?.Provider?.Provider ?? throw new CryptographicException("The CNG provider is unavailable.");
-            return true;
-        }
-        catch
-        {
-            return false;
         }
     }
 

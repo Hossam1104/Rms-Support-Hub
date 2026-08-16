@@ -12,7 +12,7 @@ namespace RmsSupportHub.Pos.Infrastructure.Tests;
 /// </summary>
 public sealed class ServiceOwnedDirectoryProvisionerTests : IDisposable
 {
-    private readonly string _rootDirectory = Path.Combine(Path.GetTempPath(), "pos-admin-acl-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _rootDirectory = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "pos-admin-acl-tests-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
     public void EnsureProvisioned_CreatesTheDirectory()
@@ -97,6 +97,7 @@ public sealed class ServiceOwnedDirectoryProvisionerTests : IDisposable
     [Fact]
     public void EnsureProvisioned_FailsClosedWhenTheTargetIsAFile()
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(_rootDirectory)!);
         File.WriteAllText(_rootDirectory, "not-a-directory");
 
         Assert.Throws<UnauthorizedAccessException>(() => ServiceOwnedDirectoryProvisioner.EnsureProvisioned(_rootDirectory));

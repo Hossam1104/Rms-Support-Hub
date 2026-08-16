@@ -3,7 +3,8 @@ param(
     [ValidateSet('Install', 'Upgrade', 'Repair', 'Uninstall', 'Rollback', 'Status')]
     [string]$Mode = 'Status',
     [ValidateSet('Testing', 'Production')]
-    [string]$Channel = 'Production',
+    [AllowNull()]
+    [string]$Channel,
     [switch]$Silent,
     [switch]$PlanOnly
 )

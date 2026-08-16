@@ -7,12 +7,22 @@ Accepted — 2026-08-16
 ## Decision
 
 The permanent POS Agent package boundary has a real machine-owned trust and
-activation path. The package manifest is not its own trust root: the channel
-and environment select only a signer thumbprint pinned in LocalMachine-owned
-configuration, and the package's display signer metadata can never select a
-certificate. Production always requires a purpose-constrained Code Signing
-certificate with explicit online chain/revocation validation. Testing may use
-an injected non-chain test seam only when the operation is explicitly Testing.
+activation path. The package manifest is not its own trust root: the effective
+release mode comes from protected machine-owned deployment configuration, and
+the channel/environment select only a signer thumbprint pinned in
+LocalMachine-owned configuration. Production and Testing pins must be
+canonically distinct; the package's display signer metadata and the caller's
+requested channel can never select or downgrade a certificate. Production
+always requires a purpose-constrained Code Signing certificate with explicit
+online chain/revocation validation. Testing may use an injected non-chain test
+seam only when the protected operation mode is explicitly Testing.
+
+Security-control files (`package-trust.json`, `agent-certificate.json`, and
+`lifecycle-state.json`) are fixed-name, bounded, non-reparse files whose own
+owner/ACL and every ancestor back to the fixed service-owned root are verified
+before their contents are consumed. The named test-fixture identity allowance
+is confined to the explicit fixture root and cannot authorize the ProgramData
+Production root.
 
 The signed payload is a deterministic UTF-8 length-delimited envelope. It
 binds the product/service identity, version and platform, channel/environment,
@@ -35,9 +45,16 @@ enterprise certificate state.
 The HTTPS certificate prerequisite remains separate from package signing. It
 requires the exact `rms-pos-agent.localhost` SAN in LocalMachine, Microsoft
 Software Key Storage Provider, non-exportable private key, Server Authentication
-EKU, private-key access, and an explicit local or enterprise ownership marker.
-Local lifecycle code never issues, imports, replaces, or removes an enterprise
-certificate.
+EKU, explicit LocalSystem access to the actual CNG key file with bounded ACL
+evidence, and an explicit local or enterprise ownership marker. Administrator
+access alone or a broad key ACL is not proof. Local lifecycle code never
+exports, issues, imports, replaces, or removes an enterprise certificate.
+
+Terminal package audit and incident-timeline records use the generated opaque
+operation instance ID and its correlation ID, rather than the static operation
+descriptor. The accepted checkpoint/`PreviousVersion` rollback identity,
+signed manifest/archive retention, fresh re-verification, health gate, explicit
+recovery slot, and H-1/H-2/H-3 controls remain part of this decision.
 
 ## Evidence boundary
 

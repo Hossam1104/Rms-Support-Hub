@@ -454,7 +454,7 @@ public sealed class AgentPackageService(
                 completed,
                 principalSid,
                 "agent-package." + preview.Operation,
-                AgentPackageOperation.OperationId,
+                operationId,
                 correlationId,
                 result.State.ToString(),
                 result.RecoveryRequired ? "recovery_required" : null,
@@ -472,7 +472,7 @@ public sealed class AgentPackageService(
                 "AgentPackage",
                 result.RecoveryRequired || !result.RollbackSucceeded && result.RollbackAttempted ? FailureSeverity.ActionRequired : FailureSeverity.Informational,
                 SafeDetail(result.Detail),
-                operationId: AgentPackageOperation.OperationId,
+                operationId: operationId,
                 correlationId: correlationId);
         }
         finally

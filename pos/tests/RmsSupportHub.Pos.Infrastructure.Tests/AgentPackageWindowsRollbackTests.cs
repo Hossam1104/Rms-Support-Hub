@@ -190,7 +190,7 @@ public sealed class AgentPackageWindowsRollbackTests
     [Fact]
     public void TrustControlFileWithAnUnprotectedInheritedAclFailsClosed()
     {
-        var root = Path.Combine(Path.GetTempPath(), "rms-agent-acl-unprotected-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-acl-unprotected-" + Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(root);
@@ -208,22 +208,22 @@ public sealed class AgentPackageWindowsRollbackTests
     [Fact]
     public void TrustControlFileWithABroadEveryoneGrantFailsClosed()
     {
-        var root = Path.Combine(Path.GetTempPath(), "rms-agent-acl-everyone-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-acl-everyone-" + Guid.NewGuid().ToString("N"));
         try
         {
             ServiceOwnedDirectoryProvisioner.EnsureProvisioned(root);
             var path = Path.Combine(root, "package-trust.json");
             File.WriteAllText(path, "{}");
+            ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(path);
 
-            var directoryInfo = new DirectoryInfo(root);
-            var security = directoryInfo.GetAccessControl();
+            var security = new FileInfo(path).GetAccessControl();
             security.AddAccessRule(new FileSystemAccessRule(
                 new SecurityIdentifier(WellKnownSidType.WorldSid, null),
                 FileSystemRights.Modify,
-                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                InheritanceFlags.None,
                 PropagationFlags.None,
                 AccessControlType.Allow));
-            directoryInfo.SetAccessControl(security);
+            new FileInfo(path).SetAccessControl(security);
 
             Assert.False(ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(path));
         }
@@ -236,12 +236,13 @@ public sealed class AgentPackageWindowsRollbackTests
     [Fact]
     public void TrustControlFileWithARestrictedOwnedAclSucceeds()
     {
-        var root = Path.Combine(Path.GetTempPath(), "rms-agent-acl-trusted-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-acl-trusted-" + Guid.NewGuid().ToString("N"));
         try
         {
             ServiceOwnedDirectoryProvisioner.EnsureProvisioned(root);
             var path = Path.Combine(root, "package-trust.json");
             File.WriteAllText(path, "{}");
+            ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(path);
 
             Assert.True(ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(path));
         }
@@ -254,13 +255,20 @@ public sealed class AgentPackageWindowsRollbackTests
     [Fact]
     public async Task PackageSignatureVerifierFailsClosedWhenTrustConfigurationHasAnUnsafeAcl()
     {
-        var root = Path.Combine(Path.GetTempPath(), "rms-agent-trust-config-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-trust-config-" + Guid.NewGuid().ToString("N"));
         try
         {
-            Directory.CreateDirectory(root);
+            ServiceOwnedDirectoryProvisioner.EnsureProvisioned(root);
             var configPath = Path.Combine(root, "package-trust.json");
             using var certificate = CreateCodeSigningCertificate();
             File.WriteAllText(configPath, $$"""{"testingSignerThumbprint":"{{certificate.Thumbprint}}"}""");
+            ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(configPath);
+            var security = new FileInfo(configPath).GetAccessControl();
+            security.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                FileSystemRights.Read,
+                AccessControlType.Allow));
+            new FileInfo(configPath).SetAccessControl(security);
 
             var verifier = new MachineCertificatePackageSignatureVerifier(
                 new AgentPackageTrustOptions { TrustConfigurationPath = configPath, RequireTrustedChain = false },
@@ -459,7 +467,7 @@ public sealed class AgentPackageWindowsRollbackTests
 
         public static RealPlatformFixture Create()
         {
-            var root = Path.Combine(Path.GetTempPath(), "rms-agent-real-platform-" + Guid.NewGuid().ToString("N"));
+            var root = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", "rms-agent-real-platform-" + Guid.NewGuid().ToString("N"));
             var options = new AgentPackageOptions
             {
                 PackageRoot = Path.Combine(root, "packages"),

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 
 namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
@@ -28,7 +29,8 @@ public sealed class AgentPackageLifecycleStateStore(AgentPackageOptions options)
                 }
 
                 if (File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)
-                    || new FileInfo(path).Length is <= 0 or > 64 * 1024)
+                    || new FileInfo(path).Length is <= 0 or > 64 * 1024
+                    || OperatingSystem.IsWindows() && !ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(path))
                 {
                     HasUnreadableState = true;
                     return null;
@@ -69,6 +71,7 @@ public sealed class AgentPackageLifecycleStateStore(AgentPackageOptions options)
                 File.WriteAllText(temporary, json);
                 if (File.GetAttributes(temporary).HasFlag(FileAttributes.ReparsePoint)) throw new IOException("The lifecycle checkpoint became a reparse point.");
                 File.Move(temporary, options.LifecycleStatePath, overwrite: true);
+                ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(options.LifecycleStatePath);
                 HasUnreadableState = false;
             }
             finally
@@ -84,7 +87,8 @@ public sealed class AgentPackageLifecycleStateStore(AgentPackageOptions options)
         lock (gate)
         {
             if (File.Exists(options.LifecycleStatePath)
-                && !File.GetAttributes(options.LifecycleStatePath).HasFlag(FileAttributes.ReparsePoint))
+                && !File.GetAttributes(options.LifecycleStatePath).HasFlag(FileAttributes.ReparsePoint)
+                && (!OperatingSystem.IsWindows() || ServiceOwnedDirectoryProvisioner.IsTrustedControlFile(options.LifecycleStatePath)))
             {
                 File.Delete(options.LifecycleStatePath);
             }

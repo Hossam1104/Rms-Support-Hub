@@ -11,12 +11,15 @@ $script:CanonicalAgentHost = 'rms-pos-agent.localhost'
 $script:CanonicalAgentOrigin = 'https://rms-pos-agent.localhost:5001'
 $script:MutationLeaseName = 'Global\RmsSupportHub.Pos.Agent.PrivilegedMutationLease'
 $script:AllowedExecutableNames = @('RmsSupportHub.Pos.Agent.exe', 'RmsSupportAgent.exe')
+$script:ControlFileMaxBytes = 64KB
+$script:TestFixtureRootName = 'RmsSupportHub.Pos.Tests'
 
 function Get-RmsSupportAgentDeploymentContract {
     [CmdletBinding()]
     param(
+        [AllowNull()]
         [ValidateSet('Testing', 'Production')]
-        [string]$Channel = 'Production'
+        [string]$Channel
     )
 
     [pscustomobject]@{
@@ -41,7 +44,10 @@ function Get-RmsSupportAgentDeploymentContract {
         CanonicalAgentOrigin = $script:CanonicalAgentOrigin
         MutationLeaseName = $script:MutationLeaseName
         AllowedExecutableNames = $script:AllowedExecutableNames
-        ReleaseChannel = $Channel
+        # This is an optional caller assertion only. Effective lifecycle trust is resolved from
+        # the protected package-trust.json deploymentMode below; this value never selects trust.
+        RequestedChannel = $Channel
+        ReleaseChannel = $null
         SilentExitCodes = [ordered]@{
             Success = 0
             InvalidArguments = 2
@@ -65,6 +71,107 @@ function Test-RmsSafeToken {
     return -not [string]::IsNullOrWhiteSpace($Value) -and
         $Value.Length -le $MaximumLength -and
         $Value -match '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+}
+
+function Normalize-RmsSupportAgentThumbprint {
+    [CmdletBinding()]
+    param([AllowNull()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
+    $normalized = ($Value -replace '\s', '').ToUpperInvariant()
+    if ($normalized -notmatch '^[0-9A-F]{40}$') { return $null }
+    return $normalized
+}
+
+function Get-RmsSupportAgentMachineTrustConfiguration {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][psobject]$Contract)
+
+    $invalid = {
+        param([string]$Code)
+        return [pscustomobject]@{
+            Valid = $false
+            Code = $Code
+            DeploymentMode = $null
+            ProductionSignerThumbprint = $null
+            TestingSignerThumbprint = $null
+        }
+    }
+
+    try {
+        $path = [IO.Path]::GetFullPath([string]$Contract.TrustConfigurationPath)
+        if ((-not (Test-Path -LiteralPath $path -PathType Leaf)) -or [IO.File]::GetAttributes($path).HasFlag([IO.FileAttributes]::ReparsePoint) -or (Get-Item -LiteralPath $path).Length -le 0 -or (Get-Item -LiteralPath $path).Length -gt 16KB -or -not (Test-RmsSupportAgentControlFileTrust -Path $path)) {
+            return & $invalid 'machine_trust_configuration_untrusted'
+        }
+
+        $trust = Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+        if ($null -eq $trust -or $trust -is [array] -or $trust -is [string] -or $trust.GetType().IsValueType) {
+            return & $invalid 'machine_trust_configuration_invalid'
+        }
+
+        $productionRaw = if ($null -ne $trust.PSObject.Properties['productionSignerThumbprint']) { [string]$trust.productionSignerThumbprint } else { $null }
+        $testingRaw = if ($null -ne $trust.PSObject.Properties['testingSignerThumbprint']) { [string]$trust.testingSignerThumbprint } else { $null }
+        $production = if ($null -eq $productionRaw) { $null } else { Normalize-RmsSupportAgentThumbprint $productionRaw }
+        $testing = if ($null -eq $testingRaw) { $null } else { Normalize-RmsSupportAgentThumbprint $testingRaw }
+        if (($null -ne $productionRaw -and $null -eq $production) -or ($null -ne $testingRaw -and $null -eq $testing)) {
+            return & $invalid 'signer_thumbprint_invalid'
+        }
+        if ($null -ne $production -and $null -ne $testing -and $production -eq $testing) {
+            return & $invalid 'signer_pins_equal'
+        }
+
+        $mode = if ($null -ne $trust.PSObject.Properties['deploymentMode']) { [string]$trust.deploymentMode } else { $null }
+        if ($mode -notin @('Testing', 'Production')) {
+            return & $invalid 'machine_release_mode_invalid'
+        }
+        if (($mode -eq 'Production' -and $null -eq $production) -or ($mode -eq 'Testing' -and $null -eq $testing)) {
+            return & $invalid 'machine_release_mode_signer_pin_missing'
+        }
+
+        return [pscustomobject]@{
+            Valid = $true
+            Code = 'machine_trust_configuration_valid'
+            DeploymentMode = $mode
+            ProductionSignerThumbprint = $production
+            TestingSignerThumbprint = $testing
+        }
+    } catch {
+        return & $invalid 'machine_trust_configuration_invalid'
+    }
+}
+
+function Resolve-RmsSupportAgentMachineReleaseMode {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][psobject]$Contract,
+        [AllowNull()][ValidateSet('Testing', 'Production')][string]$RequestedChannel
+    )
+
+    $configuration = Get-RmsSupportAgentMachineTrustConfiguration -Contract $Contract
+    if (-not $configuration.Valid) {
+        return [pscustomobject]@{
+            Valid = $false
+            Code = [string]$configuration.Code
+            Channel = $null
+            RequestedChannel = $RequestedChannel
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedChannel) -and $RequestedChannel -ne $configuration.DeploymentMode) {
+        return [pscustomobject]@{
+            Valid = $false
+            Code = 'requested_channel_mismatch'
+            Channel = $null
+            RequestedChannel = $RequestedChannel
+        }
+    }
+
+    return [pscustomobject]@{
+        Valid = $true
+        Code = 'machine_release_mode_authorized'
+        Channel = [string]$configuration.DeploymentMode
+        RequestedChannel = $RequestedChannel
+    }
 }
 
 function Test-RmsSafeSha256 {
@@ -369,40 +476,165 @@ function Test-RmsSupportAgentControlFileTrust {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path)
 
-    # Machine-owned trust control files (package-trust.json, agent-certificate.json) are never
-    # provisioned by this application. Their ownership/ACL boundary must be verified BEFORE any
-    # value inside them is trusted -- a writable configuration must never become authority. This is
-    # read-only: it never mutates an ACL to make an untrusted boundary pass.
+    # Machine-owned trust control files are never provisioned by this application. Their exact file,
+    # owner, ACL, and complete service-owned ancestor boundary must be verified BEFORE any value
+    # inside them is trusted. This function is read-only: it never mutates an ACL to make an untrusted
+    # boundary pass.
     try {
-        if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
-        $directory = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Path))
-        if ([IO.File]::GetAttributes($Path).HasFlag([IO.FileAttributes]::ReparsePoint) -or
-            [IO.File]::GetAttributes($directory).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $false }
+        if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { return $false }
+        $fullPath = [IO.Path]::GetFullPath($Path)
+    if ((-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) -or [IO.Path]::GetFileName($fullPath) -notin @('package-trust.json', 'agent-certificate.json', 'lifecycle-state.json') -or [IO.File]::GetAttributes($fullPath).HasFlag([IO.FileAttributes]::ReparsePoint) -or (Get-Item -LiteralPath $fullPath).Length -le 0 -or (Get-Item -LiteralPath $fullPath).Length -gt $script:ControlFileMaxBytes) { return $false }
 
-        # The same narrow %TEMP%-scoped escape hatch the C# ServiceOwnedDirectoryProvisioner grants a
-        # disposable test fixture: it never widens what production accepts (real control files live
-        # under %ProgramData%\DBS, never %TEMP%), and only applies when the boundary is owned by the
-        # current identity with an otherwise-protected, otherwise-untrusted-rule-free ACL.
-        $temporaryTestRoot = [IO.Path]::GetFullPath($env:TEMP)
-        $allowTemporaryTestIdentity = [IO.Path]::GetFullPath($directory).StartsWith($temporaryTestRoot, [StringComparison]::OrdinalIgnoreCase)
+        $machineRoot = [IO.Path]::GetFullPath((Join-Path $env:ProgramData 'DBS\RmsSupportAgent')).TrimEnd('\')
+        $temporaryTestRoot = [IO.Path]::GetFullPath((Join-Path $env:TEMP $script:TestFixtureRootName)).TrimEnd('\')
+        $isMachinePath = $fullPath.Equals($machineRoot, [StringComparison]::OrdinalIgnoreCase) -or $fullPath.StartsWith($machineRoot + '\', [StringComparison]::OrdinalIgnoreCase)
+        $isTemporaryTestPath = $fullPath.Equals($temporaryTestRoot, [StringComparison]::OrdinalIgnoreCase) -or $fullPath.StartsWith($temporaryTestRoot + '\', [StringComparison]::OrdinalIgnoreCase)
+        if (-not $isMachinePath -and -not $isTemporaryTestPath) { return $false }
+
+        $securityRoot = if ($isMachinePath) { $machineRoot } else { $temporaryTestRoot }
+        $allowTemporaryTestIdentity = $isTemporaryTestPath
         $currentSid = if ($allowTemporaryTestIdentity) { ([Security.Principal.WindowsIdentity]::GetCurrent()).User } else { $null }
-
-        $acl = Get-Acl -LiteralPath $directory
         $administrators = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
         $system = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::LocalSystemSid, $null)
-        $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier])
-        $ownerTrusted = ($owner -eq $administrators -or $owner -eq $system) -or ($allowTemporaryTestIdentity -and $owner -eq $currentSid)
-        if (-not $ownerTrusted -or -not $acl.AreAccessRulesProtected) { return $false }
 
-        foreach ($rule in $acl.Access) {
-            if ($rule.AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow) { continue }
-            $identity = try { $rule.IdentityReference.Translate([Security.Principal.SecurityIdentifier]) } catch { $null }
-            if ($null -eq $identity) { return $false }
-            if ($identity -eq $administrators -or $identity -eq $system) { continue }
-            if ($allowTemporaryTestIdentity -and $identity -eq $currentSid) { continue }
-            return $false
+        $directory = [IO.Path]::GetDirectoryName($fullPath)
+        while ($true) {
+            if ([string]::IsNullOrWhiteSpace($directory) -or -not (Test-Path -LiteralPath $directory -PathType Container) -or -not (Test-RmsSupportAgentRestrictedAcl -Path $directory -Administrators $administrators -System $system -CurrentSid $currentSid -AllowTemporaryTestIdentity $allowTemporaryTestIdentity -RequireFile $false)) { return $false }
+            if ($directory.Equals($securityRoot, [StringComparison]::OrdinalIgnoreCase)) { break }
+            $parent = [IO.Directory]::GetParent($directory)
+            if ($null -eq $parent -or $parent.FullName.Equals($directory, [StringComparison]::OrdinalIgnoreCase)) { return $false }
+            $directory = $parent.FullName
         }
-        return $true
+
+        return Test-RmsSupportAgentRestrictedAcl -Path $fullPath -Administrators $administrators -System $system -CurrentSid $currentSid -AllowTemporaryTestIdentity $allowTemporaryTestIdentity -RequireFile $true
+    } catch { return $false }
+}
+
+function Test-RmsSupportAgentRestrictedAcl {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][Security.Principal.SecurityIdentifier]$Administrators,
+        [Parameter(Mandatory)][Security.Principal.SecurityIdentifier]$System,
+        [AllowNull()][Security.Principal.SecurityIdentifier]$CurrentSid,
+        [bool]$AllowTemporaryTestIdentity,
+        [bool]$RequireFile
+    )
+
+    if ([IO.File]::GetAttributes($Path).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $false }
+    $acl = Get-Acl -LiteralPath $Path
+    if (-not $acl.AreAccessRulesProtected) { return $false }
+    $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier])
+    $ownerTrusted = $owner -eq $Administrators -or $owner -eq $System -or ($AllowTemporaryTestIdentity -and $null -ne $CurrentSid -and $owner -eq $CurrentSid)
+    if (-not $ownerTrusted) { return $false }
+
+    $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+    foreach ($rule in $rules) {
+        if ($rule.AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow) { continue }
+        $identity = $rule.IdentityReference
+        if ($identity -eq $Administrators -or $identity -eq $System) { continue }
+        if ($AllowTemporaryTestIdentity -and $null -ne $CurrentSid -and $identity -eq $CurrentSid) { continue }
+        return $false
+    }
+
+    $fullControl = [Security.AccessControl.FileSystemRights]::FullControl
+    if ($AllowTemporaryTestIdentity) {
+    return @($rules | Where-Object { $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and $null -ne $CurrentSid -and $_.IdentityReference -eq $CurrentSid -and $_.FileSystemRights.HasFlag($fullControl) }).Count -gt 0
+    }
+
+    return @($rules | Where-Object { $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and (($_.IdentityReference -eq $Administrators -or $_.IdentityReference -eq $System)) -and $_.FileSystemRights.HasFlag($fullControl) }).Count -ge 2
+}
+
+function Set-RmsSupportAgentControlFileAcl {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+
+    if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { return }
+
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    if ((-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) -or [IO.Path]::GetFileName($fullPath) -notin @('package-trust.json', 'agent-certificate.json', 'lifecycle-state.json')) {
+        throw 'The lifecycle control file is outside the fixed service-owned boundary.'
+    }
+
+    $machineRoot = [IO.Path]::GetFullPath((Join-Path $env:ProgramData 'DBS\RmsSupportAgent')).TrimEnd('\')
+    $temporaryTestRoot = [IO.Path]::GetFullPath((Join-Path $env:TEMP $script:TestFixtureRootName)).TrimEnd('\')
+    $isMachinePath = $fullPath.Equals($machineRoot, [StringComparison]::OrdinalIgnoreCase) -or $fullPath.StartsWith($machineRoot + '\', [StringComparison]::OrdinalIgnoreCase)
+    $isTemporaryTestPath = $fullPath.Equals($temporaryTestRoot, [StringComparison]::OrdinalIgnoreCase) -or $fullPath.StartsWith($temporaryTestRoot + '\', [StringComparison]::OrdinalIgnoreCase)
+    if (-not $isMachinePath -and -not $isTemporaryTestPath) { throw 'The lifecycle control file is outside the fixed service-owned boundary.' }
+
+    $administrators = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
+    $system = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::LocalSystemSid, $null)
+    $currentSid = if ($isTemporaryTestPath) { ([Security.Principal.WindowsIdentity]::GetCurrent()).User } else { $null }
+    $acl = Get-Acl -LiteralPath $fullPath
+    $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier])
+    if ($null -eq $owner -or ($owner -ne $administrators -and $owner -ne $system -and (-not $isTemporaryTestPath -or $owner -ne $currentSid))) {
+        throw 'The existing lifecycle control file owner is not trusted.'
+    }
+
+    $acl.SetAccessRuleProtection($true, $false)
+    foreach ($rule in @($acl.Access)) { [void]$acl.RemoveAccessRule($rule) }
+    if ($isMachinePath) { $acl.SetOwner($administrators) }
+    $fullControl = [Security.AccessControl.FileSystemRights]::FullControl
+    $allow = [Security.AccessControl.AccessControlType]::Allow
+    $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($administrators, $fullControl, $allow)))
+    $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($system, $fullControl, $allow)))
+    if ($isTemporaryTestPath -and $null -ne $currentSid) {
+        $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($currentSid, $fullControl, $allow)))
+    }
+    Set-Acl -LiteralPath $fullPath -AclObject $acl
+    if (-not (Test-RmsSupportAgentControlFileTrust -Path $fullPath)) { throw 'The lifecycle control file ACL could not be verified.' }
+}
+
+function Test-RmsSupportAgentPrivateKeyAclEvidence {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][Security.Principal.SecurityIdentifier]$Owner,
+        [Parameter(Mandatory)][bool]$AreAccessRulesProtected,
+        [Parameter(Mandatory)][object[]]$Rules
+    )
+
+    $administrators = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
+    $system = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::LocalSystemSid, $null)
+    if (-not $AreAccessRulesProtected -or ($Owner -ne $administrators -and $Owner -ne $system)) { return $false }
+
+    foreach ($rule in $Rules) {
+        if ($rule.AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow) { continue }
+        $identity = $rule.IdentityReference
+        if ($identity -ne $administrators -and $identity -ne $system) { return $false }
+    }
+
+    return @($Rules | Where-Object { $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and $_.IdentityReference -eq $system -and ($_.FileSystemRights.HasFlag([Security.AccessControl.FileSystemRights]::Read) -or $_.FileSystemRights.HasFlag([Security.AccessControl.FileSystemRights]::ReadAndExecute) -or $_.FileSystemRights.HasFlag([Security.AccessControl.FileSystemRights]::FullControl)) }).Count -gt 0
+}
+
+function Get-RmsSupportAgentCngPrivateKeyFile {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][Security.Cryptography.RSACng]$CngKey)
+
+    try {
+        $uniqueName = [string]$CngKey.Key.UniqueName
+        if ([string]::IsNullOrWhiteSpace($uniqueName) -or $uniqueName.Length -gt 260 -or $uniqueName -match '[\\/:\x00-\x1F]') { return $null }
+        $keyRoot = [IO.Path]::GetFullPath((Join-Path $env:ProgramData 'Microsoft\Crypto\Keys')).TrimEnd('\')
+        $keyPath = [IO.Path]::GetFullPath((Join-Path $keyRoot $uniqueName))
+        if ($keyPath.Equals($keyRoot, [StringComparison]::OrdinalIgnoreCase) -or -not $keyPath.StartsWith($keyRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { return $null }
+        return $keyPath
+    } catch { return $null }
+}
+
+function Test-RmsSupportAgentLocalSystemPrivateKeyAccess {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$KeyFilePath)
+
+    if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { return $false }
+    try {
+        $keyRoot = [IO.Path]::GetFullPath((Join-Path $env:ProgramData 'Microsoft\Crypto\Keys')).TrimEnd('\')
+        $fullPath = [IO.Path]::GetFullPath($KeyFilePath)
+        if (-not $fullPath.StartsWith($keyRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $fullPath -PathType Leaf) -or [IO.File]::GetAttributes($fullPath).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $false }
+        $acl = Get-Acl -LiteralPath $fullPath
+        $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+        return Test-RmsSupportAgentPrivateKeyAclEvidence `
+            -Owner $acl.GetOwner([Security.Principal.SecurityIdentifier]) `
+            -AreAccessRulesProtected $acl.AreAccessRulesProtected `
+            -Rules $rules
     } catch { return $false }
 }
 
@@ -413,22 +645,15 @@ function Get-RmsSupportAgentSignerCertificate {
         [Parameter(Mandatory)][psobject]$Contract
     )
 
-    if (-not (Test-Path -LiteralPath $Contract.TrustConfigurationPath -PathType Leaf)) { return $null }
-    if ([IO.File]::GetAttributes($Contract.TrustConfigurationPath).HasFlag([IO.FileAttributes]::ReparsePoint)) { return $null }
-    if ((Get-Item -LiteralPath $Contract.TrustConfigurationPath).Length -gt 16KB) { return $null }
-    if (-not (Test-RmsSupportAgentControlFileTrust -Path $Contract.TrustConfigurationPath)) { return $null }
-
-    try { $trust = Get-Content -Raw -LiteralPath $Contract.TrustConfigurationPath | ConvertFrom-Json } catch { return $null }
-    $property = if ($Channel -eq 'Production') { 'productionSignerThumbprint' } else { 'testingSignerThumbprint' }
-    $thumbprint = if ($null -ne $trust.PSObject.Properties[$property]) { [string]$trust.$property } else { $null }
+    $configuration = Get-RmsSupportAgentMachineTrustConfiguration -Contract $Contract
+    if (-not $configuration.Valid) { return $null }
+    $thumbprint = if ($Channel -eq 'Production') { $configuration.ProductionSignerThumbprint } else { $configuration.TestingSignerThumbprint }
     if ([string]::IsNullOrWhiteSpace($thumbprint)) { return $null }
-    $thumbprint = ($thumbprint -replace '\s', '').ToUpperInvariant()
-    if ($thumbprint -notmatch '^[0-9A-F]{40}$') { return $null }
     if (-not (Test-Path -LiteralPath ("Cert:\LocalMachine\My\$thumbprint") -PathType Leaf)) { return $null }
 
     try {
         $certificate = Get-Item -LiteralPath ("Cert:\LocalMachine\My\$thumbprint")
-        if ($certificate.Thumbprint -replace '\s' -ne $thumbprint) { return $null }
+        if ((Normalize-RmsSupportAgentThumbprint ([string]$certificate.Thumbprint)) -ne $thumbprint) { return $null }
         $now = [DateTime]::UtcNow
         if ($certificate.NotBefore.ToUniversalTime() -gt $now -or $certificate.NotAfter.ToUniversalTime() -lt $now) { return $null }
         $eku = $certificate.Extensions | Where-Object { $_.Oid.Value -eq '1.3.6.1.5.5.7.3.3' }
@@ -616,6 +841,11 @@ function Get-RmsSupportAgentLifecyclePlan {
         ProductId = $Contract.ProductId
         RequiresAdministrator = $Mode -ne 'Status'
         RequiresTrustedPackage = $Mode -ne 'Status'
+        ReleaseModeAuthority = 'protected machine-owned package-trust.json deploymentMode'
+        CallerChannelRole = 'optional assertion only; it never selects signer or package trust'
+        RequiresDistinctSignerPins = $true
+        RequiresTrustedControlFileChain = $true
+        RequiresLocalSystemPrivateKeyProof = $Mode -ne 'Uninstall' -and $Mode -ne 'Status'
         AllowsUnknownResourceDeletion = $false
         AllowsRmsProductServiceControl = $false
         AllowsBrowserPathOrUrl = $false
@@ -660,7 +890,8 @@ function Get-RmsSupportAgentLifecycleState {
 
     if (-not (Test-Path -LiteralPath $Contract.StatePath -PathType Leaf)) { return $null }
     if ([IO.File]::GetAttributes($Contract.StatePath).HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'The lifecycle checkpoint is a reparse point.' }
-    if ((Get-Item -LiteralPath $Contract.StatePath).Length -gt 64KB) { throw 'The lifecycle checkpoint exceeds its bounded size.' }
+    if ((Get-Item -LiteralPath $Contract.StatePath).Length -le 0 -or (Get-Item -LiteralPath $Contract.StatePath).Length -gt $script:ControlFileMaxBytes) { throw 'The lifecycle checkpoint exceeds its bounded size.' }
+    if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT -and -not (Test-RmsSupportAgentControlFileTrust -Path $Contract.StatePath)) { throw 'The lifecycle checkpoint has an untrusted owner or ACL boundary.' }
     try { return Get-Content -Raw -LiteralPath $Contract.StatePath | ConvertFrom-Json } catch { throw 'The lifecycle checkpoint could not be parsed safely.' }
 }
 
@@ -678,6 +909,7 @@ function Write-RmsSupportAgentLifecycleState {
         $State | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $temporary -Encoding UTF8
         if ([IO.File]::GetAttributes($temporary).HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'The lifecycle checkpoint became a reparse point.' }
         Move-Item -LiteralPath $temporary -Destination $Contract.StatePath -Force
+        Set-RmsSupportAgentControlFileAcl -Path $Contract.StatePath
     } finally { if (Test-Path -LiteralPath $temporary -PathType Leaf) { Remove-Item -LiteralPath $temporary -Force } }
 }
 
@@ -687,6 +919,7 @@ function Clear-RmsSupportAgentLifecycleState {
 
     if (Test-Path -LiteralPath $Contract.StatePath -PathType Leaf) {
         if ([IO.File]::GetAttributes($Contract.StatePath).HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'The lifecycle checkpoint is a reparse point.' }
+        if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT -and -not (Test-RmsSupportAgentControlFileTrust -Path $Contract.StatePath)) { throw 'The lifecycle checkpoint has an untrusted owner or ACL boundary.' }
         Remove-Item -LiteralPath $Contract.StatePath -Force
     }
 }
@@ -697,10 +930,11 @@ function Test-RmsSupportAgentCertificatePrerequisite {
 
     if (-not (Test-Path -LiteralPath $Contract.CertificateConfigurationPath -PathType Leaf)) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_thumbprint_unconfigured' } }
     if ([IO.File]::GetAttributes($Contract.CertificateConfigurationPath).HasFlag([IO.FileAttributes]::ReparsePoint)) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_reparse_point' } }
+    if ((Get-Item -LiteralPath $Contract.CertificateConfigurationPath).Length -le 0 -or (Get-Item -LiteralPath $Contract.CertificateConfigurationPath).Length -gt $script:ControlFileMaxBytes) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_size_invalid' } }
     if (-not (Test-RmsSupportAgentControlFileTrust -Path $Contract.CertificateConfigurationPath)) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_untrusted_boundary' } }
     try { $config = Get-Content -Raw -LiteralPath $Contract.CertificateConfigurationPath | ConvertFrom-Json } catch { return [pscustomobject]@{ Valid = $false; Code = 'certificate_configuration_invalid' } }
-    $thumbprint = if ($null -ne $config.PSObject.Properties['certificateThumbprint']) { ([string]$config.certificateThumbprint -replace '\s', '').ToUpperInvariant() } else { $null }
-    if ($thumbprint -notmatch '^[0-9A-F]{40}$') { return [pscustomobject]@{ Valid = $false; Code = 'certificate_thumbprint_invalid' } }
+    $thumbprint = if ($null -ne $config.PSObject.Properties['certificateThumbprint']) { Normalize-RmsSupportAgentThumbprint ([string]$config.certificateThumbprint) } else { $null }
+    if ($null -eq $thumbprint) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_thumbprint_invalid' } }
     try {
         $certificate = Get-Item -LiteralPath ("Cert:\LocalMachine\My\$thumbprint") -ErrorAction Stop
         if (-not $certificate.HasPrivateKey -or $certificate.NotBefore.ToUniversalTime() -gt [DateTime]::UtcNow -or $certificate.NotAfter.ToUniversalTime() -lt [DateTime]::UtcNow) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_expired_or_private_key_invalid' } }
@@ -709,11 +943,14 @@ function Test-RmsSupportAgentCertificatePrerequisite {
         if ($null -eq $eku) { return [pscustomobject]@{ Valid = $false; Code = 'server_authentication_eku_missing' } }
         $rsa = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($certificate)
         if ($null -eq $rsa -or $rsa.GetType().Name -ne 'RSACng') { return [pscustomobject]@{ Valid = $false; Code = 'certificate_provider_invalid' } }
+        $keyFilePath = $null
         try {
             $cng = [Security.Cryptography.RSACng]$rsa
             if ($null -eq $cng.Key -or $cng.Key.Provider.Provider -ne 'Microsoft Software Key Storage Provider') { return [pscustomobject]@{ Valid = $false; Code = 'certificate_provider_invalid' } }
             if ($cng.Key.ExportPolicy.HasFlag([Security.Cryptography.CngExportPolicies]::AllowExport)) { return [pscustomobject]@{ Valid = $false; Code = 'private_key_exportable' } }
+            $keyFilePath = Get-RmsSupportAgentCngPrivateKeyFile -CngKey $cng
         } finally { $rsa.Dispose() }
+        if ($null -eq $keyFilePath -or -not (Test-RmsSupportAgentLocalSystemPrivateKeyAccess -KeyFilePath $keyFilePath)) { return [pscustomobject]@{ Valid = $false; Code = 'local_system_private_key_access_unproven' } }
         $marker = @($certificate.Extensions | Where-Object { $_.Oid.Value -eq '1.3.6.1.4.1.55555.1.1' })
         if ($marker.Count -ne 1 -or [Text.Encoding]::UTF8.GetString($marker[0].RawData) -notin @('RmsSupportAgent certificate v1', 'RmsSupportAgent enterprise-managed certificate v1')) { return [pscustomobject]@{ Valid = $false; Code = 'certificate_ownership_unproven' } }
         return [pscustomobject]@{ Valid = $true; Code = 'certificate_ready' }
@@ -802,7 +1039,7 @@ function Set-RmsSupportAgentOwnedAcl {
 
     $acl = New-Object Security.AccessControl.DirectorySecurity
     $acl.SetAccessRuleProtection($true, $false)
-    $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit
+    $inheritance = ([Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit)
     $propagation = [Security.AccessControl.PropagationFlags]::None
     $allow = [Security.AccessControl.AccessControlType]::Allow
     foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
@@ -1009,16 +1246,20 @@ function Invoke-RmsSupportAgentLifecycle {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][ValidateSet('Install', 'Upgrade', 'Repair', 'Uninstall', 'Rollback', 'Status')][string]$Mode,
-        [Parameter(Mandatory)][ValidateSet('Testing', 'Production')][string]$Channel
+        [AllowNull()][ValidateSet('Testing', 'Production')][string]$Channel
     )
 
     $contract = Get-RmsSupportAgentDeploymentContract -Channel $Channel
+    $modeAuthority = Resolve-RmsSupportAgentMachineReleaseMode -Contract $contract -RequestedChannel $Channel
     if ($Mode -eq 'Status') {
         $state = try { Get-RmsSupportAgentLifecycleState -Contract $contract } catch { $null }
         $manifest = if (Test-Path -LiteralPath $contract.InstalledManifestPath -PathType Leaf) { try { Get-Content -Raw -LiteralPath $contract.InstalledManifestPath | ConvertFrom-Json } catch { $null } } else { $null }
         $service = Get-RmsSupportAgentServiceEvidence -Contract $contract
         return [pscustomobject]@{
             Mode = $Mode
+            RequestedChannel = $Channel
+            MachineReleaseMode = if ($modeAuthority.Valid) { $modeAuthority.Channel } else { $null }
+            MachineReleaseModeCode = $modeAuthority.Code
             State = if ($null -ne $state) { if ($state.RecoveryRequired) { 'RecoveryRequired' } else { [string]$state.Phase } } elseif ($null -ne $service) { [string]$service.State } else { 'NotInstalled' }
             ServiceName = $contract.ServiceName
             ServiceState = if ($null -ne $service) { $service.State } else { 'NotFound' }
@@ -1027,6 +1268,20 @@ function Invoke-RmsSupportAgentLifecycle {
             Detail = 'Status is read-only; no service, package, certificate, registry, browser policy, or filesystem mutation was performed.'
         }
     }
+
+    if (-not $modeAuthority.Valid) {
+        return [pscustomobject]@{
+            State = 'Failed'
+            Code = [string]$modeAuthority.Code
+            Detail = 'The protected machine-owned deployment mode was missing, malformed, ambiguous, or did not match the optional caller assertion. No lifecycle mutation was attempted.'
+            RollbackAttempted = $false
+            RollbackSucceeded = $false
+        }
+    }
+
+    # From this point onward the caller-selected value is no longer used. It is an optional
+    # assertion only; every trust and lifecycle decision uses this protected machine-owned mode.
+    $Channel = [string]$modeAuthority.Channel
 
     $lease = $null
     $stage = $null

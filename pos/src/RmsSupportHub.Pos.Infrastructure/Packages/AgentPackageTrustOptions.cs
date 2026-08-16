@@ -31,8 +31,9 @@ public sealed class AgentPackageTrustOptions
             throw new ArgumentException("The package trust configuration path must be a fixed absolute path.", nameof(TrustConfigurationPath));
         }
 
-        ValidateThumbprint(ProductionSignerThumbprint, nameof(ProductionSignerThumbprint));
-        ValidateThumbprint(TestingSignerThumbprint, nameof(TestingSignerThumbprint));
+        var production = ValidateThumbprint(ProductionSignerThumbprint, nameof(ProductionSignerThumbprint));
+        var testing = ValidateThumbprint(TestingSignerThumbprint, nameof(TestingSignerThumbprint));
+        ValidateDistinctThumbprints(production, testing);
     }
 
     public string? GetConfiguredThumbprint(string channel) => channel switch
@@ -42,12 +43,14 @@ public sealed class AgentPackageTrustOptions
         _ => null
     };
 
-    private static void ValidateThumbprint(string? value, string name)
+    private static string? ValidateThumbprint(string? value, string name)
     {
         if (value is not null && Normalize(value) is null)
         {
             throw new ArgumentException("A signer thumbprint must be exactly 40 hexadecimal characters.", name);
         }
+
+        return Normalize(value);
     }
 
     public static string? Normalize(string? value)
@@ -55,6 +58,16 @@ public sealed class AgentPackageTrustOptions
         if (string.IsNullOrWhiteSpace(value)) return null;
         var normalized = new string(value.Where(character => !char.IsWhiteSpace(character)).ToArray()).ToUpperInvariant();
         return normalized.Length == 40 && normalized.All(Uri.IsHexDigit) ? normalized : null;
+    }
+
+    public static void ValidateDistinctThumbprints(string? production, string? testing)
+    {
+        if (production is not null
+            && testing is not null
+            && string.Equals(production, testing, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Production and Testing signer thumbprints must be cryptographically distinct.");
+        }
     }
 }
 

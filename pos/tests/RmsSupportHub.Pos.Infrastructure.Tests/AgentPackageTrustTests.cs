@@ -35,21 +35,12 @@ public sealed class AgentPackageTrustTests
     public async Task ProductionCannotUseTheTestingChainBypassOrTestingSignerPin()
     {
         using var certificate = CreateCodeSigningCertificate();
-        var trust = new RecordingTrustValidator();
-        var verifier = new MachineCertificatePackageSignatureVerifier(
-            new AgentPackageTrustOptions
-            {
-                ProductionSignerThumbprint = certificate.Thumbprint,
-                TestingSignerThumbprint = certificate.Thumbprint,
-                RequireTrustedChain = false
-            },
-            new FixedCertificateSource(certificate),
-            trust);
-        var production = Sign(CreateManifest(certificate) with { ReleaseChannel = "Production", Environment = "Production" }, certificate);
-
-        Assert.True(await verifier.VerifyAsync(production, "unused.zip"));
-        Assert.True(trust.WasCalled);
-        Assert.True(trust.LastRequireTrustedChain);
+        Assert.Throws<ArgumentException>(() => new AgentPackageTrustOptions
+        {
+            ProductionSignerThumbprint = certificate.Thumbprint,
+            TestingSignerThumbprint = certificate.Thumbprint,
+            RequireTrustedChain = false
+        }.Validate());
 
         var strictVerifier = new MachineCertificatePackageSignatureVerifier(
             new AgentPackageTrustOptions
@@ -59,7 +50,59 @@ public sealed class AgentPackageTrustTests
             },
             new FixedCertificateSource(certificate),
             new X509ChainAgentPackageSignerTrustValidator());
+        var production = Sign(CreateManifest(certificate) with { ReleaseChannel = "Production", Environment = "Production" }, certificate);
         Assert.False(await strictVerifier.VerifyAsync(production, "unused.zip"));
+
+        var noProductionPinVerifier = new MachineCertificatePackageSignatureVerifier(
+            new AgentPackageTrustOptions
+            {
+                TestingSignerThumbprint = certificate.Thumbprint,
+                TrustConfigurationPath = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", Guid.NewGuid().ToString("N"), "package-trust.json"),
+                RequireTrustedChain = false
+            },
+            new FixedCertificateSource(certificate),
+            new RecordingTrustValidator());
+        Assert.False(await noProductionPinVerifier.VerifyAsync(production, "unused.zip"));
+    }
+
+    [Theory]
+    [InlineData("AABBCCDDEEFF00112233445566778899AABBCCDD", "aabbccddee ff00112233445566778899aabbccdd")]
+    [InlineData("AABBCCDDEEFF00112233445566778899AABBCCDD", " aabb ccdd eeff 0011 2233 4455 6677 8899 aabb ccdd ")]
+    public void RejectsEqualSignerPinsAfterCanonicalNormalization(string production, string testing)
+    {
+        Assert.Throws<ArgumentException>(() => new AgentPackageTrustOptions
+        {
+            ProductionSignerThumbprint = production,
+            TestingSignerThumbprint = testing
+        }.Validate());
+    }
+
+    [Fact]
+    public async Task ProductionUsesItsDistinctPinnedSignerAndCannotUseTestingPinnedSigner()
+    {
+        using var productionCertificate = CreateCodeSigningCertificate();
+        using var testingCertificate = CreateCodeSigningCertificate();
+        var trust = new RecordingTrustValidator();
+        var verifier = new MachineCertificatePackageSignatureVerifier(
+            new AgentPackageTrustOptions
+            {
+                ProductionSignerThumbprint = productionCertificate.Thumbprint,
+                TestingSignerThumbprint = testingCertificate.Thumbprint,
+                RequireTrustedChain = false
+            },
+            new DictionaryCertificateSource(productionCertificate, testingCertificate),
+            trust);
+
+        var production = Sign(CreateManifest(productionCertificate) with { ReleaseChannel = "Production", Environment = "Production" }, productionCertificate);
+        var testingSignedByProduction = Sign(CreateManifest(productionCertificate), productionCertificate);
+        var productionSignedByTesting = Sign(
+            CreateManifest(testingCertificate) with { ReleaseChannel = "Production", Environment = "Production" },
+            testingCertificate);
+
+        Assert.True(await verifier.VerifyAsync(production, "unused.zip"));
+        Assert.True(trust.LastRequireTrustedChain);
+        Assert.False(await verifier.VerifyAsync(testingSignedByProduction, "unused.zip"));
+        Assert.False(await verifier.VerifyAsync(productionSignedByTesting, "unused.zip"));
     }
 
     [Fact]
@@ -129,6 +172,14 @@ public sealed class AgentPackageTrustTests
     private sealed class FixedCertificateSource(X509Certificate2 certificate) : IAgentPackageSignerCertificateSource
     {
         public X509Certificate2? Find(string thumbprint) => new(certificate);
+    }
+
+    private sealed class DictionaryCertificateSource(params X509Certificate2[] certificates) : IAgentPackageSignerCertificateSource
+    {
+        public X509Certificate2? Find(string thumbprint) => certificates
+            .FirstOrDefault(certificate => string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase)) is { } certificate
+            ? new(certificate)
+            : null;
     }
 
     private sealed class RecordingTrustValidator : IAgentPackageSignerTrustValidator

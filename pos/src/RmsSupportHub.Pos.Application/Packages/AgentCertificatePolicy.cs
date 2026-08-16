@@ -26,6 +26,12 @@ public sealed class AgentCertificatePolicy
         if (!string.Equals(evidence.KeyStorageProvider, ExpectedProvider, StringComparison.Ordinal)) return Reject("certificate_provider_invalid", "The Agent certificate is not backed by the expected CNG provider.");
         if (evidence.IsExportable) return Reject("private_key_exportable", "The Agent private key must be non-exportable.");
         if (!evidence.HasServerAuthenticationEku) return Reject("server_authentication_eku_missing", "The Agent certificate lacks the Server Authentication EKU.");
+        if (evidence.PrivateKeySecurity is null
+            || !evidence.PrivateKeySecurity.IsTrusted
+            || !string.Equals(evidence.PrivateKeySecurity.ProviderName, ExpectedProvider, StringComparison.Ordinal))
+        {
+            return Reject("local_system_private_key_access_unproven", "The Agent CNG private-key ACL does not prove protected LocalSystem access.");
+        }
         if (evidence.OwnershipMarker is not (ExpectedOwnershipMarker or EnterpriseOwnershipMarker)) return Reject("certificate_ownership_unproven", "Certificate ownership is not proven; the existing certificate must not be replaced or removed.");
         if (string.IsNullOrWhiteSpace(evidence.Thumbprint)) return Reject("certificate_thumbprint_missing", "The owned Agent certificate thumbprint is unavailable.");
         if (evidence.NotBeforeUtc > nowUtc || evidence.NotAfterUtc < nowUtc) return Reject("certificate_expired_or_not_yet_valid", "The Agent certificate is not currently valid.");

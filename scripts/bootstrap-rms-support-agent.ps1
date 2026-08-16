@@ -3,7 +3,8 @@ param(
     [ValidateSet('Install', 'Upgrade', 'Repair', 'Uninstall', 'Rollback', 'Status')]
     [string]$Mode = 'Install',
     [ValidateSet('Testing', 'Production')]
-    [string]$Channel = 'Production',
+    [AllowNull()]
+    [string]$Channel,
     [switch]$Silent,
     [switch]$PlanOnly,
     [switch]$NoSelfElevate,
@@ -50,9 +51,9 @@ function Invoke-RmsSingleElevation {
         '-ExecutionPolicy', 'Bypass',
         '-File', ('"{0}"' -f [IO.Path]::GetFullPath($PSCommandPath)),
         '-Mode', $Mode,
-        '-Channel', $Channel,
         '-ElevatedHandoff'
     )
+    if (-not [string]::IsNullOrWhiteSpace($Channel)) { $arguments += @('-Channel', $Channel) }
     if ($Silent) { $arguments += '-Silent' }
     if ($PlanOnly) { $arguments += '-PlanOnly' }
 

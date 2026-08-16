@@ -1,5 +1,6 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
+using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Infrastructure.Configuration;
 
@@ -87,15 +88,10 @@ public static class ServiceOwnedDirectoryProvisioner
     }
 
     /// <summary>
-    /// Read-only trust check for a machine-owned control file (package-trust.json,
-    /// agent-certificate.json, lifecycle-state.json) that this application never provisions itself --
-    /// it is expected to already exist, placed by deployment/installer tooling running with
-    /// administrative rights. Unlike <see cref="EnsureProvisioned"/>, this never creates or mutates
-    /// the ACL; it only verifies the file's existing directory boundary is reparse-free and owned by
-    /// BUILTIN\Administrators or LocalSystem with a protected ACL that grants no broader allow rule
-    /// (no ordinary Users/Everyone/Authenticated Users write access), so an unsafe writable
-    /// configuration can never become trust authority. Callers must reject the control file's
-    /// contents when this returns false, before parsing anything security-sensitive from it.
+    /// Read-only trust check for a fixed machine-owned control file. The file itself and every
+    /// directory from it to the fixed service-owned root are verified before its contents become
+    /// authority. The only non-machine boundary is the explicitly named disposable test fixture
+    /// root; it can never make a normal %ProgramData% control file acceptable.
     /// </summary>
     public static bool IsTrustedControlFile(string filePath)
     {
@@ -105,21 +101,34 @@ public static class ServiceOwnedDirectoryProvisioner
             if (!OperatingSystem.IsWindows()) return false;
 
             var fullPath = Path.GetFullPath(filePath);
-            if (!File.Exists(fullPath) || File.GetAttributes(fullPath).HasFlag(FileAttributes.ReparsePoint)) return false;
-
-            var directory = Path.GetDirectoryName(fullPath);
-            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return false;
-
-            var current = directory;
-            while (!string.IsNullOrWhiteSpace(current) && Directory.Exists(current))
+            if (!File.Exists(fullPath)
+                || !IsSecurityControlFileName(fullPath)
+                || File.GetAttributes(fullPath).HasFlag(FileAttributes.ReparsePoint)
+                || new FileInfo(fullPath).Length is <= 0 or > 64 * 1024)
             {
-                if (new DirectoryInfo(current).Attributes.HasFlag(FileAttributes.ReparsePoint)) return false;
-                var parent = Directory.GetParent(current)?.FullName;
-                if (parent is null || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase)) break;
-                current = parent;
+                return false;
             }
 
-            return IsAclBoundaryTrusted(directory);
+            if (!TryResolveSecurityRoot(fullPath, out var securityRoot, out var allowTemporaryTestIdentity)) return false;
+
+            var currentSid = allowTemporaryTestIdentity ? WindowsIdentity.GetCurrent().User : null;
+            var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrWhiteSpace(directory)) return false;
+
+            while (true)
+            {
+                if (!Directory.Exists(directory)
+                    || !IsRestrictedDirectory(directory, administrators, system, currentSid, allowTemporaryTestIdentity)) return false;
+                if (string.Equals(directory, securityRoot, StringComparison.OrdinalIgnoreCase)) break;
+
+                var parent = Directory.GetParent(directory)?.FullName;
+                if (parent is null || string.Equals(parent, directory, StringComparison.OrdinalIgnoreCase)) return false;
+                directory = parent;
+            }
+
+            return IsRestrictedFile(fullPath, administrators, system, currentSid, allowTemporaryTestIdentity);
         }
         catch
         {
@@ -127,39 +136,160 @@ public static class ServiceOwnedDirectoryProvisioner
         }
     }
 
-    private static bool IsAclBoundaryTrusted(string directoryPath)
+    /// <summary>
+    /// Applies the exact file ACL used for an application-owned lifecycle checkpoint. External trust
+    /// and certificate files remain deployment-owned and are never repaired by this method.
+    /// </summary>
+    public static void EnsureControlFileAcl(string filePath)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        if (string.IsNullOrWhiteSpace(filePath) || !Path.IsPathFullyQualified(filePath)) throw new ArgumentException("A fixed control file path is required.", nameof(filePath));
+
+        var fullPath = Path.GetFullPath(filePath);
+        if (!File.Exists(fullPath) || !IsSecurityControlFileName(fullPath) || !TryResolveSecurityRoot(fullPath, out _, out var allowTemporaryTestIdentity))
+        {
+            throw new UnauthorizedAccessException("The lifecycle control file is outside the fixed service-owned boundary.");
+        }
+
+        var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        var currentSid = allowTemporaryTestIdentity ? WindowsIdentity.GetCurrent().User : null;
+        var fileInfo = new FileInfo(fullPath);
+        var existing = fileInfo.GetAccessControl(AccessControlSections.Owner);
+        var existingOwner = existing.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+        if (existingOwner is null
+            || (!IsTrustedIdentity(existingOwner, administrators, system)
+                && !(allowTemporaryTestIdentity && existingOwner == currentSid)))
+        {
+            throw new UnauthorizedAccessException("The existing control file owner is not trusted.");
+        }
+
+        var security = new FileSecurity();
+        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        if (!allowTemporaryTestIdentity) security.SetOwner(administrators);
+        security.AddAccessRule(new FileSystemAccessRule(administrators, FileSystemRights.FullControl, AccessControlType.Allow));
+        security.AddAccessRule(new FileSystemAccessRule(system, FileSystemRights.FullControl, AccessControlType.Allow));
+        if (allowTemporaryTestIdentity && currentSid is not null && !IsTrustedIdentity(currentSid, administrators, system))
+        {
+            security.AddAccessRule(new FileSystemAccessRule(currentSid, FileSystemRights.FullControl, AccessControlType.Allow));
+        }
+
+        fileInfo.SetAccessControl(security);
+        if (!IsTrustedControlFile(fullPath)) throw new UnauthorizedAccessException("The control file ACL could not be verified.");
+    }
+
+    private static bool IsRestrictedDirectory(
+        string directoryPath,
+        SecurityIdentifier administrators,
+        SecurityIdentifier system,
+        SecurityIdentifier? currentSid,
+        bool allowTemporaryTestIdentity)
     {
         try
         {
             var directoryInfo = new DirectoryInfo(directoryPath);
             if (directoryInfo.Attributes.HasFlag(FileAttributes.ReparsePoint)) return false;
 
-            // The same narrow %TEMP%-scoped escape hatch EnsureProvisioned already grants a
-            // disposable test fixture: it never widens what production accepts (real control files
-            // live under %ProgramData%\DBS, never %TEMP%), and only applies when the boundary is
-            // owned by the current identity with an otherwise-protected, otherwise-untrusted-rule-free
-            // ACL -- the same shape EnsureProvisioned itself would have applied.
-            var allowTemporaryTestIdentity = IsTemporaryTestPath(directoryPath);
-            var currentSid = allowTemporaryTestIdentity ? WindowsIdentity.GetCurrent().User : null;
-
             var security = directoryInfo.GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
             var owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
-            var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
-            var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
             var ownerTrusted = IsTrustedIdentity(owner, administrators, system)
                 || (allowTemporaryTestIdentity && owner is not null && owner == currentSid);
             if (!ownerTrusted || !security.AreAccessRulesProtected) return false;
 
             var rules = security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
                 .Cast<FileSystemAccessRule>();
-            return !rules.Any(rule => rule.AccessControlType == AccessControlType.Allow
+            if (rules.Any(rule => rule.AccessControlType == AccessControlType.Allow
                 && !IsTrustedIdentity(rule.IdentityReference as SecurityIdentifier, administrators, system)
-                && !(allowTemporaryTestIdentity && rule.IdentityReference == currentSid));
+                && !(allowTemporaryTestIdentity && rule.IdentityReference == currentSid))) return false;
+
+            return allowTemporaryTestIdentity
+                ? rules.Any(rule => rule.IdentityReference == currentSid
+                    && rule.AccessControlType == AccessControlType.Allow
+                    && rule.FileSystemRights.HasFlag(FileSystemRights.FullControl))
+                : rules.Count(rule => rule.IdentityReference == administrators
+                    && rule.AccessControlType == AccessControlType.Allow
+                    && rule.FileSystemRights.HasFlag(FileSystemRights.FullControl)) > 0
+                    && rules.Count(rule => rule.IdentityReference == system
+                        && rule.AccessControlType == AccessControlType.Allow
+                        && rule.FileSystemRights.HasFlag(FileSystemRights.FullControl)) > 0;
         }
         catch
         {
             return false;
         }
+    }
+
+    private static bool IsRestrictedFile(
+        string filePath,
+        SecurityIdentifier administrators,
+        SecurityIdentifier system,
+        SecurityIdentifier? currentSid,
+        bool allowTemporaryTestIdentity)
+    {
+        var security = new FileInfo(filePath).GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
+        var owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+        var ownerTrusted = IsTrustedIdentity(owner, administrators, system)
+            || (allowTemporaryTestIdentity && owner is not null && owner == currentSid);
+        if (!ownerTrusted || !security.AreAccessRulesProtected) return false;
+
+        var rules = security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
+            .Cast<FileSystemAccessRule>()
+            .ToList();
+        if (rules.Any(rule => rule.AccessControlType == AccessControlType.Allow
+            && !IsTrustedIdentity(rule.IdentityReference as SecurityIdentifier, administrators, system)
+            && !(allowTemporaryTestIdentity && rule.IdentityReference == currentSid))) return false;
+
+        return allowTemporaryTestIdentity
+            ? rules.Any(rule => rule.IdentityReference == currentSid
+                && rule.AccessControlType == AccessControlType.Allow
+                && rule.FileSystemRights.HasFlag(FileSystemRights.FullControl))
+            : rules.Any(rule => rule.IdentityReference == administrators
+                && rule.AccessControlType == AccessControlType.Allow
+                && rule.FileSystemRights.HasFlag(FileSystemRights.FullControl))
+                && rules.Any(rule => rule.IdentityReference == system
+                    && rule.AccessControlType == AccessControlType.Allow
+                    && rule.FileSystemRights.HasFlag(FileSystemRights.FullControl));
+    }
+
+    private static bool IsSecurityControlFileName(string path) =>
+        Path.GetFileName(path) is "package-trust.json" or "agent-certificate.json" or "lifecycle-state.json";
+
+    private static bool TryResolveSecurityRoot(
+        string fullPath,
+        out string securityRoot,
+        out bool allowTemporaryTestIdentity)
+    {
+        var machineRoot = Path.GetFullPath(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "DBS",
+            AgentProductIdentity.ProductId));
+        var testRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests"));
+
+        if (IsWithinRoot(fullPath, machineRoot))
+        {
+            securityRoot = machineRoot;
+            allowTemporaryTestIdentity = false;
+            return true;
+        }
+
+        if (IsWithinRoot(fullPath, testRoot))
+        {
+            securityRoot = testRoot;
+            allowTemporaryTestIdentity = true;
+            return true;
+        }
+
+        securityRoot = string.Empty;
+        allowTemporaryTestIdentity = false;
+        return false;
+    }
+
+    private static bool IsWithinRoot(string path, string root)
+    {
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        var normalizedPath = Path.GetFullPath(path);
+        return normalizedPath.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+            || normalizedPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ApplyRestrictedAcl(string path, bool allowTemporaryTestIdentity)
@@ -281,8 +411,7 @@ public static class ServiceOwnedDirectoryProvisioner
     {
         var temporaryRoot = Path.GetFullPath(Path.GetTempPath())
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return fullPath.Equals(temporaryRoot, StringComparison.OrdinalIgnoreCase)
-            || fullPath.StartsWith(temporaryRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        return fullPath.StartsWith(temporaryRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RejectReparsePointsOnExistingChain(string fullPath)

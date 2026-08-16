@@ -78,6 +78,41 @@ fixed LocalMachine trust and certificate material described below:
   rejects wildcards, `DisableLoopbackCheck`, broad CORS, and unsupported browser
   generations. The Slice C plan does not write Production registry policy.
 
+## PR #21 production trust-boundary remediation
+
+The follow-up remediation keeps the accepted checkpoint-based rollback model
+and closes the remaining trust-boundary findings in both the typed platform and
+the PowerShell lifecycle:
+
+- Production and Testing signer pins are normalized and must be cryptographically
+  distinct. Equal pins, malformed pins, a Testing signer on a Production
+  package, and any missing Production pin fail closed before trust authority is
+  selected.
+- Lifecycle mutations use `deploymentMode` from the protected machine-owned
+  trust control file as the release authority. The public `-Channel` value is
+  optional caller assertion only; a mismatch, missing/malformed mode, invalid
+  trust file, or caller/environment/package attempt to switch modes is rejected.
+- `package-trust.json`, `agent-certificate.json`, and `lifecycle-state.json`
+  are bounded, fixed-name, non-reparse control files. The file owner and ACL,
+  plus every non-reparse ancestor back to the fixed service-owned security root,
+  must be trusted, protected, and free of unsafe broad allow rules. The
+  temporary test identity is limited to the explicit named fixture root and
+  cannot authorize the ProgramData production root.
+- Certificate readiness now includes typed evidence for the actual CNG key file:
+  machine key/provider identity, non-exportable policy, fixed Microsoft CNG key
+  root, trusted owner/protected ACL, and explicit `S-1-5-18` LocalSystem read
+  access. Administrator-only access or broad key ACLs fail closed; the key is
+  never exported.
+- Package completion audit and incident-timeline records use the generated
+  opaque operation instance ID, with the same correlation ID as the accepted
+  operation. The static operation descriptor is not used as terminal identity.
+
+The accepted rollback controls remain unchanged: recovery identity comes from
+the durable checkpoint `PreviousVersion`; retained slots contain only signed
+manifest/archive material; recovery always fresh-extracts and re-verifies;
+health gates success; explicit rollback preserves a bounded recovery slot; and
+H-1/H-2/H-3 remain enforced.
+
 ## RMS evidence and Support Bundle
 
 `GET /api/v1/rms/operational-health` is an authenticated, read-only projection
@@ -128,11 +163,13 @@ fleet or customer approval:
 
 | Evidence class | Current state |
 | --- | --- |
-| Implemented | Slice C contracts, canonical package trust, publication boundary, typed Windows lifecycle, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
-| CI/local validated | POS Release build/tests, focused package trust/lifecycle tests, frontend tests/build, PowerShell parse/Pester, and generated OpenAPI/client checks pass when the documented Testing origin is supplied. |
+| Implemented | Slice C contracts, canonical package trust, machine-owned release mode, control-file and LocalSystem key ACL boundaries, typed Windows lifecycle, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
+| Automated tested | C# signer separation (6), certificate policy (6), audit correlation (1), POS solution (362), PowerShell trust/mode/ACL/key/rollback focus (33), full Pester (153), backend (194), and `build.ps1` all pass; the POS origin is supplied for Release validation. |
 | Testing live-proven | Existing historical INT-13 evidence remains valid for the earlier Testing service model; this session did not claim a new elevated run. |
-| Production representative-machine proven | Not claimed. The current shell is not Administrator and no Production registry, certificate, SCM, RMS, Main Server, or database mutation was performed. |
-| Customer/fleet approved | Not claimed. Enterprise package signing, package publication, managed policy deployment, PKI issuance/renewal/revocation, and final independent Slice C review remain release gates. |
+| Production signed | Not claimed. No representative Production signer, package publication, PKI issuance/renewal/revocation, or Production execution evidence is in this session. |
+| Representative-machine proven | Not claimed. The current shell is not Administrator and no Production registry, certificate, SCM, RMS, Main Server, or database mutation was performed. |
+| Fleet proven | Not claimed. Managed browser policy, fleet enrollment, inventory, and rollout evidence remain external gates. |
+| Customer approved | Not claimed. Customer approval and the final independent Slice C review remain release gates. |
 
 The next task is the full independent Production/Fleet Security and
 Release-Readiness Review described in the root `TASK.md`. It must inspect the
