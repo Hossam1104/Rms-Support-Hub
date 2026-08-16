@@ -124,7 +124,13 @@ public sealed class FileAgentAuditSink(
         SafeToken(item.Outcome, "unknown") ?? "unknown",
         SafeToken(item.FailureCode, null),
         SafeToken(item.ProductVersion, "unavailable") ?? "unavailable",
-        SafeToken(item.BuildId, null));
+        SafeToken(item.BuildId, null))
+    {
+        PackageId = SafeToken(item.PackageId, null),
+        PackageVersion = SafeToken(item.PackageVersion, null),
+        TrustResult = SafeToken(item.TrustResult, null),
+        RecoveryState = SafeToken(item.RecoveryState, null)
+    };
 
     private static string SafePrincipal(string? value) =>
         SafeToken(value, "unavailable") is { } principal && principal.Length <= 256

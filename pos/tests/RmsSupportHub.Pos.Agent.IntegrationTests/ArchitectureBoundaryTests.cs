@@ -1,3 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
+using RmsSupportHub.Pos.Agent.Packages;
+using RmsSupportHub.Pos.Agent.Repair;
+using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Packages;
+using RmsSupportHub.Pos.Infrastructure.Windows;
+
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
 public sealed class ArchitectureBoundaryTests
@@ -85,6 +92,31 @@ public sealed class ArchitectureBoundaryTests
         var agentDirectory = Path.Combine(root, "pos", "src", "RmsSupportHub.Pos.Agent");
 
         Assert.False(Directory.Exists(Path.Combine(agentDirectory, "wwwroot")));
+    }
+
+    [Fact]
+    public void MetadataOnlyOpenApiCompositionCannotResolveTrustOrPackageLifecycleServices()
+    {
+        var services = new ServiceCollection();
+        AgentOpenApiHost.AddMetadataOnlyLifecycleGuards(services);
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Null(provider.GetService<AgentMachineTrustConfiguration>());
+        Assert.Null(provider.GetService<IAgentPackageLifecycle>());
+        Assert.Null(provider.GetService<IAgentPackageSignatureVerifier>());
+        Assert.Null(provider.GetService<IAgentServiceLifecycleController>());
+        Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<AgentPackageService>());
+        Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<RepairService>());
+    }
+
+    [Fact]
+    public void AgentProgramDoesNotFabricateSyntheticMachineTrust()
+    {
+        var root = FindRepoRoot();
+        var program = File.ReadAllText(Path.Combine(root, "pos", "src", "RmsSupportHub.Pos.Agent", "Program.cs"));
+
+        Assert.DoesNotContain("new AgentMachineTrustConfiguration", program, StringComparison.Ordinal);
+        Assert.Contains("AddMetadataOnlyLifecycleGuards", program, StringComparison.Ordinal);
     }
 
     private static string FindRepoRoot()

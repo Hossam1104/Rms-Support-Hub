@@ -34,10 +34,13 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
 
         if (!SafeToken.IsMatch(manifest.PackageId ?? string.Empty)) blockers.Add("package_id_invalid");
         if (!SafeToken.IsMatch(manifest.Version ?? string.Empty)) blockers.Add("package_version_invalid");
+        if (!AgentPackageVersion.TryParse(manifest.Version, out _)) blockers.Add("package_version_ordering_invalid");
         if (!string.Equals(manifest.SupportedOperatingSystem, "Windows", StringComparison.OrdinalIgnoreCase)) blockers.Add("os_not_supported");
         if (!string.Equals(manifest.SupportedRuntime, "net10.0-windows", StringComparison.OrdinalIgnoreCase)) blockers.Add("runtime_not_supported");
         if (!string.Equals(manifest.ServiceIdentity, "LocalSystem", StringComparison.Ordinal)) blockers.Add("service_identity_invalid");
         if (!string.Equals(manifest.ServiceDisplayName, AgentProductIdentity.ServiceDisplayName, StringComparison.Ordinal)) blockers.Add("service_display_name_invalid");
+        if (manifest.ServiceDescription is not null
+            && !string.Equals(manifest.ServiceDescription, AgentProductIdentity.ServiceDescription, StringComparison.Ordinal)) blockers.Add("service_description_invalid");
         if (!string.Equals(manifest.ScmName, AgentProductIdentity.PermanentServiceName, StringComparison.Ordinal)) blockers.Add("scm_name_invalid");
         if (manifest.SchemaVersion != 1) blockers.Add("package_schema_invalid");
         if (!string.Equals(manifest.ProductId, AgentProductIdentity.ProductId, StringComparison.Ordinal)) blockers.Add("product_identity_invalid");
@@ -54,6 +57,7 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
         var totalBytes = 0L;
         var logicalNames = new HashSet<string>(StringComparer.Ordinal);
         var relativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hasAgentExecutable = false;
         foreach (var file in manifest.Files ?? [])
         {
             if (file is null)
@@ -67,6 +71,11 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
             var normalizedRelativePath = file.RelativePath?.Replace('\\', '/') ?? string.Empty;
             if (!IsSafeRelativePath(file.RelativePath) || !relativePaths.Add(normalizedRelativePath)) blockers.Add("file_path_invalid");
             if (string.Equals(normalizedRelativePath, "manifest.json", StringComparison.OrdinalIgnoreCase)) blockers.Add("file_path_reserved");
+            if (normalizedRelativePath.IndexOf('/') < 0
+                && AgentProductIdentity.AllowedExecutableNames.Contains(normalizedRelativePath))
+            {
+                hasAgentExecutable = true;
+            }
             if (file.SizeBytes is < 0 or > MaxFileBytes) blockers.Add("file_size_invalid");
             if (!IsSha256(file.Sha256)) blockers.Add("file_hash_invalid");
             totalBytes = totalBytes > MaxPackageBytes - Math.Max(0, file.SizeBytes)
@@ -75,6 +84,7 @@ public sealed class AgentPackagePolicy : IAgentPackagePolicy
         }
 
         if (totalBytes > MaxPackageBytes) blockers.Add("file_total_size_invalid");
+        if (!hasAgentExecutable) blockers.Add("agent_executable_missing");
         if ((manifest.AclRequirements ?? []).Any(item => !AllowedAclRequirements.Contains(item))) blockers.Add("acl_requirement_invalid");
         if ((manifest.CertificateRequirements ?? []).Any(item => !AllowedCertificateRequirements.Contains(item))) blockers.Add("certificate_requirement_invalid");
         if (manifest.RollbackAvailable && string.IsNullOrWhiteSpace(manifest.PreviousVersion)) blockers.Add("rollback_metadata_invalid");

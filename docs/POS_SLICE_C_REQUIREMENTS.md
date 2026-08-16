@@ -1,8 +1,11 @@
 # POS Slice C Requirements
 
-Status: implementation foundation delivered 2026-08-16. This document remains
-the acceptance checklist; current delivered behavior and evidence classification
-are summarized in [`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md).
+Status: implementation delivered 2026-08-16. This document remains the
+acceptance checklist and evidence gate; current delivered behavior and
+evidence classification are summarized in
+[`POS_SLICE_C_IMPLEMENTATION.md`](POS_SLICE_C_IMPLEMENTATION.md). Real
+machine-owned Production trust, certificate, fleet, and customer evidence are
+still release gates and are not claimed by repository tests.
 
 The repository contains the permanent service/deployment contract, bounded
 legacy migration policy, one-UAC onboarding bootstrap, silent lifecycle
@@ -49,6 +52,48 @@ rules already recorded in [`POS_SLICE_B_BOUNDARY.md`](POS_SLICE_B_BOUNDARY.md).
   recovery, and restart behavior. Each result must distinguish accepted,
   running, succeeded, failed, partial, unknown, rollback-failed, and
   recovery-required states.
+
+### 2.1 Production trust-boundary acceptance
+
+- The sole normal C# trust authority is exactly
+  `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`; the path is not
+  configurable from `PosAgent:TrustConfigurationPath`, its environment-variable
+  spelling, `IConfiguration`, command line, appsettings, launch settings,
+  package metadata, browser input, or API input. Tests may replace the loader
+  only through a test-only DI seam. Production and Testing signer pins are
+  mandatory in every valid document, regardless of mode; both are strings,
+  non-empty, normalized 40-hex values, and distinct. Missing or malformed pins,
+  equal pins, Testing-signer/Production-package combinations, and any
+  chain-bypass seam used for Production must fail closed.
+- Lifecycle mutations in both C# and PowerShell must derive the effective
+  release mode exclusively from a protected, fixed-path machine deployment
+  configuration (`package-trust.json` `deploymentMode`). A caller `-Channel`
+  value or `PosAgent:ReleaseChannel` configuration must never select, downgrade,
+  or relabel the mode; `PosAgent:ReleaseChannel` and
+  `PosAgent:TrustConfigurationPath` are obsolete and rejected by presence,
+  including empty values.
+  Missing, malformed, or untrusted mode configuration must fail closed and
+  must not fall back to Testing, package metadata, appsettings, or an
+  environment-variable / host-environment override.
+- Every security-control file must prove fixed path, bounded size, no reparse,
+  trusted owner, protected ACL, and no unsafe broad allow rule. Every ancestor
+  to the named service-owned security root requires the same ownership/ACL/
+  reparse boundary. Test-fixture identity allowances must be impossible under
+  the ProgramData Production root.
+- HTTPS readiness must prove actual LocalSystem access to the non-exportable
+  Microsoft CNG private-key file, including provider, machine-key, owner,
+  protected ACL, and explicit `S-1-5-18` read evidence. Administrator-only
+  access or broad key ACLs are insufficient; the key must never be exported.
+- Terminal package audit and incident-timeline events must use the generated
+  opaque operation instance ID and preserve its correlation ID. These controls
+  must not weaken the accepted checkpoint/`PreviousVersion` rollback identity,
+  signed manifest/archive retention, fresh re-verification, health gate,
+  recovery slot, H-1, H-2, or H-3 boundaries.
+- OpenAPI generation must use a metadata-only composition that does not create
+  or make usable the machine trust snapshot, package lifecycle, SCM controller,
+  certificate lifecycle, rollback/recovery mutation, or privileged package
+  operation services. It must succeed without the canonical trust file while
+  normal Agent startup fails closed without fabricating trust.
 
 ## 3. Update, download, and asset health
 

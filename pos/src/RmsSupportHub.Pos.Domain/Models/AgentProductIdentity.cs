@@ -14,6 +14,19 @@ public static class AgentProductIdentity
 
     public const string ServiceDescription = "Local diagnostics, maintenance and repair agent for RMS Support Hub";
 
+    // The published Agent is an apphost. Both names are explicit product identities because the
+    // earlier Testing package used the short apphost name; no caller may introduce another name.
+    public const string PublishedExecutableName = "RmsSupportHub.Pos.Agent.exe";
+
+    public const string TestingExecutableName = "RmsSupportAgent.exe";
+
+    public static IReadOnlySet<string> AllowedExecutableNames { get; } =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            PublishedExecutableName,
+            TestingExecutableName
+        };
+
     public const string PackageSchema = "rms-support-agent.package.v1";
 
     public const string ReleaseChannelTesting = "Testing";

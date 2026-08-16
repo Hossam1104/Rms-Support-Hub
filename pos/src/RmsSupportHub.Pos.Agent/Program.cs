@@ -51,6 +51,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     Args = args,
     ContentRootPath = AppContext.BaseDirectory,
 });
+var isMetadataOnlyOpenApi = AgentOpenApiHost.IsMetadataOnlyGeneration();
 
 var securityOptions = builder.Configuration
     .GetSection(AgentSecurityOptions.SectionName)
@@ -66,7 +67,10 @@ builder.Services.AddSingleton(securityOptions);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(RuntimeRetentionPolicy.Default);
 builder.Services.AddSingleton<AgentScopedIdempotencyStore>();
-builder.Services.AddSingleton<IPrivilegedMutationLease, MachineWidePrivilegedMutationLease>();
+if (!isMetadataOnlyOpenApi)
+{
+    builder.Services.AddSingleton<IPrivilegedMutationLease, MachineWidePrivilegedMutationLease>();
+}
 
 // The real process always uses Negotiate. IntegrationTest is a dedicated host environment used by
 // the test project to substitute a fake scheme because TestServer cannot perform SSPI handshakes;
@@ -272,29 +276,87 @@ builder.Services.AddSingleton<ISafetySnapshotStore, FileSafetySnapshotStore>();
 builder.Services.AddSingleton<ISafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
 builder.Services.AddSingleton<SafetySnapshotService>();
 
-// The package boundary reads only the Agent-owned catalog and delegates SCM, ACL, certificate,
-// activation, health, and rollback work to a typed platform seam. The default platform fails
-// closed for activation until the machine-owned implementation is provisioned.
-builder.Services.AddSingleton(new AgentPackageOptions());
-builder.Services.AddSingleton<IAgentPackagePolicy, AgentPackagePolicy>();
-builder.Services.AddSingleton<IAgentPackageCatalog, FileAgentPackageCatalog>();
-builder.Services.AddSingleton<IAgentPackageSignatureVerifier, MachineCertificatePackageSignatureVerifier>();
-builder.Services.AddSingleton<FileAgentPackageVerifier>();
-builder.Services.AddSingleton<IAgentPackageVerifier>(services => services.GetRequiredService<FileAgentPackageVerifier>());
-builder.Services.AddSingleton<IAgentPackageInstallationPlatform, WindowsAgentPackageInstallationPlatform>();
-builder.Services.AddSingleton<FileAgentPackageLifecycle>();
-builder.Services.AddSingleton<IAgentPackageLifecycle>(services => services.GetRequiredService<FileAgentPackageLifecycle>());
-builder.Services.AddSingleton<AgentPackagePreviewStore>();
-builder.Services.AddSingleton<AgentPackageOperationStore>();
-builder.Services.AddSingleton<AgentPackageService>();
+if (!isMetadataOnlyOpenApi)
+{
+    // Obsolete trust-related configuration is rejected by presence, including an empty value. The
+    // canonical machine trust file is the only normal runtime authority; these keys can never name
+    // an alternate file or influence the snapshot.
+    foreach (var obsoleteKey in new[] { "PosAgent:ReleaseChannel", "PosAgent:TrustConfigurationPath" })
+    {
+        if (builder.Configuration.AsEnumerable(true).Any(item =>
+                string.Equals(item.Key, obsoleteKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                $"{obsoleteKey} is obsolete and rejected. Agent package trust is determined exclusively by the canonical machine-owned package-trust.json.");
+        }
+    }
 
-// Repair and Guided Repair reuse the same package lifecycle and snapshot verification boundary.
-builder.Services.AddSingleton<RepairPreviewStore>();
-builder.Services.AddSingleton<RepairOperationStore>();
-builder.Services.AddSingleton<GuidedRepairStore>();
-builder.Services.AddSingleton<RepairService>();
+    // Normal Agent composition has one loader with one authority. The snapshot is resolved before
+    // startup completes so a missing, malformed, or untrusted canonical file fails closed. Tests
+    // can replace this loader only through their dedicated DI seam; no normal configuration path
+    // reaches the loader.
+    builder.Services.AddSingleton<IAgentMachineTrustConfigurationLoader, MachineAgentTrustConfigurationLoader>();
+    builder.Services.AddSingleton<AgentMachineTrustConfiguration>(services =>
+        services.GetRequiredService<IAgentMachineTrustConfigurationLoader>().Load());
+    builder.Services.AddSingleton<AgentPackageOptions>(services =>
+    {
+        var machineTrust = services.GetRequiredService<AgentMachineTrustConfiguration>();
+        var options = new AgentPackageOptions { ReleaseChannel = machineTrust.DeploymentMode };
+        options.Validate();
+        return options;
+    });
+    builder.Services.AddSingleton<AgentPackageTrustOptions>(services =>
+    {
+        var machineTrust = services.GetRequiredService<AgentMachineTrustConfiguration>();
+        var options = new AgentPackageTrustOptions
+        {
+            ProductionSignerThumbprint = machineTrust.ProductionSignerThumbprint,
+            TestingSignerThumbprint = machineTrust.TestingSignerThumbprint
+        };
+        options.Validate();
+        return options;
+    });
+    builder.Services.AddSingleton<IAgentPackageSignerCertificateSource, LocalMachineAgentPackageSignerCertificateSource>();
+    builder.Services.AddSingleton<IAgentPackageSignerTrustValidator, X509ChainAgentPackageSignerTrustValidator>();
+    builder.Services.AddSingleton<IAgentPackagePolicy, AgentPackagePolicy>();
+    builder.Services.AddSingleton<IAgentPackageCatalog, FileAgentPackageCatalog>();
+    builder.Services.AddSingleton<IAgentPackageSignatureVerifier, MachineCertificatePackageSignatureVerifier>();
+    builder.Services.AddSingleton<FileAgentPackageVerifier>();
+    builder.Services.AddSingleton<IAgentPackageVerifier>(services => services.GetRequiredService<FileAgentPackageVerifier>());
+    builder.Services.AddSingleton(new AgentCertificatePrerequisiteOptions { Thumbprint = securityOptions.CertificateThumbprint });
+    builder.Services.AddSingleton<IAgentCertificatePrerequisite, MachineAgentCertificatePrerequisite>();
+    builder.Services.AddSingleton<IAgentServiceLifecycleController, WindowsAgentServiceController>();
+    builder.Services.AddSingleton<AgentPackageLifecycleStateStore>();
+    builder.Services.AddSingleton<IAgentHealthProbe, LoopbackAgentHealthProbe>();
+    builder.Services.AddSingleton<IAgentPackageInstallationPlatform, WindowsAgentPackageInstallationPlatform>();
+    builder.Services.AddSingleton<FileAgentPackageLifecycle>();
+    builder.Services.AddSingleton<IAgentPackageLifecycle>(services => services.GetRequiredService<FileAgentPackageLifecycle>());
+    builder.Services.AddSingleton<AgentPackagePreviewStore>();
+    builder.Services.AddSingleton<AgentPackageOperationStore>();
+    builder.Services.AddSingleton<AgentPackageService>();
+
+    // Repair and Guided Repair reuse the same package lifecycle and snapshot verification boundary.
+    builder.Services.AddSingleton<RepairPreviewStore>();
+    builder.Services.AddSingleton<RepairOperationStore>();
+    builder.Services.AddSingleton<GuidedRepairStore>();
+    builder.Services.AddSingleton<RepairService>();
+}
+else
+{
+    // Minimal API endpoint metadata needs these parameter types to be known as services while the
+    // document generator reflects routes. The metadata host registers deliberate poison-pill
+    // descriptors: no package/repair service can be constructed or used in this process.
+    AgentOpenApiHost.AddMetadataOnlyLifecycleGuards(builder.Services);
+}
 
 var app = builder.Build();
+
+if (!isMetadataOnlyOpenApi)
+{
+    // Force the immutable trust snapshot to be validated during normal startup. The metadata host
+    // intentionally has no snapshot or lifecycle registrations and therefore never reaches here.
+    _ = app.Services.GetRequiredService<AgentMachineTrustConfiguration>();
+}
 
 app.UseExceptionHandler();
 app.UseMiddleware<CanonicalHostValidationMiddleware>();

@@ -65,7 +65,8 @@ public sealed record AgentPackageManifest(
     string? ProductId = null,
     string? Architecture = null,
     string? ReleaseChannel = null,
-    string? Environment = null);
+    string? Environment = null,
+    string? ServiceDescription = null);
 
 public sealed record AgentPackageValidationResult(
     AgentPackageVerificationState State,
@@ -86,6 +87,35 @@ public sealed record AgentPackageExecutionResult(
     bool RecoveryRequired,
     string Detail);
 
+public enum AgentPackageLifecyclePhase
+{
+    None,
+    Prepared,
+    Staged,
+    PreviousPreserved,
+    Activated,
+    HealthChecking,
+    Committed,
+    RollingBack,
+    RecoveryRequired
+}
+
+/// <summary>
+/// Durable, server-owned lifecycle checkpoint. Paths are intentionally not stored: every
+/// location is derived from fixed Agent package options and the operation identity.
+/// </summary>
+public sealed record AgentPackageLifecycleState(
+    string OperationId,
+    AgentPackageOperationKind Operation,
+    AgentPackageLifecyclePhase Phase,
+    string PackageId,
+    string PackageVersion,
+    string? PreviousVersion,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    string? FailureCode,
+    bool RecoveryRequired);
+
 public interface IAgentPackageCatalog
 {
     Task<AgentPackageManifest?> GetAvailableAsync(
@@ -104,6 +134,19 @@ public interface IAgentPackageVerifier
     Task<AgentPackageValidationResult> VerifyInstalledAsync(
         AgentPackageManifest manifest,
         CancellationToken cancellationToken = default);
+
+    Task<AgentPackageValidationResult> VerifyRollbackAsync(
+        AgentPackageManifest manifest,
+        CancellationToken cancellationToken = default) => VerifyAsync(manifest, cancellationToken);
+
+    /// <summary>
+    /// Verifies a package retained in the bounded recovery slot (the CURRENT package preserved
+    /// before a destructive explicit Rollback) against the same signed-manifest and archive trust
+    /// rules as any other activation source.
+    /// </summary>
+    Task<AgentPackageValidationResult> VerifyRecoveryAsync(
+        AgentPackageManifest manifest,
+        CancellationToken cancellationToken = default) => VerifyAsync(manifest, cancellationToken);
 }
 
 public interface IAgentPackageLifecycle

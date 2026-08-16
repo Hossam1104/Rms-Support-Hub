@@ -19,7 +19,15 @@ public sealed record AgentServiceEvidence(
     string? PackageVersion,
     string? OwnershipMarker,
     string? BinarySha256,
-    AgentResourceOwnershipState State);
+    AgentResourceOwnershipState State)
+{
+    /// <summary>SCM configuration evidence; these properties are not browser transport fields.</summary>
+    public string? ServiceAccount { get; init; }
+
+    public string? StartType { get; init; }
+
+    public bool? HasArguments { get; init; }
+}
 
 public sealed record AgentOwnershipAssessment(
     AgentResourceOwnershipState State,
@@ -68,6 +76,29 @@ public static class AgentLegacyServiceCatalog
     }
 }
 
+public sealed record AgentPrivateKeySecurityEvidence(
+    bool IsMachineKey,
+    bool IsCngKey,
+    string? ProviderName,
+    bool IsExportable,
+    bool KeyFileExists,
+    bool KeyFileIsReparsePoint,
+    bool OwnerTrusted,
+    bool AccessRulesProtected,
+    bool LocalSystemReadAccess,
+    bool HasUnsafeAllowRules)
+{
+    public bool IsTrusted => IsMachineKey
+        && IsCngKey
+        && !IsExportable
+        && KeyFileExists
+        && !KeyFileIsReparsePoint
+        && OwnerTrusted
+        && AccessRulesProtected
+        && LocalSystemReadAccess
+        && !HasUnsafeAllowRules;
+}
+
 public sealed record AgentCertificateEvidence(
     string? Thumbprint,
     string? DnsName,
@@ -78,7 +109,8 @@ public sealed record AgentCertificateEvidence(
     string? OwnershipMarker,
     DateTimeOffset NotBeforeUtc,
     DateTimeOffset NotAfterUtc,
-    string StoreLocation);
+    string StoreLocation,
+    AgentPrivateKeySecurityEvidence? PrivateKeySecurity = null);
 
 public sealed record AgentCertificateAssessment(
     bool Valid,

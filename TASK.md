@@ -1,120 +1,98 @@
-# RMS Support Hub — Next Task: Slice C Production/Fleet Security Review
-MODEL: GPT-5.6 Terra
-EFFORT: HIGH
-ROLE: REVIEW ONLY
-MODE: independent security, release-readiness, and runtime-evidence review
+# RMS Support Hub — POS Agent Deferred Hardening Pass (L-1 through L-4)
+
+MODEL: (assign at session start)
+EFFORT: MEDIUM
+ROLE: Implement
+MODE: in-repo hardening only — no Production/PKI/fleet/customer scope
+
+## Background
+
+PR #21 (Production POS Agent trust/lifecycle) passed independent security
+review (0 Critical/High/Medium) and was merged to `main`. The review recorded
+four non-blocking Low items as deferred backlog. See `.ai/STATE.md` section
+"Deferred non-blocking hardening (Low, from Opus review)" and
+`.ai/HISTORY.md` for full acceptance/merge evidence. Do not repeat that
+review or reopen accepted trust-boundary decisions (ADR-0027); only close the
+four items below.
+
 ## Objective
-Independently review the implemented POS Slice C foundation and decide whether
-it is ready for Production/fleet approval. This is review only: do not modify
-source, tests, generated artifacts, docs, `.ai/` memory, Git, services,
-certificates, registry, hosts, RMS folders, databases, package stores, or
-runtime processes. Do not claim any test, machine/fleet proof, customer
-acceptance, or Production readiness without direct evidence; current code/tests
-are primary truth.
-## Startup and scoped reading
-1. Read `TASK.md`, `.ai/STATE.md`, and run `python .ai/scripts/context.py`.
-2. Read `.ai/HANDOFF.md` only if `In Progress`/`Blocked`; read `.ai/PROJECT.md`
-   and ADR-0026 only when stable context is needed.
-3. Read only these scoped docs/contracts and task diff:
-   `docs/POS_SLICE_C_IMPLEMENTATION.md`, `docs/POS_SLICE_C_REQUIREMENTS.md`,
-   `docs/POS_MAINTENANCE_INTEGRATION_READINESS.md`,
-   `docs/POS_MAINTENANCE_MIGRATION_INTAKE.md`,
-   `docs/POS_RUNTIME_AND_MAIN_SERVER_API_DISCOVERY.md`,
-   `docs/POS_SLICE_B_BOUNDARY.md`, `docs/api-spec.md`,
-   `pos/openapi/README.md`, and generated OpenAPI JSON.
-4. Inspect the deployment scripts/Pester tests, Slice C
-   Domain/Application/Infrastructure/Contracts files/tests, Agent
-   OpenAPI/client transport, POS feature files/tests/styles, and
-   `docs/design-system.md`. Do not read `.ai/archive/`, old transcripts, full
-    history, or unrelated source.
-## Review gates
-### Identity and migration
-Verify the sole permanent product/service/display identity is
-`RmsSupportAgent` / `RMS Support Agent`; historical
-`RmsSupportHub.Pos.Agent` and `RmsSupportHub.Pos.Int13.TestService` are inputs
-only. Ownership must be proved before removing a disposable legacy service;
-unknown/conflicting services fail closed; migration is idempotent; RMS product
-services, especially `RMSServiceManager`, are never controlled or deleted.
-### Bootstrap and lifecycle
-Review `Status`, `PlanOnly`, `Install`, `Upgrade`, `Repair`, `Uninstall`, and
-`Rollback`. Parameters must be bounded, UAC handoff at most once, no recursive
-elevation, silent mode noninteractive, and exit codes must distinguish trust,
-conflict, elevation, and validation failures. Missing trusted package/SCM/
-certificate authority must stop safely rather than simulate success. No
-arbitrary SCM, registry, certificate, filesystem, RMS, or Production mutation
-may be reachable through unvalidated input.
-### Package trust and rollback
-Verify exact manifest product, schema, service, OS/runtime, architecture,
-channel/environment pairing, signer, signature/hash algorithm, package
-hash/size, exact file set, file hashes/sizes, safe paths, ACL/certificate
-requirements, and rollback metadata. Installed verification must detect missing,
-extra, unexpected, reparse, hash, size, manifest, and control-metadata drift.
-Production requires an approved signer; Testing is explicit and non-Production;
-rollback cannot select an untrusted or ambiguous package.
-### Browser and certificate policy
-Confirm exact Support Hub/Agent origins, no wildcard or `DisableLoopbackCheck`,
-unrelated policy preservation, and supported Chrome/Edge minimum-version
-branches. Certificate evidence must require exact Agent DNS, LocalMachine,
-Microsoft Software Key Storage Provider, non-exportable key, ServerAuth EKU,
-and explicit local/enterprise ownership. Enterprise certificates may be used
-but never removed by local lifecycle code; renewal and cleanup are bounded and
-fail closed.
-### H-1/H-2/H-3 and audit
-Re-check Slice B H-1 bounded redaction/quarantine, H-2 fixed service-owned
-roots, and H-3 machine-wide mutation serialization across Slice C paths.
-Durable JSONL audit must be bounded, sanitized, restart-readable, and record
-accepted/final/cancelled/unknown outcomes for diagnostics, maintenance,
-download, repair, snapshot, package, service, and Support Bundle operations.
-Correlation/idempotency data must not leak principals, paths, credentials, raw
-logs, or attachment contents.
-### RMS health and Support Bundle
-Confirm diagnostics use only fixed RMS setup/download/repository,
-Branch/Cashier data/log, ProgramData, and insurance roots; traversal is bounded,
-skips reparse escapes, and returns aggregate counts/bytes/timestamps/release
-state without raw paths, filenames, log contents, or attachment bytes. Update
-state is descriptive and safe, insurance aggregation bounded, and Support
-Bundle sections deterministic, manifest-driven, redacted, and export-safe.
-### API, contracts, and architecture
-Verify authenticated `GET /api/v1/rms/operational-health`, synchronized
-OpenAPI/TypeScript generation, non-Production runtime OpenAPI, and direct
-`HttpBackend` Agent transport. Dependencies remain Domain/Application ->
-Infrastructure -> Agent composition; no privileged Hub API relay exists. SQL
-and `docs/database-schema.md` remain the database contract.
-### UI, accessibility, performance
-Review `/tools/pos-maintenance` as an operations console: exact secure-origin
-handoff, command hierarchy, signal-to-action layout, fixed-root/update/
-insurance summaries, loading/empty/error states, responsive behavior, keyboard
-focus, semantic headings, screen-reader labels, contrast, reduced motion, dark
-theme, token-only styles, lazy loading, and bundle/test impact. Report concrete
-maintainability issues (including whether a child/shared component is warranted)
-without redesigning during review.
-## Safe validation and evidence
-Run only relevant safe checks; do not mutate Production, Main Server, RMS
-databases/folders, registry, certificates, SCM, or customer data. At minimum:
-```powershell
-python .ai/scripts/context.py
-python .ai/scripts/check_memory.py
-.\scripts\test-powershell-quality.ps1 -SkipScriptAnalyzer
-Invoke-Pester -Path .\scripts\tests
-$env:PosAgentSecurity__SupportHubOrigin='https://support-hub.integration.test:4443'
+
+Resolve L-1 through L-4 in the POS Agent lifecycle/trust code, or explicitly
+document why a given item is intentionally left as-is, with tests proving the
+resolved behavior.
+
+## Scope
+
+- **L-1** — `pos/src/RmsSupportHub.Pos.Infrastructure/Packages/AgentPackageVerifier.cs`,
+  `MachineCertificatePackageSignatureVerifier` parameterless constructor
+  (currently performs a canonical deferred trust reload via
+  `new MachineAgentTrustConfigurationLoader().Load()`, while shipped DI uses
+  the immutable-snapshot constructor). Confirm no DI registration or call
+  site uses the parameterless constructor; if none does, remove it. If one
+  does, bind it to the same immutable startup snapshot instead of a deferred
+  reload.
+- **L-2** — obsolete-key rejection (`PosAgent:ReleaseChannel`,
+  `PosAgent:TrustConfigurationPath`) is skipped inside the metadata-only
+  OpenAPI composition host. Confirm metadata mode genuinely has no
+  trust/lifecycle authority and does not consume either key; if confirmed,
+  add a regression test asserting metadata-only composition never reads
+  those keys, rather than changing composition behavior.
+- **L-3** — some early-return PowerShell lifecycle failure paths in
+  `scripts/PosSupportAgentDeployment.psm1` write started/attempted audit
+  events without a terminal failed event (operation-ID correlation itself is
+  correct). Identify each early-return path and add the missing terminal
+  failed audit event so every started/attempted operation ID has a terminal
+  outcome.
+- **L-4** — the PowerShell `TestOnlyTrustFixture` contract property
+  (`scripts/PosSupportAgentDeployment.psm1`,
+  `scripts/tests/PosSupportAgentRollbackRecovery.Tests.ps1`) can represent an
+  alternate test trust path, but the normal lifecycle entry point does not
+  expose or select it. Confirm this is dead/test-only surface with no
+  production entry point; if confirmed, either remove the unused property or
+  add an explicit test proving the normal entry point cannot select it.
+
+## Constraints
+
+- Do not touch the accepted trust-boundary design (ADR-0027): canonical
+  ProgramData trust path, mandatory distinct signer pins, immutable startup
+  snapshot, metadata-only OpenAPI isolation must remain exactly as they are.
+- Do not add configuration/environment/API surface for trust path selection.
+- Stay within `pos/` and `scripts/` — no backend/frontend changes expected.
+- If any item turns out to require Production/PKI/fleet evidence to close,
+  stop on that item and record it back into `.ai/STATE.md` external gates
+  instead of guessing.
+
+## Validation
+
+Run for the changed scope first:
+
+```
 dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo -warnaserror
 dotnet test pos/RmsSupportHub.Pos.slnx -c Release --no-build --nologo
-npm test --prefix frontend -- --watch=false --no-progress
-npm run build --prefix frontend -- --configuration production
+.\scripts\test-powershell-quality.ps1
+Invoke-Pester -Path .\scripts\tests
+python .ai/scripts/context.py
+python .ai/scripts/check_memory.py
 git diff --check
 ```
-Run the frontend suite twice when the first passes and verify client generation
-is byte-stable on a second pass. Compare CI where available; separate new and
-pre-existing failures. Use `.\scripts\dev.ps1` only for authorized local smoke
-checks and report only responding URLs. Do not start Testing provisioning,
-elevate, or run live H-3 proof unless separately authorized for a Testing
-machine.
-## Required output and stop boundary
-Return only a concise evidence-backed report containing:
-1. `Result`: Review Completed, Partially Completed, or Blocked.
-2. `Blocking findings`: severity, file/line or command evidence, impact, exact remediation/evidence needed; `None` when none exists.
-3. `Accepted controls`: identity/migration, trust, certificate/browser policy, H-1/H-2/H-3, audit, RMS health/insurance, Support Bundle, API/client, UI.
-4. `Validation`: exact commands/counts, CI state, and unavailable elevation, network, package, PKI, fleet, or customer evidence.
-5. `Production decision`: Ready, Not ready, or Ready only after named gates.
-6. `Remaining`: only unresolved work or evidence gates.
-Do not modify the repository or leave a plan/prompt in the active tree; the task ends at the independent review decision.
+
+Run `.\scripts\build.ps1` only if the change footprint grows beyond `pos/`
+and `scripts/`.
+
+## Delivery
+
+New branch off `main` (e.g. `fix/pos-agent-deferred-hardening`). Open a PR
+titled `fix(pos): close deferred L-1 through L-4 hardening items` with a
+summary of which items were closed, which were left as documented no-ops,
+and exact validation counts.
+
+## Return
+
+### Result
+### L-1 / L-2 / L-3 / L-4 — outcome and evidence for each
+### Validation
+Exact counts (POS Domain/Application/Infrastructure/Agent integration/total,
+PowerShell quality, Pester, memory, diff).
+### Git
+Branch, HEAD, PR (if opened).
+### Remaining

@@ -352,6 +352,22 @@ public sealed class AgentPackageService(
 
         var accepted = operations.Add(principalSid, preview.Operation, clock.GetUtcNow(), correlationId);
         idempotency.Bind(principalSid, IdempotencyScope, request.IdempotencyKey, accepted.OperationId);
+        audit.Record(new AgentAuditEvent(
+            accepted.StartedAtUtc,
+            principalSid,
+            "agent-package." + preview.Operation,
+            accepted.OperationId,
+            correlationId,
+            "accepted",
+            null,
+            typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
+            null)
+        {
+            PackageId = preview.Manifest.PackageId,
+            PackageVersion = preview.Manifest.Version,
+            TrustResult = "verified",
+            RecoveryState = "not_required"
+        });
         _ = Task.Run(
             () => ExecuteAsync(principalSid, accepted.OperationId, preview, request.SnapshotId, correlationId),
             CancellationToken.None);
@@ -438,19 +454,25 @@ public sealed class AgentPackageService(
                 completed,
                 principalSid,
                 "agent-package." + preview.Operation,
-                AgentPackageOperation.OperationId,
+                operationId,
                 correlationId,
                 result.State.ToString(),
                 result.RecoveryRequired ? "recovery_required" : null,
                 typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
-                null));
+                null)
+            {
+                PackageId = preview.Manifest.PackageId,
+                PackageVersion = preview.Manifest.Version,
+                TrustResult = "verified",
+                RecoveryState = result.RecoveryRequired ? "recovery_required" : "not_required"
+            });
 
             timeline.Record(
                 principalSid,
                 "AgentPackage",
                 result.RecoveryRequired || !result.RollbackSucceeded && result.RollbackAttempted ? FailureSeverity.ActionRequired : FailureSeverity.Informational,
                 SafeDetail(result.Detail),
-                operationId: AgentPackageOperation.OperationId,
+                operationId: operationId,
                 correlationId: correlationId);
         }
         finally

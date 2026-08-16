@@ -20,6 +20,7 @@ using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Infrastructure.Configuration;
 using RmsSupportHub.Pos.Infrastructure.Packages;
 using RmsSupportHub.Pos.Infrastructure.Snapshots;
 using RmsSupportHub.Pos.Infrastructure.Installation;
@@ -31,38 +32,77 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
     public const string SupportHubOrigin = "https://support-hub.integration.test:4443";
 
     private readonly string _environment;
+    private readonly bool _useTestTrust;
     private readonly string _databaseStorageRoot = Path.Combine(
         Path.GetTempPath(),
         "RmsSupportHub-Agent-Integration",
         Guid.NewGuid().ToString("N"));
+    private readonly string _testTrustRoot = Path.Combine(
+        Path.GetTempPath(),
+        "RmsSupportHub.Pos.Tests",
+        "agent-webfactory-" + Guid.NewGuid().ToString("N"));
+    private string _trustConfigurationPath;
     private readonly InMemoryAgentConfigurationStore _configurationStore;
     private readonly InMemoryAgentSecretStore _secretStore = new();
 
     public AgentWebApplicationFactory()
-        : this(AgentHostConstants.IntegrationTestEnvironment)
+        : this(AgentHostConstants.IntegrationTestEnvironment, useTestTrust: true)
     {
     }
 
     internal AgentWebApplicationFactory(string environment)
+        : this(environment, useTestTrust: true)
+    {
+    }
+
+    internal AgentWebApplicationFactory(string environment, bool useTestTrust)
     {
         _environment = environment;
+        _useTestTrust = useTestTrust;
         _configurationStore = new InMemoryAgentConfigurationStore(_databaseStorageRoot);
+
+        _trustConfigurationPath = Path.Combine(_testTrustRoot, "package-trust.json");
+        ServiceOwnedDirectoryProvisioner.EnsureProvisioned(_testTrustRoot);
+        var mode = string.Equals(_environment, "Production", StringComparison.Ordinal)
+            ? AgentProductIdentity.ReleaseChannelProduction
+            : AgentProductIdentity.ReleaseChannelTesting;
+        var json = $$"""
+        {
+          "productionSignerThumbprint": "1111111111111111111111111111111111111111",
+          "testingSignerThumbprint": "2222222222222222222222222222222222222222",
+          "deploymentMode": "{{mode}}"
+        }
+        """;
+        File.WriteAllText(_trustConfigurationPath, json);
+        ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(_trustConfigurationPath);
     }
 
     public void EnableDownloaderCredential() => _secretStore.EnableDownloaderCredential();
+
+    // Test-only DI seam: the normal Agent never receives this value from configuration. The
+    // ConfigureTestServices callback below installs the fixture loader after Program has registered
+    // the canonical loader.
+    internal void UseTestTrustConfiguration(string path) => _trustConfigurationPath = path;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(_environment);
         builder.UseSetting("PosAgentSecurity:SupportHubOrigin", SupportHubOrigin);
 
-        if (!string.Equals(_environment, AgentHostConstants.IntegrationTestEnvironment, StringComparison.Ordinal))
-        {
-            return;
-        }
-
         builder.ConfigureTestServices(services =>
         {
+            if (_useTestTrust)
+            {
+                services.RemoveAll<IAgentMachineTrustConfigurationLoader>();
+                services.AddSingleton<IAgentMachineTrustConfigurationLoader>(
+                    new MachineAgentTrustConfigurationLoader(_trustConfigurationPath));
+            }
+
+            if (!string.Equals(_environment, AgentHostConstants.IntegrationTestEnvironment, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             services.AddAuthentication(FakeAuthenticationHandler.SchemeName)
                 .AddScheme<FakeAuthenticationOptions, FakeAuthenticationHandler>(
                     FakeAuthenticationHandler.SchemeName,
@@ -140,10 +180,15 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
                 RootDirectory = Path.Combine(_databaseStorageRoot, "snapshots")
             });
             services.RemoveAll<AgentPackageOptions>();
-            services.AddSingleton(new AgentPackageOptions
+            services.AddSingleton(services =>
             {
-                PackageRoot = Path.Combine(_databaseStorageRoot, "packages"),
-                InstallationRoot = Path.Combine(_databaseStorageRoot, "agent-installation")
+                var machineTrust = services.GetRequiredService<AgentMachineTrustConfiguration>();
+                return new AgentPackageOptions
+                {
+                    ReleaseChannel = machineTrust.DeploymentMode,
+                    PackageRoot = Path.Combine(_databaseStorageRoot, "packages"),
+                    InstallationRoot = Path.Combine(_databaseStorageRoot, "agent-installation")
+                };
             });
             services.RemoveAll<IRmsDatabaseSqlOperations>();
             services.AddSingleton<IRmsDatabaseSqlOperations, InMemoryRmsDatabaseSqlOperations>();
@@ -166,6 +211,22 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
                 new MutationOperationDescriptor("integration.test-mutation", "PUT")
             ]));
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            try
+            {
+                if (Directory.Exists(_testTrustRoot)) Directory.Delete(_testTrustRoot, recursive: true);
+                if (Directory.Exists(_databaseStorageRoot)) Directory.Delete(_databaseStorageRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     public HttpClient CreateSecureClient()
