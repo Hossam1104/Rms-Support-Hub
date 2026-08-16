@@ -1,4 +1,4 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { PROMPT_STUDIO_DRAFT_KEYS, PromptStorageService } from './prompt-storage.service';
 
 describe('PromptStorageService', () => {
@@ -26,20 +26,27 @@ describe('PromptStorageService', () => {
     expect(TestBed.inject(PromptStorageService).load('story')).toBeNull();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
   it('does not crash when storage access is unavailable', () => {
     const service = TestBed.inject(PromptStorageService);
     const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Blocked'); });
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Blocked'); });
     const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('Blocked'); });
 
-    expect(() => {
-      service.save('testCase', { name: 'Draft' });
-      expect(service.load('testCase')).toBeNull();
-      service.clear('testCase');
-    }).not.toThrow();
-
-    getItem.mockRestore();
-    setItem.mockRestore();
-    removeItem.mockRestore();
+    try {
+      expect(() => {
+        service.save('testCase', { name: 'Draft' });
+        expect(service.load('testCase')).toBeNull();
+        service.clear('testCase');
+      }).not.toThrow();
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+      removeItem.mockRestore();
+    }
   });
 });
