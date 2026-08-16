@@ -55,15 +55,23 @@ rules already recorded in [`POS_SLICE_B_BOUNDARY.md`](POS_SLICE_B_BOUNDARY.md).
 
 ### 2.1 Production trust-boundary acceptance
 
-- Production and Testing signer pins must be separately machine-owned,
-  canonically normalized, and unequal. Missing or malformed Production pins,
+- The sole normal C# trust authority is exactly
+  `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`; the path is not
+  configurable from `PosAgent:TrustConfigurationPath`, its environment-variable
+  spelling, `IConfiguration`, command line, appsettings, launch settings,
+  package metadata, browser input, or API input. Tests may replace the loader
+  only through a test-only DI seam. Production and Testing signer pins are
+  mandatory in every valid document, regardless of mode; both are strings,
+  non-empty, normalized 40-hex values, and distinct. Missing or malformed pins,
   equal pins, Testing-signer/Production-package combinations, and any
   chain-bypass seam used for Production must fail closed.
 - Lifecycle mutations in both C# and PowerShell must derive the effective
   release mode exclusively from a protected, fixed-path machine deployment
   configuration (`package-trust.json` `deploymentMode`). A caller `-Channel`
   value or `PosAgent:ReleaseChannel` configuration must never select, downgrade,
-  or relabel the mode; `PosAgent:ReleaseChannel` is obsolete and rejected.
+  or relabel the mode; `PosAgent:ReleaseChannel` and
+  `PosAgent:TrustConfigurationPath` are obsolete and rejected by presence,
+  including empty values.
   Missing, malformed, or untrusted mode configuration must fail closed and
   must not fall back to Testing, package metadata, appsettings, or an
   environment-variable / host-environment override.
@@ -81,6 +89,11 @@ rules already recorded in [`POS_SLICE_B_BOUNDARY.md`](POS_SLICE_B_BOUNDARY.md).
   must not weaken the accepted checkpoint/`PreviousVersion` rollback identity,
   signed manifest/archive retention, fresh re-verification, health gate,
   recovery slot, H-1, H-2, or H-3 boundaries.
+- OpenAPI generation must use a metadata-only composition that does not create
+  or make usable the machine trust snapshot, package lifecycle, SCM controller,
+  certificate lifecycle, rollback/recovery mutation, or privileged package
+  operation services. It must succeed without the canonical trust file while
+  normal Agent startup fails closed without fabricating trust.
 
 ## 3. Update, download, and asset health
 

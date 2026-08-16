@@ -23,24 +23,68 @@ public interface IAgentPackageSignatureVerifier
 public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSignatureVerifier
 {
     private static readonly Regex StrictBase64 = new("^[A-Za-z0-9+/]+={0,2}$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private readonly AgentMachineTrustConfiguration machineTrust;
     private readonly AgentPackageTrustOptions options;
     private readonly IAgentPackageSignerCertificateSource certificateSource;
     private readonly IAgentPackageSignerTrustValidator trustValidator;
 
     public MachineCertificatePackageSignatureVerifier()
-        : this(new AgentPackageTrustOptions(), new LocalMachineAgentPackageSignerCertificateSource(), new X509ChainAgentPackageSignerTrustValidator())
+        : this(
+            new MachineAgentTrustConfigurationLoader().Load(),
+            new LocalMachineAgentPackageSignerCertificateSource(),
+            new X509ChainAgentPackageSignerTrustValidator())
     {
     }
 
     public MachineCertificatePackageSignatureVerifier(
+        AgentMachineTrustConfiguration machineTrust,
+        IAgentPackageSignerCertificateSource certificateSource,
+        IAgentPackageSignerTrustValidator trustValidator)
+    {
+        this.machineTrust = machineTrust ?? throw new ArgumentNullException(nameof(machineTrust));
+        this.certificateSource = certificateSource ?? throw new ArgumentNullException(nameof(certificateSource));
+        this.trustValidator = trustValidator ?? throw new ArgumentNullException(nameof(trustValidator));
+        options = new AgentPackageTrustOptions
+        {
+            ProductionSignerThumbprint = machineTrust.ProductionSignerThumbprint,
+            TestingSignerThumbprint = machineTrust.TestingSignerThumbprint
+        };
+        options.Validate();
+    }
+
+    public MachineCertificatePackageSignatureVerifier(
+        AgentMachineTrustConfiguration machineTrust,
         AgentPackageTrustOptions options,
         IAgentPackageSignerCertificateSource certificateSource,
         IAgentPackageSignerTrustValidator trustValidator)
     {
+        this.machineTrust = machineTrust ?? throw new ArgumentNullException(nameof(machineTrust));
         this.options = options ?? throw new ArgumentNullException(nameof(options));
         this.certificateSource = certificateSource ?? throw new ArgumentNullException(nameof(certificateSource));
         this.trustValidator = trustValidator ?? throw new ArgumentNullException(nameof(trustValidator));
         this.options.Validate();
+        if (!string.Equals(this.options.ProductionSignerThumbprint, machineTrust.ProductionSignerThumbprint, StringComparison.Ordinal)
+            || !string.Equals(this.options.TestingSignerThumbprint, machineTrust.TestingSignerThumbprint, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Package trust options must be an exact projection of the immutable machine trust snapshot.", nameof(options));
+        }
+    }
+
+    // Test-only constructor retained for the injected certificate/trust-validator seam. Normal
+    // Agent composition supplies the immutable machine snapshot from the canonical loader.
+    internal MachineCertificatePackageSignatureVerifier(
+        AgentPackageTrustOptions options,
+        IAgentPackageSignerCertificateSource certificateSource,
+        IAgentPackageSignerTrustValidator trustValidator)
+        : this(
+            new AgentMachineTrustConfiguration(
+                AgentProductIdentity.ReleaseChannelTesting,
+                options.ProductionSignerThumbprint,
+                options.TestingSignerThumbprint),
+            options,
+            certificateSource,
+            trustValidator)
+    {
     }
 
     public Task<bool> VerifyAsync(AgentPackageManifest manifest, string archivePath, CancellationToken cancellationToken = default)
@@ -106,16 +150,10 @@ public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSi
 
     private string? ResolveThumbprint(string channel)
     {
-        var configured = options.GetConfiguredThumbprint(channel);
-        if (configured is not null) return configured;
-
-        var loader = new MachineAgentTrustConfigurationLoader();
-        if (loader.TryLoad(options.TrustConfigurationPath, out var configuration, out _) && configuration is not null)
-        {
-            return configuration.GetConfiguredThumbprint(channel);
-        }
-
-        return null;
+        // The verifier receives the already-validated startup snapshot. It must never reread the
+        // trust file after startup, because a later file replacement cannot change this operation's
+        // authority.
+        return machineTrust.GetConfiguredThumbprint(channel);
     }
 }
 

@@ -281,7 +281,7 @@ Describe 'RMS Support Agent machine-owned release mode authority' {
         if ($ProtectFile) { Protect-RmsTestControlFile -Path $path }
         [pscustomobject]@{
             Root = $root
-            Contract = [pscustomobject]@{ TrustConfigurationPath = $path }
+            Contract = [pscustomobject]@{ TrustConfigurationPath = $path; TestOnlyTrustFixture = $true }
         }
     }
 
@@ -359,7 +359,82 @@ Describe 'RMS Support Agent machine-owned release mode authority' {
             InModuleScope PosSupportAgentDeployment {
                 $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsMachineTrustFixture.Contract
                 $result.Valid | Should Be $false
-                $result.Code | Should Be 'machine_release_mode_signer_pin_missing'
+                $result.Code | Should Be 'signer_thumbprint_missing'
+            }
+        } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture -Scope Global -ErrorAction SilentlyContinue }
+    }
+
+    It 'accepts complete signer snapshots for both Production and Testing modes' {
+        foreach ($mode in @('Production', 'Testing')) {
+            $fixture = New-RmsMachineTrustFixture -DeploymentMode $mode
+            $global:RmsMachineTrustFixture = $fixture
+            $global:RmsExpectedMachineTrustMode = $mode
+            try {
+                InModuleScope PosSupportAgentDeployment {
+                    $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsMachineTrustFixture.Contract
+                    $result.Valid | Should Be $true
+                    $result.DeploymentMode | Should Be $global:RmsExpectedMachineTrustMode
+                    $result.ProductionSignerThumbprint | Should Be ('1' * 40)
+                    $result.TestingSignerThumbprint | Should Be ('2' * 40)
+                }
+            } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture, RmsExpectedMachineTrustMode -Scope Global -ErrorAction SilentlyContinue }
+        }
+    }
+
+    It 'rejects Testing mode without a Testing signer pin' {
+        $fixture = New-RmsMachineTrustFixture -DeploymentMode Testing
+        $global:RmsMachineTrustFixture = $fixture
+        try {
+            [ordered]@{
+                deploymentMode = 'Testing'
+                productionSignerThumbprint = ('1' * 40)
+            } | ConvertTo-Json -Compress | Set-Content -LiteralPath $fixture.Contract.TrustConfigurationPath -Encoding UTF8
+            InModuleScope PosSupportAgentDeployment {
+                $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsMachineTrustFixture.Contract
+                $result.Valid | Should Be $false
+                $result.Code | Should Be 'signer_thumbprint_missing'
+            }
+        } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture -Scope Global -ErrorAction SilentlyContinue }
+    }
+
+    It 'rejects whitespace-only signer pins' {
+        $fixture = New-RmsMachineTrustFixture -TestingPin '   '
+        $global:RmsMachineTrustFixture = $fixture
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsMachineTrustFixture.Contract
+                $result.Valid | Should Be $false
+                $result.Code | Should Be 'signer_thumbprint_invalid'
+            }
+        } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture -Scope Global -ErrorAction SilentlyContinue }
+    }
+
+    It 'rejects non-string signer pins' {
+        $fixture = New-RmsMachineTrustFixture
+        $global:RmsMachineTrustFixture = $fixture
+        try {
+            [ordered]@{
+                deploymentMode = 'Testing'
+                productionSignerThumbprint = 123
+                testingSignerThumbprint = ('2' * 40)
+            } | ConvertTo-Json -Compress | Set-Content -LiteralPath $fixture.Contract.TrustConfigurationPath -Encoding UTF8
+            InModuleScope PosSupportAgentDeployment {
+                $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsMachineTrustFixture.Contract
+                $result.Valid | Should Be $false
+                $result.Code | Should Be 'signer_thumbprint_invalid'
+            }
+        } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture -Scope Global -ErrorAction SilentlyContinue }
+    }
+
+    It 'rejects an alternate trust path unless the test-only fixture seam is explicit' {
+        $fixture = New-RmsMachineTrustFixture
+        $global:RmsMachineTrustFixture = $fixture
+        try {
+            $global:RmsMachineTrustFixture.Contract = [pscustomobject]@{ TrustConfigurationPath = $fixture.Contract.TrustConfigurationPath }
+            InModuleScope PosSupportAgentDeployment {
+                $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsMachineTrustFixture.Contract
+                $result.Valid | Should Be $false
+                $result.Code | Should Be 'machine_trust_configuration_path_invalid'
             }
         } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture -Scope Global -ErrorAction SilentlyContinue }
     }
@@ -413,6 +488,69 @@ Describe 'RMS Support Agent machine-owned release mode authority' {
                 Assert-MockCalled Enter-RmsSupportAgentMutationLease -Times 0 -Scope It
             }
         } finally { Remove-Item -LiteralPath $fixture.Root -Recurse -Force -ErrorAction SilentlyContinue; Remove-Variable RmsMachineTrustFixture -Scope Global -ErrorAction SilentlyContinue }
+    }
+}
+
+Describe 'RMS Support Agent lifecycle audit operation correlation' {
+    It 'uses one operation ID for started, attempted, accepted, rollback, recovery, and failed events' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-audit-correlation-' + [Guid]::NewGuid().ToString('N'))
+        foreach ($child in @('available', 'rollback', 'recovery', 'staging', 'install', 'package', 'audit', 'trust')) {
+            New-Item -ItemType Directory -Path (Join-Path $root $child) -Force | Out-Null
+        }
+        $contract = [pscustomobject]@{
+            PackageRoot = Join-Path $root 'package'
+            AvailableRoot = Join-Path $root 'available'
+            RollbackRoot = Join-Path $root 'rollback'
+            RecoveryRoot = Join-Path $root 'recovery'
+            StagingRoot = Join-Path $root 'staging'
+            InstallRoot = Join-Path $root 'install'
+            AuditRoot = Join-Path $root 'audit'
+            TrustRoot = Join-Path $root 'trust'
+            InstalledManifestPath = Join-Path $root 'install\manifest.json'
+            StatePath = Join-Path $root 'lifecycle-state.json'
+        }
+        $manifest = [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '2.0.0'; Files = @() }
+        [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '1.0.0' } | ConvertTo-Json -Compress | Set-Content -LiteralPath $contract.InstalledManifestPath -Encoding UTF8
+        $global:RmsAuditCorrelationContract = $contract
+        $global:RmsAuditCorrelationManifest = $manifest
+        $global:RmsAuditCorrelationCalls = @()
+        $global:RmsAuditCorrelationStateReads = 0
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsAuditCorrelationContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent {
+                    $global:RmsAuditCorrelationCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId }
+                }
+                Mock Get-RmsSupportAgentLifecycleState {
+                    $global:RmsAuditCorrelationStateReads++
+                    if ($global:RmsAuditCorrelationStateReads -eq 1) { return $null }
+                    return [pscustomobject]@{ Phase = 'Staged'; RecoveryRequired = $false }
+                }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = $global:RmsAuditCorrelationManifest; ArchivePath = 'unused.zip' } }
+                Mock Test-RmsSupportAgentInstalledIntegrity { [pscustomobject]@{ Valid = $true } }
+                Mock Get-RmsSupportAgentServiceEvidence { [pscustomobject]@{ ServiceAccount = 'LocalSystem'; StartMode = 'Auto'; HasArguments = $false } }
+                Mock Test-RmsSupportAgentServiceOwnership { [pscustomobject]@{ Owned = $true } }
+                Mock Test-RmsSupportAgentCertificatePrerequisite { [pscustomobject]@{ Valid = $true } }
+                Mock Enter-RmsSupportAgentMutationLease { [pscustomobject]@{ Acquired = $true } }
+                Mock Exit-RmsSupportAgentMutationLease {}
+                Mock Set-RmsSupportAgentOwnedAcl {}
+                Mock Write-RmsSupportAgentLifecycleState {}
+                Mock Expand-RmsSupportAgentPackage {}
+                Mock Save-RmsSupportAgentRetainedSlot { throw 'activation_failed' }
+                Mock Restore-RmsSupportAgentRetainedSlot { [pscustomobject]@{ Succeeded = $false; Code = 'rollback_failed' } }
+
+                $result = Invoke-RmsSupportAgentLifecycle -Mode Upgrade -Channel Testing
+                $result.State | Should Be 'RecoveryRequired'
+            }
+
+            @($global:RmsAuditCorrelationCalls).Outcome | Should Be @('started', 'attempted', 'accepted', 'rollback_attempted', 'rollback_failed', 'recovery_required', 'failed')
+            @($global:RmsAuditCorrelationCalls | Select-Object -ExpandProperty OperationId -Unique).Count | Should Be 1
+            [string]::IsNullOrWhiteSpace([string]$global:RmsAuditCorrelationCalls[0].OperationId) | Should Be $false
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsAuditCorrelationContract, RmsAuditCorrelationManifest, RmsAuditCorrelationCalls, RmsAuditCorrelationStateReads -Scope Global -ErrorAction SilentlyContinue
+        }
     }
 }
 

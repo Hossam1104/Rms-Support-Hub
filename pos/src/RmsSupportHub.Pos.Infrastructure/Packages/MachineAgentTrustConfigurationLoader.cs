@@ -6,9 +6,9 @@ namespace RmsSupportHub.Pos.Infrastructure.Packages;
 
 public interface IAgentMachineTrustConfigurationLoader
 {
-    AgentMachineTrustConfiguration Load(string? customPath = null);
+    AgentMachineTrustConfiguration Load();
 
-    bool TryLoad(string? customPath, out AgentMachineTrustConfiguration? configuration, out string failureCode);
+    bool TryLoad(out AgentMachineTrustConfiguration? configuration, out string failureCode);
 }
 
 /// <summary>
@@ -21,16 +21,30 @@ public sealed class MachineAgentTrustConfigurationLoader : IAgentMachineTrustCon
 {
     public const int MaxControlFileBytes = 16 * 1024;
 
-    public static readonly string DefaultTrustConfigurationPath = Path.Combine(
+    public static readonly string CanonicalTrustConfigurationPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "DBS",
         "RmsSupportAgent",
         "Trust",
         "package-trust.json");
 
-    public AgentMachineTrustConfiguration Load(string? customPath = null)
+    private readonly string? testOnlyTrustConfigurationPath;
+
+    public MachineAgentTrustConfigurationLoader()
     {
-        if (TryLoad(customPath, out var configuration, out var failureCode) && configuration is not null)
+    }
+
+    // This constructor is intentionally internal. It exists only so test DI can replace the
+    // canonical source with a disposable fixture; normal Agent composition cannot select it from
+    // IConfiguration, environment variables, command-line arguments, or package input.
+    internal MachineAgentTrustConfigurationLoader(string testOnlyTrustConfigurationPath)
+    {
+        this.testOnlyTrustConfigurationPath = testOnlyTrustConfigurationPath;
+    }
+
+    public AgentMachineTrustConfiguration Load()
+    {
+        if (TryLoad(out var configuration, out var failureCode) && configuration is not null)
         {
             return configuration;
         }
@@ -38,14 +52,23 @@ public sealed class MachineAgentTrustConfigurationLoader : IAgentMachineTrustCon
         throw new InvalidOperationException($"The machine trust configuration could not be loaded: {failureCode}.");
     }
 
-    public bool TryLoad(string? customPath, out AgentMachineTrustConfiguration? configuration, out string failureCode)
+    // Test-only overloads. They are internal and are never part of the shipped Agent composition;
+    // they let friend test assemblies exercise the same parser and ACL checks against disposable
+    // fixtures without making an alternate path a normal runtime API.
+    internal AgentMachineTrustConfiguration Load(string testOnlyPath) =>
+        new MachineAgentTrustConfigurationLoader(testOnlyPath).Load();
+
+    internal bool TryLoad(string testOnlyPath, out AgentMachineTrustConfiguration? configuration, out string failureCode) =>
+        new MachineAgentTrustConfigurationLoader(testOnlyPath).TryLoad(out configuration, out failureCode);
+
+    public bool TryLoad(out AgentMachineTrustConfiguration? configuration, out string failureCode)
     {
         configuration = null;
         failureCode = "unknown";
 
         try
         {
-            var rawPath = string.IsNullOrWhiteSpace(customPath) ? DefaultTrustConfigurationPath : customPath;
+            var rawPath = testOnlyTrustConfigurationPath ?? CanonicalTrustConfigurationPath;
             if (string.IsNullOrWhiteSpace(rawPath)
                 || !Path.IsPathFullyQualified(rawPath)
                 || rawPath.Any(char.IsControl)
@@ -92,61 +115,36 @@ public sealed class MachineAgentTrustConfigurationLoader : IAgentMachineTrustCon
 
             var root = document.RootElement;
 
-            string? production = null;
-            if (root.TryGetProperty("productionSignerThumbprint", out var productionProp))
+            if (!root.TryGetProperty("productionSignerThumbprint", out var productionProp))
             {
-                if (productionProp.ValueKind != JsonValueKind.String)
-                {
-                    failureCode = "signer_thumbprint_invalid";
-                    return false;
-                }
-
-                var rawProduction = productionProp.GetString();
-                if (string.IsNullOrWhiteSpace(rawProduction))
-                {
-                    failureCode = "signer_thumbprint_invalid";
-                    return false;
-                }
-
-                production = AgentPackageTrustOptions.Normalize(rawProduction);
-                if (production is null)
-                {
-                    failureCode = "signer_thumbprint_invalid";
-                    return false;
-                }
+                failureCode = "signer_thumbprint_missing";
+                return false;
             }
 
-            string? testing = null;
-            if (root.TryGetProperty("testingSignerThumbprint", out var testingProp))
+            if (!root.TryGetProperty("testingSignerThumbprint", out var testingProp))
             {
-                if (testingProp.ValueKind != JsonValueKind.String)
-                {
-                    failureCode = "signer_thumbprint_invalid";
-                    return false;
-                }
-
-                var rawTesting = testingProp.GetString();
-                if (string.IsNullOrWhiteSpace(rawTesting))
-                {
-                    failureCode = "signer_thumbprint_invalid";
-                    return false;
-                }
-
-                testing = AgentPackageTrustOptions.Normalize(rawTesting);
-                if (testing is null)
-                {
-                    failureCode = "signer_thumbprint_invalid";
-                    return false;
-                }
+                failureCode = "signer_thumbprint_missing";
+                return false;
             }
 
-            if (production is not null && testing is not null)
+            if (productionProp.ValueKind != JsonValueKind.String || testingProp.ValueKind != JsonValueKind.String)
             {
-                if (string.Equals(production, testing, StringComparison.Ordinal))
-                {
-                    failureCode = "signer_pins_equal";
-                    return false;
-                }
+                failureCode = "signer_thumbprint_invalid";
+                return false;
+            }
+
+            var production = AgentPackageTrustOptions.Normalize(productionProp.GetString());
+            var testing = AgentPackageTrustOptions.Normalize(testingProp.GetString());
+            if (production is null || testing is null)
+            {
+                failureCode = "signer_thumbprint_invalid";
+                return false;
+            }
+
+            if (string.Equals(production, testing, StringComparison.Ordinal))
+            {
+                failureCode = "signer_pins_equal";
+                return false;
             }
 
             if (!root.TryGetProperty("deploymentMode", out var modeProp))
@@ -168,23 +166,10 @@ public sealed class MachineAgentTrustConfigurationLoader : IAgentMachineTrustCon
                 return false;
             }
 
-            if (string.Equals(mode, AgentProductIdentity.ReleaseChannelProduction, StringComparison.Ordinal) && production is null)
-            {
-                failureCode = "machine_release_mode_signer_pin_missing";
-                return false;
-            }
-
-            if (string.Equals(mode, AgentProductIdentity.ReleaseChannelTesting, StringComparison.Ordinal) && testing is null)
-            {
-                failureCode = "machine_release_mode_signer_pin_missing";
-                return false;
-            }
-
             configuration = new AgentMachineTrustConfiguration(
                 mode,
                 production,
-                testing,
-                fullPath);
+                testing);
             failureCode = "machine_trust_configuration_valid";
             return true;
         }

@@ -156,7 +156,7 @@ public sealed class AgentMachineTrustConfigurationLoaderTests
 
         Assert.False(success);
         Assert.Null(config);
-        Assert.Equal("machine_release_mode_signer_pin_missing", failureCode);
+        Assert.Equal("signer_thumbprint_missing", failureCode);
     }
 
     [Fact]
@@ -175,7 +175,64 @@ public sealed class AgentMachineTrustConfigurationLoaderTests
 
         Assert.False(success);
         Assert.Null(config);
-        Assert.Equal("machine_release_mode_signer_pin_missing", failureCode);
+        Assert.Equal("signer_thumbprint_missing", failureCode);
+    }
+
+    [Theory]
+    [InlineData("", TestingPin)]
+    [InlineData("   ", TestingPin)]
+    [InlineData(ProductionPin, "")]
+    [InlineData(ProductionPin, "   ")]
+    public void EmptyOrWhitespaceSignerPinsAreRejected(string productionPin, string testingPin)
+    {
+        using var fixture = new MachineTrustTestFixture(
+            customJson: $$"""
+            {
+              "productionSignerThumbprint": "{{productionPin}}",
+              "testingSignerThumbprint": "{{testingPin}}",
+              "deploymentMode": "Testing"
+            }
+            """);
+
+        var loader = new MachineAgentTrustConfigurationLoader();
+        var success = loader.TryLoad(fixture.TrustFilePath, out var config, out var failureCode);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.Equal("signer_thumbprint_invalid", failureCode);
+    }
+
+    [Fact]
+    public void NonStringSignerPinIsRejected()
+    {
+        using var fixture = new MachineTrustTestFixture(
+            customJson: $$"""
+            {
+              "productionSignerThumbprint": 123,
+              "testingSignerThumbprint": "{{TestingPin}}",
+              "deploymentMode": "Testing"
+            }
+            """);
+
+        var loader = new MachineAgentTrustConfigurationLoader();
+        var success = loader.TryLoad(fixture.TrustFilePath, out var config, out var failureCode);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.Equal("signer_thumbprint_invalid", failureCode);
+    }
+
+    [Fact]
+    public void CanonicalTrustPathIsExactlyTheProgramDataAuthority()
+    {
+        var expected = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "DBS",
+            "RmsSupportAgent",
+            "Trust",
+            "package-trust.json");
+
+        Assert.Equal(expected, MachineAgentTrustConfigurationLoader.CanonicalTrustConfigurationPath);
     }
 
     [Fact]

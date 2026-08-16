@@ -1,6 +1,6 @@
 # POS Slice C implementation status
 
-Updated: 2026-08-16
+Updated: 2026-08-17
 
 Slice C is implemented as a production-oriented foundation in the destination
 `Rms-Support-Hub` repository. This document is the current operational summary;
@@ -29,7 +29,14 @@ Support Hub API is not a privileged relay.
 The deployment implementation is fail-closed at each machine-owned boundary.
 Repository code does not contain private keys or customer/Production evidence;
 the real lifecycle becomes executable only when the operator provisions the
-fixed LocalMachine trust and certificate material described below:
+fixed LocalMachine trust and certificate material described below.
+
+The sole normal C# package-trust authority is exactly
+`%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`. The path is not
+configurable: `IConfiguration`, environment variables, command-line arguments,
+appsettings, launch settings, package metadata, browser input, and API input
+cannot select a sibling, nested, temporary, or alternate trust file. Tests use
+only the internal test DI replacement seam.
 
 - `scripts/PosSupportAgentDeployment.psm1` is the shared contract for identity,
   package validation, ownership/migration assessment, browser policy, certificate
@@ -84,17 +91,27 @@ The follow-up remediation keeps the accepted checkpoint-based rollback model
 and closes the remaining trust-boundary findings in both the typed platform and
 the PowerShell lifecycle:
 
-- Production and Testing signer pins are normalized and must be cryptographically
-  distinct. Equal pins, malformed pins, a Testing signer on a Production
-  package, and any missing Production pin fail closed before trust authority is
-  selected.
+- Production and Testing signer pins are mandatory in every valid trust
+  document, regardless of deployment mode. Both must be JSON strings, non-empty,
+  valid normalized 40-hex thumbprints, and cryptographically distinct. Equal
+  pins, malformed pins, a Testing signer on a Production package, and any
+  missing pin fail closed before trust authority is selected.
 - Lifecycle mutations in both PowerShell and C# use `deploymentMode` from the
-  protected machine-owned trust control file (`package-trust.json`) as the release
+  protected machine-owned trust control file (exactly
+  `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`) as the release
   authority (`AgentMachineTrustConfiguration`, `MachineAgentTrustConfigurationLoader`,
-  `Get-RmsSupportAgentMachineTrustConfiguration`). Process configuration
-  (`PosAgent:ReleaseChannel`), `IConfiguration`, environment variables, appsettings,
-  and the host environment cannot select, alter, or downgrade trust mode.
-  The obsolete `PosAgent:ReleaseChannel` setting is rejected on Agent startup.
+  `Get-RmsSupportAgentMachineTrustConfiguration`). `deploymentMode` selects the
+  active signer only. Process configuration (`PosAgent:ReleaseChannel` and
+  `PosAgent:TrustConfigurationPath`), `IConfiguration`, environment variables,
+  appsettings, launch settings, and the host environment cannot select, alter,
+  or downgrade trust mode. Both obsolete keys are rejected by presence,
+  including empty values, on normal Agent startup.
+- The SDK OpenAPI document host is metadata-only. It builds endpoint metadata
+  without loading the canonical trust file and without composing usable package
+  trust, package activation, SCM, certificate lifecycle, rollback/recovery, or
+  repair services; deliberate poison-pill descriptors prevent lifecycle service
+  resolution in that host. Normal Agent startup without the canonical file still
+  fails closed, and no synthetic trust snapshot is fabricated.
 - `package-trust.json`, `agent-certificate.json`, and `lifecycle-state.json`
   are bounded, fixed-name, non-reparse control files. The file owner and ACL,
   plus every non-reparse ancestor back to the fixed service-owned security root,
@@ -108,7 +125,9 @@ the PowerShell lifecycle:
   never exported.
 - Package completion audit and incident-timeline records use the generated
   opaque operation instance ID, with the same correlation ID as the accepted
-  operation. The static operation descriptor is not used as terminal identity.
+  operation. PowerShell lifecycle audit events carry one operation ID through
+  started, attempted, accepted, completion/failure, rollback, and recovery
+  outcomes. The static operation descriptor is not used as terminal identity.
 
 The accepted rollback controls remain unchanged: recovery identity comes from
 the durable checkpoint `PreviousVersion`; retained slots contain only signed
@@ -167,7 +186,7 @@ fleet or customer approval:
 | Evidence class | Current state |
 | --- | --- |
 | Implemented | Slice C contracts, canonical package trust, machine-owned release mode in C# and PowerShell, control-file and LocalSystem key ACL boundaries, typed Windows lifecycle, fixed-root health, durable audit, Support Bundle, UI, tests, and generated client are in the repository. |
-| Automated tested | C# machine trust unit and integration tests (37), signer separation (6), certificate policy (6), audit correlation (1), POS solution (399), PowerShell trust/mode/ACL/key/rollback focus (33), full Pester (153), backend (194), and `build.ps1` all pass; the POS origin is supplied for Release validation. |
+| Automated tested | C# focused trust/signer/lifecycle tests (55) and Agent trust/composition/OpenAPI tests (14), POS solution (410: Domain 12, Application 82, Infrastructure 153, Agent integration 163), PowerShell quality (29 files), full Pester (159), backend (194), and `build.ps1` all pass; the POS origin is supplied for Release validation. |
 | Testing live-proven | Existing historical INT-13 evidence remains valid for the earlier Testing service model; this session did not claim a new elevated run. |
 | Production signed | Not claimed. No representative Production signer, package publication, PKI issuance/renewal/revocation, or Production execution evidence is in this session. |
 | Representative-machine proven | Not claimed. The current shell is not Administrator and no Production registry, certificate, SCM, RMS, Main Server, or database mutation was performed. |

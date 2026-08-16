@@ -1,11 +1,12 @@
 # Current Project State
 
-- **Updated:** 2026-08-16
+- **Updated:** 2026-08-17
 - **Active branch:** `feat/pos-production-agent-lifecycle`, based on merged
   Slice C baseline `0b380ef`. PR #21 remains DRAFT/unmerged.
 - **Status:** Production-capable Agent package trust/lifecycle implementation is
-  complete in scope, including rollback/recovery hardening and PR #21 trust
-  remediation below. External Production, PKI, fleet, and customer evidence remains open.
+  complete in scope, including rollback/recovery hardening and the final PR #21
+  trust remediation below. External Production, PKI, fleet, and customer
+  evidence remains open.
 - **Next task:** run the full GPT-5.6 Terra HIGH independent Production/fleet
   security and release-readiness review already in `TASK.md`.
 
@@ -36,24 +37,30 @@
   root are bounded, non-reparse, owner-verified, protected, and free of unsafe
   broad allow rules. The temporary test identity is confined to the named test
   fixture root and cannot authorize the ProgramData production root.
-- Fixed three genuine Windows PowerShell 5.1 / .NET Framework production
-  defects in `PosSupportAgentDeployment.psm1` found via the new real-seam
-  Pester coverage: an `AddRange` array-type coercion failure, an unresolved
-  instance-style `GetRSAPublicKey()` call, and use of the .NET 5+-only
-  `TrimEndingDirectorySeparator` API. All three would have broken trust
-  verification and/or package extraction on the real target platform.
 
 ## PR #21 production trust-boundary remediation
 
-- Production and Testing signer pins are normalized and must be distinct in
-  both C# and PowerShell. Equal, malformed, missing, or ambiguous trust values
-  fail closed before either pin becomes authority.
+- The sole normal C# package-trust authority is exactly
+  `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`; the path is not
+  configurable from configuration, environment, command line, appsettings,
+  launch settings, package input, browser input, or API input. Tests replace
+  the loader only through the test-only DI seam.
+- Production and Testing signer pins are mandatory, string, non-empty,
+  normalized 40-hex values and must be distinct in both C# and PowerShell.
+  Equal, malformed, missing, or ambiguous trust values fail closed before
+  either pin becomes authority; deployment mode selects the active signer only.
 - Lifecycle mutation mode in both C# and PowerShell comes exclusively from the
-  protected machine-owned `package-trust.json` `deploymentMode` snapshot
+   protected machine-owned canonical `package-trust.json` `deploymentMode` snapshot
   (`AgentMachineTrustConfiguration`, `MachineAgentTrustConfigurationLoader`).
   Process config (`PosAgent:ReleaseChannel`), `IConfiguration`, environment
-  variables, appsettings, and host environment cannot decide or alter trust mode;
-  `PosAgent:ReleaseChannel` is rejected on startup.
+  variables, appsettings, launch settings, and host environment cannot decide or
+  alter trust mode; `PosAgent:ReleaseChannel` and
+  `PosAgent:TrustConfigurationPath` are rejected by presence, including empty
+  values, on startup.
+- OpenAPI document generation uses a metadata-only host. It does not create
+  synthetic trust or compose usable Agent package trust, activation, SCM,
+  certificate, rollback/recovery, or repair lifecycle services; normal startup
+  without canonical trust fails closed.
 - Certificate readiness carries typed actual CNG key-file ACL evidence,
   including Microsoft provider, machine-key, non-exportable policy, fixed key
   root, protected owner/ACL, and explicit LocalSystem read access. Admin-only
@@ -89,24 +96,21 @@
   LocalSystem private-key-file access evidence, and a local or enterprise
   ownership marker. Enterprise certificates are never removed by the Agent
   lifecycle.
-- `TASK.md` is intentionally left as the next independent Terra review prompt;
-  this implementation turn does not claim representative-machine elevation,
-  Production signing/PKI, fleet enrollment, or customer approval.
+- `TASK.md` is the next independent Terra review prompt. This implementation
+  turn does not claim representative-machine elevation, Production signing/PKI,
+  fleet enrollment, or customer approval.
 
 ## Validation evidence
-
-- POS Release build: 0 warnings, 0 errors with `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`.
-- POS solution tests: 399 passed, 0 failed (Domain 12, Application 82,
-  Infrastructure 147, Agent integration 158), including C# machine trust
-  loader, ACL/reparse, and composition fallback rejection coverage.
-- PowerShell quality: 29 tracked scripts/modules parsed with no dangling
-  operator continuations. Full Pester suite: 153 passed, 0 failed, including
-  33 trust/mode/ACL/key/rollback tests in `PosSupportAgentRollbackRecovery.Tests.ps1`.
-- Backend: `dotnet test backend/tests/RmsSupportHub.Tests` 194 passed, 0
-  failed; `.\scripts\build.ps1` (backend test + Release build + frontend
-  production build) passed end-to-end; backend Release build was 0 warnings,
-  0 errors.
-- Frontend: production build succeeds; `frontend/` has no diff on this branch.
+- POS Release build: 0 warnings, 0 errors with
+  `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`.
+- POS solution tests: 410 passed, 0 failed, 0 skipped (Domain 12,
+  Application 82, Infrastructure 153, Agent integration 163). Focused trust /
+  composition tests: 55 infrastructure and 14 Agent integration tests passed.
+- PowerShell quality: all 29 tracked scripts/modules parsed; full Pester 159
+  passed, 0 failed, 0 skipped.
+- Backend: `dotnet test backend/tests/RmsSupportHub.Tests` 194 passed, 0 failed;
+  `.\scripts\build.ps1` and the explicit frontend production build passed;
+  backend Release build was 0 warnings, 0 errors.
 
 ## Runtime and delivery gates
 

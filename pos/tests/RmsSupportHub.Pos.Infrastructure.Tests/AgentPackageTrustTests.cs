@@ -16,6 +16,7 @@ public sealed class AgentPackageTrustTests
         var verifier = new MachineCertificatePackageSignatureVerifier(
             new AgentPackageTrustOptions
             {
+                ProductionSignerThumbprint = new string('0', 40),
                 TestingSignerThumbprint = certificate.Thumbprint,
                 RequireTrustedChain = false
             },
@@ -46,6 +47,7 @@ public sealed class AgentPackageTrustTests
             new AgentPackageTrustOptions
             {
                 ProductionSignerThumbprint = certificate.Thumbprint,
+                TestingSignerThumbprint = new string('0', 40),
                 RequireTrustedChain = false
             },
             new FixedCertificateSource(certificate),
@@ -56,8 +58,8 @@ public sealed class AgentPackageTrustTests
         var noProductionPinVerifier = new MachineCertificatePackageSignatureVerifier(
             new AgentPackageTrustOptions
             {
+                ProductionSignerThumbprint = new string('0', 40),
                 TestingSignerThumbprint = certificate.Thumbprint,
-                TrustConfigurationPath = Path.Combine(Path.GetTempPath(), "RmsSupportHub.Pos.Tests", Guid.NewGuid().ToString("N"), "package-trust.json"),
                 RequireTrustedChain = false
             },
             new FixedCertificateSource(certificate),

@@ -32,6 +32,7 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
     public const string SupportHubOrigin = "https://support-hub.integration.test:4443";
 
     private readonly string _environment;
+    private readonly bool _useTestTrust;
     private readonly string _databaseStorageRoot = Path.Combine(
         Path.GetTempPath(),
         "RmsSupportHub-Agent-Integration",
@@ -40,18 +41,24 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
         Path.GetTempPath(),
         "RmsSupportHub.Pos.Tests",
         "agent-webfactory-" + Guid.NewGuid().ToString("N"));
-    private readonly string _trustConfigurationPath;
+    private string _trustConfigurationPath;
     private readonly InMemoryAgentConfigurationStore _configurationStore;
     private readonly InMemoryAgentSecretStore _secretStore = new();
 
     public AgentWebApplicationFactory()
-        : this(AgentHostConstants.IntegrationTestEnvironment)
+        : this(AgentHostConstants.IntegrationTestEnvironment, useTestTrust: true)
     {
     }
 
     internal AgentWebApplicationFactory(string environment)
+        : this(environment, useTestTrust: true)
+    {
+    }
+
+    internal AgentWebApplicationFactory(string environment, bool useTestTrust)
     {
         _environment = environment;
+        _useTestTrust = useTestTrust;
         _configurationStore = new InMemoryAgentConfigurationStore(_databaseStorageRoot);
 
         _trustConfigurationPath = Path.Combine(_testTrustRoot, "package-trust.json");
@@ -72,19 +79,30 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
     public void EnableDownloaderCredential() => _secretStore.EnableDownloaderCredential();
 
+    // Test-only DI seam: the normal Agent never receives this value from configuration. The
+    // ConfigureTestServices callback below installs the fixture loader after Program has registered
+    // the canonical loader.
+    internal void UseTestTrustConfiguration(string path) => _trustConfigurationPath = path;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(_environment);
         builder.UseSetting("PosAgentSecurity:SupportHubOrigin", SupportHubOrigin);
-        builder.UseSetting("PosAgent:TrustConfigurationPath", _trustConfigurationPath);
-
-        if (!string.Equals(_environment, AgentHostConstants.IntegrationTestEnvironment, StringComparison.Ordinal))
-        {
-            return;
-        }
 
         builder.ConfigureTestServices(services =>
         {
+            if (_useTestTrust)
+            {
+                services.RemoveAll<IAgentMachineTrustConfigurationLoader>();
+                services.AddSingleton<IAgentMachineTrustConfigurationLoader>(
+                    new MachineAgentTrustConfigurationLoader(_trustConfigurationPath));
+            }
+
+            if (!string.Equals(_environment, AgentHostConstants.IntegrationTestEnvironment, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             services.AddAuthentication(FakeAuthenticationHandler.SchemeName)
                 .AddScheme<FakeAuthenticationOptions, FakeAuthenticationHandler>(
                     FakeAuthenticationHandler.SchemeName,

@@ -9,9 +9,8 @@ namespace RmsSupportHub.Pos.Infrastructure.Packages;
 /// </summary>
 public sealed record AgentMachineTrustConfiguration(
     string DeploymentMode,
-    string? ProductionSignerThumbprint,
-    string? TestingSignerThumbprint,
-    string TrustConfigurationPath)
+    string ProductionSignerThumbprint,
+    string TestingSignerThumbprint)
 {
     public string? GetConfiguredThumbprint(string channel) => channel switch
     {
@@ -22,10 +21,8 @@ public sealed record AgentMachineTrustConfiguration(
 
     public string ActiveSignerThumbprint => DeploymentMode switch
     {
-        AgentProductIdentity.ReleaseChannelProduction => ProductionSignerThumbprint
-            ?? throw new InvalidOperationException("Production deployment mode requires a configured productionSignerThumbprint."),
-        AgentProductIdentity.ReleaseChannelTesting => TestingSignerThumbprint
-            ?? throw new InvalidOperationException("Testing deployment mode requires a configured testingSignerThumbprint."),
+        AgentProductIdentity.ReleaseChannelProduction => ProductionSignerThumbprint,
+        AgentProductIdentity.ReleaseChannelTesting => TestingSignerThumbprint,
         _ => throw new InvalidOperationException($"The deployment mode '{DeploymentMode}' is unsupported.")
     };
 }

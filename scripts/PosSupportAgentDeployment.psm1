@@ -99,7 +99,15 @@ function Get-RmsSupportAgentMachineTrustConfiguration {
     }
 
     try {
-        $path = [IO.Path]::GetFullPath([string]$Contract.TrustConfigurationPath)
+        $canonicalPath = [IO.Path]::GetFullPath((Join-Path $env:ProgramData 'DBS\RmsSupportAgent\Trust\package-trust.json'))
+        $contractPath = [IO.Path]::GetFullPath([string]$Contract.TrustConfigurationPath)
+        $testOnlyFixture = $Contract.PSObject.Properties['TestOnlyTrustFixture']
+        $usesCanonicalPath = $null -eq $testOnlyFixture -or -not [bool]$testOnlyFixture.Value
+        if ($usesCanonicalPath -and -not $contractPath.Equals($canonicalPath, [StringComparison]::OrdinalIgnoreCase)) {
+            return & $invalid 'machine_trust_configuration_path_invalid'
+        }
+
+        $path = if ($null -ne $testOnlyFixture -and [bool]$testOnlyFixture.Value) { $contractPath } else { $canonicalPath }
         if ((-not (Test-Path -LiteralPath $path -PathType Leaf)) -or [IO.File]::GetAttributes($path).HasFlag([IO.FileAttributes]::ReparsePoint) -or (Get-Item -LiteralPath $path).Length -le 0 -or (Get-Item -LiteralPath $path).Length -gt 16KB -or -not (Test-RmsSupportAgentControlFileTrust -Path $path)) {
             return & $invalid 'machine_trust_configuration_untrusted'
         }
@@ -109,11 +117,22 @@ function Get-RmsSupportAgentMachineTrustConfiguration {
             return & $invalid 'machine_trust_configuration_invalid'
         }
 
-        $productionRaw = if ($null -ne $trust.PSObject.Properties['productionSignerThumbprint']) { [string]$trust.productionSignerThumbprint } else { $null }
-        $testingRaw = if ($null -ne $trust.PSObject.Properties['testingSignerThumbprint']) { [string]$trust.testingSignerThumbprint } else { $null }
-        $production = if ($null -eq $productionRaw) { $null } else { Normalize-RmsSupportAgentThumbprint $productionRaw }
-        $testing = if ($null -eq $testingRaw) { $null } else { Normalize-RmsSupportAgentThumbprint $testingRaw }
-        if (($null -ne $productionRaw -and $null -eq $production) -or ($null -ne $testingRaw -and $null -eq $testing)) {
+        $productionProperty = $trust.PSObject.Properties['productionSignerThumbprint']
+        $testingProperty = $trust.PSObject.Properties['testingSignerThumbprint']
+        if ($null -eq $productionProperty -or $null -eq $testingProperty) {
+            return & $invalid 'signer_thumbprint_missing'
+        }
+        if ($productionProperty.Value -isnot [string] -or $testingProperty.Value -isnot [string]) {
+            return & $invalid 'signer_thumbprint_invalid'
+        }
+        $productionRaw = [string]$productionProperty.Value
+        $testingRaw = [string]$testingProperty.Value
+        if ([string]::IsNullOrWhiteSpace($productionRaw) -or [string]::IsNullOrWhiteSpace($testingRaw)) {
+            return & $invalid 'signer_thumbprint_invalid'
+        }
+        $production = Normalize-RmsSupportAgentThumbprint $productionRaw
+        $testing = Normalize-RmsSupportAgentThumbprint $testingRaw
+        if ($null -eq $production -or $null -eq $testing) {
             return & $invalid 'signer_thumbprint_invalid'
         }
         if ($null -ne $production -and $null -ne $testing -and $production -eq $testing) {
@@ -124,10 +143,6 @@ function Get-RmsSupportAgentMachineTrustConfiguration {
         if ($mode -notin @('Testing', 'Production')) {
             return & $invalid 'machine_release_mode_invalid'
         }
-        if (($mode -eq 'Production' -and $null -eq $production) -or ($mode -eq 'Testing' -and $null -eq $testing)) {
-            return & $invalid 'machine_release_mode_signer_pin_missing'
-        }
-
         return [pscustomobject]@{
             Valid = $true
             Code = 'machine_trust_configuration_valid'
@@ -1211,6 +1226,7 @@ function Add-RmsSupportAgentAuditEvent {
     param(
         [Parameter(Mandatory)][psobject]$Contract,
         [Parameter(Mandatory)][string]$Operation,
+        [Parameter(Mandatory)][string]$OperationId,
         [Parameter(Mandatory)][string]$Outcome,
         [AllowEmptyString()][string]$PackageId,
         [AllowEmptyString()][string]$PackageVersion,
@@ -1226,6 +1242,7 @@ function Add-RmsSupportAgentAuditEvent {
         $record = [ordered]@{
             atUtc = [DateTimeOffset]::UtcNow.ToString('O')
             operation = $Operation
+            operationId = $OperationId
             outcome = $Outcome
             packageId = if ($PackageId) { $PackageId } else { $null }
             packageVersion = if ($PackageVersion) { $PackageVersion } else { $null }
@@ -1250,8 +1267,8 @@ function Invoke-RmsSupportAgentLifecycle {
     )
 
     $contract = Get-RmsSupportAgentDeploymentContract -Channel $Channel
-    $modeAuthority = Resolve-RmsSupportAgentMachineReleaseMode -Contract $contract -RequestedChannel $Channel
     if ($Mode -eq 'Status') {
+        $modeAuthority = Resolve-RmsSupportAgentMachineReleaseMode -Contract $contract -RequestedChannel $Channel
         $state = try { Get-RmsSupportAgentLifecycleState -Contract $contract } catch { $null }
         $manifest = if (Test-Path -LiteralPath $contract.InstalledManifestPath -PathType Leaf) { try { Get-Content -Raw -LiteralPath $contract.InstalledManifestPath | ConvertFrom-Json } catch { $null } } else { $null }
         $service = Get-RmsSupportAgentServiceEvidence -Contract $contract
@@ -1269,7 +1286,20 @@ function Invoke-RmsSupportAgentLifecycle {
         }
     }
 
+    # Generate the immutable operation correlation value before the first lifecycle audit event.
+    # Every event for this attempted mutation, including rollback and recovery outcomes, carries
+    # this same value; the lifecycle checkpoint below uses it as well.
+    $operationId = [Guid]::NewGuid().ToString('N')
+    $operationName = 'agent-package.' + $Mode.ToLowerInvariant()
+    try {
+        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'started' -PackageId '' -PackageVersion '' -FailureCode '' -RecoveryState 'not_required'
+        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'attempted' -PackageId '' -PackageVersion '' -FailureCode '' -RecoveryState 'not_required'
+    } catch { }
+
+    $modeAuthority = Resolve-RmsSupportAgentMachineReleaseMode -Contract $contract -RequestedChannel $Channel
+
     if (-not $modeAuthority.Valid) {
+        try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId '' -PackageVersion '' -FailureCode ([string]$modeAuthority.Code) -RecoveryState 'not_required' } catch { }
         return [pscustomobject]@{
             State = 'Failed'
             Code = [string]$modeAuthority.Code
@@ -1288,7 +1318,6 @@ function Invoke-RmsSupportAgentLifecycle {
     $manifest = $null
     $rollbackAttempted = $false
     try {
-        try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'started' -PackageId '' -PackageVersion '' -FailureCode '' -RecoveryState 'not_required' } catch { }
         $existingState = Get-RmsSupportAgentLifecycleState -Contract $contract
         if ($null -ne $existingState) {
             # A checkpoint left behind before any destructive mutation began (staging only, not yet
@@ -1352,9 +1381,9 @@ function Invoke-RmsSupportAgentLifecycle {
         foreach ($ownedRoot in @($contract.PackageRoot, $contract.AvailableRoot, $contract.RollbackRoot, $contract.StagingRoot, $contract.InstallRoot, $contract.AuditRoot, $contract.TrustRoot)) {
             Set-RmsSupportAgentOwnedAcl -Path $ownedRoot
         }
-        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'accepted' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode '' -RecoveryState 'not_required'
+        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'accepted' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode '' -RecoveryState 'not_required'
 
-        $state = [pscustomobject]@{ OperationId = [Guid]::NewGuid().ToString('N'); Operation = $Mode; Phase = 'Prepared'; PackageId = $manifest.PackageId; PackageVersion = $manifest.Version; PreviousVersion = $null; StartedAtUtc = [DateTimeOffset]::UtcNow; UpdatedAtUtc = [DateTimeOffset]::UtcNow; FailureCode = $null; RecoveryRequired = $false }
+        $state = [pscustomobject]@{ OperationId = $operationId; Operation = $Mode; Phase = 'Prepared'; PackageId = $manifest.PackageId; PackageVersion = $manifest.Version; PreviousVersion = $null; StartedAtUtc = [DateTimeOffset]::UtcNow; UpdatedAtUtc = [DateTimeOffset]::UtcNow; FailureCode = $null; RecoveryRequired = $false }
         Write-RmsSupportAgentLifecycleState -Contract $contract -State $state
         if ($Mode -eq 'Uninstall') {
             Stop-RmsSupportAgentService
@@ -1362,7 +1391,7 @@ function Invoke-RmsSupportAgentLifecycle {
             if (Test-Path -LiteralPath $contract.InstallRoot -PathType Container) { Remove-Item -LiteralPath $contract.InstallRoot -Recurse -Force }
             Clear-RmsSupportAgentLifecycleState -Contract $contract
             $result = [pscustomobject]@{ State = 'Completed'; Code = 'uninstalled'; Detail = 'The owned Agent service and installation were removed; audit, trust, browser policy, and enterprise certificate state were retained.'; RollbackAttempted = $false; RollbackSucceeded = $false }
-            Add-RmsSupportAgentAuditEvent -Contract $contract -Operation 'agent-package.uninstall' -Outcome 'completed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode '' -RecoveryState 'not_required'
+            Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'completed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode '' -RecoveryState 'not_required'
             return $result
         }
 
@@ -1401,25 +1430,31 @@ function Invoke-RmsSupportAgentLifecycle {
         if (-not (Test-RmsSupportAgentHealth)) { throw 'agent_health_failed' }
         Clear-RmsSupportAgentLifecycleState -Contract $contract
         $result = [pscustomobject]@{ State = 'Completed'; Code = 'completed'; Detail = 'The trusted Agent package was activated, the owned service was configured, and live/ready health was confirmed.'; RollbackAttempted = $rollbackAttempted; RollbackSucceeded = $false }
-        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'completed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode '' -RecoveryState 'not_required'
+        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'completed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode '' -RecoveryState 'not_required'
         return $result
     } catch {
         $failure = $_.Exception.Message
         try {
             if ($rollbackAttempted) {
+                Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'rollback_attempted' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'not_required'
                 $restore = Restore-RmsSupportAgentRetainedSlot -Contract $contract -FailedOperation $Mode -Channel $Channel
                 if ($restore.Succeeded) {
-                    Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'rollback_succeeded' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovered'
+                    Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'rollback_succeeded' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovered'
                     return [pscustomobject]@{ State = 'RollbackSucceeded'; Code = 'rollback_succeeded'; Detail = 'Activation failed; the prior trusted installation was restored and its own health was independently confirmed.'; RollbackAttempted = $true; RollbackSucceeded = $true }
                 }
+                Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'rollback_failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode ([string]$restore.Code) -RecoveryState 'recovery_required'
                 $failure = $failure + '; rollback_failed:' + $restore.Code
             }
-        } catch { $failure = $failure + '; rollback_failed' }
+        } catch {
+            try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'rollback_failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'rollback_unknown' -RecoveryState 'recovery_required' } catch { }
+            $failure = $failure + '; rollback_failed'
+        }
         try {
             $state = Get-RmsSupportAgentLifecycleState -Contract $contract
             if ($null -ne $state) { $state.Phase = 'RecoveryRequired'; $state.FailureCode = $failure; $state.RecoveryRequired = $true; $state.UpdatedAtUtc = [DateTimeOffset]::UtcNow; Write-RmsSupportAgentLifecycleState -Contract $contract -State $state }
         } catch { }
-        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation ('agent-package.' + $Mode.ToLowerInvariant()) -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovery_required'
+        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'recovery_required' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovery_required'
+        Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode $failure -RecoveryState 'recovery_required'
         return [pscustomobject]@{ State = 'RecoveryRequired'; Code = 'recovery_required'; Detail = 'The lifecycle did not reach terminal health truth: ' + $failure; RollbackAttempted = $rollbackAttempted; RollbackSucceeded = $false }
     } finally {
         if ($null -ne $stage -and (Test-Path -LiteralPath $stage -PathType Container)) { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue }

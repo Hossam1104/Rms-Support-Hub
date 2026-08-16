@@ -7,32 +7,14 @@ namespace RmsSupportHub.Pos.Infrastructure.Packages;
 /// </summary>
 public sealed class AgentPackageTrustOptions
 {
-    public static readonly string DefaultTrustConfigurationPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-        "DBS",
-        "RmsSupportAgent",
-        "Trust",
-        "package-trust.json");
+    public string ProductionSignerThumbprint { get; init; } = string.Empty;
 
-    public string? ProductionSignerThumbprint { get; init; }
-
-    public string? TestingSignerThumbprint { get; init; }
-
-    public string TrustConfigurationPath { get; init; } = DefaultTrustConfigurationPath;
+    public string TestingSignerThumbprint { get; init; } = string.Empty;
 
     public bool RequireTrustedChain { get; init; } = true;
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(TrustConfigurationPath)
-            || !Path.IsPathFullyQualified(TrustConfigurationPath)
-            || TrustConfigurationPath.Any(char.IsControl)
-            || TrustConfigurationPath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
-                .Any(segment => segment is "." or ".."))
-        {
-            throw new ArgumentException("The package trust configuration path must be a fixed absolute path.", nameof(TrustConfigurationPath));
-        }
-
         var production = ValidateThumbprint(ProductionSignerThumbprint, nameof(ProductionSignerThumbprint));
         var testing = ValidateThumbprint(TestingSignerThumbprint, nameof(TestingSignerThumbprint));
         ValidateDistinctThumbprints(production, testing);
@@ -45,14 +27,15 @@ public sealed class AgentPackageTrustOptions
         _ => null
     };
 
-    private static string? ValidateThumbprint(string? value, string name)
+    private static string ValidateThumbprint(string value, string name)
     {
-        if (value is not null && Normalize(value) is null)
+        var normalized = Normalize(value);
+        if (normalized is null)
         {
             throw new ArgumentException("A signer thumbprint must be exactly 40 hexadecimal characters.", name);
         }
 
-        return Normalize(value);
+        return normalized;
     }
 
     public static string? Normalize(string? value)

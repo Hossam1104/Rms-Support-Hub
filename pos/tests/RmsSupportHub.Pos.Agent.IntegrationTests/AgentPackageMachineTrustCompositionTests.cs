@@ -18,9 +18,9 @@ public sealed class AgentPackageMachineTrustCompositionTests
         var ex = Assert.Throws<InvalidOperationException>(() =>
         {
             using var baseFactory = new AgentWebApplicationFactory();
+            baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
             using var factory = baseFactory.WithWebHostBuilder(builder =>
             {
-                builder.UseSetting("PosAgent:TrustConfigurationPath", fixture.TrustFilePath);
                 builder.UseSetting("PosAgent:ReleaseChannel", "Testing");
             });
             _ = factory.Services;
@@ -37,9 +37,9 @@ public sealed class AgentPackageMachineTrustCompositionTests
         var ex = Assert.Throws<InvalidOperationException>(() =>
         {
             using var baseFactory = new AgentWebApplicationFactory();
+            baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
             using var factory = baseFactory.WithWebHostBuilder(builder =>
             {
-                builder.UseSetting("PosAgent:TrustConfigurationPath", fixture.TrustFilePath);
                 builder.UseSetting("PosAgent:ReleaseChannel", "Testing");
             });
             _ = factory.Services;
@@ -48,15 +48,60 @@ public sealed class AgentPackageMachineTrustCompositionTests
         Assert.Contains("obsolete and rejected", ex.Message);
     }
 
+    [Theory]
+    [InlineData("PosAgent:ReleaseChannel")]
+    [InlineData("PosAgent:TrustConfigurationPath")]
+    public void ObsoletePosAgentConfigurationPresenceFailsStartupEvenWhenEmpty(string key)
+    {
+        using var fixture = new TestTrustFixture("Production");
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+        {
+            using var baseFactory = new AgentWebApplicationFactory();
+            baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
+            using var factory = baseFactory.WithWebHostBuilder(builder =>
+            {
+                builder.UseSetting(key, string.Empty);
+            });
+            _ = factory.Services;
+        });
+
+        Assert.Contains($"{key} is obsolete and rejected", ex.Message);
+    }
+
+    [Fact]
+    public void EnvironmentTrustPathOverrideIsRejectedByPresence()
+    {
+        using var fixture = new TestTrustFixture("Production");
+        var alternatePathKey = "PosAgent__TrustConfigurationPath";
+        var previous = Environment.GetEnvironmentVariable(alternatePathKey);
+        try
+        {
+            Environment.SetEnvironmentVariable(alternatePathKey, fixture.TrustFilePath);
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+            {
+                using var baseFactory = new AgentWebApplicationFactory();
+                baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
+                using var factory = baseFactory.WithWebHostBuilder(_ => { });
+                _ = factory.Services;
+            });
+
+            Assert.Contains("PosAgent:TrustConfigurationPath is obsolete and rejected", ex.Message);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(alternatePathKey, previous);
+        }
+    }
+
     [Fact]
     public void MachineTrustSnapshotDeterminesLifecycleReleaseChannelIndependentlyOfEnvironment()
     {
         using var fixture = new TestTrustFixture("Production");
         // Using "IntegrationTest" host environment, but machine trust says "Production"
         using var baseFactory = new AgentWebApplicationFactory();
+        baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
         using var factory = baseFactory.WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("PosAgent:TrustConfigurationPath", fixture.TrustFilePath);
         });
 
         var packageOptions = factory.Services.GetRequiredService<AgentPackageOptions>();
@@ -72,9 +117,9 @@ public sealed class AgentPackageMachineTrustCompositionTests
     {
         using var fixture = new TestTrustFixture("Testing");
         using var baseFactory = new AgentWebApplicationFactory();
+        baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
         using var factory = baseFactory.WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("PosAgent:TrustConfigurationPath", fixture.TrustFilePath);
         });
 
         var packageOptions = factory.Services.GetRequiredService<AgentPackageOptions>();
@@ -88,19 +133,11 @@ public sealed class AgentPackageMachineTrustCompositionTests
     [Fact]
     public void MissingMachineTrustConfigurationFailsStartupClosed()
     {
-        var missingPath = Path.Combine(
-            Path.GetTempPath(),
-            "RmsSupportHub.Pos.Tests",
-            "missing-trust-" + Guid.NewGuid().ToString("N"),
-            "package-trust.json");
-
         var ex = Assert.Throws<InvalidOperationException>(() =>
         {
-            using var baseFactory = new AgentWebApplicationFactory();
-            using var factory = baseFactory.WithWebHostBuilder(builder =>
-            {
-                builder.UseSetting("PosAgent:TrustConfigurationPath", missingPath);
-            });
+            using var factory = new AgentWebApplicationFactory(
+                AgentHostConstants.IntegrationTestEnvironment,
+                useTestTrust: false);
             _ = factory.Services;
         });
 

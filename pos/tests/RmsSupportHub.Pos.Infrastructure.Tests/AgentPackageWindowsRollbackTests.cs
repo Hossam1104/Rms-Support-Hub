@@ -271,13 +271,20 @@ public sealed class AgentPackageWindowsRollbackTests
             new FileInfo(configPath).SetAccessControl(security);
 
             var verifier = new MachineCertificatePackageSignatureVerifier(
-                new AgentPackageTrustOptions { TrustConfigurationPath = configPath, RequireTrustedChain = false },
+                new AgentPackageTrustOptions
+                {
+                    ProductionSignerThumbprint = new string('0', 40),
+                    TestingSignerThumbprint = certificate.Thumbprint,
+                    RequireTrustedChain = false
+                },
                 new FixedCertificateSource(certificate),
                 new AcceptingTrustValidator());
 
             var manifest = Sign(CreateBareManifest(), certificate);
 
-            Assert.False(await verifier.VerifyAsync(manifest, "unused.zip"));
+            // The verifier uses only the already-validated startup snapshot. A later unsafe
+            // alternate file cannot become authority and therefore cannot cause a reread failure.
+            Assert.True(await verifier.VerifyAsync(manifest, "unused.zip"));
         }
         finally
         {
@@ -478,7 +485,12 @@ public sealed class AgentPackageWindowsRollbackTests
 
             var certificate = CreateCodeSigningCertificate();
             var signatureVerifier = new MachineCertificatePackageSignatureVerifier(
-                new AgentPackageTrustOptions { TestingSignerThumbprint = certificate.Thumbprint, RequireTrustedChain = false },
+                new AgentPackageTrustOptions
+                {
+                    ProductionSignerThumbprint = new string('0', 40),
+                    TestingSignerThumbprint = certificate.Thumbprint,
+                    RequireTrustedChain = false
+                },
                 new FixedCertificateSource(certificate),
                 new AcceptingTrustValidator());
             var verifier = new FileAgentPackageVerifier(options, new AgentPackagePolicy(), signatureVerifier);

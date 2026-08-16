@@ -2,20 +2,32 @@
 
 ## Status
 
-Accepted — 2026-08-16
+Accepted — 2026-08-17
 
 ## Decision
 
 The permanent POS Agent package boundary has a real machine-owned trust and
 activation path. The package manifest is not its own trust root: the effective
-release mode comes from protected machine-owned deployment configuration, and
-the channel/environment select only a signer thumbprint pinned in
-LocalMachine-owned configuration. Production and Testing pins must be
-canonically distinct; the package's display signer metadata and the caller's
-requested channel can never select or downgrade a certificate. Production
-always requires a purpose-constrained Code Signing certificate with explicit
-online chain/revocation validation. Testing may use an injected non-chain test
-seam only when the protected operation mode is explicitly Testing.
+release mode comes from the exact canonical file
+`%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`, and that path is
+not configurable by `IConfiguration`, environment variables, command-line
+arguments, appsettings, launch settings, package metadata, browser input, or
+API input. The channel/environment select only the active signer thumbprint
+from the immutable startup snapshot. Every valid trust file must contain both
+Production and Testing pins as non-empty strings that normalize to distinct
+40-hex values. The package's display signer metadata and the caller's requested
+channel can never select or downgrade a certificate. Production always requires
+a purpose-constrained Code Signing certificate with explicit online
+chain/revocation validation. Testing may use an injected non-chain test seam
+only when the protected operation mode is explicitly Testing.
+
+Normal Agent startup resolves and validates this complete snapshot before the
+host is usable. The obsolete `PosAgent:ReleaseChannel` and
+`PosAgent:TrustConfigurationPath` keys are rejected by presence, including
+empty values. The SDK OpenAPI document host is a metadata-only composition: it
+does not create trust or usable package/SCM/certificate/rollback/repair
+lifecycle services and uses poison-pill descriptors only where endpoint
+metadata requires service parameter types. It never fabricates trust.
 
 Security-control files (`package-trust.json`, `agent-certificate.json`, and
 `lifecycle-state.json`) are fixed-name, bounded, non-reparse files whose own
