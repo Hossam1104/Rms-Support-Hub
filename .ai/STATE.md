@@ -99,7 +99,6 @@
 - `TASK.md` is the next independent Terra review prompt. This implementation
   turn does not claim representative-machine elevation, Production signing/PKI,
   fleet enrollment, or customer approval.
-
 ## Validation evidence
 - POS Release build: 0 warnings, 0 errors with
   `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`.
