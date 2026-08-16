@@ -1,115 +1,82 @@
 # Current Project State
 
 - **Updated:** 2026-08-17
-- **Active branch:** `feat/pos-production-agent-lifecycle`, based on merged
-  Slice C baseline `0b380ef`. PR #21 remains DRAFT/unmerged.
-- **Status:** Production-capable Agent package trust/lifecycle implementation is
-  complete in scope, including rollback/recovery hardening and the final PR #21
-  trust remediation below. External Production, PKI, fleet, and customer
-  evidence remains open.
-- **Next task:** run the full GPT-5.6 Terra HIGH independent Production/fleet
-  security and release-readiness review already in `TASK.md`.
+- **Active branch at last session:** `feat/pos-production-agent-lifecycle`,
+  merged to `main` via PR #21 (head `21256c9`). See PR #21 acceptance below.
+- **Status:** Production-capable Agent package trust/lifecycle implementation
+  (Slice C, ADR-0026/ADR-0027) is complete in scope and merged to `main`.
+  External Production, PKI, fleet, and customer evidence remains open (see
+  External release gates).
+- **Next task:** see `TASK.md` for the next executable session.
 
-## Rollback/recovery hardening (this pass)
+## PR #21 acceptance and merge
 
-- Automatic rollback/recovery now resolves the retained slot and target
-  identity from the durable checkpoint's `PreviousVersion`, never from the
-  failed operation's incoming manifest.
-- Retained slots (`rollback/`, new `recovery/`) hold only a signed manifest
-  and archive, never a raw copied installation directory. Restoration always
-  re-extracts into a new unique staging directory and re-verifies
-  signature/hash/traversal (`AgentPackageArchiveStaging`, `VerifyRecoveryAsync`)
-  before activation, identically in C# and PowerShell
-  (`Save-`/`Restore-RmsSupportAgentRetainedSlot`).
-- Rollback/recovery success is health-gated (`VerifyHealthAsync` /
-  `Test-RmsSupportAgentHealth`) before returning success and clearing the
-  checkpoint; failure returns `RollbackFailed`/`RecoveryRequired` and keeps
-  the checkpoint as recovery evidence.
-- Explicit rollback preserves the CURRENT installation into a bounded
-  one-operation `recovery/` slot before its destructive mutation, so a failed
-  explicit rollback can restore the pre-rollback version.
-- Trust-control files (`package-trust.json`, `agent-certificate.json`,
-  `lifecycle-state.json`) are ACL/ownership-verified
-  (`Test-RmsSupportAgentControlFileTrust` /
-  `ServiceOwnedDirectoryProvisioner.IsTrustedControlFile`) before any
-  security-sensitive value is consumed, in both C# and PowerShell.
-- The control file itself and every ancestor back to the fixed service-owned
-  root are bounded, non-reparse, owner-verified, protected, and free of unsafe
-  broad allow rules. The temporary test identity is confined to the named test
-  fixture root and cannot authorize the ProgramData production root.
+- Claude Opus 5 HIGH completed the final independent security review of PR #21
+  at head `21256c9d59d5e0295e51fdc7f3704a60665eea4` (base `main`,
+  `02d6e1f62fd8aa4c463cbe42d946f449360f2de`): Critical 0, High 0, Medium 0.
+  Code/security accepted.
+- GPT-5.6 Sol accepted that review and authorized merge. Production/fleet
+  rollout remains gated on the external items below; repository merge is not
+  Production rollout approval.
+- Required CI verified green on the accepted head: POS OpenAPI and Angular
+  contract generation, POS Windows build and Infrastructure tests, POS
+  portable projects, Retained WinUI publish validation, Support Hub PowerShell
+  quality gate, Windows Agent security foundation.
+- PR #21 was merged to `main` using the repository's normal merge strategy
+  after a documentation/state-only closure commit recording this acceptance.
 
-## PR #21 production trust-boundary remediation
+## Deferred non-blocking hardening (Low, from Opus review)
 
-- The sole normal C# package-trust authority is exactly
-  `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`; the path is not
-  configurable from configuration, environment, command line, appsettings,
-  launch settings, package input, browser input, or API input. Tests replace
-  the loader only through the test-only DI seam.
-- Production and Testing signer pins are mandatory, string, non-empty,
-  normalized 40-hex values and must be distinct in both C# and PowerShell.
-  Equal, malformed, missing, or ambiguous trust values fail closed before
-  either pin becomes authority; deployment mode selects the active signer only.
-- Lifecycle mutation mode in both C# and PowerShell comes exclusively from the
-   protected machine-owned canonical `package-trust.json` `deploymentMode` snapshot
-  (`AgentMachineTrustConfiguration`, `MachineAgentTrustConfigurationLoader`).
-  Process config (`PosAgent:ReleaseChannel`), `IConfiguration`, environment
-  variables, appsettings, launch settings, and host environment cannot decide or
-  alter trust mode; `PosAgent:ReleaseChannel` and
-  `PosAgent:TrustConfigurationPath` are rejected by presence, including empty
-  values, on startup.
-- OpenAPI document generation uses a metadata-only host. It does not create
-  synthetic trust or compose usable Agent package trust, activation, SCM,
-  certificate, rollback/recovery, or repair lifecycle services; normal startup
-  without canonical trust fails closed.
-- Certificate readiness carries typed actual CNG key-file ACL evidence,
-  including Microsoft provider, machine-key, non-exportable policy, fixed key
-  root, protected owner/ACL, and explicit LocalSystem read access. Admin-only
-  access and broad grants fail closed; no key is exported.
-- Terminal package audit and incident timeline use the generated opaque
-  operation instance ID and preserve the operation correlation ID.
+- **L-1:** Parameterless `MachineCertificatePackageSignatureVerifier`
+  constructor performs a deferred trust reload; shipped DI uses the
+  immutable-snapshot constructor instead. No production impact.
+- **L-2:** Obsolete-key rejection is skipped inside metadata-only OpenAPI
+  composition; metadata mode has no trust/lifecycle authority and consumes
+  neither key.
+- **L-3:** Some early-return PowerShell lifecycle failures write
+  started/attempted audit events without a terminal failed event.
+  Operation-ID correlation itself is correct.
+- **L-4:** PowerShell `TestOnlyTrustFixture` contract property can represent
+  an alternate test trust path; the normal lifecycle entry point does not
+  expose or select it.
 
 ## Durable implementation facts
 
-- The permanent product and SCM identity is `RmsSupportAgent`, display name
-  `RMS Support Agent`, description `Local diagnostics, maintenance and repair
-  agent for RMS Support Hub`, and account `LocalSystem`. Historical Testing
-  services are migration inputs only; RMS product services are never adopted,
-  removed, or controlled.
-- Package publication is controlled by
-  `scripts/publish-rms-support-agent-package.ps1`. It reads a bounded publish
-  directory, signs a deterministic UTF-8 length-delimited envelope with a
-  pinned `Cert:\LocalMachine\My` Code Signing certificate, and never exports
-  private key material.
-- C# and PowerShell trust paths independently bind channel/environment,
-  machine-owned signer pins, archive hash/size, exact sorted file metadata,
-  service identity, ACL/certificate requirements, and rollback metadata.
-  Production cannot use the Testing signer or the injected no-chain seam.
-- The typed Windows lifecycle uses the machine-wide
-  `Global\RmsSupportHub.Pos.Agent.PrivilegedMutationLease`, fixed ACL roots,
-  atomic lifecycle checkpoints, retained trusted rollback payload/archive,
-  exact SCM configuration and bounded restart recovery actions. Terminal
-  activation requires both `https://rms-pos-agent.localhost:5001/health/live`
-  and `/health/ready` to return 200 over HTTPS without redirect following.
-- The certificate prerequisite is read-only and requires the exact
-  `rms-pos-agent.localhost` SAN, LocalMachine store, Microsoft Software Key
-  Storage Provider, non-exportable key, Server Authentication EKU, actual
-  LocalSystem private-key-file access evidence, and a local or enterprise
-  ownership marker. Enterprise certificates are never removed by the Agent
-  lifecycle.
-- `TASK.md` is the next independent Terra review prompt. This implementation
-  turn does not claim representative-machine elevation, Production signing/PKI,
-  fleet enrollment, or customer approval.
-## Validation evidence
-- POS Release build: 0 warnings, 0 errors with
+- Sole normal C# package-trust authority is exactly
+  `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`, non-configurable
+  from any config/env/CLI/API/browser input; deployment mode (from the same
+  file) selects the mandatory, distinct, 40-hex Production/Testing signer pins
+  in both C# and PowerShell. OpenAPI generation uses a metadata-only host with
+  no trust/lifecycle authority; normal startup without canonical trust fails
+  closed.
+- Rollback/recovery resolves target identity from the durable checkpoint's
+  `PreviousVersion`; retained slots hold only a signed manifest+archive,
+  always re-extracted and re-verified before activation, and are health-gated
+  before success. Explicit rollback preserves the current install into a
+  bounded `recovery/` slot first. Trust-control files and their full ancestor
+  path are ACL/ownership-verified before any sensitive value is consumed.
+- Permanent product/SCM identity is `RmsSupportAgent` (`LocalSystem`); typed
+  Windows lifecycle uses one machine-wide mutation lease, fixed ACL roots,
+  atomic checkpoints, and requires both `/health/live` and `/health/ready`
+  over HTTPS for terminal activation. Certificate prerequisite is read-only,
+  requiring the exact `rms-pos-agent.localhost` SAN, non-exportable
+  machine-key CNG storage, and actual LocalSystem private-key-file access
+  evidence.
+- Package publication (`scripts/publish-rms-support-agent-package.ps1`) signs
+  a deterministic envelope with a pinned `Cert:\LocalMachine\My` Code Signing
+  certificate; no private key is ever exported.
+
+## Validation evidence (PR #21 final head)
+
+- POS Release build: 0 warnings/errors with
   `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`.
-- POS solution tests: 410 passed, 0 failed, 0 skipped (Domain 12,
-  Application 82, Infrastructure 153, Agent integration 163). Focused trust /
-  composition tests: 55 infrastructure and 14 Agent integration tests passed.
-- PowerShell quality: all 29 tracked scripts/modules parsed; full Pester 159
+- POS solution tests: 410 passed (Domain 12, Application 82, Infrastructure
+  153, Agent integration 163); focused trust/composition tests 55 + 14 passed.
+- PowerShell quality: 29 tracked scripts/modules parsed; full Pester 159
   passed, 0 failed, 0 skipped.
-- Backend: `dotnet test backend/tests/RmsSupportHub.Tests` 194 passed, 0 failed;
-  `.\scripts\build.ps1` and the explicit frontend production build passed;
-  backend Release build was 0 warnings, 0 errors.
+- Backend: `dotnet test backend/tests/RmsSupportHub.Tests` 194 passed;
+  `.\scripts\build.ps1` and frontend production build passed; backend Release
+  build 0 warnings/errors.
 
 ## Runtime and delivery gates
 
@@ -118,3 +85,21 @@
 - No private key was exported or committed. A real representative-machine
   activation still requires separately authorized Testing evidence followed by
   independent Production/PKI/fleet/customer review.
+
+## External release gates (unresolved, outside repository scope)
+
+1. Real Production Code Signing signer.
+2. Enterprise PKI issuance/renewal/revocation process.
+3. Representative elevated Windows lifecycle execution.
+4. Representative LocalSystem CNG key ACL evidence.
+5. Multiprocess H-3 contention evidence.
+6. Managed Chrome/Edge and BackConnectionHostNames policy evidence.
+7. Fleet deployment/enrollment plan.
+8. Customer/environment approval.
+9. Authorized Production execution window.
+
+Repository merge of PR #21 does not authorize Production signer installation,
+enterprise PKI changes, certificate-store mutation, SCM Agent activation on
+customer machines, fleet browser-policy deployment, Production package
+install/upgrade, RMS service changes, or Main Server/customer environment
+mutation. Those remain separate evidence/approval gates.
