@@ -251,4 +251,24 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
             }
         }
     }
+
+    [Fact]
+    public async Task NonExistentApiRoute_DeleteAndPatch_Returns404()
+    {
+        var deleteResponse = await _client.DeleteAsync("/api/modules/ghc_ecommerce/nonexistent-endpoint");
+        Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
+
+        var patchResponse = await _client.PatchAsJsonAsync("/api/modules/ghc_ecommerce/nonexistent-endpoint", new { });
+        Assert.Equal(HttpStatusCode.NotFound, patchResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task NonApiDeepLink_DoesNotReturn405MethodNotAllowed()
+    {
+        var getResponse = await _client.GetAsync("/tools/pos-maintenance");
+        Assert.NotEqual(HttpStatusCode.MethodNotAllowed, getResponse.StatusCode);
+
+        var postResponse = await _client.PostAsJsonAsync("/tools/pos-maintenance", new { });
+        Assert.Equal(HttpStatusCode.NotFound, postResponse.StatusCode);
+    }
 }

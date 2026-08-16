@@ -29,6 +29,7 @@ describe('PosMaintenanceComponent', () => {
   afterEach(() => {
     for (const fixture of fixtures) fixture.destroy();
     fixtures = [];
+    TestBed.resetTestingModule();
   });
 
   function createFixture(): ComponentFixture<PosMaintenanceComponent> {

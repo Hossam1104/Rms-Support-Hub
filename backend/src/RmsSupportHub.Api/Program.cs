@@ -108,15 +108,34 @@ app.MapControllers();
 
 // SPA fallback: any GET that isn't a static file and doesn't match an API
 // controller route (deep links, browser refresh) falls through to
-// index.html so Angular's router takes over client-side. Endpoint routing
-// matches before UseStaticFiles ever runs, so the route pattern needs the
-// same "nonfile" constraint MapFallbackToFile(string) applies by default --
-// without it, an extension-bearing path (main.js, styles.css, ...) matches
-// the fallback and StaticFileMiddleware defers to that already-selected
-// endpoint instead of serving the physical file. The added "not api/..."
-// constraint keeps a mistyped/removed API path a real 404 instead of a
-// silent 200 HTML response.
-app.MapFallbackToFile("{**path:nonfile:regex(^(?!api).*$)}", "index.html");
+// index.html so Angular's router takes over client-side.
+// Mistyped or retired /api/** paths return 404 across all HTTP methods (GET,
+// POST, PUT, DELETE, PATCH, etc.) rather than returning 405 or 200 HTML.
+app.MapFallback("{*path:nonfile}", async context =>
+{
+    if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var fileInfo = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+    if (fileInfo.Exists)
+    {
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(fileInfo);
+    }
+    else
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+    }
+});
 
 app.Run();
 
