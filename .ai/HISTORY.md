@@ -30,7 +30,7 @@ the linked planning/evidence documents.
 | Slice C foundation | PR #18; `0b380ef` | Added permanent `RmsSupportAgent` identity/migration, plan-first deployment, browser/certificate policy, durable audit, fixed RMS health, Support Bundle, and operations-console contracts. |
 | Production Agent lifecycle activation | `036bb62`; PR #21 | Added machine-pinned package trust, deterministic publication/envelopes, typed SCM lifecycle, ACL/certificate prerequisites, checkpoints, rollback/recovery, and health-gated activation. |
 | PR #21 trusted rollback/recovery hardening | `59f8015`; PR #21 | Anchored recovery to checkpoint `PreviousVersion`, retained signed manifest+archive only, re-extracted and re-verified rollback payloads, health-gated recovery, preserved explicit rollback recovery, and fixed PowerShell 5.1 seams. |
-| PR #21 production trust-boundary remediation | Pending commit on PR #21 (DRAFT, unmerged) | Enforced distinct Production/Testing pins, machine-owned release mode with caller assertion only, file/owner/ancestor control-file trust, actual LocalSystem CNG key-file ACL evidence, and generated operation-ID audit/timeline correlation. Added focused C#/Pester coverage and compacted this history under budget. |
+| PR #21 production trust-boundary remediation | `9a552fd`; PR #21 (DRAFT, unmerged) | Enforced distinct Production/Testing pins, machine-owned release mode with caller assertion only, file/owner/ancestor control-file trust, actual LocalSystem CNG key-file ACL evidence, and generated operation-ID audit/timeline correlation. Added focused C#/Pester coverage and compacted this history under budget. |
 
 ## Current programme status
 
