@@ -1,106 +1,34 @@
-# CLAUDE OPUS 5 HIGH — Bounded Re-Review — P0-A M-1 Remediation
-MODEL: Claude Opus 5 HIGH
-ROLE: Review
-MODE: REVIEW ONLY. Do not modify files, create/delete files, commit, push,
-merge, deploy, install, or mutate Testing, Production, customer, database,
-IIS, POS Agent, certificate, registry, SCM, or browser-policy state.
-Repository: https://github.com/Hossam1104/Rms-Support-Hub
-Branch: `feat/staging-environment-safety`; base: `main`
-Programme: Staging-Safe Release Candidate v1; milestone: P0-A M-1 remediation
-re-review only.
+# GPT-5.6 LUNA MAX HIGH — P0-B Release Candidate Pipeline
+MODEL: GPT-5.6 Luna Max HIGH
+ROLE: Implement
+BRANCH: `feat/staging-release-candidate-pipeline`; BASE: `main`
+PROGRAMME: Staging-Safe Release Candidate v1; MILESTONE: P0-B Release Candidate Pipeline
 
-## Background
+## Objective
+Implement a deterministic, offline-verifiable Testing/Staging IIS Release Candidate pipeline and integrated Support Hub CI.
 
-Your prior independent review of P0-A at commit `04304ed` found 0 Critical,
-0 High, 1 Medium (M-1), 3 Low (L-1/L-2/L-3) and classified the PR as accepted
-with non-blocking findings. GPT-5.6 Sol required M-1 fixed before merge
-authorization. Commit `500a8b3` (bounded remediation only, no other change)
-addresses M-1. This review verifies that remediation. It is not a full re-run
-of the original P0-A review.
+## Requirements
+1. Add integrated Support Hub CI workflow for `backend/**` and `frontend/**` running backend tests/build, frontend tests, production frontend build, Riyal asset verifier, and required quality checks.
+2. Produce deterministic Testing/Staging IIS Release Candidate package.
+3. Finalize build identity using source commit and Testing environment.
+4. Add release manifest including schema version, source commit, build ID, configuration schema identity, and runtime prerequisites.
+5. Produce file-integrity manifest/hashes and ZIP SHA-256 sidecar.
+6. Unpack generated ZIP into a fresh directory and verify package integrity.
+7. Add packaged-runtime smoke testing: application starts, `/`, API liveness/health, module catalogue, SPA fallback/deep link, build identity, static assets.
+8. Establish offline/runtime independence: remove public Google Fonts/runtime CDN dependencies, bundle required local assets, scan HTML/CSS/JS for unexpected public runtime URLs.
+9. Preserve approved internal RMS gateway dependencies as explicit configured dependencies rather than treating them as public Internet dependencies.
+10. Ensure package contains backend publish output, Angular assets under `wwwroot`, `web.config`, build identity, release manifest, and deployment/config schema documentation.
+11. Ensure package excludes secrets, `.env`, certificates/private keys, runtime `var`, local development state, source maps (unless approved), and generated junk.
+12. Add configuration template using names/placeholders only.
+13. Add deployment, rollback, and smoke instructions (DO NOT deploy IIS).
+14. Account for framework-dependent .NET 10 Hosting Bundle prerequisite and writable `var/drafts` ACL/runtime storage requirement.
+15. Add automated regression proving omitted `SupportHub:DeploymentTier` defaults to Testing (N-2).
+16. N-1 (redundant Program.cs fallback test) may be cleaned up only if trivial and naturally adjacent; do not expand scope.
+17. P0-A L-1/L-2/L-3 remain deferred unless directly touched.
+18. Preserve P0-A: server-owned tier, Production denial in Testing, no browser raw connection strings, no arbitrary endpoint probes, no browser endpoint redirects.
 
-## M-1 recap
+## Guardrails
+- Do NOT deploy IIS, contact Production, mutate Testing data, send/cancel/resend orders, change customer environments, begin OMS/Call Center implementation, or reopen POS architecture.
 
-`Enum.TryParse<DeploymentTier>`/`Enum.Parse<DeploymentTier>` accept the
-enum's numeric representation (`Testing=0`, `Production=1`), so
-`SupportHub:DeploymentTier="1"` passed validation and resolved to Production
--- an unsafe failure direction for malformed server configuration.
-
-## Review setup
-
-Read `AGENTS.md`, `.ai/STATE.md` (M-1 remediation section), `.ai/HISTORY.md`.
-Run:
-
-```powershell
-git diff 04304ed..500a8b3 --stat
-git diff 04304ed..500a8b3
-python .ai/scripts/context.py
-python .ai/scripts/check_memory.py
-git diff --check
-```
-
-Inspect only the M-1 diff and its tests:
-`backend/src/RmsSupportHub.Core/Modules/DeploymentTierParser.cs`,
-`backend/src/RmsSupportHub.Api/Configuration/SupportHubOptions.cs`,
-`backend/src/RmsSupportHub.Api/Program.cs`,
-`backend/tests/RmsSupportHub.Tests/DeploymentTierParserTests.cs`,
-`backend/tests/RmsSupportHub.Tests/DeploymentTierHostStartupTests.cs`,
-`backend/tests/RmsSupportHub.Tests/SupportHubOptionsTests.cs`.
-
-## Required review evidence
-
-1. Numeric `DeploymentTier` values (`"0"`, `"1"`, `"-1"`, `"2"`, and other
-   coerced/malformed forms) are rejected by both the validator and the
-   composition root.
-2. Only the intended textual tokens `Testing`/`Production` (case-insensitive)
-   are accepted; no whitespace, compound, or partial-token variant passes.
-3. `SupportHubOptionsValidator` and the `Program.cs` `IEnvironmentPolicy`
-   factory resolve `DeploymentTier` through the same
-   `DeploymentTierParser.TryParseExact` call -- confirm no duplicated parsing
-   logic exists that could diverge in the future.
-4. An explicit invalid value fails application startup (no default-to-
-   Production, silent default-to-Testing, partial registration, or
-   environment-name inference).
-5. `Testing` remains the effective tier when `SupportHub:DeploymentTier` is
-   legitimately omitted (bound options default).
-6. Textual `Production` still produces a legitimate Production-tier
-   `EnvironmentPolicy` under explicit server-owned test configuration only.
-7. No regression to the already-accepted P0-A browser/environment boundary
-   (server-owned tier, Testing/Production denial, `EnvironmentPolicy`,
-   `CapabilityGuard`, browser authority, error envelopes, health policy).
-8. L-1, L-2, L-3 remain unchanged and deferred -- confirm no incidental edit
-   touched their surfaces.
-9. Full backend/frontend/build validation remains green.
-
-## Validation (read-only, exact evidence)
-
-```powershell
-dotnet test backend/RmsSupportHub.slnx -c Release --nologo
-Push-Location frontend
-npx ng test --watch=false --progress=false --reporters=default
-npx ng build --configuration production --no-progress
-Pop-Location
-.\scripts\build.ps1
-```
-
-Expected baseline: backend 252 passed / 0 failed (206 + 46 new M-1 tests);
-frontend 362 passed / 0 failed across 59 files; production and broad builds
-green. Report exact counts and distinguish any new failure from this
-baseline. Do not send/cancel/resend, probe live gateways, write databases, or
-mutate Testing data.
-
-## Required report
-
-Return only a self-contained review report:
-
-- `Result`: ACCEPTED, ACCEPTED WITH NON-BLOCKING FINDINGS, REQUEST CHANGES,
-  or BLOCKED.
-- `M-1 verification`: evidence for each of the 9 points above.
-- `Findings`: Critical/High/Medium/Low with file/line; state zero findings
-  per severity where applicable.
-- `Validation`: exact commands, counts, warnings/errors.
-- `Decision boundary`: state whether M-1 is closed and whether P0-A overall
-  is independently accepted. Keep P0-B, Production approval, and deployment
-  execution open unless evidence closes them.
-
-Stop after the review. Do not run Opus recursively, modify the repository,
-commit, push, mark a PR ready, or merge.
+## Execution Sequence
+Implementation → focused validation → full validation → artifact verification → CI exact-head verification → draft PR → Opus independent review → STOP.
