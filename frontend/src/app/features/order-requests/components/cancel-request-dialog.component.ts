@@ -6,7 +6,6 @@ import { JsonTreeComponent, RiyalComponent } from '../../../shared/ui';
 
 export interface CancelDialogResult {
   reason: string;
-  customUrl?: string;
 }
 
 export type CancelErrorKind = 'blocked' | 'upstream' | 'network';
@@ -20,8 +19,8 @@ export interface CancelErrorState {
 const QUICK_REASONS = ['Customer request', 'Out of stock', 'Duplicate order', 'Wrong branch'];
 
 /**
- * Cancel confirmation -- required reason, quick-fill chips, an endpoint
- * override, and all four outcome branches from R9 step 7. The dialog stays
+ * Cancel confirmation -- required reason, quick-fill chips, and all four
+ * outcome branches from R9 step 7. The dialog stays
  * mounted (parent keeps *ngIf true) on every branch except a clean success,
  * so the operator never loses context or has to re-enter the reason.
  */
@@ -56,20 +55,13 @@ const QUICK_REASONS = ['Customer request', 'Out of stock', 'Duplicate order', 'W
           <textarea rows="3" [(ngModel)]="reason" placeholder="Required..."></textarea>
         </div>
 
-        <div class="form-group">
-          <label>
-            <input type="checkbox" [(ngModel)]="useCustomUrl" /> Use a custom cancel endpoint
-          </label>
-          <input type="text" *ngIf="useCustomUrl" [(ngModel)]="customUrl" placeholder="https://..." />
-        </div>
-
         <div class="error-panel" *ngIf="errorState as err">
           <div class="error-message" [class]="'kind-' + err.kind">
             <i class="bi bi-exclamation-triangle-fill"></i>
             <span>{{ err.message }}</span>
           </div>
           <app-json-tree *ngIf="err.rawBody" title="Upstream response" [data]="err.rawBody"></app-json-tree>
-          <button type="button" class="retry-btn" *ngIf="err.kind === 'network'" (click)="confirm.emit({ reason: reason.trim(), customUrl: useCustomUrl ? customUrl : undefined })">
+          <button type="button" class="retry-btn" *ngIf="err.kind === 'network'" (click)="confirm.emit({ reason: reason.trim() })">
             Retry
           </button>
         </div>
@@ -139,14 +131,12 @@ export class CancelRequestDialogComponent {
 
   quickReasons = QUICK_REASONS;
   reason = '';
-  useCustomUrl = false;
-  customUrl = '';
 
   @HostListener('document:keydown.escape')
   onEscape() { this.close.emit(); }
 
   onConfirm() {
     if (!this.reason.trim()) return;
-    this.confirm.emit({ reason: this.reason.trim(), customUrl: this.useCustomUrl ? this.customUrl : undefined });
+    this.confirm.emit({ reason: this.reason.trim() });
   }
 }

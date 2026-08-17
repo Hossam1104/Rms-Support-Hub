@@ -15,12 +15,14 @@ public class GhcEcommerceModule : IOrderModule
         IFlatOrderPayloadBuilder payloadBuilder,
         IFlatOrderValidator validator,
         IItemRepository itemRepository,
-        IConsumerRepository consumerRepository)
+        IConsumerRepository consumerRepository,
+        IReadOnlyDictionary<string, ModuleEnvironment>? environments = null)
     {
         _payloadBuilder = payloadBuilder;
         _validator = validator;
         _itemRepository = itemRepository;
         _consumerRepository = consumerRepository;
+        Environments = environments ?? ModuleEnvironmentDefaults.GhcEcommerce();
     }
 
     public string Key => "ghc_ecommerce";
@@ -39,49 +41,10 @@ public class GhcEcommerceModule : IOrderModule
         ConsumerLookup: true,
         OrderRequests: false,
         Cancel: true,
-        Resend: true,
+        Resend: false,
         HasDeliveryFields: true);
 
-    // Real credentials are never hardcoded here. The connection string for this
-    // module is resolved at request time via IConfiguration.GetConnectionString("GhcEcommerce"),
-    // sourced from .NET user-secrets (dev) or environment variables (prod). See README.md.
-
-    public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; } = new Dictionary<string, ModuleEnvironment>
-    {
-        ["GHC Production"] = new ModuleEnvironment
-        {
-            Key = "GHC Production",
-            Environment = "Production",
-            Description = "GHC live routing.",
-            Accent = "ember",
-            Cue = "Warehouse",
-            Icon = "bi-box-seam",
-            RouteLabel = "Live lane",
-            VisualUrl = "static/assets/whites_logo.svg",
-            VisualAlt = "GHC logo",
-            Available = true,
-            ApiUrl = "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "https://10.10.20.200/Gateway/RmsMainServerApi/api/Order/CancelOrder",
-            ConnectionStringName = "GhcEcommerce"
-        },
-        ["GHC Testing"] = new ModuleEnvironment
-        {
-            Key = "GHC Testing",
-            Environment = "Testing",
-            Description = "GHC QA routing.",
-            Accent = "ocean",
-            Cue = "Dispatch",
-            Icon = "bi-truck",
-            RouteLabel = "QA lane",
-            VisualUrl = "static/assets/whites_logo.svg",
-            VisualAlt = "GHC logo",
-            Available = true,
-            IsDefault = true,
-            ApiUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.20.126:8090/RmsMainServerApi/api/Order/CancelOrder",
-            ConnectionStringName = "GhcEcommerce"
-        }
-    };
+    public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; }
 
     public ModuleEnvironment GetEnvironment(string? envKey) => ModuleEnvironmentResolver.Resolve(Environments, envKey);
 

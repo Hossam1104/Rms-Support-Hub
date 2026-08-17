@@ -32,6 +32,7 @@ export interface ModuleCapabilities {
   cancel: boolean;
   resend: boolean;
   hasDeliveryFields: boolean;
+  branchLookup: boolean;
 }
 
 /** Mirrors RmsSupportHub.Core.DTOs.ModuleDto. */
@@ -57,7 +58,7 @@ export interface ModuleDto {
  * client-side only: the sweep has not returned, or the Support Hub's own API
  * could not be reached -- neither of which is evidence the module is down.
  */
-export type EnvironmentHealthStatus = 'reachable' | 'unreachable' | 'unconfigured';
+export type EnvironmentHealthStatus = 'reachable' | 'unreachable' | 'unconfigured' | 'policy_disabled';
 export type EnvironmentHealthState = EnvironmentHealthStatus | 'unknown';
 
 export interface EnvironmentHealthDto {

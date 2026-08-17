@@ -36,6 +36,11 @@ the linked planning/evidence documents.
 
 ## Current programme status
 
+| Milestone | Evidence | Outcome |
+|---|---|---|
+| P0-A server-owned Testing environment authority & M-1 closure | Commits `08a54a8`, `500a8b3`, `a05eb5e`; PR #23; backend 252 passed, frontend 362 passed across 59 files, production and broad builds passed | Enforced server-side deployment tier and registered environment resolution; removed browser database/URL authority; fail-closed `DeploymentTierParser` strict allowlist closed M-1; Opus re-review 0 Critical / 0 High / 0 Medium; Sol merge authorization; merged to `main`. L-1..L-3 and N-1..N-2 deferred as non-blocking debt. P0-B release candidate pipeline is next phase. |
+
+
 INT-00 through INT-13, Slice B, and Slice C (including PR #22 deferred hardening)
 are repository-validated and merged to `main`. Slice C remains subject to
 external representative-machine, Production signing/PKI, fleet, and customer

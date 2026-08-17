@@ -46,86 +46,28 @@ describe('ApiConfigComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('PROD');
   });
 
-  it('does not expose or emit a custom endpoint for Production', () => {
+  it('does not expose a custom endpoint control for Production', () => {
     const fixture = createFixture();
-    const sent: { url: string }[] = [];
+    const sent: void[] = [];
     fixture.componentInstance.sendRequest.subscribe(e => sent.push(e));
 
     fixture.componentRef.setInput('environment', { key: 'UPC Production', environment: 'Production' } as EnvironmentDto);
     fixture.detectChanges();
-    fixture.componentInstance.useCustomEndpoint = true;
-    fixture.componentInstance.customUrl = 'https://attacker.example/api';
     fixture.componentInstance.onSend();
 
     expect(fixture.nativeElement.textContent).not.toContain('Use custom endpoint');
-    expect(sent).toEqual([{ url: '' }]);
+    expect(sent.length).toBe(1);
   });
 
-  it('keeps the custom URL input hidden and omits customApiUrl by default', () => {
+  it('emits only the server-resolved send action', () => {
     const fixture = createFixture();
-    const sent: { url: string }[] = [];
+    const sent: void[] = [];
     fixture.componentInstance.sendRequest.subscribe(e => sent.push(e));
 
     fixture.componentInstance.onSend();
 
-    expect(sent).toEqual([{ url: '' }]);
-  });
-
-  it('includes the custom URL only when the toggle is enabled and valid', () => {
-    const fixture = createFixture();
-    const component = fixture.componentInstance;
-    const sent: { url: string }[] = [];
-    component.sendRequest.subscribe(e => sent.push(e));
-
-    component.useCustomEndpoint = true;
-    component.customUrl = 'https://example.com/api/Order';
-    component.onSend();
-
-    expect(sent).toEqual([{ url: 'https://example.com/api/Order' }]);
-  });
-
-  it('blocks the send with an inline hint when the custom URL is invalid', () => {
-    const fixture = createFixture();
-    const component = fixture.componentInstance;
-    const sent: { url: string }[] = [];
-    component.sendRequest.subscribe(e => sent.push(e));
-
-    component.useCustomEndpoint = true;
-    component.customUrl = 'not-a-url';
-    component.onSend();
-
-    expect(sent).toEqual([]);
-    expect(component.customUrlError).toBeTruthy();
-  });
-
-  it('clears and ignores the custom value when the toggle is turned off', () => {
-    const fixture = createFixture();
-    const component = fixture.componentInstance;
-    const sent: { url: string }[] = [];
-    component.sendRequest.subscribe(e => sent.push(e));
-
-    component.useCustomEndpoint = true;
-    component.customUrl = 'https://example.com/api/Order';
-    component.onToggleCustom(false);
-    component.useCustomEndpoint = false;
-    component.onSend();
-
-    expect(component.customUrl).toBe('');
-    expect(sent).toEqual([{ url: '' }]);
-  });
-
-  it('publishes custom endpoint state so a single parent-owned send action can use it', () => {
-    const fixture = createFixture();
-    const states: unknown[] = [];
-    fixture.componentInstance.customEndpointChange.subscribe(state => states.push(state));
-
-    fixture.componentInstance.onToggleCustom(true);
-    fixture.componentInstance.onCustomUrlChange('https://example.com/api/Order');
-
-    expect(states).toEqual([
-      { enabled: true, url: '', valid: false },
-      { enabled: true, url: 'https://example.com/api/Order', valid: true }
-    ]);
+    expect(sent.length).toBe(1);
+    expect(fixture.nativeElement.querySelector('input[placeholder*="custom"]')).toBeNull();
   });
 
   it('drives the button state from the lifecycle loading input, not a timer', () => {

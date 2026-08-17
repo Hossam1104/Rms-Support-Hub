@@ -40,13 +40,25 @@ describe('ModuleCardComponent', () => {
   it('emits the selected environment from a card action', () => {
     const component = new ModuleCardComponent();
     component.module = module;
-    const environment = { key: 'UPC Testing', environment: 'Testing' } as EnvironmentDto;
+    const environment = { key: 'UPC Testing', environment: 'Testing', available: true } as EnvironmentDto;
     const emitted: EnvironmentDto[] = [];
     component.selectEnv.subscribe(value => emitted.push(value));
 
     component.onSelectEnv(environment);
 
     expect(emitted).toEqual([environment]);
+  });
+
+  it('does not emit an unavailable environment', () => {
+    const component = new ModuleCardComponent();
+    component.module = module;
+    const environment = { key: 'UPC Production', environment: 'Production', available: false } as EnvironmentDto;
+    const emitted: EnvironmentDto[] = [];
+    component.selectEnv.subscribe(value => emitted.push(value));
+
+    component.onSelectEnv(environment);
+
+    expect(emitted).toEqual([]);
   });
 
   it('uses the shared Coming Soon status label for unavailable modules', async () => {

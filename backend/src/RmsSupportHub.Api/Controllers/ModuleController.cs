@@ -13,40 +13,24 @@ public class ModuleController : ControllerBase
     private readonly IModuleRegistry _moduleRegistry;
     private readonly IDraftManager _draftManager;
     private readonly IModuleHealthService _healthService;
+    private readonly IEnvironmentPolicy _environmentPolicy;
 
-    public ModuleController(IModuleRegistry moduleRegistry, IDraftManager draftManager, IModuleHealthService healthService)
+    public ModuleController(
+        IModuleRegistry moduleRegistry,
+        IDraftManager draftManager,
+        IModuleHealthService healthService,
+        IEnvironmentPolicy environmentPolicy)
     {
         _moduleRegistry = moduleRegistry;
         _draftManager = draftManager;
         _healthService = healthService;
+        _environmentPolicy = environmentPolicy;
     }
 
     [HttpGet]
     public ActionResult<IEnumerable<ModuleDto>> GetModules()
     {
-        var modules = _moduleRegistry.GetAllModules().Select(m => new ModuleDto(
-            Key: m.Key,
-            Label: m.Label,
-            Client: m.Client,
-            Available: m.Available,
-            Environments: m.Environments.Values.Select(e => new EnvironmentDto(
-                Key: e.Key,
-                Environment: e.Environment,
-                Description: e.Description,
-                Accent: e.Accent,
-                Cue: e.Cue,
-                Icon: e.Icon,
-                RouteLabel: e.RouteLabel,
-                VisualUrl: e.VisualUrl,
-                VisualAlt: e.VisualAlt,
-                Available: e.Available,
-                StatusLabel: e.StatusLabel,
-                HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
-                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl),
-                IsDefault: e.IsDefault
-            )).ToList(),
-            Capabilities: ToDto(m.Capabilities)
-        ));
+        var modules = _moduleRegistry.GetAllModules().Select(BuildModuleDto);
 
         return Ok(modules);
     }
@@ -82,12 +66,20 @@ public class ModuleController : ControllerBase
 
         var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
 
-        var dto = new ModuleDto(
+        var dto = BuildModuleDto(module);
+
+        return Ok(new { module = dto, state = draft });
+    }
+
+    private ModuleDto BuildModuleDto(IOrderModule module)
+    {
+        var environments = _environmentPolicy.ProjectEnvironments(module);
+        return new ModuleDto(
             Key: module.Key,
             Label: module.Label,
             Client: module.Client,
-            Available: module.Available,
-            Environments: module.Environments.Values.Select(e => new EnvironmentDto(
+            Available: _environmentPolicy.IsModuleAvailable(module),
+            Environments: environments.Select(e => new EnvironmentDto(
                 Key: e.Key,
                 Environment: e.Environment,
                 Description: e.Description,
@@ -99,13 +91,10 @@ public class ModuleController : ControllerBase
                 VisualAlt: e.VisualAlt,
                 Available: e.Available,
                 StatusLabel: e.StatusLabel,
-                HasApiUrl: !string.IsNullOrWhiteSpace(e.ApiUrl),
-                HasCancelUrl: !string.IsNullOrWhiteSpace(e.CancelUrl),
+                HasApiUrl: e.Available && !string.IsNullOrWhiteSpace(e.ApiUrl),
+                HasCancelUrl: e.Available && !string.IsNullOrWhiteSpace(e.CancelUrl),
                 IsDefault: e.IsDefault
             )).ToList(),
-            Capabilities: ToDto(module.Capabilities)
-        );
-
-        return Ok(new { module = dto, state = draft });
+            Capabilities: ToDto(module.Capabilities));
     }
 }

@@ -6,7 +6,7 @@ namespace RmsSupportHub.Core.Services;
 public interface IApiClient
 {
     Task<ApiResponseResult> SendOrderAsync(string url, object payloadJson);
-    Task<bool> TestEndpointAsync(string url);
+    Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null);
 }
 
 public record ApiResponseResult(
@@ -42,25 +42,25 @@ public class ApiClient : IApiClient
                 Success: response.IsSuccessStatusCode
             );
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return new ApiResponseResult(
                 StatusCode: 500,
-                ResponseText: $"API request failed: {ex.Message}",
+                ResponseText: "The downstream operation could not be completed.",
                 UrlSent: url,
                 Success: false
             );
         }
     }
 
-    public async Task<bool> TestEndpointAsync(string url)
+    public async Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null)
     {
         try
         {
             var uri = new Uri(url);
             using var tcpClient = new System.Net.Sockets.TcpClient();
             var connectTask = tcpClient.ConnectAsync(uri.Host, uri.Port > 0 ? uri.Port : (uri.Scheme == "https" ? 443 : 80));
-            var timeoutTask = Task.Delay(3000);
+            var timeoutTask = Task.Delay(timeout ?? TimeSpan.FromSeconds(3));
 
             var completedTask = await Task.WhenAny(connectTask, timeoutTask);
             return completedTask == connectTask && tcpClient.Connected;

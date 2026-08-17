@@ -65,19 +65,23 @@ public class ModuleHealthService : IModuleHealthService
     public const string StatusReachable = "reachable";
     public const string StatusUnreachable = "unreachable";
     public const string StatusUnconfigured = "unconfigured";
+    public const string StatusPolicyDisabled = "policy_disabled";
 
     private readonly IModuleRegistry _moduleRegistry;
+    private readonly IEnvironmentPolicy _environmentPolicy;
     private readonly IApiClient _apiClient;
     private readonly ModuleHealthCache _cache;
     private readonly TimeProvider _timeProvider;
 
     public ModuleHealthService(
         IModuleRegistry moduleRegistry,
+        IEnvironmentPolicy environmentPolicy,
         IApiClient apiClient,
         ModuleHealthCache cache,
         TimeProvider? timeProvider = null)
     {
         _moduleRegistry = moduleRegistry;
+        _environmentPolicy = environmentPolicy;
         _apiClient = apiClient;
         _cache = cache;
         _timeProvider = timeProvider ?? TimeProvider.System;
@@ -109,13 +113,20 @@ public class ModuleHealthService : IModuleHealthService
         DateTimeOffset checkedAt,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(environment.ApiUrl))
+        if (!_environmentPolicy.IsAllowed(environment))
+        {
+            // Production entries remain represented in the projection, but a
+            // Testing-tier deployment must never open a socket to them.
+            return new EnvironmentHealth(moduleKey, environment.Key, StatusPolicyDisabled, checkedAt);
+        }
+
+        if (!environment.Available || !environment.HealthProbeEnabled || string.IsNullOrWhiteSpace(environment.ApiUrl))
         {
             return new EnvironmentHealth(moduleKey, environment.Key, StatusUnconfigured, checkedAt);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var reachable = await _apiClient.TestEndpointAsync(environment.ApiUrl);
+        var reachable = await _apiClient.TestEndpointAsync(environment.ApiUrl, environment.HealthProbeTimeout);
         return new EnvironmentHealth(
             moduleKey,
             environment.Key,

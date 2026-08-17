@@ -8,10 +8,14 @@ public class GhcUnicommerceModule : IOrderModule
     private readonly IUniCommercePayloadBuilder _payloadBuilder;
     private readonly IUniCommerceValidator _validator;
 
-    public GhcUnicommerceModule(IUniCommercePayloadBuilder payloadBuilder, IUniCommerceValidator validator)
+    public GhcUnicommerceModule(
+        IUniCommercePayloadBuilder payloadBuilder,
+        IUniCommerceValidator validator,
+        IReadOnlyDictionary<string, ModuleEnvironment>? environments = null)
     {
         _payloadBuilder = payloadBuilder;
         _validator = validator;
+        Environments = environments ?? ModuleEnvironmentDefaults.GhcUnicommerce();
     }
 
     public string Key => "ghc_unicommerce";
@@ -30,46 +34,7 @@ public class GhcUnicommerceModule : IOrderModule
         Cancel: false,
         Resend: false);
 
-    // Real credentials are never hardcoded here. The connection string for this
-    // module is resolved at request time via IConfiguration.GetConnectionString("GhcUnicommerce"),
-    // sourced from .NET user-secrets (dev) or environment variables (prod). See README.md.
-
-    public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; } = new Dictionary<string, ModuleEnvironment>
-    {
-        ["GHC Uni-Commerce Production"] = new ModuleEnvironment
-        {
-            Key = "GHC Uni-Commerce Production",
-            Environment = "Production",
-            Description = "GHC Uni-Commerce live routing (pending API URL).",
-            Accent = "aurora",
-            Cue = "Automation",
-            Icon = "bi-cpu",
-            RouteLabel = "Pending lane",
-            VisualUrl = "static/assets/whites_logo.svg",
-            VisualAlt = "GHC Uni-Commerce logo",
-            Available = false,
-            ApiUrl = null,
-            CancelUrl = null,
-            ConnectionStringName = "GhcUnicommerce"
-        },
-        ["GHC Uni-Commerce Testing"] = new ModuleEnvironment
-        {
-            Key = "GHC Uni-Commerce Testing",
-            Environment = "Testing",
-            Description = "GHC Uni-Commerce QA routing (pending API URL).",
-            Accent = "violet",
-            Cue = "Staging",
-            Icon = "bi-hourglass-split",
-            RouteLabel = "Pending lane",
-            VisualUrl = "static/assets/whites_logo.svg",
-            VisualAlt = "GHC Uni-Commerce logo",
-            Available = false,
-            IsDefault = true,
-            ApiUrl = null,
-            CancelUrl = null,
-            ConnectionStringName = "GhcUnicommerce"
-        }
-    };
+    public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; }
 
     public ModuleEnvironment GetEnvironment(string? envKey) => ModuleEnvironmentResolver.Resolve(Environments, envKey);
 

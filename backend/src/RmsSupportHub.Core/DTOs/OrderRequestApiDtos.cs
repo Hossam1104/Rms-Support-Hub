@@ -23,10 +23,6 @@ public record OrderRequestListQuery(
     bool? ExactMatch
 );
 
-/// <summary>EndpointKey is accepted for forward compatibility with the
-/// customUrl -> endpointKey -> environment.CancelUrl precedence order the
-/// plan specifies when the selected environment permits a custom URL. A
-/// server-routed Production environment ignores browser overrides.</summary>
-public record OrderRequestCancelRequest(string Reason, string? EndpointKey, string? CustomUrl);
+public record OrderRequestCancelRequest(string Reason);
 
-public record OrderRequestResendRequest(string? BranchCode, string? EndpointKey);
+public record OrderRequestResendRequest(string? BranchCode);

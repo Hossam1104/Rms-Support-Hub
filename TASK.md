@@ -1,60 +1,34 @@
-# GPT-5.6 SOL — Architecture & Programme Planning — Support Hub Post-Slice C Integration & Staging Readiness
-
-MODEL: GPT-5.6 Sol
-EFFORT: HIGH
-ROLE: Plan
-MODE: Planning only — do not modify product code, create branches, or mutate external environments
-
-## Background
-
-With the completion and merge of PR #21 (POS Slice C Agent trust/lifecycle) and
-PR #22 (deferred hardening L-1 through L-4), the POS Agent code-hardening cycle
-is complete in repository scope. External Production/fleet/PKI release gates
-remain clearly defined and gated.
-
-The core RMS+ Support Hub application contains four primary tool surfaces:
-1. **Online Orders Tool**: Multi-module order creation, validation, pricing, and
-   draft lifecycle (UPC live-capable with Testing database gating).
-2. **Order Requests**: SQL-backed order history, detail, filtering, and resend.
-3. **Prompt Studio**: Local-only, deterministic QA prompt generation and reactive forms.
-4. **POS Maintenance Console**: Operations console backed by the permanent
-   `RmsSupportAgent` service.
-
-In addition, the module registry retains registered unavailable stubs for OMS
-and Call Center, and manual IIS release packaging (`scripts/publish-iis.ps1`)
-exists for staging distribution.
+# GPT-5.6 LUNA MAX HIGH — P0-B Release Candidate Pipeline
+MODEL: GPT-5.6 Luna Max HIGH
+ROLE: Implement
+BRANCH: `feat/staging-release-candidate-pipeline`; BASE: `main`
+PROGRAMME: Staging-Safe Release Candidate v1; MILESTONE: P0-B Release Candidate Pipeline
 
 ## Objective
+Implement a deterministic, offline-verifiable Testing/Staging IIS Release Candidate pipeline and integrated Support Hub CI.
 
-Produce a comprehensive, structured implementation plan for the next phase of
-RMS+ Support Hub product delivery and staging readiness:
-1. **Registered Stub Modules Strategy**: Define architecture and capability
-   contracts for OMS and Call Center stubs (or determine deprecation/readiness milestones).
-2. **Staging / Testing Delivery Verification**: Establish end-to-end testing and
-   validation runbooks for Support Hub release candidate packaging, offline asset
-   verification, and automated build artifact generation.
-3. **External Gateway & Environment Integration**: Structure prerequisites and
-   mock/live boundaries for Testing environment configuration (e.g.,
-   `UpcEcommerceTest` connection handling, database performance index rollout plan,
-   and error envelopes).
-4. **Non-blocking Backlog Debt Management**: Plan resolution for the three
-   post-merge Low audit/test items (LOW-1, LOW-2, LOW-3) without destabilizing
-   accepted Slice C trust boundaries.
+## Requirements
+1. Add integrated Support Hub CI workflow for `backend/**` and `frontend/**` running backend tests/build, frontend tests, production frontend build, Riyal asset verifier, and required quality checks.
+2. Produce deterministic Testing/Staging IIS Release Candidate package.
+3. Finalize build identity using source commit and Testing environment.
+4. Add release manifest including schema version, source commit, build ID, configuration schema identity, and runtime prerequisites.
+5. Produce file-integrity manifest/hashes and ZIP SHA-256 sidecar.
+6. Unpack generated ZIP into a fresh directory and verify package integrity.
+7. Add packaged-runtime smoke testing: application starts, `/`, API liveness/health, module catalogue, SPA fallback/deep link, build identity, static assets.
+8. Establish offline/runtime independence: remove public Google Fonts/runtime CDN dependencies, bundle required local assets, scan HTML/CSS/JS for unexpected public runtime URLs.
+9. Preserve approved internal RMS gateway dependencies as explicit configured dependencies rather than treating them as public Internet dependencies.
+10. Ensure package contains backend publish output, Angular assets under `wwwroot`, `web.config`, build identity, release manifest, and deployment/config schema documentation.
+11. Ensure package excludes secrets, `.env`, certificates/private keys, runtime `var`, local development state, source maps (unless approved), and generated junk.
+12. Add configuration template using names/placeholders only.
+13. Add deployment, rollback, and smoke instructions (DO NOT deploy IIS).
+14. Account for framework-dependent .NET 10 Hosting Bundle prerequisite and writable `var/drafts` ACL/runtime storage requirement.
+15. Add automated regression proving omitted `SupportHub:DeploymentTier` defaults to Testing (N-2).
+16. N-1 (redundant Program.cs fallback test) may be cleaned up only if trivial and naturally adjacent; do not expand scope.
+17. P0-A L-1/L-2/L-3 remain deferred unless directly touched.
+18. Preserve P0-A: server-owned tier, Production denial in Testing, no browser raw connection strings, no arbitrary endpoint probes, no browser endpoint redirects.
 
-## Scope & Constraints
+## Guardrails
+- Do NOT deploy IIS, contact Production, mutate Testing data, send/cancel/resend orders, change customer environments, begin OMS/Call Center implementation, or reopen POS architecture.
 
-- Inspect architecture docs (`docs/RMS_SUPPORT_HUB_RELEASE_READINESS.md`,
-  `docs/POS_MAINTENANCE_INTEGRATION_PLAN.md`, `docs/design-system.md`,
-  `docs/api-spec.md`), backend capabilities
-  (`backend/src/RmsSupportHub.Core/Capabilities/`), and frontend module definitions.
-- Respect all established ADRs (ADR-0001 through ADR-0027).
-- Do not plan direct Production mutation or bypass external release gates.
-- Keep plan actionable, modular, and phased with clear ownership and risk classification.
-
-## Deliverable
-
-An actionable architecture plan artifact or report detailing:
-1. Executive summary & scope boundary.
-2. Capability matrix & module roadmap.
-3. Staging validation and release candidate packaging specifications.
-4. Phased execution schedule with model/effort assignments for subsequent implementation sessions.
+## Execution Sequence
+Implementation → focused validation → full validation → artifact verification → CI exact-head verification → draft PR → Opus independent review → STOP.

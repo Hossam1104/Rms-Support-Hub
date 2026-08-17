@@ -76,10 +76,12 @@ public class UpcProductionRoutingTests
             new FlatOrderPayloadBuilder(),
             new FlatOrderValidator(),
             itemRepository,
-            consumerRepository);
+            consumerRepository,
+            TestEnvironmentCatalog.Upc());
         var controller = new LookupController(
             new SingleModuleRegistry(module),
-            BuildConfiguration(),
+            new RmsSupportHub.Api.ServerConnectionStringResolver(BuildConfiguration()),
+            new EnvironmentPolicy(DeploymentTier.Production),
             new EmptyBranchRepository(),
             new MemoryCache(new MemoryCacheOptions()));
 
@@ -97,5 +99,31 @@ public class UpcProductionRoutingTests
 
         Assert.Equal("RmsMainTest2", ReadConnection(itemRepository.LastConnectionString!).Database);
         Assert.Equal("RmsMainTest2", ReadConnection(consumerRepository.LastConnectionString!).Database);
+    }
+
+    [Fact]
+    public async Task TestingDeployment_ProductionLookupIsRejectedBeforeDatabaseAccess()
+    {
+        var itemRepository = new CapturingItemRepository();
+        var consumerRepository = new CapturingConsumerRepository();
+        var module = new UpcEcommerceModule(
+            new FlatOrderPayloadBuilder(),
+            new FlatOrderValidator(),
+            itemRepository,
+            consumerRepository,
+            TestEnvironmentCatalog.Upc());
+        var controller = new LookupController(
+            new SingleModuleRegistry(module),
+            new RmsSupportHub.Api.ServerConnectionStringResolver(BuildConfiguration()),
+            new EnvironmentPolicy(DeploymentTier.Testing),
+            new EmptyBranchRepository(),
+            new MemoryCache(new MemoryCacheOptions()));
+
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.EnvironmentNotAllowedException>(() =>
+            controller.LookupItem("upc_ecommerce", "123456", envKey: "UPC Production"));
+
+        Assert.Equal("environment_not_allowed", error.Code);
+        Assert.Null(itemRepository.LastConnectionString);
+        Assert.Null(consumerRepository.LastConnectionString);
     }
 }

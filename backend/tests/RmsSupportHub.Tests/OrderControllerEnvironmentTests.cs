@@ -29,7 +29,8 @@ public class OrderControllerEnvironmentTests
             new FlatOrderPayloadBuilder(),
             new FlatOrderValidator(),
             Mock.Of<IItemRepository>(),
-            Mock.Of<IConsumerRepository>());
+            Mock.Of<IConsumerRepository>(),
+            TestEnvironmentCatalog.Upc());
 
         var registry = new Mock<IModuleRegistry>();
         registry.Setup(r => r.GetModule("upc_ecommerce")).Returns(module);
@@ -47,7 +48,10 @@ public class OrderControllerEnvironmentTests
             registry.Object,
             Mock.Of<IDraftManager>(),
             client.Object,
-            Mock.Of<ISqlServerConnectionFactory>());
+            Mock.Of<ISqlServerConnectionFactory>(),
+            new RmsSupportHub.Api.ServerConnectionStringResolver(
+                new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()),
+            new EnvironmentPolicy(DeploymentTier.Testing));
 
         return controller;
     }
@@ -87,71 +91,28 @@ public class OrderControllerEnvironmentTests
     }
 
     [Fact]
-    public void GetEndpoint_ResolvesProductionUrlWithoutPosting()
+    public void GetEndpoint_RejectsProductionInTestingDeploymentWithoutPosting()
     {
         var controller = BuildController(out var apiClient, out _);
 
-        var result = controller.GetEndpoint("upc_ecommerce", "UPC Production");
-        var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
-        var endpoint = Assert.IsType<ModuleEndpointDto>(ok.Value);
+        var error = Assert.Throws<RmsSupportHub.Api.Exceptions.EnvironmentNotAllowedException>(
+            () => controller.GetEndpoint("upc_ecommerce", "UPC Production"));
 
-        Assert.Equal("http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder", endpoint.ApiUrl);
-        Assert.DoesNotContain(":8080", endpoint.ApiUrl);
+        Assert.Equal("environment_not_allowed", error.Code);
         apiClient.Verify(c => c.SendOrderAsync(It.IsAny<string>(), It.IsAny<object>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendRequest_ProductionIgnoresBrowserCustomUrl()
+    public async Task SendRequest_ProductionIsRejectedBeforeDownstreamCall()
     {
-        var production = new ModuleEnvironment
-        {
-            Key = "UPC Production",
-            Environment = "Production",
-            Description = "",
-            Accent = "",
-            Cue = "",
-            Icon = "",
-            RouteLabel = "",
-            VisualUrl = "",
-            VisualAlt = "",
-            Available = true,
-            ApiUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            AllowCustomApiUrl = false
-        };
-        var module = new Mock<IOrderModule>();
-        module.SetupGet(m => m.Key).Returns("upc_ecommerce");
-        module.Setup(m => m.GetEnvironment("UPC Production")).Returns(production);
-        module.Setup(m => m.Validate(It.IsAny<OrderDraft>())).Returns(new List<string>());
-        module.Setup(m => m.BuildPayload(It.IsAny<OrderDraft>())).Returns(new Dictionary<string, object?>());
+        var controller = BuildController(out var apiClient, out _);
 
-        var registry = new Mock<IModuleRegistry>();
-        registry.Setup(r => r.GetModule("upc_ecommerce")).Returns(module.Object);
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.EnvironmentNotAllowedException>(
+            () => controller.SendRequest(
+                "upc_ecommerce",
+                new SendOrderRequest("UPC Production")));
 
-        var apiClient = new Mock<IApiClient>();
-        apiClient.Setup(c => c.SendOrderAsync(It.IsAny<string>(), It.IsAny<object>()))
-            .ReturnsAsync(new ApiResponseResult(200, "{}", "", true));
-        var drafts = new Mock<IDraftManager>();
-        drafts.Setup(d => d.LoadDraftAsync(It.IsAny<string>(), "upc_ecommerce"))
-            .ReturnsAsync(new OrderDraft());
-
-        var controller = new OrderController(
-            registry.Object,
-            drafts.Object,
-            apiClient.Object,
-            Mock.Of<ISqlServerConnectionFactory>());
-        var context = new DefaultHttpContext();
-        context.Items["oot_sid"] = "test-session";
-        controller.ControllerContext = new ControllerContext { HttpContext = context };
-
-        await controller.SendRequest(
-            "upc_ecommerce",
-            new SendOrderRequest("UPC Production", "https://attacker.example/create"));
-
-        apiClient.Verify(c => c.SendOrderAsync(
-            "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            It.IsAny<object>()), Times.Once);
-        apiClient.Verify(c => c.SendOrderAsync(
-            "https://attacker.example/create",
-            It.IsAny<object>()), Times.Never);
+        Assert.Equal("environment_not_allowed", error.Code);
+        apiClient.Verify(c => c.SendOrderAsync(It.IsAny<string>(), It.IsAny<object>()), Times.Never);
     }
 }

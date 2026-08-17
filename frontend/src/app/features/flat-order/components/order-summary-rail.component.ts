@@ -112,10 +112,6 @@ export interface OrderValidationSummary {
           </div>
           <p>{{ environment?.key || 'Environment unresolved' }}</p>
           <p class="summary-rail__endpoint">{{ endpointSummary() }}</p>
-          <p class="summary-rail__custom" *ngIf="customEndpointEnabled">
-            <i class="bi bi-link-45deg" aria-hidden="true"></i>
-            Custom endpoint {{ customEndpointValid ? 'ready' : 'needs attention' }}
-          </p>
         </section>
 
         <div class="summary-rail__actions">
@@ -167,7 +163,6 @@ export interface OrderValidationSummary {
     .summary-rail__issues button:focus-visible { outline: none; border-radius: var(--radius-sm); box-shadow: var(--focus-ring-danger); }
     .summary-rail__issues .is-global { text-decoration: none; }
     .summary-rail__endpoint { overflow-wrap: anywhere; }
-    .summary-rail__custom { color: var(--state-info-fg) !important; }
     .summary-rail__actions { display: grid; gap: 9px; }
     .summary-rail__actions ui-button ::ng-deep .ui-button { width: 100%; }
     .summary-rail__action-hint { color: var(--text-muted); font-size: .72rem; }
@@ -195,8 +190,6 @@ export class OrderSummaryRailComponent {
   @Input() endpoint: ModuleEndpoint | null = null;
   @Input() sending = false;
   @Input() compact = false;
-  @Input() customEndpointEnabled = false;
-  @Input() customEndpointValid = true;
   /** True when the draft carries no payment rows. That is a valid,
    * non-blocking state: FlatOrderPayloadBuilder emits the verified Cash on
    * Delivery shape for it (order_payment_method "COD",
@@ -228,21 +221,19 @@ export class OrderSummaryRailComponent {
   }
 
   endpointSummary(): string {
-    if (this.customEndpointEnabled) return this.customEndpointValid ? 'Custom endpoint selected' : 'Custom endpoint needs attention';
     if (this.endpoint?.apiUrl) return this.endpoint.apiUrl;
     return this.endpoint ? 'No endpoint configured' : 'Resolving endpoint…';
   }
 
   sendDisabled(): boolean {
-    return this.sending || this.hasValidationIssues() || !this.environment || (!this.customEndpointEnabled && !this.endpoint?.apiUrl) || (this.customEndpointEnabled && !this.customEndpointValid);
+    return this.sending || this.hasValidationIssues() || !this.environment || !this.endpoint?.apiUrl;
   }
 
   sendDisabledReason(): string {
     if (this.sending) return 'An order request is already being sent.';
     if (this.hasValidationIssues()) return 'Resolve the known validation issues before sending.';
     if (!this.environment) return 'The active environment is still resolving.';
-    if (this.customEndpointEnabled && !this.customEndpointValid) return 'Review the custom endpoint in the payload section.';
-    if (!this.customEndpointEnabled && !this.endpoint?.apiUrl) return 'No send endpoint is configured for this environment.';
+    if (!this.endpoint?.apiUrl) return 'No send endpoint is configured for this environment.';
     return '';
   }
 

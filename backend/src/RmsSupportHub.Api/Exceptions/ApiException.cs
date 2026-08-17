@@ -61,3 +61,45 @@ public sealed class ConfigurationException : ApiException
     public ConfigurationException(string message, object? details = null)
         : base(StatusCodes.Status500InternalServerError, "configuration_error", message, details) { }
 }
+
+public sealed class EnvironmentNotAllowedException : ApiException
+{
+    public EnvironmentNotAllowedException()
+        : base(StatusCodes.Status403Forbidden, "environment_not_allowed",
+            "The selected environment is not allowed by this deployment.") { }
+}
+
+public sealed class EnvironmentUnconfiguredException : ApiException
+{
+    public EnvironmentUnconfiguredException()
+        : base(StatusCodes.Status503ServiceUnavailable, "environment_unconfigured",
+            "The selected environment is not configured for this deployment.") { }
+}
+
+public sealed class InvalidEnvironmentException : ApiException
+{
+    public InvalidEnvironmentException()
+        : base(StatusCodes.Status400BadRequest, "invalid_environment",
+            "The selected environment is not registered for this module.") { }
+}
+
+public sealed class CapabilityUnavailableException : ApiException
+{
+    public CapabilityUnavailableException()
+        : base(StatusCodes.Status501NotImplemented, "capability_unavailable",
+            "The requested operation is not available for this module.") { }
+}
+
+public sealed class DownstreamUnreachableException : ApiException
+{
+    public DownstreamUnreachableException()
+        : base(StatusCodes.Status502BadGateway, "downstream_unreachable",
+            "The configured downstream environment could not be reached.") { }
+}
+
+public sealed class DownstreamTimeoutException : ApiException
+{
+    public DownstreamTimeoutException()
+        : base(StatusCodes.Status504GatewayTimeout, "downstream_timeout",
+            "The configured downstream environment did not respond in time.") { }
+}

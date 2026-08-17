@@ -232,8 +232,7 @@ const TOTALS_DEBOUNCE_MS = 300;
                   [loading]="sending()"
                   [endpoint]="activeEndpoint()"
                   [environment]="moduleService.activeEnvironment()"
-                  [validationSummary]="validationSummary()"
-                  (customEndpointChange)="onCustomEndpointChange($event)">
+                  [validationSummary]="validationSummary()">
                 </app-api-config>
               </ui-section>
 
@@ -265,8 +264,6 @@ const TOTALS_DEBOUNCE_MS = 300;
               [endpoint]="activeEndpoint()"
               [sending]="sending()"
               [isCashOnDelivery]="isCashOnDelivery()"
-              [customEndpointEnabled]="customEndpointEnabled()"
-              [customEndpointValid]="customEndpointValid()"
               (validate)="onValidate()"
               (send)="onSummarySend()"
               (issueSelected)="onValidationIssue($event)">
@@ -288,8 +285,6 @@ const TOTALS_DEBOUNCE_MS = 300;
             [endpoint]="activeEndpoint()"
             [sending]="sending()"
             [isCashOnDelivery]="isCashOnDelivery()"
-            [customEndpointEnabled]="customEndpointEnabled()"
-            [customEndpointValid]="customEndpointValid()"
             (validate)="onValidate()"
             (send)="onSummarySend()"
             (issueSelected)="onValidationIssue($event)">
@@ -308,7 +303,7 @@ const TOTALS_DEBOUNCE_MS = 300;
       reasonLabel="Type the environment name to confirm"
       [reasonPlaceholder]="moduleService.activeEnvironment()?.key || ''"
       confirmLabel="Send to Production"
-      (cancel)="showProdSendConfirm.set(false); pendingSendEvent = null"
+      (cancel)="showProdSendConfirm.set(false); pendingSendConfirmation = false"
       (confirm)="onConfirmProdSend()">
     </app-confirm-dialog>
 
@@ -447,10 +442,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   showAddPaymentDialog = signal<boolean>(false);
 
   showProdSendConfirm = signal<boolean>(false);
-  pendingSendEvent: { url: string } | null = null;
-  customEndpointEnabled = signal(false);
-  customEndpointUrl = signal('');
-  customEndpointValid = signal(true);
+  pendingSendConfirmation = false;
 
   /** undefined until the first environment is known, so the effect below
    * never re-fetches on the initial load -- only on an actual switch. */
@@ -629,9 +621,6 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.draftLoading.set(true);
     this.draftLoadError.set(null);
     this.validation.set(null);
-    this.customEndpointEnabled.set(false);
-    this.customEndpointUrl.set('');
-    this.customEndpointValid.set(true);
     this.activeEndpoint.set(null);
     this.totals.set(null);
     this.totalsError.set(null);
@@ -924,12 +913,6 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Gates the send behind a typed confirmation when the active lane is
    * Production (U1, UI_Rework_Plan.md §3 decision 4) -- Testing sends
    * proceed immediately. */
-  onCustomEndpointChange(state: { enabled: boolean, url: string, valid: boolean }) {
-    this.customEndpointEnabled.set(state.enabled);
-    this.customEndpointUrl.set(state.url);
-    this.customEndpointValid.set(state.valid);
-  }
-
   /** There is intentionally no standalone validate endpoint in the current
    * API contract. This action flushes pending draft edits, refreshes the
    * server-built preview/totals when safe, and opens any already-known server
@@ -953,27 +936,27 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onSummarySend() {
-    this.onSendOrder({ url: this.customEndpointEnabled() ? this.customEndpointUrl() : '' });
+    this.onSendOrder();
   }
 
-  onSendOrder(event: { url: string }) {
+  onSendOrder() {
     if (this.moduleService.activeEnvironment()?.environment === 'Production') {
-      this.pendingSendEvent = event;
+      this.pendingSendConfirmation = true;
       this.showProdSendConfirm.set(true);
       return;
     }
-    this.performSend(event);
+    this.performSend();
   }
 
   onConfirmProdSend() {
     this.showProdSendConfirm.set(false);
-    if (this.pendingSendEvent) {
-      this.performSend(this.pendingSendEvent);
-      this.pendingSendEvent = null;
+    if (this.pendingSendConfirmation) {
+      this.performSend();
+      this.pendingSendConfirmation = false;
     }
   }
 
-  private performSend(event: { url: string }) {
+  private performSend() {
     // A send is already in flight -- block the duplicate (U4, D13).
     if (this.sending()) return;
 
@@ -986,7 +969,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.draftStore.flushNow();
     this.sending.set(true);
 
-    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined })
+    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })
       .pipe(finalize(() => this.sending.set(false)))
       .subscribe({
         next: res => {
@@ -1022,7 +1005,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
             }
             return;
           }
-          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText: 'The request could not be completed.', urlSent: event.url });
+          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText: 'The request could not be completed.', urlSent: '' });
         }
       });
   }

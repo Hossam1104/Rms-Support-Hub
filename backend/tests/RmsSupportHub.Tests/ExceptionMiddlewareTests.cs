@@ -35,6 +35,8 @@ public class ExceptionMiddlewareTests
         yield return new object[] { new UpstreamException("boom"), 502, "upstream_error" };
         yield return new object[] { new FeatureNotSupportedException("boom"), 501, "feature_not_supported" };
         yield return new object[] { new ConfigurationException("boom"), 500, "configuration_error" };
+        yield return new object[] { new DownstreamUnreachableException(), 502, "downstream_unreachable" };
+        yield return new object[] { new DownstreamTimeoutException(), 504, "downstream_timeout" };
     }
 
     [Theory]
@@ -45,7 +47,11 @@ public class ExceptionMiddlewareTests
 
         Assert.Equal(expectedStatus, statusCode);
         Assert.Equal(expectedCode, body.GetProperty("error").GetProperty("code").GetString());
-        Assert.Equal("boom", body.GetProperty("error").GetProperty("message").GetString());
+        var message = body.GetProperty("error").GetProperty("message").GetString();
+        if (exception.Code is "downstream_unreachable" or "downstream_timeout")
+            Assert.DoesNotContain("boom", message);
+        else
+            Assert.Equal("boom", message);
     }
 
     [Fact]
@@ -55,6 +61,7 @@ public class ExceptionMiddlewareTests
 
         Assert.Equal(500, statusCode);
         Assert.Equal("internal_error", body.GetProperty("error").GetProperty("code").GetString());
-        Assert.Equal("unexpected failure", body.GetProperty("error").GetProperty("message").GetString());
+        Assert.Equal("An unexpected server error occurred.", body.GetProperty("error").GetProperty("message").GetString());
+        Assert.DoesNotContain("unexpected failure", body.ToString());
     }
 }

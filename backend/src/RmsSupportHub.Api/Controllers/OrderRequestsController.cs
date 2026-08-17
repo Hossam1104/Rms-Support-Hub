@@ -23,18 +23,21 @@ public class OrderRequestsController : ControllerBase
     private readonly IModuleRegistry _moduleRegistry;
     private readonly IOrderRequestRepository _repository;
     private readonly IApiClient _apiClient;
-    private readonly IConfiguration _configuration;
+    private readonly IConnectionStringResolver _connectionStrings;
+    private readonly IEnvironmentPolicy _environmentPolicy;
 
     public OrderRequestsController(
         IModuleRegistry moduleRegistry,
         IOrderRequestRepository repository,
         IApiClient apiClient,
-        IConfiguration configuration)
+        IConnectionStringResolver connectionStrings,
+        IEnvironmentPolicy environmentPolicy)
     {
         _moduleRegistry = moduleRegistry;
         _repository = repository;
         _apiClient = apiClient;
-        _configuration = configuration;
+        _connectionStrings = connectionStrings;
+        _environmentPolicy = environmentPolicy;
     }
 
     [HttpGet]
@@ -165,11 +168,10 @@ public class OrderRequestsController : ControllerBase
         return Ok(new { request = detail, attempts, lineage });
     }
 
-    /// <summary>Resolves the URL as customUrl -> endpointKey -> environment.CancelUrl
-    /// (never ApiUrl -- that bug lived in the now-deleted HistoryController,
-    /// see remediation_plan.md B12) and re-checks CancelBlockedStatuses
-    /// server-side: the client's disabled-button state is a UX convenience,
-    /// not a security boundary.</summary>
+    /// <summary>Resolves cancellation to the registered environment's
+    /// server-owned CancelUrl and re-checks CancelBlockedStatuses server-side.
+    /// The client's disabled-button state is a UX convenience, not a security
+    /// boundary.</summary>
     [HttpPost("{id:long}/cancel")]
     public async Task<ActionResult> Cancel(string key, long id, [FromBody] OrderRequestCancelRequest request, [FromQuery] string? envKey = null)
     {
@@ -190,12 +192,10 @@ public class OrderRequestsController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Reason))
             return BadRequest(new { error = "A cancellation reason is required." });
 
-        var env = module!.GetEnvironment(envKey);
-        var cancelUrl = env.AllowCustomApiUrl && !string.IsNullOrWhiteSpace(request.CustomUrl)
-            ? request.CustomUrl
-            : env.CancelUrl;
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module!, envKey);
+        var cancelUrl = env.CancelUrl;
         if (string.IsNullOrWhiteSpace(cancelUrl))
-            return BadRequest(new { error = $"No cancel URL configured for environment '{env.Key}'." });
+            throw new Exceptions.EnvironmentUnconfiguredException();
 
         var cancelPayload = new { order_number = detail.OrderNumber, cancel_reason = request.Reason };
         var apiResult = await _apiClient.SendOrderAsync(cancelUrl, cancelPayload);
@@ -242,10 +242,10 @@ public class OrderRequestsController : ControllerBase
         {
             payload = JsonNode.Parse(detail.RequestJson) as JsonObject;
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
             return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = $"Stored request payload is not valid JSON: {ex.Message}" });
+                new { error = "Stored request payload is not valid JSON." });
         }
 
         if (payload == null)
@@ -288,10 +288,10 @@ public class OrderRequestsController : ControllerBase
         // order_code and every unknown payload field remain untouched.
         payload["branch_code"] = targetBranchCode;
 
-        var env = module!.GetEnvironment(envKey);
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module!, envKey);
         var url = env.ApiUrl;
         if (string.IsNullOrWhiteSpace(url))
-            return BadRequest(new { error = $"No API endpoint configured for environment '{env.Key}'." });
+            throw new Exceptions.EnvironmentUnconfiguredException();
 
         var apiResult = await _apiClient.SendOrderAsync(url, payload);
 
@@ -328,8 +328,8 @@ public class OrderRequestsController : ControllerBase
             if (guard != null) return (module, null, guard);
         }
 
-        var env = module.GetEnvironment(envKey);
-        var connStr = ConnectionStringResolver.RequireForEnvironment(_configuration, env);
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
+        var connStr = _connectionStrings.RequireForEnvironment(env);
 
         return (module, connStr, null);
     }

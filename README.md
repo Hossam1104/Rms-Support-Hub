@@ -64,7 +64,7 @@ The platform provides three core operational pillars:
 #### Supported Integration Families
 
 * **GHC E-Commerce (`ghc_ecommerce`)** — Flat order builder with client identity, branch-aware product lookups, consumer lookups, delivery charge fields, direct order submission (`POST /api/modules/ghc_ecommerce/send-request`), and ad-hoc order cancellation.
-* **UPC E-Commerce (`upc_ecommerce`)** — Flat order builder supporting dual **Testing** and **Production** environments, branch-aware item lookups, consumer lookups, direct submission, server-enforced cancellation, live `OrderRequests` history, and same-number order resending.
+* **UPC E-Commerce (`upc_ecommerce`)** — Flat order builder supporting registered **Testing** and **Production** environments, branch-aware item lookups, consumer lookups, direct submission, server-enforced cancellation, live `OrderRequests` history, and same-number order resending. The application defaults to the Testing deployment tier.
 * **GHC Uni-Commerce (`ghc_unicommerce`)** — Specialized invoice payload builder supporting invoice headers, consumer details, multi-row items, return order logic (`IsReturn`), parent invoice references, and server-calculated totals.
 * **OMS & Call Center (`oms`, `call_center`)** — Registered placeholder modules prepared for upcoming integration contracts.
 
@@ -78,13 +78,13 @@ The platform provides three core operational pillars:
   * Route-level detail view (`/tools/online-orders/modules/:key/order-requests/:id`) displaying full `RequestJson`, `ResponseJson`, rejection messages, execution attempts, and request lineage.
   * **Server-Enforced Cancellation** — Blocks cancellations on terminal statuses (`{5, 6, 7, 9}` — Rejected, CanceledByClient, CanceledByAdmin, Done).
   * **Same-Number Resend** — Reuses the stored request payload, preserves custom attributes, allows branch overrides, and re-submits under the original order code.
-* **Safe Environment Separation** — Testing is the default mode. Production mode routes to the dedicated `RmsMainProd` catalog via server-owned connection settings; operators cannot override connection strings or server endpoints from the browser.
+* **Safe Environment Separation** — Testing is the default deployment tier. In Testing, Production environments are unavailable and no Production endpoint, database, or mutation is contacted. A separate authorized Production deployment must explicitly select the Production tier; all endpoints, database mappings, and credentials remain server-owned, and operators cannot override connection strings or URLs from the browser.
 
 #### Module Capability Matrix
 
 | Module Key | Display Name | Order Builder | Invoice Builder | Item / Consumer Lookup | Delivery Fields | Order Requests | Cancel / Resend | Status |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| `upc_ecommerce` | UPC E-Commerce | ✅ | — | ✅ | — | ✅ | ✅ / ✅ | ✅ Active (Testing & Prod) |
+| `upc_ecommerce` | UPC E-Commerce | ✅ | — | ✅ | — | ✅ | ✅ / ✅ | ✅ Testing; Production tier-gated |
 | `ghc_ecommerce` | GHC E-Commerce | ✅ | — | ✅ | ✅ | ⏳ | ✅ / — | ✅ Active (Lookup & Send) |
 | `ghc_unicommerce` | GHC Uni-Commerce | — | ✅ | — | — | ⏳ | — / — | 🚧 Registered |
 | `oms` | OMS | — | — | — | — | — | — / — | 📋 Placeholder |
@@ -176,7 +176,8 @@ flowchart TB
 Security and boundary integrity are fundamental design requirements of RMS+ Support Hub:
 
 * **Zero Committed Secrets** — `appsettings.json` contains only empty connection-string placeholders. Credentials are injected via .NET user-secrets in development and environment variables in deployed instances.
-* **Server-Derived Connection Authority** — The browser can select named environment keys (e.g., `"UPC Testing"`, `"UPC Production"`), but cannot provide server addresses, database catalogs, or connection strings. Production switches point strictly to the pre-approved `RmsMainProd` catalog.
+* **Server-Derived Connection Authority** — The browser can select only named environment keys (e.g., `"UPC Testing"`, `"UPC Production"`) that the server advertises as available. It cannot provide server addresses, database catalogs, endpoint URLs, or connection strings. Production switches point strictly to the pre-approved `RmsMainProd` catalog when the deployment tier is explicitly Production.
+* **Testing-First Environment Policy** — `SupportHub:DeploymentTier` defaults to `Testing`. Production environments are policy-disabled in Testing before lookup, health probing, endpoint diagnostics, send, cancel, resend, or database access. Missing server secrets degrade to a safe `environment_unconfigured` response rather than accepting browser-supplied values.
 * **Direct Browser-to-Agent Boundary** — Privileged POS maintenance runs on the local machine via `RmsSupportAgent`. The central API never receives or routes POS commands.
 * **Windows Negotiate & Local Admin Authorization** — All POS Agent endpoints authenticate the calling Windows user via Kerberos/NTLM and require membership in the local `Administrators` group.
 * **No Arbitrary Execution** — The platform contains no generic command execution, no arbitrary PowerShell invokers, no dynamic SQL runners, and no unvalidated service-name controls.
@@ -233,7 +234,7 @@ Security and boundary integrity are fundamental design requirements of RMS+ Supp
 | | Durable Sanitized JSONL Audit | ✅ Available | Bounded, access-controlled audit logging |
 | | Safe Support Bundle Generation | ✅ Available | Redacted diagnostic bundle without secrets or raw payloads |
 | | Plan-First Lifecycle Scripts | ✅ Available | Bounded `Status`, `PlanOnly`, `Install`, `Repair`, `Rollback` |
-| **Release Gates** | Automated Unit & Integration Tests | ✅ Passed | 360+ frontend tests, 330+ POS tests, 190 backend tests |
+| **Release Gates** | Automated Unit & Integration Tests | ✅ Passed | 362+ frontend tests, 330+ POS tests, 206 backend tests |
 | | Elevated Testing Machine Proof | ⏳ Pending Evidence | Requires execution on authorized Testing machine with elevation |
 | | Production Code Signing & PKI | ⏳ Pending Evidence | Requires enterprise PKI certificate issuance and signing pipeline |
 | | Fleet Rollout & Customer Approval | ⏳ Pending Evidence | Pending independent security review and production release approval |
@@ -250,7 +251,9 @@ Security and boundary integrity are fundamental design requirements of RMS+ Supp
 
 ### 2. Configuration & Secrets
 
-No connection strings or credentials are committed to the repository. Configure your local .NET user-secrets for `RmsSupportHub.Api`:
+No connection strings or credentials are committed to the repository. Configure
+the server-owned environment catalog and local .NET user-secrets for
+`RmsSupportHub.Api`:
 
 ```powershell
 cd backend/src/RmsSupportHub.Api
@@ -260,7 +263,32 @@ dotnet user-secrets set "ConnectionStrings:GhcUnicommerce"   "Server=<host>;Data
 dotnet user-secrets list
 ```
 
-In deployed environments, provide the corresponding environment variables: `CONNECTIONSTRINGS__GHCECOMMERCE`, `CONNECTIONSTRINGS__UPCECOMMERCETEST`, and `CONNECTIONSTRINGS__GHCUNICOMMERCE`.
+The tracked `appsettings.json` declares the safe catalog shape. Its important
+controls are:
+
+```text
+SupportHub:DeploymentTier=Testing
+SupportHub:AllowCustomEndpoints=false
+SupportHub:Environments:<module-key>:<environment-key>:Enabled=true|false
+SupportHub:Environments:<module-key>:<environment-key>:ApiEndpointKey=<server endpoint key>
+SupportHub:Environments:<module-key>:<environment-key>:CancelEndpointKey=<server endpoint key>
+SupportHub:Environments:<module-key>:<environment-key>:ConnectionStringName=<secret name>
+ModuleEndpoints:<server endpoint key>=https://approved-host/...
+ModuleCancelEndpoints:<server endpoint key>=https://approved-host/...
+```
+
+Only registered module/environment keys are exposed to the SPA. `ApiEndpointKey`
+and `CancelEndpointKey` resolve through the server's endpoint maps; they are not
+browser-controlled URLs. `ConnectionStringName` resolves through the server's
+configuration providers, and `DatabaseOverride` is an explicit server-side
+catalog override only. Keep all secret values in user-secrets or the deployment
+secret store.
+
+In deployed environments, provide the corresponding environment variables,
+for example `SUPPORTHUB__DEPLOYMENTTIER=Testing`,
+`CONNECTIONSTRINGS__UPCECOMMERCETEST`, and the nested `SUPPORTHUB__...`
+environment registration values. Do not enable Production or provide
+Production credentials in a Testing deployment.
 
 ### 3. Running Locally
 
@@ -305,7 +333,7 @@ dotnet test pos/RmsSupportHub.Pos.slnx -c Release --nologo
 
 # Frontend tests & production build
 cd frontend
-npm test -- --watch=false
+npm test -- --watch=false --progress=false
 npm run build -- --configuration production
 npm run test:riyal-asset
 ```

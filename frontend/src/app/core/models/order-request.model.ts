@@ -140,13 +140,10 @@ export interface OrderRequestDetailResponse {
 
 export interface OrderRequestCancelRequest {
   reason: string;
-  endpointKey?: string | null;
-  customUrl?: string | null;
 }
 
 export interface OrderRequestResendRequest {
   branchCode?: string | null;
-  endpointKey?: string | null;
 }
 
 /** POST .../order-requests/{id}/cancel response body. */

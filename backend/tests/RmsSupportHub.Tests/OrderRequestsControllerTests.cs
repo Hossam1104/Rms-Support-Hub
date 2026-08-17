@@ -27,7 +27,8 @@ public class OrderRequestsControllerTests
         new FlatOrderItemRepository(new SqlServerConnectionFactory()),
         new GhcConsumerRepository(new SqlServerConnectionFactory()),
         new UpcItemRepository(new SqlServerConnectionFactory()),
-        new UpcConsumerRepository(new SqlServerConnectionFactory()));
+        new UpcConsumerRepository(new SqlServerConnectionFactory()),
+        TestEnvironmentCatalog.UpcOnly());
 
     private static IConfiguration BuildConfiguration() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?>
@@ -35,6 +36,17 @@ public class OrderRequestsControllerTests
             ["ConnectionStrings:UpcEcommerceTest"] = "Server=fake;Database=fake;"
         })
         .Build();
+
+    private static OrderRequestsController BuildController(
+        IOrderRequestRepository repository,
+        IApiClient apiClient,
+        DeploymentTier deploymentTier = DeploymentTier.Testing) =>
+        new(
+            BuildRegistry(),
+            repository,
+            apiClient,
+            new RmsSupportHub.Api.ServerConnectionStringResolver(BuildConfiguration()),
+            new EnvironmentPolicy(deploymentTier));
 
     private static OrderRequestDetailDto MakeDetail(int orderStatus) => new(
         Id: 42,
@@ -140,7 +152,7 @@ public class OrderRequestsControllerTests
             return Task.FromResult(new ApiResponseResult(200, "{\"ok\":true}", url, true));
         }
 
-        public Task<bool> TestEndpointAsync(string url) => Task.FromResult(true);
+        public Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null) => Task.FromResult(true);
     }
 
     [Fact]
@@ -148,11 +160,11 @@ public class OrderRequestsControllerTests
     {
         var repo = new FakeOrderRequestRepository();
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
         var result = await controller.Cancel(
             "upc_ecommerce", 42,
-            new OrderRequestCancelRequest("Customer request", null, null),
+            new OrderRequestCancelRequest("Customer request"),
             envKey: "UPC Testing");
 
         Assert.NotNull(apiClient.LastUrl);
@@ -161,18 +173,39 @@ public class OrderRequestsControllerTests
     }
 
     [Fact]
-    public async Task ProductionCancel_IgnoresBrowserCustomUrl()
+    public async Task TestingDeployment_ProductionCancelIsRejectedBeforeRepositoryOrApi()
     {
         var repo = new FakeOrderRequestRepository();
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
-        await controller.Cancel(
-            "upc_ecommerce", 42,
-            new OrderRequestCancelRequest("Customer request", null, "https://attacker.example/cancel"),
-            envKey: "UPC Production");
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.EnvironmentNotAllowedException>(() =>
+            controller.Cancel(
+                "upc_ecommerce", 42,
+                new OrderRequestCancelRequest("Customer request"),
+                envKey: "UPC Production"));
 
-        Assert.Equal("http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder", apiClient.LastUrl);
+        Assert.Equal("environment_not_allowed", error.Code);
+        Assert.Null(apiClient.LastUrl);
+        Assert.Empty(repo.ConnectionStrings);
+    }
+
+    [Fact]
+    public async Task TestingDeployment_ProductionResendIsRejectedBeforeRepositoryOrApi()
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
+        var apiClient = new FakeApiClient();
+        var controller = BuildController(repo, apiClient);
+
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.EnvironmentNotAllowedException>(() =>
+            controller.Resend(
+                "upc_ecommerce", 42,
+                new OrderRequestResendRequest("200"),
+                envKey: "UPC Production"));
+
+        Assert.Equal("environment_not_allowed", error.Code);
+        Assert.Null(apiClient.LastUrl);
+        Assert.Empty(repo.ConnectionStrings);
     }
 
     [Fact]
@@ -180,11 +213,11 @@ public class OrderRequestsControllerTests
     {
         var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 9) }; // 9 = Done, cancel-blocked
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
         var result = await controller.Cancel(
             "upc_ecommerce", 42,
-            new OrderRequestCancelRequest("Customer request", null, null),
+            new OrderRequestCancelRequest("Customer request"),
             envKey: "UPC Testing");
 
         var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
@@ -199,11 +232,11 @@ public class OrderRequestsControllerTests
     {
         var repo = new FakeOrderRequestRepository { Detail = MakeDetail(status) };
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
         var result = await controller.Resend(
             "upc_ecommerce", 42,
-            new OrderRequestResendRequest("200", null),
+            new OrderRequestResendRequest("200"),
             envKey: "UPC Testing");
 
         var conflict = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
@@ -217,11 +250,11 @@ public class OrderRequestsControllerTests
         var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
         var originalJson = repo.Detail.RequestJson;
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
         var result = await controller.Resend(
             "upc_ecommerce", 42,
-            new OrderRequestResendRequest("200", null),
+            new OrderRequestResendRequest("200"),
             envKey: "UPC Testing");
 
         Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
@@ -239,11 +272,11 @@ public class OrderRequestsControllerTests
     {
         var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
         await controller.Resend(
             "upc_ecommerce", 42,
-            new OrderRequestResendRequest(null, null),
+            new OrderRequestResendRequest(null),
             envKey: "UPC Testing");
 
         using var sent = JsonDocument.Parse(apiClient.LastPayloadJson!);
@@ -259,11 +292,11 @@ public class OrderRequestsControllerTests
     {
         var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) with { RequestJson = requestJson } };
         var apiClient = new FakeApiClient();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, apiClient, BuildConfiguration());
+        var controller = BuildController(repo, apiClient);
 
         var result = await controller.Resend(
             "upc_ecommerce", 42,
-            new OrderRequestResendRequest("200", null),
+            new OrderRequestResendRequest("200"),
             envKey: "UPC Testing");
 
         var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
@@ -299,7 +332,7 @@ public class OrderRequestsControllerTests
     public async Task List_NormalizesPhoneAndPassesOneCanonicalFilterSetToAllReads()
     {
         var repo = new FakeOrderRequestRepository();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
         using var cancellation = new CancellationTokenSource();
 
         var result = await controller.List(
@@ -319,7 +352,7 @@ public class OrderRequestsControllerTests
     public async Task ProductionListAndDetailReadsUseTheProductionCatalog()
     {
         var repo = new FakeOrderRequestRepository();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient(), DeploymentTier.Production);
 
         var list = await controller.List("upc_ecommerce", ListQuery(), "UPC Production");
         Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(list);
@@ -339,7 +372,7 @@ public class OrderRequestsControllerTests
     public async Task List_RejectsInvalidDateRangeBeforeStartingDatabaseReads()
     {
         var repo = new FakeOrderRequestRepository();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
 
         var result = await controller.List(
             "upc_ecommerce", ListQuery(dateFrom: new DateTime(2026, 8, 4), dateTo: new DateTime(2026, 8, 3)), "UPC Testing");
@@ -353,7 +386,7 @@ public class OrderRequestsControllerTests
     public async Task List_RejectsInvalidPhoneBeforeStartingDatabaseReads()
     {
         var repo = new FakeOrderRequestRepository();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
 
         var result = await controller.List(
             "upc_ecommerce", ListQuery(phone: "123"), "UPC Testing");
@@ -367,7 +400,7 @@ public class OrderRequestsControllerTests
     public async Task List_RejectsInvalidStatusBeforeStartingDatabaseReads()
     {
         var repo = new FakeOrderRequestRepository();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
 
         var result = await controller.List(
             "upc_ecommerce", ListQuery(status: 99), "UPC Testing");
@@ -381,7 +414,7 @@ public class OrderRequestsControllerTests
     public async Task List_ClampsInvalidPageAndPageSizeBeforeRepositoryPaging()
     {
         var repo = new FakeOrderRequestRepository();
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
 
         var result = await controller.List(
             "upc_ecommerce", ListQuery(page: 0, pageSize: 999), "UPC Testing");
@@ -395,7 +428,7 @@ public class OrderRequestsControllerTests
     public async Task List_FallsBackToLastRealPageWhenTotalShrinks()
     {
         var repo = new FakeOrderRequestRepository { Total = 1 };
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
 
         var result = await controller.List(
             "upc_ecommerce", ListQuery(page: 2, pageSize: 50), "UPC Testing");
@@ -408,7 +441,7 @@ public class OrderRequestsControllerTests
     public async Task List_ConvertsRepositoryFailureToRetryableUpstreamError()
     {
         var repo = new FakeOrderRequestRepository { ListException = new InvalidOperationException("secret SQL details") };
-        var controller = new OrderRequestsController(BuildRegistry(), repo, new FakeApiClient(), BuildConfiguration());
+        var controller = BuildController(repo, new FakeApiClient());
 
         var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.UpstreamException>(() =>
             controller.List("upc_ecommerce", ListQuery(), "UPC Testing"));

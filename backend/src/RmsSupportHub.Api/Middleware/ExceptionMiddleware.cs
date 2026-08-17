@@ -34,7 +34,12 @@ public class ExceptionMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception occurred: {Message}", ex.Message);
-            await WriteEnvelopeAsync(context, StatusCodes.Status500InternalServerError, "internal_error", ex.Message, details: null);
+            await WriteEnvelopeAsync(
+                context,
+                StatusCodes.Status500InternalServerError,
+                "internal_error",
+                "An unexpected server error occurred.",
+                details: null);
         }
     }
 

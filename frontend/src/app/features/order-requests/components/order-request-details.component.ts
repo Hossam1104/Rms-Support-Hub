@@ -594,7 +594,7 @@ export class OrderRequestDetailsComponent implements OnDestroy {
 
     this.api.post<OrderRequestCancelResponse>(
       `modules/${key}/order-requests/${detail.request.id}/cancel`,
-      { reason: result.reason, customUrl: result.customUrl },
+      { reason: result.reason },
       { envKey: this.store.envKey() || undefined }
     ).subscribe({
       next: response => {
