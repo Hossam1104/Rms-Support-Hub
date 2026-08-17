@@ -2,7 +2,8 @@
 
 - **Updated:** 2026-08-17
 - **Active branch:** `feat/staging-environment-safety` (P0-A implementation;
-  based on `f24e2fef1818f6aea3655fc7255dd894a4b53e71`).
+  commit `08a54a8`; draft PR #23; based on
+  `f24e2fef1818f6aea3655fc7255dd894a4b53e71`).
 - **Status:** P0-A server-owned Testing/Staging environment authority is
   implemented and validated on this branch. The change is not merged and no
   external deployment or customer/Production mutation was performed.
@@ -32,8 +33,12 @@
   `{ error: { code, message, details } }` envelope. Health keeps a separate
   policy-aware projection and never probes a Testing-tier Production target.
 - Validation on this branch: backend `206 passed / 0 failed`; frontend `362
-  passed / 0 failed` across 59 files; production build passed; broad build and
-  final runtime evidence remain to be recorded before handoff.
+  passed / 0 failed` across 59 files; production frontend build and broad
+  repository build passed. Final runtime probes returned HTTP 200 for the
+  frontend, direct API module catalog, API health, and frontend API proxy;
+  the live Testing-tier Production authority probe returned HTTP 403 with
+  `environment_not_allowed`. Successful project-owned API/frontend processes
+  were left running; no live Production or customer mutation was performed.
 
 ## PR #22 acceptance and merge
 
