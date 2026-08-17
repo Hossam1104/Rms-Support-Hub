@@ -36,7 +36,8 @@ the linked planning/evidence documents.
 
 ## Current programme status
 
-| P0-A server-owned Testing environment authority | Commit `08a54a8`; draft PR #23; backend 206 passed, frontend 362 passed across 59 files, production and broad builds passed; runtime probes passed | Enforced server-side deployment tier and registered environment resolution; removed browser database/URL authority; corrected module/capability truth; verified live Testing-tier Production rejection; no external deployment or Production/customer mutation. Awaiting independent Opus review before P0-B. |
+| P0-A server-owned Testing environment authority | Commit `08a54a8`; draft PR #23; backend 206 passed, frontend 362 passed across 59 files, production and broad builds passed; runtime probes passed | Enforced server-side deployment tier and registered environment resolution; removed browser database/URL authority; corrected module/capability truth; verified live Testing-tier Production rejection; no external deployment or Production/customer mutation. |
+| P0-A Opus review and M-1 remediation | Opus 5 HIGH review at `04304ed` (0 Crit/0 High/1 Med/3 Low); commit `500a8b3`; backend 252 passed, frontend 362 passed, production and broad builds passed | Sol required M-1 (numeric `DeploymentTier` coercing to Production) fixed before merge; added shared `DeploymentTierParser.TryParseExact` strict textual allowlist used by both the validator and the composition root so they cannot diverge; any other value now fails startup. L-1/L-2/L-3 deferred as non-blocking debt. PR #23 remains open/draft/unmerged, awaiting bounded Opus re-review before P0-B. |
 
 INT-00 through INT-13, Slice B, and Slice C (including PR #22 deferred hardening)
 are repository-validated and merged to `main`. Slice C remains subject to
