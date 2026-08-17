@@ -554,6 +554,370 @@ Describe 'RMS Support Agent lifecycle audit operation correlation' {
     }
 }
 
+# L-3: every early-return path in Invoke-RmsSupportAgentLifecycle that follows the
+# started/attempted audit pair must reach exactly one terminal audit outcome carrying the same
+# OperationId. Each It below drives one specific blocker and proves the terminal event exists,
+# carries the correct FailureCode, and shares the operation's single OperationId.
+Describe 'RMS Support Agent lifecycle terminal audit completeness (L-3)' {
+    $script:RmsTerminalOutcomes = @('completed', 'failed', 'rollback_succeeded', 'rollback_failed', 'recovery_required')
+
+    function New-RmsTerminalAuditContract {
+        param([Parameter(Mandatory)][string]$Root)
+
+        foreach ($child in @('available', 'rollback', 'recovery', 'staging', 'install', 'package', 'audit', 'trust')) {
+            New-Item -ItemType Directory -Path (Join-Path $Root $child) -Force | Out-Null
+        }
+        [pscustomobject]@{
+            PackageRoot = Join-Path $Root 'package'
+            AvailableRoot = Join-Path $Root 'available'
+            RollbackRoot = Join-Path $Root 'rollback'
+            RecoveryRoot = Join-Path $Root 'recovery'
+            StagingRoot = Join-Path $Root 'staging'
+            InstallRoot = Join-Path $Root 'install'
+            AuditRoot = Join-Path $Root 'audit'
+            TrustRoot = Join-Path $Root 'trust'
+            InstalledManifestPath = Join-Path $Root 'install\manifest.json'
+            StatePath = Join-Path $Root 'lifecycle-state.json'
+        }
+    }
+
+    It 'records a single recovery_required terminal event when an unresolved checkpoint blocks the operation' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-recovery-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { [pscustomobject]@{ Phase = 'HealthChecking'; RecoveryRequired = $true } }
+                Mock Test-RmsSupportAgentPackageTrust { throw 'trust must not be evaluated while an unresolved checkpoint exists' }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Install -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'RecoveryRequired'
+            $global:RmsTerminalAuditResult.Code | Should Be 'recovery_required'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'recovery_required')
+            @($global:RmsTerminalAuditCalls | Select-Object -ExpandProperty OperationId -Unique).Count | Should Be 1
+            ($script:RmsTerminalOutcomes -contains $global:RmsTerminalAuditCalls[-1].Outcome) | Should Be $true
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single failed terminal event with FailureCode trust_rejected when package trust is invalid' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-trust-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $false; Blockers = @('signer_untrusted'); Manifest = $null; ArchivePath = $null } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Install -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Failed'
+            $global:RmsTerminalAuditResult.Code | Should Be 'trust_rejected'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'failed')
+            $global:RmsTerminalAuditCalls[-1].FailureCode | Should Be 'trust_rejected'
+            @($global:RmsTerminalAuditCalls | Select-Object -ExpandProperty OperationId -Unique).Count | Should Be 1
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single completed terminal event when Uninstall targets an already-absent Agent' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-absent-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = $null; ArchivePath = 'unused.zip' } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Uninstall -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Completed'
+            $global:RmsTerminalAuditResult.Code | Should Be 'not_installed'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'completed')
+            @($global:RmsTerminalAuditCalls | Select-Object -ExpandProperty OperationId -Unique).Count | Should Be 1
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single failed terminal event with FailureCode installed_integrity_rejected when Uninstall finds a tampered installation' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-uninstall-integrity-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '1.0.0' } | ConvertTo-Json -Compress | Set-Content -LiteralPath $global:RmsTerminalAuditContract.InstalledManifestPath -Encoding UTF8
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = $null; ArchivePath = 'unused.zip' } }
+                Mock Test-RmsSupportAgentInstalledIntegrity { [pscustomobject]@{ Valid = $false; Blockers = @('installed_file_hash_mismatch') } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Uninstall -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Failed'
+            $global:RmsTerminalAuditResult.Code | Should Be 'installed_integrity_rejected'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'failed')
+            $global:RmsTerminalAuditCalls[-1].FailureCode | Should Be 'installed_integrity_rejected'
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single failed terminal event with FailureCode ownership_conflict when the same-name service is not independently owned' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-ownership-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '1.0.0' }; ArchivePath = 'unused.zip' } }
+                Mock Get-RmsSupportAgentServiceEvidence { [pscustomobject]@{ ServiceAccount = 'DOMAIN\OtherAccount'; StartMode = 'Auto'; HasArguments = $false } }
+                Mock Test-RmsSupportAgentServiceOwnership { [pscustomobject]@{ Owned = $true } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Install -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Failed'
+            $global:RmsTerminalAuditResult.Code | Should Be 'ownership_conflict'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'failed')
+            $global:RmsTerminalAuditCalls[-1].FailureCode | Should Be 'ownership_conflict'
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single failed terminal event with FailureCode service_ownership_unproven when Upgrade finds no verifiable service' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-noservice-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '2.0.0' }; ArchivePath = 'unused.zip' } }
+                Mock Get-RmsSupportAgentServiceEvidence { $null }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Upgrade -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Failed'
+            $global:RmsTerminalAuditResult.Code | Should Be 'service_ownership_unproven'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'failed')
+            $global:RmsTerminalAuditCalls[-1].FailureCode | Should Be 'service_ownership_unproven'
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single failed terminal event carrying the certificate prerequisite Code when the certificate is not ready' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-cert-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '1.0.0' }; ArchivePath = 'unused.zip' } }
+                Mock Get-RmsSupportAgentServiceEvidence { $null }
+                Mock Test-RmsSupportAgentCertificatePrerequisite { [pscustomobject]@{ Valid = $false; Code = 'certificate_thumbprint_unconfigured' } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Install -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Failed'
+            $global:RmsTerminalAuditResult.Code | Should Be 'certificate_thumbprint_unconfigured'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'failed')
+            $global:RmsTerminalAuditCalls[-1].FailureCode | Should Be 'certificate_thumbprint_unconfigured'
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records a single failed terminal event with FailureCode busy when another mutation owns the machine-wide lease' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-lease-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '1.0.0' }; ArchivePath = 'unused.zip' } }
+                Mock Get-RmsSupportAgentServiceEvidence { $null }
+                Mock Test-RmsSupportAgentCertificatePrerequisite { [pscustomobject]@{ Valid = $true; Code = 'certificate_ready' } }
+                Mock Enter-RmsSupportAgentMutationLease { [pscustomobject]@{ Acquired = $false; Code = 'busy'; Handle = $null } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Install -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Busy'
+            $global:RmsTerminalAuditResult.Code | Should Be 'busy'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'failed')
+            $global:RmsTerminalAuditCalls[-1].FailureCode | Should Be 'busy'
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'records exactly one completed terminal event (no duplicate) for a successful Install' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-success-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditManifest = [pscustomobject]@{
+            PackageId = 'rms-support-agent'
+            Version = '1.0.0'
+            Files = @([pscustomobject]@{ RelativePath = 'RmsSupportAgent.exe' })
+        }
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { $null }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = $global:RmsTerminalAuditManifest; ArchivePath = 'unused.zip' } }
+                Mock Get-RmsSupportAgentServiceEvidence { $null }
+                Mock Test-RmsSupportAgentCertificatePrerequisite { [pscustomobject]@{ Valid = $true; Code = 'certificate_ready' } }
+                Mock Enter-RmsSupportAgentMutationLease { [pscustomobject]@{ Acquired = $true; Code = 'acquired'; Handle = $null } }
+                Mock Exit-RmsSupportAgentMutationLease {}
+                Mock Set-RmsSupportAgentOwnedAcl {}
+                Mock Write-RmsSupportAgentLifecycleState {}
+                Mock Expand-RmsSupportAgentPackage {}
+                Mock Copy-RmsSupportAgentOwnedDirectory {}
+                Mock Ensure-RmsSupportAgentService {}
+                Mock Start-RmsSupportAgentService {}
+                Mock Test-RmsSupportAgentHealth { $true }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Install -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'Completed'
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'accepted', 'completed')
+            @($global:RmsTerminalAuditCalls | Select-Object -ExpandProperty OperationId -Unique).Count | Should Be 1
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditManifest, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'represents a successful rollback restoration as a single rollback_succeeded terminal event, not completed' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-terminal-rollback-ok-' + [Guid]::NewGuid().ToString('N'))
+        $global:RmsTerminalAuditContract = New-RmsTerminalAuditContract -Root $root
+        $global:RmsTerminalAuditManifest = [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '2.0.0'; Files = @() }
+        [pscustomobject]@{ PackageId = 'rms-support-agent'; Version = '1.0.0' } | ConvertTo-Json -Compress | Set-Content -LiteralPath $global:RmsTerminalAuditContract.InstalledManifestPath -Encoding UTF8
+        $global:RmsTerminalAuditCalls = @()
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                Mock Get-RmsSupportAgentDeploymentContract { $global:RmsTerminalAuditContract }
+                Mock Resolve-RmsSupportAgentMachineReleaseMode { [pscustomobject]@{ Valid = $true; Channel = 'Testing' } }
+                Mock Add-RmsSupportAgentAuditEvent { $global:RmsTerminalAuditCalls += [pscustomobject]@{ Outcome = $Outcome; OperationId = $OperationId; FailureCode = $FailureCode } }
+                Mock Get-RmsSupportAgentLifecycleState { [pscustomobject]@{ Phase = 'Staged'; RecoveryRequired = $false } }
+                Mock Test-RmsSupportAgentPackageTrust { [pscustomobject]@{ Valid = $true; Manifest = $global:RmsTerminalAuditManifest; ArchivePath = 'unused.zip' } }
+                Mock Test-RmsSupportAgentInstalledIntegrity { [pscustomobject]@{ Valid = $true } }
+                Mock Get-RmsSupportAgentServiceEvidence { [pscustomobject]@{ ServiceAccount = 'LocalSystem'; StartMode = 'Auto'; HasArguments = $false } }
+                Mock Test-RmsSupportAgentServiceOwnership { [pscustomobject]@{ Owned = $true } }
+                Mock Test-RmsSupportAgentCertificatePrerequisite { [pscustomobject]@{ Valid = $true; Code = 'certificate_ready' } }
+                Mock Enter-RmsSupportAgentMutationLease { [pscustomobject]@{ Acquired = $true; Code = 'acquired'; Handle = $null } }
+                Mock Exit-RmsSupportAgentMutationLease {}
+                Mock Set-RmsSupportAgentOwnedAcl {}
+                Mock Write-RmsSupportAgentLifecycleState {}
+                Mock Expand-RmsSupportAgentPackage {}
+                Mock Save-RmsSupportAgentRetainedSlot { throw 'activation_failed' }
+                Mock Restore-RmsSupportAgentRetainedSlot { [pscustomobject]@{ Succeeded = $true; Code = 'rollback_succeeded'; Manifest = $global:RmsTerminalAuditManifest } }
+
+                $global:RmsTerminalAuditResult = Invoke-RmsSupportAgentLifecycle -Mode Upgrade -Channel Testing
+            }
+
+            $global:RmsTerminalAuditResult.State | Should Be 'RollbackSucceeded'
+            $global:RmsTerminalAuditResult.RollbackSucceeded | Should Be $true
+            @($global:RmsTerminalAuditCalls).Outcome | Should Be @('started', 'attempted', 'accepted', 'rollback_attempted', 'rollback_succeeded')
+            @($global:RmsTerminalAuditCalls | Select-Object -ExpandProperty OperationId -Unique).Count | Should Be 1
+            # A restored rollback must never be recorded as a plain 'completed' -- the operation
+            # that was actually requested still failed and only the PRIOR version was restored.
+            $global:RmsTerminalAuditCalls | Where-Object { $_.Outcome -eq 'completed' } | Should Be $null
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsTerminalAuditContract, RmsTerminalAuditManifest, RmsTerminalAuditCalls, RmsTerminalAuditResult -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# L-4: TestOnlyTrustFixture is read only inside the non-exported Get-RmsSupportAgentMachineTrustConfiguration
+# and is set only by test-only fixtures invoked through Pester's InModuleScope (see the
+# 'RMS Support Agent machine-owned release mode authority' Describe above). The normal production
+# entry point, Invoke-RmsSupportAgentLifecycle, always builds its contract via the exported
+# Get-RmsSupportAgentDeploymentContract, which never emits this property -- so no parameter,
+# environment variable, configuration key, package input, or deploymentMode value reaching the
+# normal entry point can ever select the alternate trust path.
+Describe 'RMS Support Agent normal lifecycle entry point cannot reach the test-only trust fixture (L-4)' {
+    It 'never includes TestOnlyTrustFixture on the contract the normal entry point builds' {
+        $contract = Get-RmsSupportAgentDeploymentContract -Channel Testing
+        $contract.PSObject.Properties['TestOnlyTrustFixture'] | Should Be $null
+    }
+
+    It 'ignores an attempted TestOnlyTrustFixture=$true injection because the real entry point never reads it from caller input' {
+        # Invoke-RmsSupportAgentLifecycle exposes only -Mode and -Channel; there is no parameter,
+        # environment variable, or configuration surface through which a caller could cause the
+        # contract it builds to carry TestOnlyTrustFixture. This proves that even if a caller
+        # believes it can request the alternate trust path, the real entry point cannot honor it.
+        $command = Get-Command Invoke-RmsSupportAgentLifecycle
+        $command.Parameters.Keys | Where-Object { $_ -notin @('Mode', 'Channel') -and $command.Parameters[$_].ParameterSets.Values.IsMandatory -contains $true } | Should Be $null
+        $command.Parameters.Keys -contains 'TestOnlyTrustFixture' | Should Be $false
+        $command.Parameters.Keys -contains 'TrustConfigurationPath' | Should Be $false
+    }
+
+    It 'resolves machine trust from the protected canonical path when the normal contract-builder supplies the contract' {
+        $root = Join-Path $script:PosTestFixtureRoot ('rms-l4-canonical-' + [Guid]::NewGuid().ToString('N'))
+        New-RmsProtectedOwnedAclDirectory -Path $root | Out-Null
+        $global:RmsL4Contract = Get-RmsSupportAgentDeploymentContract -Channel Testing
+        try {
+            InModuleScope PosSupportAgentDeployment {
+                # The real contract's TrustConfigurationPath is the fixed %ProgramData% path and it
+                # carries no TestOnlyTrustFixture property, so resolution must evaluate the canonical
+                # path branch -- never the alternate fixture branch -- regardless of what exists on disk.
+                $result = Get-RmsSupportAgentMachineTrustConfiguration -Contract $global:RmsL4Contract
+                $result.Code | Should Not Be 'machine_trust_configuration_path_invalid'
+            }
+        } finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Variable RmsL4Contract -Scope Global -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Describe 'RMS Support Agent LocalSystem private-key ACL evidence' {
     It 'accepts protected administrator and LocalSystem rules with LocalSystem read access' {
         $admin = New-Object Security.Principal.SecurityIdentifier([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)

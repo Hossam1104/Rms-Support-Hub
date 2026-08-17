@@ -1327,31 +1327,46 @@ function Invoke-RmsSupportAgentLifecycle {
             if (-not $existingState.RecoveryRequired -and [string]$existingState.Phase -in @('Prepared', 'Staged')) {
                 Clear-RmsSupportAgentLifecycleState -Contract $contract
             } else {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'recovery_required' -PackageId '' -PackageVersion '' -FailureCode 'recovery_required' -RecoveryState 'recovery_required' } catch { }
                 return [pscustomobject]@{ State = 'RecoveryRequired'; Code = 'recovery_required'; Detail = 'An incomplete lifecycle checkpoint exists. Recovery must be resolved before another mutation.'; RollbackAttempted = $false; RollbackSucceeded = $false }
             }
         }
 
         $trust = if ($Mode -eq 'Rollback') { Test-RmsSupportAgentPackageTrust -Channel $Channel -Contract $contract -Rollback } else { Test-RmsSupportAgentPackageTrust -Channel $Channel -Contract $contract }
-        if ($Mode -ne 'Uninstall' -and -not $trust.Valid) { return [pscustomobject]@{ State = 'Failed'; Code = 'trust_rejected'; Detail = ($trust.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false } }
+        if ($Mode -ne 'Uninstall' -and -not $trust.Valid) {
+            try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId '' -PackageVersion '' -FailureCode 'trust_rejected' -RecoveryState 'not_required' } catch { }
+            return [pscustomobject]@{ State = 'Failed'; Code = 'trust_rejected'; Detail = ($trust.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false }
+        }
         $manifest = $trust.Manifest
         if ($Mode -eq 'Uninstall') {
-            if (-not (Test-Path -LiteralPath $contract.InstalledManifestPath -PathType Leaf)) { return [pscustomobject]@{ State = 'Completed'; Code = 'not_installed'; Detail = 'The permanent Agent is already absent.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
+            if (-not (Test-Path -LiteralPath $contract.InstalledManifestPath -PathType Leaf)) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'completed' -PackageId '' -PackageVersion '' -FailureCode '' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Completed'; Code = 'not_installed'; Detail = 'The permanent Agent is already absent.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
             $manifest = Get-Content -Raw -LiteralPath $contract.InstalledManifestPath | ConvertFrom-Json
             $installedIntegrity = Test-RmsSupportAgentInstalledIntegrity -Contract $contract -Manifest $manifest
-            if (-not $installedIntegrity.Valid) { return [pscustomobject]@{ State = 'Failed'; Code = 'installed_integrity_rejected'; Detail = ($installedIntegrity.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false } }
+            if (-not $installedIntegrity.Valid) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'installed_integrity_rejected' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = 'installed_integrity_rejected'; Detail = ($installedIntegrity.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
         }
 
         $installedManifest = if (Test-Path -LiteralPath $contract.InstalledManifestPath -PathType Leaf) { try { Get-Content -Raw -LiteralPath $contract.InstalledManifestPath | ConvertFrom-Json } catch { $null } } else { $null }
         if (Test-Path -LiteralPath $contract.InstallRoot) {
             if ([IO.File]::GetAttributes($contract.InstallRoot).HasFlag([IO.FileAttributes]::ReparsePoint)) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'installation_reparse_point' -RecoveryState 'not_required' } catch { }
                 return [pscustomobject]@{ State = 'Failed'; Code = 'installation_reparse_point'; Detail = 'The fixed Agent installation root is a reparse point.'; RollbackAttempted = $false; RollbackSucceeded = $false }
             }
         }
         if ($null -ne $installedManifest -and $Mode -in @('Upgrade', 'Repair', 'Rollback')) {
             $installedIntegrity = Test-RmsSupportAgentInstalledIntegrity -Contract $contract -Manifest $installedManifest
-            if (-not $installedIntegrity.Valid) { return [pscustomobject]@{ State = 'Failed'; Code = 'installed_integrity_rejected'; Detail = ($installedIntegrity.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false } }
+            if (-not $installedIntegrity.Valid) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'installed_integrity_rejected' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = 'installed_integrity_rejected'; Detail = ($installedIntegrity.Blockers -join ','); RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
         }
         if ($null -eq $installedManifest -and $Mode -ne 'Uninstall' -and (Test-Path -LiteralPath $contract.InstallRoot -PathType Container) -and @(Get-ChildItem -LiteralPath $contract.InstallRoot -Force).Count -gt 0) {
+            try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'installation_ownership_unproven' -RecoveryState 'not_required' } catch { }
             return [pscustomobject]@{ State = 'Failed'; Code = 'installation_ownership_unproven'; Detail = 'The fixed Agent installation root contains content without a trusted installed manifest.'; RollbackAttempted = $false; RollbackSucceeded = $false }
         }
 
@@ -1359,25 +1374,44 @@ function Invoke-RmsSupportAgentLifecycle {
         if ($null -ne $service) {
             $ownershipManifest = if ($null -ne $installedManifest) { $installedManifest } else { $manifest }
             $ownership = Test-RmsSupportAgentServiceOwnership -Evidence $service -Contract $contract -ExpectedPackageId ([string]$ownershipManifest.PackageId) -ExpectedVersion ([string]$ownershipManifest.Version)
-            if (-not $ownership.Owned -or $service.ServiceAccount -notmatch 'LocalSystem$' -or $service.StartMode -ne 'Auto' -or $service.HasArguments) { return [pscustomobject]@{ State = 'Failed'; Code = 'ownership_conflict'; Detail = 'The same-name Agent service is not independently owned by RMS Support Hub.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
+            if (-not $ownership.Owned -or $service.ServiceAccount -notmatch 'LocalSystem$' -or $service.StartMode -ne 'Auto' -or $service.HasArguments) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'ownership_conflict' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = 'ownership_conflict'; Detail = 'The same-name Agent service is not independently owned by RMS Support Hub.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
         } elseif ($Mode -in @('Upgrade', 'Repair', 'Rollback', 'Uninstall')) {
+            try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'service_ownership_unproven' -RecoveryState 'not_required' } catch { }
             return [pscustomobject]@{ State = 'Failed'; Code = 'service_ownership_unproven'; Detail = 'The installed package has no independently verifiable permanent Agent service.'; RollbackAttempted = $false; RollbackSucceeded = $false }
         }
 
         if ($Mode -in @('Upgrade', 'Repair', 'Rollback') -and $null -ne $service) {
             $comparison = ([Version]$manifest.Version).CompareTo([Version]$installedManifest.Version)
-            if ($Mode -eq 'Repair' -and $comparison -ne 0) { return [pscustomobject]@{ State = 'Failed'; Code = 'repair_version_mismatch'; Detail = 'Repair requires the installed semantic version.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
-            if ($Mode -eq 'Upgrade' -and $comparison -lt 0) { return [pscustomobject]@{ State = 'Failed'; Code = 'unsupported_downgrade'; Detail = 'Upgrade cannot select an older semantic version.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
-            if ($Mode -eq 'Rollback' -and $comparison -ge 0) { return [pscustomobject]@{ State = 'Failed'; Code = 'rollback_version_invalid'; Detail = 'Rollback must select the explicitly retained prior semantic version.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
+            if ($Mode -eq 'Repair' -and $comparison -ne 0) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'repair_version_mismatch' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = 'repair_version_mismatch'; Detail = 'Repair requires the installed semantic version.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
+            if ($Mode -eq 'Upgrade' -and $comparison -lt 0) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'unsupported_downgrade' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = 'unsupported_downgrade'; Detail = 'Upgrade cannot select an older semantic version.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
+            if ($Mode -eq 'Rollback' -and $comparison -ge 0) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode 'rollback_version_invalid' -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = 'rollback_version_invalid'; Detail = 'Rollback must select the explicitly retained prior semantic version.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
         }
 
         if ($Mode -ne 'Uninstall') {
             $certificate = Test-RmsSupportAgentCertificatePrerequisite -Contract $contract
-            if (-not $certificate.Valid) { return [pscustomobject]@{ State = 'Failed'; Code = $certificate.Code; Detail = 'The Agent certificate prerequisite was not satisfied before lifecycle mutation.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
+            if (-not $certificate.Valid) {
+                try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode ([string]$certificate.Code) -RecoveryState 'not_required' } catch { }
+                return [pscustomobject]@{ State = 'Failed'; Code = $certificate.Code; Detail = 'The Agent certificate prerequisite was not satisfied before lifecycle mutation.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+            }
         }
 
         $lease = Enter-RmsSupportAgentMutationLease -Contract $contract
-        if (-not $lease.Acquired) { return [pscustomobject]@{ State = if ($lease.Code -eq 'busy') { 'Busy' } else { 'Failed' }; Code = $lease.Code; Detail = 'Another privileged lifecycle mutation owns the machine-wide lease.'; RollbackAttempted = $false; RollbackSucceeded = $false } }
+        if (-not $lease.Acquired) {
+            try { Add-RmsSupportAgentAuditEvent -Contract $contract -Operation $operationName -OperationId $operationId -Outcome 'failed' -PackageId ([string]$manifest.PackageId) -PackageVersion ([string]$manifest.Version) -FailureCode ([string]$lease.Code) -RecoveryState 'not_required' } catch { }
+            return [pscustomobject]@{ State = if ($lease.Code -eq 'busy') { 'Busy' } else { 'Failed' }; Code = $lease.Code; Detail = 'Another privileged lifecycle mutation owns the machine-wide lease.'; RollbackAttempted = $false; RollbackSucceeded = $false }
+        }
         foreach ($ownedRoot in @($contract.PackageRoot, $contract.AvailableRoot, $contract.RollbackRoot, $contract.StagingRoot, $contract.InstallRoot, $contract.AuditRoot, $contract.TrustRoot)) {
             Set-RmsSupportAgentOwnedAcl -Path $ownedRoot
         }
