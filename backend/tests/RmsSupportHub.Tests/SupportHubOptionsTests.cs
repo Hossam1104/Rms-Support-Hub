@@ -19,6 +19,51 @@ public sealed class SupportHubOptionsTests
         Assert.Contains("DeploymentTier", result.FailureMessage);
     }
 
+    /// <summary>M-1: DeploymentTier is an enum (Testing=0, Production=1), so
+    /// the pre-remediation validator (Enum.TryParse) accepted numeric strings
+    /// and "1" resolved to Production. Malformed/coerced server configuration
+    /// must fail startup, never silently resolve to Production.</summary>
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("-1")]
+    [InlineData("2")]
+    [InlineData("01")]
+    [InlineData("+1")]
+    [InlineData("Staging")]
+    [InlineData("Testing;Production")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(" Testing")]
+    [InlineData("Testing ")]
+    public void ValidatorRejectsNumericAndMalformedDeploymentTier(string invalidTier)
+    {
+        var options = ValidTestingOptions();
+        options.DeploymentTier = invalidTier;
+
+        var result = Validate(options, Configuration());
+
+        Assert.True(result.Failed);
+        Assert.Contains("SupportHub:DeploymentTier must be Testing or Production.", result.FailureMessage);
+    }
+
+    [Theory]
+    [InlineData("Testing")]
+    [InlineData("testing")]
+    [InlineData("TESTING")]
+    [InlineData("Production")]
+    [InlineData("production")]
+    [InlineData("PRODUCTION")]
+    public void ValidatorAcceptsIntendedTextualDeploymentTier(string validTier)
+    {
+        var options = ValidTestingOptions();
+        options.DeploymentTier = validTier;
+
+        var result = Validate(options, Configuration());
+
+        Assert.False(result.Failed, result.FailureMessage);
+    }
+
     [Fact]
     public void ValidatorRejectsEnabledEnvironmentWithMissingServerMappings()
     {

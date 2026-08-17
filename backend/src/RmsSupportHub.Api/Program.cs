@@ -47,7 +47,9 @@ builder.Services.AddSingleton<IValidateOptions<SupportHubOptions>>(
 builder.Services.AddSingleton<IEnvironmentPolicy>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<SupportHubOptions>>().Value;
-    return new EnvironmentPolicy(Enum.Parse<DeploymentTier>(options.DeploymentTier, ignoreCase: true));
+    if (!DeploymentTierParser.TryParseExact(options.DeploymentTier, out var deploymentTier))
+        throw new InvalidOperationException("SupportHub:DeploymentTier must be Testing or Production.");
+    return new EnvironmentPolicy(deploymentTier);
 });
 
 // Register Core & Data Services. The API composition root is the only place

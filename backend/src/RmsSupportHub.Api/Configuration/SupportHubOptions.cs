@@ -48,7 +48,7 @@ public sealed class SupportHubOptionsValidator : IValidateOptions<SupportHubOpti
     {
         var errors = new List<string>();
 
-        if (!Enum.TryParse<DeploymentTier>(options.DeploymentTier, ignoreCase: true, out _))
+        if (!DeploymentTierParser.TryParseExact(options.DeploymentTier, out _))
             errors.Add("SupportHub:DeploymentTier must be Testing or Production.");
 
         if (options.HealthProbe is null || options.HealthProbe.TimeoutSeconds is < 1 or > 30)
