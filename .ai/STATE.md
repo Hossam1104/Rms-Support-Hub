@@ -1,15 +1,39 @@
 # Current Project State
 
 - **Updated:** 2026-08-17
-- **Active branch:** `main` (PR #22 merged; POS Agent deferred hardening closed).
-- **Status:** Production-capable Agent package trust/lifecycle implementation
-  (Slice C, ADR-0026/ADR-0027) and deferred hardening (L-1 through L-4) are
-  complete and merged to `main` via PR #21 and PR #22. PR #22 was accepted
-  by Claude Opus 5 HIGH (0 Crit/0 High/0 Med/3 Low) and authorized by GPT-5.6 Sol.
-  External Production, PKI, fleet, and customer gates remain open (see External
-  release gates).
-- **Next task:** see `TASK.md` for the next executable session (Post-Slice C
-  Programme Architecture & Staging Planning).
+- **Active branch:** `feat/staging-environment-safety` (P0-A implementation;
+  based on `f24e2fef1818f6aea3655fc7255dd894a4b53e71`).
+- **Status:** P0-A server-owned Testing/Staging environment authority is
+  implemented and validated on this branch. The change is not merged and no
+  external deployment or customer/Production mutation was performed.
+- **Next task:** see `TASK.md` for the complete `CLAUDE OPUS 5 HIGH`
+  independent review prompt. P0-B remains blocked on that review and explicit
+  acceptance.
+
+## P0-A staging environment safety
+
+- `SupportHub:DeploymentTier` is typed and startup-validated, defaulting to
+  `Testing`; the API composition root maps registered module/environment keys to
+  server-owned endpoint and database configuration.
+- Testing policy rejects Production environment resolution before send, cancel,
+  resend, lookup, Order Requests, database diagnostics, endpoint diagnostics,
+  or health probing. Production registrations remain available only to a future
+  explicitly configured Production-tier deployment.
+- Missing endpoint mappings or server secrets project an environment as
+  unavailable without preventing unrelated application surfaces from starting.
+  Secrets remain external configuration; no secret value is stored in tracked
+  files or returned by DTOs.
+- Browser request contracts carry only registered module/environment keys.
+  Raw connection strings, arbitrary probe URLs, and custom endpoint overrides
+  are not accepted as authority. GHC resend is false; OMS, Call Center, and
+  unconfigured GHC/Uni-Commerce environments remain truthful unavailable
+  registrations.
+- Safe environment/downstream codes are handled through the existing
+  `{ error: { code, message, details } }` envelope. Health keeps a separate
+  policy-aware projection and never probes a Testing-tier Production target.
+- Validation on this branch: backend `206 passed / 0 failed`; frontend `362
+  passed / 0 failed` across 59 files; production build passed; broad build and
+  final runtime evidence remain to be recorded before handoff.
 
 ## PR #22 acceptance and merge
 

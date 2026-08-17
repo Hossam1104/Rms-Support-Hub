@@ -1,5 +1,6 @@
 using RmsSupportHub.Core.Repositories;
 using RmsSupportHub.Core.Services;
+using RmsSupportHub.Core.Models;
 
 namespace RmsSupportHub.Core.Modules;
 
@@ -27,11 +28,32 @@ public class ModuleRegistry : IModuleRegistry
         IGhcItemRepository ghcItemRepository,
         IGhcConsumerRepository ghcConsumerRepository,
         IUpcItemRepository upcItemRepository,
-        IUpcConsumerRepository upcConsumerRepository)
+        IUpcConsumerRepository upcConsumerRepository,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, ModuleEnvironment>>? configuredEnvironments = null)
     {
-        Register(new GhcEcommerceModule(flatPayloadBuilder, flatValidator, ghcItemRepository, ghcConsumerRepository));
-        Register(new UpcEcommerceModule(flatPayloadBuilder, flatValidator, upcItemRepository, upcConsumerRepository));
-        Register(new GhcUnicommerceModule(uniPayloadBuilder, uniValidator));
+        IReadOnlyDictionary<string, ModuleEnvironment> EnvironmentsFor(
+            string moduleKey,
+            IReadOnlyDictionary<string, ModuleEnvironment> fallback) =>
+            configuredEnvironments is not null && configuredEnvironments.TryGetValue(moduleKey, out var configured)
+                ? configured
+                : fallback;
+
+        Register(new GhcEcommerceModule(
+            flatPayloadBuilder,
+            flatValidator,
+            ghcItemRepository,
+            ghcConsumerRepository,
+            EnvironmentsFor("ghc_ecommerce", ModuleEnvironmentDefaults.GhcEcommerce())));
+        Register(new UpcEcommerceModule(
+            flatPayloadBuilder,
+            flatValidator,
+            upcItemRepository,
+            upcConsumerRepository,
+            EnvironmentsFor("upc_ecommerce", ModuleEnvironmentDefaults.UpcEcommerce())));
+        Register(new GhcUnicommerceModule(
+            uniPayloadBuilder,
+            uniValidator,
+            EnvironmentsFor("ghc_unicommerce", ModuleEnvironmentDefaults.GhcUnicommerce())));
         Register(new OmsModule());
         Register(new CallCenterModule());
     }

@@ -69,7 +69,7 @@ function asNumber(value: unknown, fallback = 0): number {
         [loading]="sending()"
         [endpoint]="activeEndpoint()"
         [environment]="moduleService.activeEnvironment()"
-        (sendRequest)="onSendOrder($event)">
+        (sendRequest)="onSendOrder()">
       </app-api-config>
     </div>
 
@@ -211,14 +211,14 @@ export class UnicommerceComponent implements OnInit {
     });
   }
 
-  onSendOrder(event: { url: string }) {
+  onSendOrder() {
     // A send is already in flight -- block the duplicate (U4, D13).
     if (this.sending()) return;
 
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.sending.set(true);
-    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey, customApiUrl: event.url || undefined })
+    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })
       .pipe(finalize(() => this.sending.set(false)))
       .subscribe({
         next: res => {
@@ -235,7 +235,7 @@ export class UnicommerceComponent implements OnInit {
           const responseText = err.code === 'validation_failed' && Array.isArray(err.details)
             ? (err.details as string[]).join('\n')
             : 'The request could not be completed.';
-          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText, urlSent: event.url });
+          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText, urlSent: '' });
         }
       });
   }

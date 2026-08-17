@@ -10,6 +10,24 @@ namespace RmsSupportHub.Api;
 /// CONNECTIONSTRINGS__&lt;NAME&gt; environment variable in production — never from
 /// a tracked appsettings*.json file. See README.md "Configuration &amp; secrets".
 /// </summary>
+public interface IConnectionStringResolver
+{
+    string RequireForEnvironment(ModuleEnvironment environment);
+}
+
+public sealed class ServerConnectionStringResolver : IConnectionStringResolver
+{
+    private readonly IConfiguration _configuration;
+
+    public ServerConnectionStringResolver(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public string RequireForEnvironment(ModuleEnvironment environment) =>
+        ConnectionStringResolver.RequireForEnvironment(_configuration, environment);
+}
+
 public static class ConnectionStringResolver
 {
     public static string Require(IConfiguration configuration, string name)
@@ -17,10 +35,7 @@ public static class ConnectionStringResolver
         var value = configuration.GetConnectionString(name);
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ConfigurationException(
-                $"ConnectionStrings:{name} is not configured. Set it via " +
-                $"'dotnet user-secrets set ConnectionStrings:{name} \"...\"' in development, " +
-                $"or the CONNECTIONSTRINGS__{name.ToUpperInvariant()} environment variable in production.");
+            throw new EnvironmentUnconfiguredException();
         }
         return value;
     }
@@ -33,10 +48,7 @@ public static class ConnectionStringResolver
     {
         var name = environment.ConnectionStringName;
         if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ConfigurationException(
-                $"Environment '{environment.Key}' has no ConnectionStringName configured.");
-        }
+            throw new EnvironmentUnconfiguredException();
 
         var connectionString = Require(configuration, name);
         if (!string.IsNullOrWhiteSpace(environment.DatabaseOverride))

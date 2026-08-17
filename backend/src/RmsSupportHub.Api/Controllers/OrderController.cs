@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using RmsSupportHub.Api.Exceptions;
 using RmsSupportHub.Api.Middleware;
 using RmsSupportHub.Core.DTOs;
 using RmsSupportHub.Core.Modules;
@@ -15,17 +16,23 @@ public class OrderController : ControllerBase
     private readonly IDraftManager _draftManager;
     private readonly IApiClient _apiClient;
     private readonly ISqlServerConnectionFactory _connectionFactory;
+    private readonly IConnectionStringResolver _connectionStrings;
+    private readonly IEnvironmentPolicy _environmentPolicy;
 
     public OrderController(
         IModuleRegistry moduleRegistry,
         IDraftManager draftManager,
         IApiClient apiClient,
-        ISqlServerConnectionFactory connectionFactory)
+        ISqlServerConnectionFactory connectionFactory,
+        IConnectionStringResolver connectionStrings,
+        IEnvironmentPolicy environmentPolicy)
     {
         _moduleRegistry = moduleRegistry;
         _draftManager = draftManager;
         _apiClient = apiClient;
         _connectionFactory = connectionFactory;
+        _connectionStrings = connectionStrings;
+        _environmentPolicy = environmentPolicy;
     }
 
     [HttpGet("state")]
@@ -50,7 +57,7 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var env = module.GetEnvironment(envKey);
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
         return Ok(new ModuleEndpointDto(env.Key, env.Environment, env.ApiUrl));
     }
 
@@ -129,15 +136,11 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var env = module.GetEnvironment(request.EnvironmentKey);
-        var targetUrl = env.AllowCustomApiUrl && !string.IsNullOrWhiteSpace(request.CustomApiUrl)
-            ? request.CustomApiUrl
-            : env.ApiUrl;
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, request.EnvironmentKey);
+        var targetUrl = env.ApiUrl;
 
         if (string.IsNullOrWhiteSpace(targetUrl))
-        {
-            return BadRequest(new { error = $"No API URL available for environment '{env.Key}' in module '{key}'." });
-        }
+            throw new EnvironmentUnconfiguredException();
 
         var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         var validationErrors = module.Validate(draft);
@@ -169,11 +172,12 @@ public class OrderController : ControllerBase
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var env = module.GetEnvironment(request.EnvironmentKey);
+        var capabilityGuard = CapabilityGuard.Require(module, c => c.Cancel, "cancel");
+        if (capabilityGuard != null) return capabilityGuard;
+
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, request.EnvironmentKey);
         if (string.IsNullOrWhiteSpace(env.CancelUrl))
-        {
-            return BadRequest(new { error = $"Cancellation URL is not configured for environment '{env.Key}'." });
-        }
+            throw new EnvironmentUnconfiguredException();
 
         var cancelPayload = new
         {
@@ -192,25 +196,50 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("test-endpoint")]
-    public async Task<ActionResult> TestEndpoint([FromQuery] string url)
+    public async Task<ActionResult> TestEndpoint(string key, [FromQuery] string? envKey = null)
     {
-        if (string.IsNullOrWhiteSpace(url)) return BadRequest(new { error = "URL parameter is required." });
+        var module = _moduleRegistry.GetModule(key);
+        if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
-        var isOnline = await _apiClient.TestEndpointAsync(url);
-        return Ok(new { status = isOnline ? "Online" : "Offline", url });
+        var environment = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
+        if (!environment.HealthProbeEnabled || string.IsNullOrWhiteSpace(environment.ApiUrl))
+            throw new EnvironmentUnconfiguredException();
+
+        var isOnline = await _apiClient.TestEndpointAsync(environment.ApiUrl, environment.HealthProbeTimeout);
+        if (!isOnline) throw new DownstreamUnreachableException();
+        return Ok(new { status = "Online" });
     }
 
     [HttpPost("test-db")]
-    public ActionResult TestDb([FromQuery] string connectionString)
+    public ActionResult TestDb(string key, [FromQuery] string? envKey = null)
     {
+        var module = _moduleRegistry.GetModule(key);
+        if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
+
+        var environment = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
+        if (!environment.RequiresDatabase)
+            return new ObjectResult(new
+            {
+                error = new
+                {
+                    code = "capability_unavailable",
+                    message = "Database diagnostics are not available for this environment.",
+                    details = (object?)null
+                }
+            }) { StatusCode = StatusCodes.Status501NotImplemented };
+
         try
         {
-            using var conn = _connectionFactory.CreateConnection(connectionString);
+            using var conn = _connectionFactory.CreateConnection(_connectionStrings.RequireForEnvironment(environment));
             return Ok(new { status = "Online", database = conn.Database });
         }
-        catch (Exception ex)
+        catch (ApiException)
         {
-            return Ok(new { status = "Offline", error = ex.Message });
+            throw;
+        }
+        catch (Exception)
+        {
+            return Ok(new { status = "Offline", error = "Database connectivity could not be verified." });
         }
     }
 }

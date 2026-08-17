@@ -1,19 +1,21 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using RmsSupportHub.Core.DTOs;
 using RmsSupportHub.Core.Models;
 using Xunit;
 
 namespace RmsSupportHub.Tests;
 
-public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class ControllerIntegrationTests : IClassFixture<TestingWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestingWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
-    public ControllerIntegrationTests(WebApplicationFactory<Program> factory)
+    public ControllerIntegrationTests(TestingWebApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -28,6 +30,31 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         var modules = await response.Content.ReadFromJsonAsync<List<ModuleDto>>();
         Assert.NotNull(modules);
         Assert.Equal(5, modules.Count);
+    }
+
+    [Fact]
+    public async Task GetModules_ReportsEffectiveTestingCatalogAndCapabilityTruth()
+    {
+        var response = await _client.GetAsync("/api/modules");
+        var modules = await response.Content.ReadFromJsonAsync<List<ModuleDto>>();
+        Assert.NotNull(modules);
+
+        var upc = modules!.Single(module => module.Key == "upc_ecommerce");
+        Assert.True(upc.Available);
+        Assert.True(upc.Environments.Single(environment => environment.Key == "UPC Testing").Available);
+        Assert.False(upc.Environments.Single(environment => environment.Key == "UPC Production").Available);
+
+        var ghc = modules.Single(module => module.Key == "ghc_ecommerce");
+        Assert.False(ghc.Available);
+        Assert.False(ghc.Capabilities.Resend);
+        Assert.All(ghc.Environments, environment => Assert.False(environment.Available));
+
+        var uni = modules.Single(module => module.Key == "ghc_unicommerce");
+        Assert.False(uni.Available);
+        Assert.All(uni.Environments, environment => Assert.False(environment.Available));
+
+        Assert.False(modules.Single(module => module.Key == "oms").Available);
+        Assert.False(modules.Single(module => module.Key == "call_center").Available);
     }
 
     [Fact]
@@ -195,18 +222,50 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.False(string.IsNullOrWhiteSpace(endpoint.ApiUrl));
     }
 
-    /// <summary>The same GetEnvironment resolution send-request uses applies
-    /// here too -- an explicit envKey selects that environment's URL.</summary>
+    /// <summary>The Testing deployment policy is server-owned: a handcrafted
+    /// Production endpoint request is rejected even though that environment
+    /// exists in the registered catalog.</summary>
     [Fact]
-    public async Task GetEndpoint_HonoursExplicitEnvKey()
+    public async Task GetEndpoint_RejectsProductionInTestingDeployment()
     {
         var response = await _client.GetAsync("/api/modules/upc_ecommerce/endpoint?envKey=UPC%20Production");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        var endpoint = await response.Content.ReadFromJsonAsync<ModuleEndpointDto>();
-        Assert.NotNull(endpoint);
-        Assert.Equal("UPC Production", endpoint!.EnvironmentKey);
-        Assert.Equal("Production", endpoint.Environment);
+        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("environment_not_allowed", error.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task TestEndpoint_RejectsProductionBeforeAnyProbeAndIgnoresArbitraryUrl()
+    {
+        var response = await _client.PostAsync(
+            "/api/modules/upc_ecommerce/test-endpoint?envKey=UPC%20Production&url=https%3A%2F%2Fattacker.example%2Fprobe",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("environment_not_allowed", body.GetProperty("error").GetProperty("code").GetString());
+        Assert.DoesNotContain("attacker.example", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task TestDb_IgnoresRawConnectionStringAndUsesServerConfigurationOnly()
+    {
+        using var client = _factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, configuration) =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:UpcEcommerceTest"] = ""
+            }))).CreateClient();
+
+        var response = await client.PostAsync(
+            "/api/modules/upc_ecommerce/test-db?envKey=UPC%20Testing&connectionString=Server%3Dattacker%3BDatabase%3DEvil%3B",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var raw = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("attacker", raw, StringComparison.OrdinalIgnoreCase);
+        using var body = JsonDocument.Parse(raw);
+        Assert.Equal("environment_unconfigured", body.RootElement.GetProperty("error").GetProperty("code").GetString());
     }
 
     /// <summary>The display contract must not become a new topology leak:
@@ -270,5 +329,22 @@ public class ControllerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
 
         var postResponse = await _client.PostAsJsonAsync("/tools/pos-maintenance", new { });
         Assert.Equal(HttpStatusCode.NotFound, postResponse.StatusCode);
+    }
+}
+
+/// <summary>Supplies a synthetic server-side secret so integration tests do
+/// not depend on developer user-secrets or advertise a real database as a
+/// prerequisite. The test never opens this connection; tests that need the
+/// missing-secret path override it with an empty value.</summary>
+public sealed class TestingWebApplicationFactory : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureAppConfiguration((_, configuration) =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:UpcEcommerceTest"] =
+                    "Server=127.0.0.1;Database=RmsSupportHubTest;Integrated Security=True;TrustServerCertificate=True;"
+            }));
     }
 }

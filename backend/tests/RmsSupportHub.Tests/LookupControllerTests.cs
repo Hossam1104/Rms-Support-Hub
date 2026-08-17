@@ -92,7 +92,12 @@ public class LookupControllerTests
         .Build();
 
     private static LookupController BuildController(IOrderModule module, IBranchRepository branches) =>
-        new(new SingleModuleRegistry(module), BuildConfiguration(), branches, new MemoryCache(new MemoryCacheOptions()));
+        new(
+            new SingleModuleRegistry(module),
+            new RmsSupportHub.Api.ServerConnectionStringResolver(BuildConfiguration()),
+            new EnvironmentPolicy(DeploymentTier.Testing),
+            branches,
+            new MemoryCache(new MemoryCacheOptions()));
 
     [Fact]
     public async Task LookupItem_DatabaseFailure_ThrowsUpstreamException_NotOk200()
@@ -103,7 +108,8 @@ public class LookupControllerTests
             controller.LookupItem("throwing_module", code: "123"));
 
         Assert.Equal(502, ex.StatusCode);
-        Assert.Contains("simulated database connection failure", ex.Message);
+        Assert.DoesNotContain("simulated database connection failure", ex.Message);
+        Assert.Equal("Database lookup could not be completed.", ex.Message);
     }
 
     [Fact]
@@ -115,7 +121,8 @@ public class LookupControllerTests
             controller.LookupConsumer("throwing_module", phone: "0500000000"));
 
         Assert.Equal(502, ex.StatusCode);
-        Assert.Contains("simulated database connection failure", ex.Message);
+        Assert.DoesNotContain("simulated database connection failure", ex.Message);
+        Assert.Equal("Database lookup could not be completed.", ex.Message);
     }
 
     [Fact]
@@ -186,7 +193,8 @@ public class LookupControllerTests
             controller.ListBranches("throwing_module"));
 
         Assert.Equal(502, ex.StatusCode);
-        Assert.Contains("simulated database connection failure", ex.Message);
+        Assert.DoesNotContain("simulated database connection failure", ex.Message);
+        Assert.Equal("Database lookup could not be completed.", ex.Message);
     }
 
     private class ThrowingBranchRepository : IBranchRepository

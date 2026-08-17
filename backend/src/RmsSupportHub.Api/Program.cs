@@ -1,6 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Options;
+using RmsSupportHub.Api.Configuration;
 using RmsSupportHub.Api.Middleware;
+using RmsSupportHub.Api;
 using RmsSupportHub.Core.Modules;
 using RmsSupportHub.Core.Repositories;
 using RmsSupportHub.Core.Services;
@@ -32,8 +35,39 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddOpenApi();
 
-// Register Core & Data Services
-builder.Services.AddSingleton<IModuleRegistry, ModuleRegistry>();
+// Bind and validate the one server-owned environment contract. The request
+// pipeline receives the resulting typed snapshot; no controller or Core
+// service reads arbitrary IConfiguration values.
+builder.Services.AddOptions<SupportHubOptions>()
+    .Bind(builder.Configuration.GetSection(SupportHubOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<SupportHubOptions>>(
+    new SupportHubOptionsValidator(builder.Configuration));
+
+builder.Services.AddSingleton<IEnvironmentPolicy>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<SupportHubOptions>>().Value;
+    return new EnvironmentPolicy(Enum.Parse<DeploymentTier>(options.DeploymentTier, ignoreCase: true));
+});
+
+// Register Core & Data Services. The API composition root is the only place
+// that maps configuration onto module environment registrations.
+builder.Services.AddSingleton<IModuleRegistry>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<SupportHubOptions>>().Value;
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    return new ModuleRegistry(
+        serviceProvider.GetRequiredService<IFlatOrderPayloadBuilder>(),
+        serviceProvider.GetRequiredService<IFlatOrderValidator>(),
+        serviceProvider.GetRequiredService<IUniCommercePayloadBuilder>(),
+        serviceProvider.GetRequiredService<IUniCommerceValidator>(),
+        serviceProvider.GetRequiredService<IGhcItemRepository>(),
+        serviceProvider.GetRequiredService<IGhcConsumerRepository>(),
+        serviceProvider.GetRequiredService<IUpcItemRepository>(),
+        serviceProvider.GetRequiredService<IUpcConsumerRepository>(),
+        ConfiguredEnvironmentCatalog.Build(configuration, options));
+});
+builder.Services.AddSingleton<IConnectionStringResolver, ServerConnectionStringResolver>();
 
 // Drafts live under <content root>/var/drafts/, not the process's working
 // directory (see remediation_plan.md B20), keyed by (sessionId, moduleKey)

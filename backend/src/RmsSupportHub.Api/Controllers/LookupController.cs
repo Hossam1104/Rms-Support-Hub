@@ -13,18 +13,21 @@ public class LookupController : ControllerBase
     private static readonly TimeSpan BranchCacheTtl = TimeSpan.FromMinutes(5);
 
     private readonly IModuleRegistry _moduleRegistry;
-    private readonly IConfiguration _configuration;
+    private readonly IConnectionStringResolver _connectionStrings;
+    private readonly IEnvironmentPolicy _environmentPolicy;
     private readonly IBranchRepository _branchRepository;
     private readonly IMemoryCache _cache;
 
     public LookupController(
         IModuleRegistry moduleRegistry,
-        IConfiguration configuration,
+        IConnectionStringResolver connectionStrings,
+        IEnvironmentPolicy environmentPolicy,
         IBranchRepository branchRepository,
         IMemoryCache cache)
     {
         _moduleRegistry = moduleRegistry;
-        _configuration = configuration;
+        _connectionStrings = connectionStrings;
+        _environmentPolicy = environmentPolicy;
         _branchRepository = branchRepository;
         _cache = cache;
     }
@@ -43,7 +46,7 @@ public class LookupController : ControllerBase
         var guard = CapabilityGuard.Require(module, c => c.ItemLookup, "item-lookup");
         if (guard != null) return guard;
 
-        var env = module.GetEnvironment(envKey);
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
         var connStr = GetConnectionString(env);
 
         try
@@ -57,7 +60,7 @@ public class LookupController : ControllerBase
         }
         catch (Exception ex) when (ex is not ApiException)
         {
-            throw new UpstreamException($"Database connection error: {ex.Message}");
+            throw new UpstreamException("Database lookup could not be completed.");
         }
     }
 
@@ -70,7 +73,7 @@ public class LookupController : ControllerBase
         var guard = CapabilityGuard.Require(module, c => c.ConsumerLookup, "consumer-lookup");
         if (guard != null) return guard;
 
-        var env = module.GetEnvironment(envKey);
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
         var connStr = GetConnectionString(env);
 
         try
@@ -84,7 +87,7 @@ public class LookupController : ControllerBase
         }
         catch (Exception ex) when (ex is not ApiException)
         {
-            throw new UpstreamException($"SQL Server database connection error: {ex.Message}");
+            throw new UpstreamException("Database lookup could not be completed.");
         }
     }
 
@@ -105,7 +108,7 @@ public class LookupController : ControllerBase
         var guard = CapabilityGuard.Require(module, c => c.BranchLookup, "branches");
         if (guard != null) return guard;
 
-        var env = module.GetEnvironment(envKey);
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, envKey);
         var connStr = GetConnectionString(env);
 
         var cacheKey = $"branches:{connStr}";
@@ -122,12 +125,12 @@ public class LookupController : ControllerBase
         }
         catch (Exception ex) when (ex is not ApiException)
         {
-            throw new UpstreamException($"Database connection error: {ex.Message}");
+            throw new UpstreamException("Database lookup could not be completed.");
         }
     }
 
     private string GetConnectionString(Core.Models.ModuleEnvironment env)
     {
-        return ConnectionStringResolver.RequireForEnvironment(_configuration, env);
+        return _connectionStrings.RequireForEnvironment(env);
     }
 }

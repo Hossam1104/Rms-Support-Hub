@@ -1,6 +1,6 @@
 # RMS+ Support Hub — Release Readiness
 
-Date: 2026-08-16
+Date: 2026-08-17
 
 ## 1. Release scope
 
@@ -28,14 +28,15 @@ rerun; current Slice C evidence is summarized in
 
 | Gate | Result |
 | --- | --- |
-| Frontend tests | 363 passed across 58 files in two consecutive runs; 0 skipped |
-| Backend tests | 190 passed, 2 unchanged legacy route-test failures (`NotFound` expected, `MethodNotAllowed` actual) |
+| Frontend tests | 362 passed across 59 files; 0 failed |
+| Backend tests | 206 passed; 0 failed |
 | Backend Release build | Passed; 0 warnings; 0 errors |
 | POS Release build | Passed; 0 warnings; 0 errors |
-| Standard production build | Passed; 483.64 kB raw / 107.52 kB estimated transfer initial bundle; no budget warnings |
+| Standard production build | Passed; 483.69 kB raw / 107.62 kB estimated transfer initial bundle; no budget warnings |
 | Lazy `three-module` chunk | 734.66 kB raw / 153.78 kB estimated transfer; Hub-only, dynamically imported |
 | Offline production build | Not rerun in Slice C validation |
 | Riyal asset verification | Passed; SHA-1 `02b0fe79…`, 924 bytes, 2 paths, no text or external references |
+| P0-A environment safety | Passed in direct controller/integration tests: Testing rejects Production before database or downstream calls; raw URL/connection-string inputs are ignored; errors use safe envelopes |
 | Security review | No credential, token, or connection-string value in the release diff |
 | Rendered browser matrix | Not re-run this session — see below |
 
@@ -63,15 +64,20 @@ canonical `/tools/online-orders/...` mount.
   Open/Copy/Delete/Clear, Markdown and plain-text export, and
   `Ctrl`/`Cmd`+`Enter` are unchanged and covered by unit tests. No external AI
   or API transmission path exists.
-- Online Order API endpoints, DTOs, JSON contracts, payload mappings, module
-  keys, capabilities, payment values, statuses, filtering, sorting, paging,
-  totals, and send/cancel/resend behavior are unchanged. No state-changing
-  Online Order action was executed.
-- UPC Testing and UPC Production are supported through the existing environment
-  architecture. UPC Production read-side routing uses the server-owned
-  `RmsMainProd` catalog derived from the existing UPC Testing connection
-  details; Production database checks remain read-only and no Production order
-  mutation is validated here.
+- Online Order API endpoints, module keys, payload mappings, payment values,
+  statuses, filtering, sorting, paging, totals, and module capability gating
+  remain contract-driven. Environment selection is now server-enforced: the
+  browser sends only a registered environment key, and the server resolves all
+  endpoint and database authority.
+- The default `Testing` deployment tier rejects Production for send, cancel,
+  resend, lookup, database diagnostics, endpoint diagnostics, and health
+  probes before any Production network or database operation. Production
+  registrations remain available only to an explicitly configured Production
+  deployment; this work does not approve or exercise Production mutation.
+- Missing server-side environment secrets return the safe
+  `environment_unconfigured` envelope instead of accepting a browser-supplied
+  connection string or URL. Optional modules remain truthful in the module
+  catalog, and GHC resend remains disabled.
 - The Online Order landing now renders a neutral bounded empty state when no
   modules are available. It is presentation only: no API change, no service
   contract change, no retry behavior, and no claimed reason, because
@@ -86,8 +92,10 @@ canonical `/tools/online-orders/...` mount.
 
 ## 5. Release blockers
 
-Two pre-existing backend legacy-route test failures remain as noted above; no
-new Slice C-specific blocker was identified by the targeted validation.
+P0-A implementation and automated validation are complete on this branch. An
+independent Opus review, authorized Testing-environment runtime evidence, and
+the existing POS/Production release gates remain outstanding. P0-B and any
+Production mutation workflow are explicitly out of scope for this change.
 
 This is a release-candidate recommendation only. It is not Production approval,
 WCAG certification, or a global security certification.
@@ -96,9 +104,10 @@ WCAG certification, or a global security certification.
 
 - POS integration, after the independent POS project is complete and a source
   assessment is authorized.
-- `ConnectionStrings:UpcEcommerceTest` is not configured in the local Testing
-  environment, so Testing-only UPC order and order-request calls return HTTP
-  500. Deferred environment setup, not an application defect.
+- A deployment without the configured Testing secret returns HTTP `503` with
+  `environment_unconfigured` for operations that need that database; it never
+  accepts a browser-supplied connection string. This is an environment setup
+  requirement, not a reason to weaken the server boundary.
 - UPC Testing fixture and live state-changing acceptance. No COD acceptance,
   send, resend, or cancellation claim is made here.
 - UPC Production database runtime validation was not executed in this local

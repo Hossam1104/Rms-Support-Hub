@@ -36,6 +36,8 @@ the linked planning/evidence documents.
 
 ## Current programme status
 
+| P0-A server-owned Testing environment authority | Branch `feat/staging-environment-safety`; backend 206 passed, frontend 362 passed across 59 files, targeted production build passed | Enforced server-side deployment tier and registered environment resolution; removed browser database/URL authority; corrected module/capability truth; no external deployment or Production/customer mutation. Awaiting independent Opus review before P0-B. |
+
 INT-00 through INT-13, Slice B, and Slice C (including PR #22 deferred hardening)
 are repository-validated and merged to `main`. Slice C remains subject to
 external representative-machine, Production signing/PKI, fleet, and customer

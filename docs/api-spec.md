@@ -9,11 +9,15 @@ sync with the controllers, not the other way around.
 
 Every `{key}` path segment is a module key: `ghc_ecommerce`, `upc_ecommerce`,
 `ghc_unicommerce`, `oms`, `call_center`. Most action endpoints accept an
-optional `envKey` query parameter selecting a named environment (e.g.
-`"UPC Testing"`, `"UPC Production"`); when omitted, each module resolves its
-explicitly flagged default environment, with Testing remaining the safe UPC
-default. Environment resolution is server-owned: the client selects only the
-environment key, not an API host or database catalog.
+optional `envKey` query parameter selecting a named, server-registered
+environment (e.g. `"UPC Testing"`, `"UPC Production"`); when omitted, each
+module resolves its explicitly flagged default environment. The API starts in
+the `Testing` deployment tier. In that tier, a Production environment is
+never resolved, probed, queried, or used for a mutation. A deployment must
+explicitly select the `Production` tier before a registered Production
+environment can become effective. Environment resolution is server-owned: the
+client selects only the module and environment keys, not an API host, endpoint,
+database catalog, or connection string.
 
 ---
 
@@ -21,7 +25,7 @@ environment key, not an API host or database catalog.
 
 ### List All Modules
 - **`GET /api/modules`**
-- **Response `200 OK`**: `ModuleDto[]` — key, label, client, availability, the module's environments, and its `capabilities` (mirrors `ModuleCapabilities`: `draftKind`, `itemLookup`, `consumerLookup`, `orderRequests`, `cancel`, `resend`, `hasDeliveryFields` — added in R7 so the frontend can gate routes/UI on real capability data instead of hardcoded module-key checks; `hasDeliveryFields` added in R10 so the flat-order builder can show/hide the Delivery card without comparing module-key strings — `true` only for `ghc_ecommerce`). No `password`/`db_config`/raw credentials are ever emitted.
+- **Response `200 OK`**: `ModuleDto[]` — key, label, client, effective availability, the module's registered environments, and its `capabilities` (mirrors `ModuleCapabilities`: `draftKind`, `itemLookup`, `consumerLookup`, `orderRequests`, `cancel`, `resend`, `branchLookup`, `hasDeliveryFields`). The frontend must render only environments marked available by this response. `GhcEcommerceModule.Capabilities.Resend` is `false` until that integration is explicitly enabled. No `password`/`db_config`/raw credentials are ever emitted.
 
 The capability object also includes `branchLookup`; it gates the branch route
 described in section 4 alongside item and consumer lookup capabilities.
@@ -29,7 +33,11 @@ described in section 4 alongside item and consumer lookup capabilities.
 ### Environment Reachability
 - **`GET /api/modules/health`**
 - **Response `200 OK`**: `EnvironmentHealthDto[]` — `{ moduleKey, environmentKey, status, checkedAt }`, one entry per environment of every module.
-- `status` is `reachable` | `unreachable` | `unconfigured` (no `ApiUrl` to probe).
+- `status` is `reachable` | `unreachable` | `unconfigured` | `policy_disabled`.
+  `policy_disabled` means the environment is registered but is outside the
+  active deployment tier; it is never probed. Missing server configuration,
+  endpoint registration, or server secret is reported as `unconfigured` and
+  does not expose a secret or connection string.
 - The probe is a **TCP connect only**, ~3s timeout, run in parallel and cached
   process-wide for 30s. It sends no HTTP request and no payload, because the
   upstream URLs are POST-only order operations with no health route. A
@@ -64,8 +72,9 @@ described in section 4 alongside item and consumer lookup capabilities.
 
 ### Get Active Send Endpoint
 - **`GET /api/modules/{key}/endpoint?envKey=`**
-- **Response `200 OK`**: `{ environmentKey: string, environment: string, apiUrl: string | null }` — the resolved environment's send endpoint for read-only display in the builder (U4, UI_Rework_Plan.md D13). Deliberately scoped: the module catalog still never carries URLs (see §1), and this route never returns `CancelUrl`, connection-string names, or database config. Uses the same `GetEnvironment` resolution as `send-request`.
+- **Response `200 OK`**: `{ environmentKey: string, environment: string, apiUrl: string | null }` — the server-resolved send endpoint for read-only display in the builder (U4, UI_Rework_Plan.md D13). The value is not an authority input: action routes resolve the endpoint again from server configuration. Deliberately scoped: the module catalog still never carries URLs (see §1), and this route never returns `CancelUrl`, connection-string names, or database config. Uses the same policy resolution as `send-request`.
 - **`404 Not Found`**: unknown module key.
+- **`400` / `403` / `503`**: the safe error envelope described below for an invalid, policy-disallowed, or unconfigured environment.
 
 ### Calculate Totals
 - **`GET /api/modules/{key}/calculate-totals`**
@@ -121,10 +130,11 @@ described in section 4 alongside item and consumer lookup capabilities.
 
 ### Send Order Request
 - **`POST /api/modules/{key}/send-request`**
-- **Request Body**: `{ environmentKey?: string, customApiUrl?: string }`.
-  The existing optional custom endpoint remains available for environments that
-  allow it; UPC Production ignores browser overrides and always uses its
-  server-owned configured endpoint.
+- **Request Body**: `{ environmentKey?: string }`. The environment key must be
+  registered by the server and available in the active deployment tier. There
+  is no browser-supplied URL, endpoint key, database name, or connection
+  string. Unknown or policy-disallowed environments fail before any downstream
+  network call.
 - **Response `200 OK`**: `{ success: boolean, statusCode: int, responseText: string, urlSent: string }`
 - **`400 Bad Request`**: `{ success: false, errors: string[] }` when `module.Validate(draft)` fails — the request is never sent.
 - The sent request/response is **not** persisted locally; it is already recorded server-side by the upstream API into the `OrderRequests` table, which section 5 below reads from. There is no local `order-history` store or `historyEntryId` — that JSON-file feature was retired in R5.
@@ -136,8 +146,14 @@ described in section 4 alongside item and consumer lookup capabilities.
 - Posts to the active environment's `CancelUrl` (never `ApiUrl`). Prefer **section 5's** `POST /order-requests/{id}/cancel` when cancelling a specific recorded request — it additionally re-checks `CancelBlockedStatuses` server-side and returns the refreshed request detail.
 
 ### Diagnostics
-- **`POST /api/modules/{key}/test-endpoint?url={url}`** → `{ status: "Online"|"Offline", url }`
-- **`POST /api/modules/{key}/test-db?connectionString={connectionString}`** → `{ status: "Online"|"Offline", database?, error? }`
+- **`POST /api/modules/{key}/test-endpoint?envKey={envKey}`** → `{ status: "Online"|"Offline" }`.
+  The server resolves the URL from the registered module/environment mapping.
+  A raw `url` query value, if sent by an old client, is ignored and never
+  becomes an outbound destination.
+- **`POST /api/modules/{key}/test-db?envKey={envKey}`** → `{ status: "Online"|"Offline", database? }`.
+  The server resolves the named connection string and optional database
+  override. A raw `connectionString` query value, if sent by an old client,
+  is ignored. Database credentials and exception text are never returned.
 
 ---
 
@@ -154,8 +170,10 @@ Every route below is gated by `Capabilities.OrderRequests`. As of R5 this is
 (`GhcEcommerceModule.Capabilities.OrderRequests` carries a `// TODO(db-creds)`
 naming the one-line flip once GHC's live database credentials are confirmed.)
 
-All routes accept `?envKey={envKey}` to pick the environment (and therefore
-the connection string) to query.
+All routes accept `?envKey={envKey}` to pick the registered environment (and
+therefore the server-side connection mapping) to query. The active deployment
+tier is enforced for every route, including read-only lookup and history
+routes.
 
 The frontend's canonical history route is `/order-requests`; the legacy
 `/requests` and `/validation` paths redirect to it for bookmarked links. The
@@ -182,25 +200,39 @@ drawer surfaces.
 
 ### Cancel
 - **`POST /api/modules/{key}/order-requests/{id}/cancel`**
-- **Request Body**: `{ reason: string, endpointKey?: string, customUrl?: string }`
-- URL resolution uses the existing custom override only where the selected
-  environment allows it, otherwise `environment.CancelUrl` is used. UPC
-  Production always uses its server-owned `CancelUrl` and never accepts a
-  browser override; it never falls back to `environment.ApiUrl` (the
-  historical bug this endpoint replaces silently posted cancellations to the
-  create-order URL because the endpoint-picker field name was never wired up).
+- **Request Body**: `{ reason: string }`
+- URL resolution always uses the server-owned `CancelUrl` for the selected
+  environment. Browser endpoint overrides are disabled; the route never falls
+  back to `environment.ApiUrl` (the historical bug this endpoint replaces
+  silently posted cancellations to the create-order URL because the
+  endpoint-picker field name was never wired up).
 - Server re-checks `OrderRequestStatus.CancelBlockedStatuses` (`{5,6,7,9}` — Rejected/CanceledByClient/CanceledByAdmin/Done) even if the client's button was enabled; a client-side check is not a trust boundary.
 - **`409 Conflict`**: `{ error: string, cancelBlockedReason: string }` if blocked — the upstream API is never called.
 - **`200 OK`** otherwise: `{ success, statusCode, responseText, urlSent, request: OrderRequestDetailDto }` — the detail is re-read after the call so the UI can show the refreshed status without a second round trip.
 
 ### Resend
 - **`POST /api/modules/{key}/order-requests/{id}/resend`**
-- **Request Body**: `{ branchCode?: string, endpointKey?: string }`
+- **Request Body**: `{ branchCode?: string }`
 - Reuses **that specific request's own stored `RequestJson`** (not the live in-progress draft), verifies its `order_code` matches the recorded `OrderNumber`, and overrides only `branch_code` when a target is supplied. When omitted, the original stored branch is reused. The original order/request number is sent again unchanged, all unknown payload fields are preserved, and no historical row is mutated.
 - The server re-checks the canonical resend rule `OrderRequestStatus.ResendBlockedStatuses` (`{1,4}` — New/With_Delegate) immediately before sending.
 - **`409 Conflict`**: `{ error: string, resendBlockedReason: string }` if blocked.
 - **`200 OK`** otherwise: `{ success, statusCode, responseText, urlSent }`.
 - Posts to `environment.ApiUrl` (a resend is a new order attempt, not a cancellation).
+
+### Environment and safety errors
+
+Environment and downstream failures use the stable envelope below; raw
+exception text, connection strings, and arbitrary destinations are not sent to
+the browser:
+
+```json
+{ "error": { "code": "environment_not_allowed", "message": "...", "details": null } }
+```
+
+The principal codes are `invalid_environment` (`400`),
+`environment_not_allowed` (`403`), `environment_unconfigured` (`503`),
+`capability_unavailable` (`501`), `downstream_unreachable` (`502`), and
+`downstream_timeout` (`504`).
 
 ---
 

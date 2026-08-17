@@ -71,7 +71,7 @@ public record PatchOrderDataRequest(Dictionary<string, object?> Fields);
 /// CancelUrl, connection strings, or credentials.</summary>
 public record ModuleEndpointDto(string EnvironmentKey, string Environment, string? ApiUrl);
 
-public record SendOrderRequest(string? EnvironmentKey, string? CustomApiUrl);
+public record SendOrderRequest(string? EnvironmentKey);
 
 public record CancelOrderRequest(string OrderNumber, string CancelReason, string? EnvironmentKey);
 

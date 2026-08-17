@@ -15,12 +15,14 @@ public class UpcEcommerceModule : IOrderModule
         IFlatOrderPayloadBuilder payloadBuilder,
         IFlatOrderValidator validator,
         IItemRepository itemRepository,
-        IConsumerRepository consumerRepository)
+        IConsumerRepository consumerRepository,
+        IReadOnlyDictionary<string, ModuleEnvironment>? environments = null)
     {
         _payloadBuilder = payloadBuilder;
         _validator = validator;
         _itemRepository = itemRepository;
         _consumerRepository = consumerRepository;
+        Environments = environments ?? ModuleEnvironmentDefaults.UpcEcommerce();
     }
 
     public string Key => "upc_ecommerce";
@@ -38,49 +40,7 @@ public class UpcEcommerceModule : IOrderModule
         HasDeliveryFields: false,
         BranchLookup: true);
 
-    // Real credentials are never hardcoded here. UPC Production deliberately
-    // reuses the server-owned UPC Testing connection details and changes only
-    // its approved catalog through ModuleEnvironment.DatabaseOverride. See
-    // README.md and ConnectionStringResolver.
-
-    public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; } = new Dictionary<string, ModuleEnvironment>
-    {
-        ["UPC Production"] = new ModuleEnvironment
-        {
-            Key = "UPC Production",
-            Environment = "Production",
-            Description = "UPC live routing.",
-            Accent = "sunrise",
-            Cue = "Retail Ops",
-            Icon = "bi-bag-check",
-            RouteLabel = "Live lane",
-            VisualUrl = "static/assets/upc_logo.svg",
-            VisualAlt = "UPC logo",
-            Available = true,
-            ApiUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.10.181/RmsMainServerApi/api/Order/CancelOrder",
-            ConnectionStringName = "UpcEcommerceTest",
-            DatabaseOverride = "RmsMainProd",
-            AllowCustomApiUrl = false
-        },
-        ["UPC Testing"] = new ModuleEnvironment
-        {
-            Key = "UPC Testing",
-            Environment = "Testing",
-            Description = "UPC QA routing.",
-            Accent = "electric",
-            Cue = "QA Grid",
-            Icon = "bi-sliders2-vertical",
-            RouteLabel = "Test lane",
-            VisualUrl = "static/assets/upc_logo.svg",
-            VisualAlt = "UPC logo",
-            Available = true,
-            IsDefault = true,
-            ApiUrl = "http://10.10.10.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder",
-            CancelUrl = "http://10.10.10.181:8080/RmsMainServerApi/api/Order/CancelOrder",
-            ConnectionStringName = "UpcEcommerceTest"
-        }
-    };
+    public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; }
 
     public ModuleEnvironment GetEnvironment(string? envKey) => ModuleEnvironmentResolver.Resolve(Environments, envKey);
 

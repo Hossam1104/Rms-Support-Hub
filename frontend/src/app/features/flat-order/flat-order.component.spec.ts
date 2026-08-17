@@ -215,13 +215,13 @@ describe('FlatOrderComponent', () => {
     expect(component.itemLookupOutcome()).toEqual({ status: 'error' });
   });
 
-  it('runs send loading through the request lifecycle and omits customApiUrl by default', () => {
+  it('runs send loading through the request lifecycle with only the environment key', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;
 
-    component.onSendOrder({ url: '' });
+    component.onSendOrder();
     expect(component.sending()).toBe(true);
-    expect(api.sentBodies[0]).toEqual({ environmentKey: 'UPC Testing', customApiUrl: undefined });
+    expect(api.sentBodies[0]).toEqual({ environmentKey: 'UPC Testing' });
 
     api.sendCalls[0].next({ success: true, statusCode: 200, responseText: '{}', urlSent: 'http://10.10.10.181:8080/api' });
     api.sendCalls[0].complete(); // HTTP observables terminate -- finalize clears loading
@@ -232,7 +232,7 @@ describe('FlatOrderComponent', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;
 
-    component.onSendOrder({ url: '' });
+    component.onSendOrder();
     api.sendCalls[0].error({ status: 500, code: 'unknown_error', message: 'boom' });
 
     expect(component.sending()).toBe(false);
@@ -243,25 +243,17 @@ describe('FlatOrderComponent', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;
 
-    component.onSendOrder({ url: '' });
-    component.onSendOrder({ url: '' });
+    component.onSendOrder();
+    component.onSendOrder();
 
     expect(api.sendCalls.length).toBe(1);
-  });
-
-  it('includes customApiUrl only when the event carries a URL', () => {
-    const fixture = createFixture();
-    const component = fixture.componentInstance;
-
-    component.onSendOrder({ url: 'https://custom.example/api' });
-    expect(api.sentBodies[0]).toEqual({ environmentKey: 'UPC Testing', customApiUrl: 'https://custom.example/api' });
   });
 
   it('maps send validation failures to inline field errors and focuses the first', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;
 
-    component.onSendOrder({ url: '' });
+    component.onSendOrder();
     api.sendCalls[0].error({
       status: 400,
       code: 'validation_failed',
@@ -282,7 +274,7 @@ describe('FlatOrderComponent', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance;
 
-    component.onSendOrder({ url: '' });
+    component.onSendOrder();
     api.sendCalls[0].error({
       status: 400,
       code: 'validation_failed',

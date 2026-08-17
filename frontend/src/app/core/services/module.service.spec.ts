@@ -46,11 +46,13 @@ describe('ModuleService environment selection', () => {
   const testing: EnvironmentDto = {
     key: 'UPC Testing',
     environment: 'Testing',
+    available: true,
     isDefault: true
   } as EnvironmentDto;
   const production: EnvironmentDto = {
     key: 'UPC Production',
     environment: 'Production',
+    available: true,
     isDefault: false
   } as EnvironmentDto;
   const upc: ModuleDto = {
@@ -98,5 +100,14 @@ describe('ModuleService environment selection', () => {
     service.loadModuleDetails('upc_ecommerce').subscribe();
 
     expect(service.activeEnvironment()?.key).toBe('UPC Testing');
+  });
+
+  it('ignores an unavailable environment selected by stale UI state', () => {
+    const unavailableProduction = { ...production, available: false };
+
+    service.selectEnvironment(unavailableProduction, upc);
+
+    expect(service.activeEnvironment()).toBeNull();
+    expect(localStorage.getItem('onlineOrderTool.activeEnvironment.upc_ecommerce')).toBeNull();
   });
 });

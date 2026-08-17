@@ -50,9 +50,9 @@ import { APP_ASSETS } from '../../core/config/app-assets';
           </span>
         </div>
 
-        <div class="module-card__envs" *ngIf="module.available && module.environments.length > 0">
+        <div class="module-card__envs" *ngIf="module.available && availableEnvironments().length > 0">
           <p class="module-card__label">Environments</p>
-          @for (env of module.environments; track env.key) {
+          @for (env of availableEnvironments(); track env.key) {
             <ui-button variant="secondary" size="sm" class="env-btn" [ariaLabel]="'Select environment ' + env.key" (pressed)="onSelectEnv(env)">
               <span class="env-content">
                 <span class="env-icon"><i class="bi" [class]="env.icon" aria-hidden="true"></i></span>
@@ -181,6 +181,7 @@ export class ModuleCardComponent {
       case 'reachable': return 'Reachable';
       case 'unreachable': return 'Unreachable';
       case 'unconfigured': return 'No endpoint';
+      case 'policy_disabled': return 'Disabled by policy';
       default: return this.healthPending ? 'Checking' : 'Unknown';
     }
   }
@@ -190,6 +191,7 @@ export class ModuleCardComponent {
       case 'reachable': return 'bi-broadcast-pin';
       case 'unreachable': return 'bi-plug';
       case 'unconfigured': return 'bi-dash-circle';
+      case 'policy_disabled': return 'bi-shield-lock';
       default: return this.healthPending ? 'bi-arrow-repeat' : 'bi-question-circle';
     }
   }
@@ -209,7 +211,11 @@ export class ModuleCardComponent {
   }
 
   onSelectEnv(env: EnvironmentDto) {
-    this.selectEnv.emit(env);
+    if (env.available) this.selectEnv.emit(env);
+  }
+
+  availableEnvironments(): EnvironmentDto[] {
+    return (this.module?.environments ?? []).filter(env => env.available);
   }
 
   getModuleRoute(key: string): string[] {

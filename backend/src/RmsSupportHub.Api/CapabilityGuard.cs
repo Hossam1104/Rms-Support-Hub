@@ -14,10 +14,30 @@ public static class CapabilityGuard
 
         return new ObjectResult(new
         {
-            error = $"'{capabilityName}' is not available for module '{module.Key}'."
+            error = new
+            {
+                code = "capability_unavailable",
+                message = $"The '{capabilityName}' operation is not available for this module.",
+                details = (object?)null
+            }
         })
         {
             StatusCode = StatusCodes.Status501NotImplemented
+        };
+    }
+
+    public static RmsSupportHub.Core.Models.ModuleEnvironment RequireEnvironment(
+        IEnvironmentPolicy policy,
+        IOrderModule module,
+        string? environmentKey)
+    {
+        var resolution = policy.Resolve(module, environmentKey);
+        return resolution.Failure switch
+        {
+            EnvironmentPolicyFailure.None => resolution.Environment!,
+            EnvironmentPolicyFailure.InvalidEnvironment => throw new Exceptions.InvalidEnvironmentException(),
+            EnvironmentPolicyFailure.EnvironmentNotAllowed => throw new Exceptions.EnvironmentNotAllowedException(),
+            _ => throw new Exceptions.EnvironmentUnconfiguredException()
         };
     }
 }

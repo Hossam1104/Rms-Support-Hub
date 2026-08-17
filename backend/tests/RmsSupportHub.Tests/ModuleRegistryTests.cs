@@ -52,17 +52,19 @@ public class ModuleRegistryTests
 
         Assert.Equal("UPC Production", prodEnv.Key);
         Assert.Equal("Production", prodEnv.Environment);
-        Assert.Equal("http://10.10.10.181/RmsMainServerApi/api/Order/CreateAndAssignOrder", prodEnv.ApiUrl);
-        Assert.DoesNotContain(":8080", prodEnv.ApiUrl);
-        Assert.Equal("UpcEcommerceTest", prodEnv.ConnectionStringName);
-        Assert.Equal("RmsMainProd", prodEnv.DatabaseOverride);
-        Assert.False(prodEnv.AllowCustomApiUrl);
+        Assert.Null(prodEnv.ApiUrl);
+        Assert.Null(prodEnv.CancelUrl);
+        Assert.Null(prodEnv.ConnectionStringName);
+        Assert.Null(prodEnv.DatabaseOverride);
+        Assert.False(prodEnv.Available);
+        Assert.True(prodEnv.RequiresDatabase);
         Assert.Equal("UPC Testing", testEnv.Key);
         Assert.Equal("Testing", testEnv.Environment);
-        Assert.Equal("http://10.10.10.181:8080/RmsMainServerApi/api/Order/CreateAndAssignOrder", testEnv.ApiUrl);
-        Assert.Equal("UpcEcommerceTest", testEnv.ConnectionStringName);
+        Assert.Null(testEnv.ApiUrl);
+        Assert.Null(testEnv.CancelUrl);
+        Assert.Null(testEnv.ConnectionStringName);
         Assert.Null(testEnv.DatabaseOverride);
-        Assert.True(testEnv.AllowCustomApiUrl);
-        Assert.NotEqual(prodEnv.ApiUrl, testEnv.ApiUrl);
+        Assert.False(testEnv.Available);
+        Assert.True(testEnv.RequiresDatabase);
     }
 }

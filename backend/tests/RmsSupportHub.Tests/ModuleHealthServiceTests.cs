@@ -16,7 +16,8 @@ public class ModuleHealthServiceTests
         new FlatOrderItemRepository(new SqlServerConnectionFactory()),
         new GhcConsumerRepository(new SqlServerConnectionFactory()),
         new UpcItemRepository(new SqlServerConnectionFactory()),
-        new UpcConsumerRepository(new SqlServerConnectionFactory()));
+        new UpcConsumerRepository(new SqlServerConnectionFactory()),
+        TestEnvironmentCatalog.UpcOnly());
 
     /// <summary>Records every probed URL so a test can prove the probe never
     /// sends a payload and never touches an endpoint it was not given.</summary>
@@ -37,7 +38,7 @@ public class ModuleHealthServiceTests
             return Task.FromResult(new ApiResponseResult(200, "{}", url, true));
         }
 
-        public Task<bool> TestEndpointAsync(string url)
+        public Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null)
         {
             ProbedUrls.Add(url);
             return Task.FromResult(_reachable(url));
@@ -49,7 +50,11 @@ public class ModuleHealthServiceTests
     {
         var registry = BuildRegistry();
         var apiClient = new ProbeApiClient();
-        var service = new ModuleHealthService(registry, apiClient, new ModuleHealthCache());
+        var service = new ModuleHealthService(
+            registry,
+            new EnvironmentPolicy(DeploymentTier.Testing),
+            apiClient,
+            new ModuleHealthCache());
 
         var health = await service.GetHealthAsync();
 
@@ -64,20 +69,34 @@ public class ModuleHealthServiceTests
     public async Task GetHealthAsync_MarksUnreachableAndUnconfiguredEnvironmentsDistinctly()
     {
         var registry = BuildRegistry();
-        // GHC Uni-Commerce ships without an ApiUrl; UPC Production has one.
-        var apiClient = new ProbeApiClient(url => !url.Contains("10.10.10.181"));
-        var service = new ModuleHealthService(registry, apiClient, new ModuleHealthCache());
+        // Production is configured in the fixture but the Testing deployment
+        // policy must disable it before the probe client sees its URL.
+        var apiClient = new ProbeApiClient(_ => false);
+        var service = new ModuleHealthService(
+            registry,
+            new EnvironmentPolicy(DeploymentTier.Testing),
+            apiClient,
+            new ModuleHealthCache());
 
         var health = await service.GetHealthAsync();
 
         var upcProduction = health.Single(h => h.EnvironmentKey == "UPC Production");
-        Assert.Equal(ModuleHealthService.StatusUnreachable, upcProduction.Status);
+        Assert.Equal(ModuleHealthService.StatusPolicyDisabled, upcProduction.Status);
+
+        var upcTesting = health.Single(h => h.EnvironmentKey == "UPC Testing");
+        Assert.Equal(ModuleHealthService.StatusUnreachable, upcTesting.Status);
 
         var unicommerce = health.Where(h => h.ModuleKey == "ghc_unicommerce").ToList();
         Assert.NotEmpty(unicommerce);
-        Assert.All(unicommerce, entry => Assert.Equal(ModuleHealthService.StatusUnconfigured, entry.Status));
+        Assert.Equal(
+            ModuleHealthService.StatusPolicyDisabled,
+            unicommerce.Single(entry => entry.EnvironmentKey.EndsWith("Production", StringComparison.Ordinal)).Status);
+        Assert.Equal(
+            ModuleHealthService.StatusUnconfigured,
+            unicommerce.Single(entry => entry.EnvironmentKey.EndsWith("Testing", StringComparison.Ordinal)).Status);
         // An environment with no configured endpoint must never be probed.
         Assert.DoesNotContain(apiClient.ProbedUrls, url => string.IsNullOrWhiteSpace(url));
+        Assert.DoesNotContain(apiClient.ProbedUrls, url => !url.Contains(":8080", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -86,7 +105,11 @@ public class ModuleHealthServiceTests
         var registry = BuildRegistry();
         var apiClient = new ProbeApiClient();
         var cache = new ModuleHealthCache();
-        var service = new ModuleHealthService(registry, apiClient, cache);
+        var service = new ModuleHealthService(
+            registry,
+            new EnvironmentPolicy(DeploymentTier.Testing),
+            apiClient,
+            cache);
 
         await service.GetHealthAsync();
         var afterFirstSweep = apiClient.ProbedUrls.Count;
@@ -103,7 +126,11 @@ public class ModuleHealthServiceTests
     public async Task GetHealthAsync_LeavesTheLaneStatusLabelUntouched()
     {
         var registry = BuildRegistry();
-        var service = new ModuleHealthService(registry, new ProbeApiClient(_ => false), new ModuleHealthCache());
+        var service = new ModuleHealthService(
+            registry,
+            new EnvironmentPolicy(DeploymentTier.Testing),
+            new ProbeApiClient(_ => false),
+            new ModuleHealthCache());
 
         await service.GetHealthAsync();
 

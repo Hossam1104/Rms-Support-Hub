@@ -24,6 +24,25 @@ public record ModuleEnvironment
     public string? CancelUrl { get; init; }
     public DbConnectionConfig? DbConfig { get; init; }
 
+    /// <summary>Whether this registered environment needs a server-owned
+    /// connection-string key before database work can start. The flag is
+    /// module metadata, not caller input.</summary>
+    public bool RequiresDatabase { get; init; }
+
+    /// <summary>Whether an enabled environment must have a configured send
+    /// endpoint. Read-only database-only registrations may leave this false.
+    /// </summary>
+    public bool RequiresApiEndpoint { get; init; }
+
+    /// <summary>Whether an enabled environment must have a configured cancel
+    /// endpoint for the module's cancel capability.</summary>
+    public bool RequiresCancelEndpoint { get; init; }
+
+    /// <summary>Server-owned health policy. These values are never bound from
+    /// a browser request.</summary>
+    public bool HealthProbeEnabled { get; init; }
+    public TimeSpan HealthProbeTimeout { get; init; } = TimeSpan.FromSeconds(3);
+
     /// <summary>U1 (UI_Rework_Plan.md D3/D4): the environment every module's
     /// GetEnvironment(null) resolves to, so the default is an explicit flag
     /// rather than positional dictionary order (which silently resolved to
@@ -43,11 +62,6 @@ public record ModuleEnvironment
     /// browser DTO: an environment may reuse one credential set while routing
     /// reads to an approved catalog such as UPC Production's RmsMainProd.</summary>
     public string? DatabaseOverride { get; init; }
-
-    /// <summary>Whether the pre-existing optional custom endpoint may
-    /// override this environment. Production environments that must remain
-    /// server-routed can explicitly disable the browser override.</summary>
-    public bool AllowCustomApiUrl { get; init; } = true;
 
     public string StatusLabel => (Available, Environment) switch
     {

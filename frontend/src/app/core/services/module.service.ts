@@ -112,6 +112,7 @@ export class ModuleService {
   /** Persists per module (U1, UI_Rework_Plan.md D4) so a Testing choice on
    * one module never leaks into another module's default. */
   selectEnvironment(env: EnvironmentDto, ownerModule?: ModuleDto) {
+    if (!env.available) return;
     // Landing-page selection happens before the module shell is active. Keep
     // that outside-module choice on the same active-module/persistence path as
     // the navbar switcher so loading the module cannot silently restore its
@@ -141,8 +142,11 @@ export class ModuleService {
     } catch {
       // Fall back to the module's declared default when storage is blocked.
     }
-    const stored = storedKey ? module.environments.find(e => e.key === storedKey) : undefined;
-    const fallbackDefault = module.environments.find(e => e.isDefault);
-    this.activeEnvironment.set(stored ?? fallbackDefault ?? module.environments[0] ?? null);
+    const stored = storedKey
+      ? module.environments.find(e => e.key === storedKey && e.available)
+      : undefined;
+    const fallbackDefault = module.environments.find(e => e.isDefault && e.available);
+    const fallbackAvailable = module.environments.find(e => e.available);
+    this.activeEnvironment.set(stored ?? fallbackDefault ?? fallbackAvailable ?? null);
   }
 }

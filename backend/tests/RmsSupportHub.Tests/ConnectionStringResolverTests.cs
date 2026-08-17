@@ -24,7 +24,8 @@ public class ConnectionStringResolverTests
         new FlatOrderPayloadBuilder(),
         new FlatOrderValidator(),
         new UpcItemRepository(new SqlServerConnectionFactory()),
-        new UpcConsumerRepository(new SqlServerConnectionFactory()));
+        new UpcConsumerRepository(new SqlServerConnectionFactory()),
+        TestEnvironmentCatalog.Upc());
 
     [Fact]
     public void Testing_UsesTheExistingTestingConnectionAndCatalog()
