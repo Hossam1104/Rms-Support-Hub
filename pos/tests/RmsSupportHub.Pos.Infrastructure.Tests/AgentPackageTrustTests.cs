@@ -108,6 +108,36 @@ public sealed class AgentPackageTrustTests
     }
 
     [Fact]
+    public void VerifierExposesNoPublicConstructionPathThatIndependentlyReloadsMachineTrust()
+    {
+        // The verifier's only runtime trust authority is the immutable snapshot the host resolves
+        // once at startup. A public parameterless (or otherwise machine-trust-reloading) constructor
+        // would let any caller bypass that snapshot and re-read package-trust.json after startup, so
+        // none may exist.
+        var publicConstructors = typeof(MachineCertificatePackageSignatureVerifier)
+            .GetConstructors(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        Assert.All(publicConstructors, constructor => Assert.NotEmpty(constructor.GetParameters()));
+        Assert.All(
+            publicConstructors,
+            constructor => Assert.Contains(
+                constructor.GetParameters(),
+                parameter => parameter.ParameterType == typeof(AgentMachineTrustConfiguration)));
+    }
+
+    [Fact]
+    public void InstallationPlatformExposesNoPublicConstructionPathThatIndependentlyReloadsMachineTrust()
+    {
+        // The Windows activation platform must always receive its verifier from the caller (DI in
+        // production, explicit fixtures in tests); it must never be able to build its own
+        // machine-trust-reloading verifier internally.
+        var publicConstructors = typeof(WindowsAgentPackageInstallationPlatform)
+            .GetConstructors(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        Assert.All(publicConstructors, constructor => Assert.NotEmpty(constructor.GetParameters()));
+    }
+
+    [Fact]
     public void CanonicalizationIsIndependentOfJsonOrFileEnumerationOrder()
     {
         using var certificate = CreateCodeSigningCertificate();

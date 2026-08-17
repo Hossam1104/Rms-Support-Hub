@@ -131,6 +131,54 @@ public sealed class AgentPackageMachineTrustCompositionTests
     }
 
     [Fact]
+    public void ShippedCompositionResolvesSignatureVerifierFromTheImmutableMachineSnapshot()
+    {
+        using var fixture = new TestTrustFixture("Production");
+        using var baseFactory = new AgentWebApplicationFactory();
+        baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
+        using var factory = baseFactory.WithWebHostBuilder(_ => { });
+
+        var verifier = factory.Services.GetRequiredService<IAgentPackageSignatureVerifier>();
+        var trustSnapshot = factory.Services.GetRequiredService<AgentMachineTrustConfiguration>();
+
+        Assert.IsType<MachineCertificatePackageSignatureVerifier>(verifier);
+        Assert.Equal(ProductionPin, trustSnapshot.ProductionSignerThumbprint);
+        Assert.Equal(TestingPin, trustSnapshot.TestingSignerThumbprint);
+    }
+
+    [Fact]
+    public void ReplacingPackageTrustFileAfterStartupCannotAlterTheResolvedVerifierAuthority()
+    {
+        using var fixture = new TestTrustFixture("Production");
+        using var baseFactory = new AgentWebApplicationFactory();
+        baseFactory.UseTestTrustConfiguration(fixture.TrustFilePath);
+        using var factory = baseFactory.WithWebHostBuilder(_ => { });
+
+        // Force host/service resolution to occur before the trust file is mutated on disk.
+        var trustSnapshotBeforeReplacement = factory.Services.GetRequiredService<AgentMachineTrustConfiguration>();
+        _ = factory.Services.GetRequiredService<IAgentPackageSignatureVerifier>();
+
+        var replacementJson = $$"""
+        {
+          "productionSignerThumbprint": "3333333333333333333333333333333333333333",
+          "testingSignerThumbprint": "4444444444444444444444444444444444444444",
+          "deploymentMode": "Production"
+        }
+        """;
+        File.WriteAllText(fixture.TrustFilePath, replacementJson);
+        ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl(fixture.TrustFilePath);
+
+        var trustSnapshotAfterReplacement = factory.Services.GetRequiredService<AgentMachineTrustConfiguration>();
+
+        // The DI-resolved snapshot is a singleton captured at startup: rereading it after the
+        // on-disk file changes must still report the original pins, proving the verifier's
+        // authority cannot be redirected post-startup.
+        Assert.Same(trustSnapshotBeforeReplacement, trustSnapshotAfterReplacement);
+        Assert.Equal(ProductionPin, trustSnapshotAfterReplacement.ProductionSignerThumbprint);
+        Assert.Equal(TestingPin, trustSnapshotAfterReplacement.TestingSignerThumbprint);
+    }
+
+    [Fact]
     public void MissingMachineTrustConfigurationFailsStartupClosed()
     {
         var ex = Assert.Throws<InvalidOperationException>(() =>

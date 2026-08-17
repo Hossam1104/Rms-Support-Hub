@@ -69,20 +69,6 @@ public sealed class WindowsAgentPackageInstallationPlatform : IAgentPackageInsta
     private readonly AgentPackageLifecycleStateStore stateStore;
     private readonly IAgentHealthProbe healthProbe;
 
-    public WindowsAgentPackageInstallationPlatform()
-        : this(
-            new AgentPackageOptions(),
-            new FileAgentPackageVerifier(
-                new AgentPackageOptions(),
-                new AgentPackagePolicy(),
-                new MachineCertificatePackageSignatureVerifier()),
-            new WindowsAgentServiceController(),
-            new MachineAgentCertificatePrerequisite(),
-            new AgentPackageLifecycleStateStore(new AgentPackageOptions()),
-            new LoopbackAgentHealthProbe())
-    {
-    }
-
     public WindowsAgentPackageInstallationPlatform(
         AgentPackageOptions options,
         IAgentPackageVerifier verifier,

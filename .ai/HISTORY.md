@@ -32,12 +32,14 @@ the linked planning/evidence documents.
 | PR #21 trusted rollback/recovery hardening | `59f8015`; PR #21 | Anchored recovery to checkpoint `PreviousVersion`, retained signed manifest+archive only, re-extracted and re-verified rollback payloads, health-gated recovery, preserved explicit rollback recovery, and fixed PowerShell 5.1 seams. |
 | PR #21 root-of-trust remediation | `da16529`; PR #21 | Sealed the exact non-configurable ProgramData trust authority, removed synthetic OpenAPI trust in favor of metadata-only composition, made both signer pins mandatory in C# and PowerShell, froze verifier authority to the startup snapshot, correlated PowerShell lifecycle audit events by operation ID, rejected obsolete configuration presence, and preserved rollback/certificate/H-1/H-2/H-3 controls. Validation evidence: POS 410, backend 194, Pester 159, PowerShell quality 29 files, broad build, frontend production build, and memory checks passed with no skips. |
 | PR #21 acceptance and merge | Opus 5 HIGH review; Sol merge authorization; PR #21 merged to `main` | Independent review found 0 Critical/High/Medium; merge approved with four deferred non-blocking Low hardening items (L-1 through L-4, recorded in `.ai/STATE.md`); Production/fleet rollout remains gated on external signer/PKI/fleet/customer evidence. |
+| PR #22 deferred hardening acceptance and merge | Opus 5 HIGH review (0 Crit/0 High/0 Med/3 Low); Sol merge authorization; PR #22 merged to `main` | Closed L-1 (dead constructors removed), L-2 (OpenAPI metadata isolation proved), L-3 (early-return audit completeness), and L-4 (retained test fixture proved unreachable from normal entry). Three Low findings recorded as non-blocking backlog debt. Validation: POS 420 passed (Domain 12, Application 82, Infrastructure 155, Agent integration 171), Pester 172 passed, PowerShell quality 29 clean, backend 194 passed. |
 
 ## Current programme status
 
-INT-00 through INT-13 and Slice B are repository-validated and merged to
-`main`. Slice C remains subject to independent Terra review and external
-representative-machine, Production signing/PKI, fleet, and customer gates.
+INT-00 through INT-13, Slice B, and Slice C (including PR #22 deferred hardening)
+are repository-validated and merged to `main`. Slice C remains subject to
+external representative-machine, Production signing/PKI, fleet, and customer
+gates.
 
 No Production, customer, RMS, Main Server, database, registry, certificate,
 SCM, browser-policy, or live package-activation mutation has been executed by

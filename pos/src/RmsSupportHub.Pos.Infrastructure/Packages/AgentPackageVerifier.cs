@@ -28,14 +28,6 @@ public sealed class MachineCertificatePackageSignatureVerifier : IAgentPackageSi
     private readonly IAgentPackageSignerCertificateSource certificateSource;
     private readonly IAgentPackageSignerTrustValidator trustValidator;
 
-    public MachineCertificatePackageSignatureVerifier()
-        : this(
-            new MachineAgentTrustConfigurationLoader().Load(),
-            new LocalMachineAgentPackageSignerCertificateSource(),
-            new X509ChainAgentPackageSignerTrustValidator())
-    {
-    }
-
     public MachineCertificatePackageSignatureVerifier(
         AgentMachineTrustConfiguration machineTrust,
         IAgentPackageSignerCertificateSource certificateSource,
