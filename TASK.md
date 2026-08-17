@@ -1,98 +1,117 @@
-# RMS Support Hub — POS Agent Deferred Hardening Pass (L-1 through L-4)
+# CLAUDE OPUS 5 HIGH — Independent Review — POS Agent Deferred Hardening L-1 through L-4
 
-MODEL: (assign at session start)
-EFFORT: MEDIUM
-ROLE: Implement
-MODE: in-repo hardening only — no Production/PKI/fleet/customer scope
+MODEL: Claude Opus 5, effort HIGH
+EFFORT: HIGH
+ROLE: Review
+MODE: review only — do not modify, commit, push, merge, or mark the PR ready
 
 ## Background
 
-PR #21 (Production POS Agent trust/lifecycle) passed independent security
-review (0 Critical/High/Medium) and was merged to `main`. The review recorded
-four non-blocking Low items as deferred backlog. See `.ai/STATE.md` section
-"Deferred non-blocking hardening (Low, from Opus review)" and
-`.ai/HISTORY.md` for full acceptance/merge evidence. Do not repeat that
-review or reopen accepted trust-boundary decisions (ADR-0027); only close the
-four items below.
+PR #21 (Production POS Agent trust/lifecycle) previously passed independent
+security review (0 Critical/High/Medium) and was merged to `main` at head
+`548ff98`. That review deferred four non-blocking Low items (L-1 through
+L-4). A follow-up branch, `fix/pos-agent-deferred-hardening` (based on
+`main` at `548ff98`), closes all four items and is open as an UNMERGED PR
+titled `fix(pos): close deferred L-1 through L-4 hardening items`. See
+`.ai/STATE.md` section "Deferred non-blocking hardening (Low, from Opus
+review) — closure status" and the matching `.ai/HISTORY.md` entry for the
+implementer's own account of what changed and why. Treat those as claims to
+verify, not as ground truth.
 
 ## Objective
 
-Resolve L-1 through L-4 in the POS Agent lifecycle/trust code, or explicitly
-document why a given item is intentionally left as-is, with tests proving the
-resolved behavior.
+Independently review the L-1 through L-4 closure diff (branch
+`fix/pos-agent-deferred-hardening` vs. `main` at `548ff98`) for correctness,
+completeness, and — most importantly — confirm it does not reopen or weaken
+any previously accepted trust-boundary decision (ADR-0027) or any other
+control PR #21 already closed. Do not repeat the full PR #21 review; focus
+on this diff and its interaction with the existing accepted controls.
 
-## Scope
+## Scope to verify
 
-- **L-1** — `pos/src/RmsSupportHub.Pos.Infrastructure/Packages/AgentPackageVerifier.cs`,
-  `MachineCertificatePackageSignatureVerifier` parameterless constructor
-  (currently performs a canonical deferred trust reload via
-  `new MachineAgentTrustConfigurationLoader().Load()`, while shipped DI uses
-  the immutable-snapshot constructor). Confirm no DI registration or call
-  site uses the parameterless constructor; if none does, remove it. If one
-  does, bind it to the same immutable startup snapshot instead of a deferred
-  reload.
-- **L-2** — obsolete-key rejection (`PosAgent:ReleaseChannel`,
-  `PosAgent:TrustConfigurationPath`) is skipped inside the metadata-only
-  OpenAPI composition host. Confirm metadata mode genuinely has no
-  trust/lifecycle authority and does not consume either key; if confirmed,
-  add a regression test asserting metadata-only composition never reads
-  those keys, rather than changing composition behavior.
-- **L-3** — some early-return PowerShell lifecycle failure paths in
-  `scripts/PosSupportAgentDeployment.psm1` write started/attempted audit
-  events without a terminal failed event (operation-ID correlation itself is
-  correct). Identify each early-return path and add the missing terminal
-  failed audit event so every started/attempted operation ID has a terminal
-  outcome.
-- **L-4** — the PowerShell `TestOnlyTrustFixture` contract property
-  (`scripts/PosSupportAgentDeployment.psm1`,
-  `scripts/tests/PosSupportAgentRollbackRecovery.Tests.ps1`) can represent an
-  alternate test trust path, but the normal lifecycle entry point does not
-  expose or select it. Confirm this is dead/test-only surface with no
-  production entry point; if confirmed, either remove the unused property or
-  add an explicit test proving the normal entry point cannot select it.
+- **L-1**: the `MachineCertificatePackageSignatureVerifier` and
+  `WindowsAgentPackageInstallationPlatform` parameterless constructors were
+  removed. Confirm they were genuinely unreachable dead code (no DI
+  registration/test/runtime path used them), confirm no replacement
+  construction path independently reloads machine trust, and confirm the
+  shipped composition still resolves the verifier from the immutable
+  startup snapshot only.
+- **L-2**: no production code changed. Confirm the added tests actually
+  prove metadata-only OpenAPI composition has no trust/lifecycle authority
+  and never reads `PosAgent:ReleaseChannel` / `PosAgent:TrustConfigurationPath`
+  (including the empty-value Theory cases), and that the normal
+  composition branch's obsolete-key rejection is untouched.
+- **L-3**: every early-return path added in
+  `Invoke-RmsSupportAgentLifecycle` (`scripts/PosSupportAgentDeployment.psm1`)
+  now writes a terminal audit event before returning, reusing the
+  operation's `OperationId`. Verify exactly one terminal outcome per
+  started/attempted OperationId (no duplicates, no gaps), trust/integrity/
+  ownership/certificate/lease failures each produce a terminal `failed` (or
+  pre-existing `recovery_required`), pre-existing success/rollback-success
+  terminals are unchanged, and no path writes a false `completed` over
+  `recovery_required`.
+- **L-4**: `TestOnlyTrustFixture` was retained rather than removed. Verify
+  the normal entry point (`Invoke-RmsSupportAgentLifecycle` via
+  `Get-RmsSupportAgentDeploymentContract`) truly cannot set, expose, or
+  reach this property via any parameter/env var/config key, and that the
+  new negative tests actually exercise that claim.
 
 ## Constraints
 
-- Do not touch the accepted trust-boundary design (ADR-0027): canonical
+- Review only. Do not edit files, run `git commit`/`git push`, merge the PR,
+  or mark it ready for review/auto-merge.
+- Do not reopen or re-litigate the ADR-0027 trust boundary itself (canonical
   ProgramData trust path, mandatory distinct signer pins, immutable startup
-  snapshot, metadata-only OpenAPI isolation must remain exactly as they are.
-- Do not add configuration/environment/API surface for trust path selection.
-- Stay within `pos/` and `scripts/` — no backend/frontend changes expected.
-- If any item turns out to require Production/PKI/fleet evidence to close,
-  stop on that item and record it back into `.ai/STATE.md` external gates
-  instead of guessing.
+  snapshot, metadata-only OpenAPI isolation) — only confirm this diff leaves
+  it intact. If you find it does not, that is a finding, not a design
+  discussion to resolve here.
+- Do not claim Production/fleet/PKI/customer readiness; that remains
+  out of scope per `.ai/STATE.md` external release gates.
 
-## Validation
+## Suggested approach
 
-Run for the changed scope first:
+1. Read `.ai/STATE.md` and `.ai/HISTORY.md` for the claimed closure summary.
+2. Read every changed line via `git diff main...fix/pos-agent-deferred-hardening`
+   (or the PR diff): `AgentPackageVerifier.cs`, `AgentPackageLifecycle.cs`,
+   the three touched test files under `pos/tests/`,
+   `scripts/PosSupportAgentDeployment.psm1`, and
+   `scripts/tests/PosSupportAgentRollbackRecovery.Tests.ps1`.
+3. For each of L-1 through L-4, independently confirm the claim (grep for
+   other call sites, trace control flow, re-derive reachability) rather
+   than trusting the summary.
+4. Re-run validation and confirm the reported counts below still hold.
+5. Regression-check adjacent accepted controls: canonical trust path
+   exclusivity, dual mandatory signer pins, immutable snapshot binding, no
+   synthetic OpenAPI trust, rollback/recovery checkpoint integrity,
+   H-1/H-2/H-3, certificate prerequisite boundary.
+
+## Validation to reproduce
 
 ```
+git fetch && git checkout fix/pos-agent-deferred-hardening
+$env:PosAgentSecurity__SupportHubOrigin = 'https://support-hub.integration.test:4443'
 dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --nologo -warnaserror
 dotnet test pos/RmsSupportHub.Pos.slnx -c Release --no-build --nologo
 .\scripts\test-powershell-quality.ps1
 Invoke-Pester -Path .\scripts\tests
 python .ai/scripts/context.py
 python .ai/scripts/check_memory.py
-git diff --check
 ```
 
-Run `.\scripts\build.ps1` only if the change footprint grows beyond `pos/`
-and `scripts/`.
-
-## Delivery
-
-New branch off `main` (e.g. `fix/pos-agent-deferred-hardening`). Open a PR
-titled `fix(pos): close deferred L-1 through L-4 hardening items` with a
-summary of which items were closed, which were left as documented no-ops,
-and exact validation counts.
+Expected (implementer-reported, verify independently): POS 420 passed/0
+failed (Domain 12, Application 82, Infrastructure 155, Agent integration
+171); PowerShell quality 29 files clean; Pester 172 passed/0 failed.
 
 ## Return
 
 ### Result
-### L-1 / L-2 / L-3 / L-4 — outcome and evidence for each
+Critical/High/Medium/Low counts and overall accept/request-changes verdict.
+### L-1 / L-2 / L-3 / L-4
+Per item: confirmed closed, closed with caveats, or not closed — with
+concrete evidence (file:line).
+### Regression check
+Confirmation (or findings) on each adjacent accepted control listed above.
 ### Validation
-Exact counts (POS Domain/Application/Infrastructure/Agent integration/total,
-PowerShell quality, Pester, memory, diff).
-### Git
-Branch, HEAD, PR (if opened).
+Commands run and results, with any discrepancy from the reported counts.
 ### Remaining
+Findings requiring a fix, and anything still open outside this diff's scope.
