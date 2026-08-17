@@ -1,108 +1,66 @@
 # Current Project State
 
 - **Updated:** 2026-08-17
-- **Active branch at last session:** `fix/pos-agent-deferred-hardening`,
-  based on `main` at PR #21's merge head `548ff98`. Not yet merged; open
-  for independent review (see Deferred hardening section below).
+- **Active branch:** `main` (PR #22 merged; POS Agent deferred hardening closed).
 - **Status:** Production-capable Agent package trust/lifecycle implementation
-  (Slice C, ADR-0026/ADR-0027) is complete in scope and merged via PR #21.
-  The four Low items PR #21 deferred (L-1 through L-4) are now closed in a
-  follow-up branch/PR, pending independent Opus 5 HIGH review. External
-  Production, PKI, fleet, and customer evidence remains open (see External
-  release gates). This closure does not change the ADR-0027 trust boundary
-  or claim Production/fleet readiness.
-- **Next task:** see `TASK.md` for the next executable session (independent
-  review of the L-1 through L-4 closure).
+  (Slice C, ADR-0026/ADR-0027) and deferred hardening (L-1 through L-4) are
+  complete and merged to `main` via PR #21 and PR #22. PR #22 was accepted
+  by Claude Opus 5 HIGH (0 Crit/0 High/0 Med/3 Low) and authorized by GPT-5.6 Sol.
+  External Production, PKI, fleet, and customer gates remain open (see External
+  release gates).
+- **Next task:** see `TASK.md` for the next executable session (Post-Slice C
+  Programme Architecture & Staging Planning).
 
-## PR #21 acceptance and merge
+## PR #22 acceptance and merge
 
-- Claude Opus 5 HIGH completed the final independent security review of PR #21
-  at head `21256c9d` (base `main` `02d6e1f6`): Critical 0, High 0, Medium 0.
-  Code/security accepted.
-- GPT-5.6 Sol accepted that review and authorized merge; repository merge is
-  not Production rollout approval (gated on external items below).
-- Required CI (POS OpenAPI/Angular contracts, POS Windows build/Infra tests,
-  portable projects, WinUI publish, PowerShell quality, Agent security
-  foundation) verified green on the accepted head before merge.
-
-## Deferred non-blocking hardening (Low, from Opus review) — closure status
-
-Closure evidence is in branch `fix/pos-agent-deferred-hardening` (unmerged),
-pending independent Opus 5 HIGH review per the current `TASK.md`.
-
-- **L-1 (Closed):** removed the dead parameterless
-  `MachineCertificatePackageSignatureVerifier` constructor (deferred trust
-  reload) and its sole caller, the parameterless
-  `WindowsAgentPackageInstallationPlatform` constructor. Added tests proving
-  no public constructor can independently reload machine trust, and that
-  the shipped verifier stays bound to the immutable startup snapshot even
-  if `package-trust.json` is rewritten after startup.
-- **L-2 (Closed, no code change):** confirmed metadata-only OpenAPI
-  composition has no trust/lifecycle authority and never reads
-  `PosAgent:ReleaseChannel`/`PosAgent:TrustConfigurationPath` — those keys
-  appear only in the normal composition branch, and
-  `AddMetadataOnlyLifecycleGuards` takes no `IConfiguration` parameter.
-  Added regression tests instead of changing behavior.
-- **L-3 (Closed):** added a terminal audit event (same `OperationId`) before
-  every early-return path in `Invoke-RmsSupportAgentLifecycle` that
-  previously lacked one (checkpoint, trust-rejected, not-installed,
-  integrity, ownership, service-ownership, version-mismatch, certificate,
-  and lease-busy paths). 10 new Pester tests prove one terminal outcome per
-  OperationId; existing success/rollback terminals unchanged.
-- **L-4 (Intentionally retained, with evidence):** confirmed
-  `TestOnlyTrustFixture` is read only inside the non-exported
-  `Get-RmsSupportAgentMachineTrustConfiguration` and set only via Pester
-  `InModuleScope`; the normal contract-builder
-  `Get-RmsSupportAgentDeploymentContract` never sets it. Retained (needed
-  for trust unit tests without touching real `%ProgramData%`); added 3
-  negative tests proving the normal entry point can't reach it.
+- Claude Opus 5 HIGH completed independent security review of PR #22: Critical 0,
+  High 0, Medium 0, Low 3. Decision: ACCEPTED / APPROVE MERGE.
+- GPT-5.6 Sol accepted that review and authorized merge. PR #22 merged to `main`.
+- L-1 through L-4 hardening results:
+  - **L-1 (Closed):** Removed dead parameterless constructors in
+    `MachineCertificatePackageSignatureVerifier` and
+    `WindowsAgentPackageInstallationPlatform`. Shipped verifier stays bound to
+    immutable startup snapshot.
+  - **L-2 (Closed):** Proved metadata-only OpenAPI composition has no trust
+    authority and ignores obsolete config keys.
+  - **L-3 (Closed with accepted caveat):** Terminal audit events added to all
+    early-return paths under existing `OperationId`.
+  - **L-4 (Safely retained):** Proved normal lifecycle cannot reach test-only
+    `TestOnlyTrustFixture`; negative tests added.
+- Non-blocking backlog debt (Low findings from Opus review, not merge blockers):
+  - **LOW-1:** Audit event asymmetry on unresolved-checkpoint path
+    (`recovery_required` vs `recovery_required` + `failed`).
+  - **LOW-2:** Terminal-outcome terminology in Pester test helper vs accepted
+    timeline event semantics.
+  - **LOW-3:** Six newly audited early-return paths lack dedicated Pester unit
+    tests (coverage debt only).
 
 ## Durable implementation facts
 
-- Sole normal C# package-trust authority is exactly
+- Sole normal C# package-trust authority is
   `%ProgramData%\DBS\RmsSupportAgent\Trust\package-trust.json`, non-configurable
-  from any config/env/CLI/API/browser input; deployment mode (from the same
-  file) selects the mandatory, distinct, 40-hex Production/Testing signer pins
-  in both C# and PowerShell. OpenAPI generation uses a metadata-only host with
-  no trust/lifecycle authority; normal startup without canonical trust fails
-  closed.
-- Rollback/recovery resolves target identity from the durable checkpoint's
-  `PreviousVersion`; retained slots hold only a signed manifest+archive,
-  always re-extracted and re-verified before activation, and are health-gated
-  before success. Explicit rollback preserves the current install into a
-  bounded `recovery/` slot first. Trust-control files and their full ancestor
-  path are ACL/ownership-verified before any sensitive value is consumed.
-- Permanent product/SCM identity is `RmsSupportAgent` (`LocalSystem`); typed
-  Windows lifecycle uses one machine-wide mutation lease, fixed ACL roots,
-  atomic checkpoints, and requires both `/health/live` and `/health/ready`
-  over HTTPS for terminal activation. Certificate prerequisite is read-only,
-  requiring the exact `rms-pos-agent.localhost` SAN, non-exportable
-  machine-key CNG storage, and actual LocalSystem private-key-file evidence.
-- Package publication (`scripts/publish-rms-support-agent-package.ps1`) signs
-  a deterministic envelope with a pinned `Cert:\LocalMachine\My` Code Signing
-  certificate; no private key is ever exported.
+  from config/env/CLI/API/browser. Mandatory distinct 40-hex Production/Testing
+  signer pins in C# and PowerShell.
+- OpenAPI host is metadata-only with no trust/lifecycle authority; normal startup
+  without canonical trust fails closed.
+- Rollback/recovery resolves target identity from checkpoint `PreviousVersion`;
+  retained slots hold signed manifest+archive only, re-extracted and
+  re-verified before activation, health-gated before success. Explicit rollback
+  preserves current install to `recovery/`. Security-control files and ancestors
+  are ACL/ownership-verified.
+- SCM identity is `RmsSupportAgent` (`LocalSystem`); typed Windows lifecycle uses
+  one mutation lease, fixed ACL roots, atomic checkpoints, HTTPS `/health/live`
+  and `/health/ready` gates. Certificate prerequisite requires exact
+  `rms-pos-agent.localhost` SAN, non-exportable CNG machine key, and LocalSystem
+  private key ACL evidence.
 
-## Validation evidence
+## Validation baseline
 
-- PR #21 final head (historical baseline): POS 410 passed (Domain 12,
-  Application 82, Infrastructure 153, Agent integration 163); PowerShell
-  Pester 159 passed/0 failed; backend 194 passed; `.\scripts\build.ps1` and
-  frontend build passed; 0 warnings/errors throughout.
-- L-1 through L-4 hardening pass (branch head, footprint bounded to `pos/`
-  and `scripts/`, 7 files — broad `.\scripts\build.ps1` not re-run since
-  nothing outside those paths changed): POS 420 passed/0 failed (Domain 12,
-  Application 82, Infrastructure 155 [+2 L-1], Agent integration 171 [+2
-  L-1, +6 L-2]); PowerShell Pester 172 passed/0 failed (+13: 10 L-3 + 3 L-4
-  in `PosSupportAgentRollbackRecovery.Tests.ps1`); `context.py`/
-  `check_memory.py`/`git diff --check` all clean.
-
-## Runtime and delivery gates
-
-- No Production, customer, RMS, Main Server, database, registry, certificate
-  store, SCM, browser policy, or live package activation mutation was executed.
-- No private key was exported or committed. A real representative-machine
-  activation still requires separately authorized Testing evidence followed by
-  independent Production/PKI/fleet/customer review.
+- Merged `main` validation: POS 420 passed/0 failed (Domain 12, Application 82,
+  Infrastructure 155, Agent integration 171); PowerShell quality 29 files clean;
+  Pester 172 passed/0 failed; Backend 194 passed/0 failed; `context.py` and
+  `check_memory.py` clean.
+- All six CI workflows passed on PR #22 head `1c401b409c0f986336a9a676d4c95fd79bf0c7a6`.
 
 ## External release gates (unresolved, outside repository scope)
 
@@ -113,8 +71,6 @@ contention evidence; managed Chrome/Edge and BackConnectionHostNames policy
 evidence; fleet deployment/enrollment plan; customer/environment approval;
 authorized Production execution window.
 
-Repository merge of PR #21 does not authorize Production signer installation,
-enterprise PKI changes, certificate-store mutation, SCM Agent activation on
-customer machines, fleet browser-policy deployment, Production package
-install/upgrade, RMS service changes, or Main Server/customer environment
-mutation. Those remain separate evidence/approval gates.
+Repository merge does not authorize Production signer installation, PKI
+mutation, customer SCM activation, fleet browser-policy deployment, or RMS/
+Main Server live mutation.
