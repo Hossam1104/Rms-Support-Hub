@@ -124,7 +124,7 @@ finally {
         # overload. The packaged API has no child process, so Kill() is the
         # precise and portable cleanup operation here.
         $process.Kill()
-        $process.WaitForExit(5000)
+        [void]$process.WaitForExit(5000)
       }
     } catch { }
     $process.Dispose()

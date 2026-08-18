@@ -76,7 +76,7 @@ jobs:
       - name: Run full frontend tests
         shell: pwsh
         working-directory: frontend
-        run: npm test -- --watch=false
+        run: npx ng test --watch=false --progress=false
 
       - name: Build frontend production assets
         shell: pwsh
