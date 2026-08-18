@@ -60,8 +60,9 @@ try {
   $badConfigurationPath = Join-Path $badPackageRoot 'appsettings.json'
   $badConfiguration = Get-Content -Raw -LiteralPath $badConfigurationPath | ConvertFrom-Json
   $badConfiguration.ModuleEndpoints.GhcProduction = 'https://production.example.invalid/api'
-  $badConfiguration.SupportHub.Environments.ghc_ecommerce.'GHC Production'.Enabled = $true
-  $badConfiguration.SupportHub.Environments.ghc_ecommerce.'GHC Production'.DatabaseOverride = 'ProductionDb'
+  $productionRegistration = $badConfiguration.SupportHub.Environments.ghc_ecommerce.'GHC Production'
+  $productionRegistration.Enabled = $true
+  $productionRegistration | Add-Member -NotePropertyName DatabaseOverride -NotePropertyValue 'ProductionDb' -Force
   [System.IO.File]::WriteAllText(
     $badConfigurationPath,
     (($badConfiguration | ConvertTo-Json -Depth 20) + "`n"),
