@@ -35,7 +35,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: "10.0.302"
+          dotnet-version: "10.0.400"
 
       - name: Restore portable projects
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: "10.0.302"
+          dotnet-version: "10.0.400"
 
       - name: Restore POS solution
         run: dotnet restore pos/RmsSupportHub.Pos.slnx --nologo
@@ -93,7 +93,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: "10.0.302"
+          dotnet-version: "10.0.400"
 
       - name: Restore Agent foundation
         run: dotnet restore pos/tests/RmsSupportHub.Pos.Agent.IntegrationTests/RmsSupportHub.Pos.Agent.IntegrationTests.csproj --nologo
@@ -118,7 +118,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: "10.0.302"
+          dotnet-version: "10.0.400"
 
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -190,7 +190,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: "10.0.302"
+          dotnet-version: "10.0.400"
 
       - name: Restore WinUI project
         run: dotnet restore pos/src/PosAdminTool.WinUI/PosAdminTool.WinUI.csproj --nologo

@@ -49,6 +49,25 @@ public sealed class DeploymentTierHostStartupTests
         Assert.Equal(DeploymentTier.Production, policy.DeploymentTier);
     }
 
+    /// <summary>N-2 regression: remove the complete application configuration
+    /// source so the value cannot be inherited from appsettings.json. The
+    /// bound options object must retain its safe Testing property default.
+    /// </summary>
+    [Fact]
+    public async Task OmittedDeploymentTier_DefaultsToTesting()
+    {
+        using var factory = new OmittedDeploymentTierWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var policy = factory.Services.GetRequiredService<IEnvironmentPolicy>();
+        Assert.Equal(DeploymentTier.Testing, policy.DeploymentTier);
+
+        var response = await client.GetAsync("/api/health/ready");
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"deploymentTier\":\"Testing\"", body);
+    }
+
     private static string CollectMessages(Exception exception)
     {
         var messages = new List<string>();
@@ -75,6 +94,23 @@ public sealed class DeploymentTierHostStartupTests
                     ["ConnectionStrings:UpcEcommerceTest"] =
                         "Server=127.0.0.1;Database=RmsSupportHubTest;Integrated Security=True;TrustServerCertificate=True;"
                 }));
+        }
+    }
+
+    private sealed class OmittedDeploymentTierWebApplicationFactory : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.ConfigureAppConfiguration((_, configuration) =>
+            {
+                configuration.Sources.Clear();
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["SupportHub:AllowCustomEndpoints"] = "false",
+                    ["SupportHub:HealthProbe:Enabled"] = "false",
+                    ["SupportHub:HealthProbe:TimeoutSeconds"] = "3"
+                });
+            });
         }
     }
 }

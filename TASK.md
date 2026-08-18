@@ -1,34 +1,46 @@
-# GPT-5.6 LUNA MAX HIGH — P0-B Release Candidate Pipeline
-MODEL: GPT-5.6 Luna Max HIGH
-ROLE: Implement
-BRANCH: `feat/staging-release-candidate-pipeline`; BASE: `main`
-PROGRAMME: Staging-Safe Release Candidate v1; MILESTONE: P0-B Release Candidate Pipeline
+# CLAUDE SONNET 5 HIGH
+## P0-C — Controlled Testing/Staging IIS Deployment and Read-Only Acceptance Evidence
 
-## Objective
-Implement a deterministic, offline-verifiable Testing/Staging IIS Release Candidate pipeline and integrated Support Hub CI.
+MODEL: Claude Sonnet 5 HIGH | ROLE: Implement / Operational Verification
+PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-C controlled deployment and read-only acceptance
+Repository: `D:\AI Tools\DBS\Rms-Support-Hub` | Branch: `main` | Base: Merged PR #24 on `main`
 
-## Requirements
-1. Add integrated Support Hub CI workflow for `backend/**` and `frontend/**` running backend tests/build, frontend tests, production frontend build, Riyal asset verifier, and required quality checks.
-2. Produce deterministic Testing/Staging IIS Release Candidate package.
-3. Finalize build identity using source commit and Testing environment.
-4. Add release manifest including schema version, source commit, build ID, configuration schema identity, and runtime prerequisites.
-5. Produce file-integrity manifest/hashes and ZIP SHA-256 sidecar.
-6. Unpack generated ZIP into a fresh directory and verify package integrity.
-7. Add packaged-runtime smoke testing: application starts, `/`, API liveness/health, module catalogue, SPA fallback/deep link, build identity, static assets.
-8. Establish offline/runtime independence: remove public Google Fonts/runtime CDN dependencies, bundle required local assets, scan HTML/CSS/JS for unexpected public runtime URLs.
-9. Preserve approved internal RMS gateway dependencies as explicit configured dependencies rather than treating them as public Internet dependencies.
-10. Ensure package contains backend publish output, Angular assets under `wwwroot`, `web.config`, build identity, release manifest, and deployment/config schema documentation.
-11. Ensure package excludes secrets, `.env`, certificates/private keys, runtime `var`, local development state, source maps (unless approved), and generated junk.
-12. Add configuration template using names/placeholders only.
-13. Add deployment, rollback, and smoke instructions (DO NOT deploy IIS).
-14. Account for framework-dependent .NET 10 Hosting Bundle prerequisite and writable `var/drafts` ACL/runtime storage requirement.
-15. Add automated regression proving omitted `SupportHub:DeploymentTier` defaults to Testing (N-2).
-16. N-1 (redundant Program.cs fallback test) may be cleaned up only if trivial and naturally adjacent; do not expand scope.
-17. P0-A L-1/L-2/L-3 remain deferred unless directly touched.
-18. Preserve P0-A: server-owned tier, Production denial in Testing, no browser raw connection strings, no arbitrary endpoint probes, no browser endpoint redirects.
+### 1. MANDATORY APPROVAL GATE
+NO EXTERNAL WRITE OR DEPLOYMENT MAY OCCUR UNTIL THE USER PROVIDES FRESH EXPLICIT APPROVAL FOR THE SPECIFIC TESTING/STAGING TARGET. TASK.md existing DOES NOT authorize deployment.
+Before requesting approval, P0-C must prepare/display an approval packet containing:
+1. Environment: Testing/Staging only.
+2. Target host/server: Exact approved IIS host.
+3. IIS target: Site / application / application pool / destination path.
+4. Artifact: Exact merged-main source SHA, ZIP SHA-256, Build ID, release-manifest identity.
+5. Deployment method: Exact copy / deploy mechanism.
+6. Configuration: Server-owned Testing config source, placeholders/secrets injection approach, no committed secrets.
+7. Expected effects: Files, config, site, and app-pool changes.
+8. Rollback: Exact backup / restore procedure.
+9. Runtime prerequisites: .NET 10 Hosting Bundle, ASP.NET Core Module v2, IIS app pool, writable `var/drafts` ACL.
+10. Post-deployment probes: Read-only probes only.
+If explicit target approval is absent: prepare the approval packet -> STOP -> ask owner for explicit approval. DO NOT DEPLOY.
 
-## Guardrails
-- Do NOT deploy IIS, contact Production, mutate Testing data, send/cancel/resend orders, change customer environments, begin OMS/Call Center implementation, or reopen POS architecture.
+### 2. RELEASE CANDIDATE REQUIREMENTS
+- Regenerate/verify RC from MERGED MAIN (do not merely reuse pre-merge PR artifact).
+- `sourceCommit` in `release-manifest.json` must equal the merged-main commit being deployed.
+- Verify ZIP SHA-256 sidecar, verify `file-integrity.sha256`, and perform fresh-extract verification before deployment.
+- Verify sanitized Testing package configuration (`appsettings.json` matches Testing template; disabled registrations; no concrete topology).
+- Deploy only with externally supplied authorized Testing configuration. Confirm no Production topology in packaged defaults.
 
-## Execution Sequence
-Implementation → focused validation → full validation → artifact verification → CI exact-head verification → draft PR → Opus independent review → STOP.
+### 3. READ-ONLY ACCEPTANCE PROBES
+Post-deploy acceptance may initially include ONLY:
+- GET `/`, GET `/api/health/live`, GET `/api/health/ready`, GET `/api/modules`, GET `/build-identity.json`, SPA deep-link, and local static assets.
+Confirm:
+- `DeploymentTier` = `Testing`, served build identity = deployed manifest, local health = expected, `var/drafts` writable, static assets local, SPA fallback works.
+
+### 4. STRICT SAFETY BOUNDARIES
+Do NOT automatically perform: order send/cancel/resend, database write, customer data mutation, Production request, Main Server mutation, RMS service control, certificate mutation, or fleet rollout.
+Any RMS gateway/API/DB read-only probe beyond local Hub health requires separate explicit authorization if contacting a customer/shared environment.
+
+### 5. EVIDENCE COLLECTION
+Collect durable evidence: deployment timestamp, target environment, source SHA, Build ID, ZIP hash, HTTP status evidence, rollback checkpoint, sanitized config evidence.
+Never commit customer IPs, credentials, secrets, connection strings, or patient/insurance/order payload data.
+
+### 6. READINESS DISTINCTIONS
+P0-C must clearly distinguish: REPOSITORY READY / TESTING DEPLOYED / TESTING ACCEPTED / PRODUCTION READY.
+Production readiness must remain false unless all external gates are closed.

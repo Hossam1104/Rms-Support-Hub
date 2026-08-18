@@ -16,7 +16,7 @@ import { RiyalComponent, UiCardComponent, UiFieldComponent, UiInputComponent } f
           <ui-input inputId="delivery-phone" type="tel" [value]="delivery.deliveryPhoneNumber || ''" (valueChange)="onFieldChange('deliveryPhoneNumber', $event)"></ui-input>
         </ui-field>
         <ui-field label="Delivery Location URL" forId="delivery-location-url">
-          <ui-input inputId="delivery-location-url" type="url" placeholder="https://maps.google.com/..." [value]="delivery.deliveryLocationUrl || ''" (valueChange)="onFieldChange('deliveryLocationUrl', $event)"></ui-input>
+          <ui-input inputId="delivery-location-url" type="url" placeholder="Paste a map link (optional)" [value]="delivery.deliveryLocationUrl || ''" (valueChange)="onFieldChange('deliveryLocationUrl', $event)"></ui-input>
         </ui-field>
         <ui-field label="Delivery Fees" forId="delivery-fees">
           <ui-input inputId="delivery-fees" type="number" step="0.01" [value]="delivery.deliveryFees || 0" (valueChange)="onFieldChange('deliveryFees', $event)">
