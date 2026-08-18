@@ -1,94 +1,119 @@
 # CLAUDE OPUS 5 HIGH
-## Bounded Re-Review — P0-B Release Pipeline Remediation
+## Final Bounded Re-Review — P0-B M-1 Closure
+
 MODEL: Claude Opus 5 HIGH
 ROLE: Review only
 PROGRAMME: Staging-Safe Release Candidate v1
-MILESTONE: P0-B remediation re-review
+MILESTONE: P0-B final M-1 closure re-review
+
 Repository: `D:\AI Tools\DBS\Rms-Support-Hub`
 Branch: `feat/staging-release-candidate-pipeline`
 PR: `https://github.com/Hossam1104/Rms-Support-Hub/pull/24`
 Base: `main@ae4712cd0280c6f5b48797233f6574bec9ccea88`
+
+LAST REVIEWED: `ccdaa8db05f3b1e8db67bce08d5bb4911e55660b`
+COMPARE THROUGH: FINAL NEW HEAD (see `.ai/STATE.md` for the exact SHA recorded
+after this session's delivery)
+
 ## Contract
 
-Independently review the current branch, exact PR head, task diff, `.ai/STATE.md`,
-`.ai/HISTORY.md`, generated package evidence, and repository tests. Do not use
-chat history as evidence. This is review only: do not edit files, commit, push,
-merge, deploy IIS, contact Production/RMS/Main Server/customer systems or
-databases, send/cancel/resend orders, mutate Testing data, or start P0-C/OMS/
-Call Center/POS architecture work. Do not reopen P0-A L-1/L-2/L-3 unless a
-  direct regression is proven.
+Independently review the current branch, exact PR head, task diff,
+`.ai/STATE.md`, `.ai/HISTORY.md`, generated package evidence, and repository
+tests. Do not use chat history as evidence. This is review only: do not edit
+files, commit, push, merge, deploy IIS, contact Production/RMS/Main
+Server/customer systems or databases, send/cancel/resend orders, mutate
+Testing data, or start P0-C/OMS/Call Center/POS architecture work. Do not
+reopen P0-A L-1/L-2/L-3 unless a direct regression is proven.
+
 ## Objective
 
-Decide whether PR #24 is acceptable for merge as a deterministic, offline-
-verifiable Testing/Staging IIS release-candidate pipeline. Separate repository
-proof from unavailable live-environment evidence. Challenge claims with concrete
-  file/line, artifact, test, and exact-head CI evidence.
+Decide whether PR #24 is acceptable for merge now that M-1 has been
+remediated and an unreviewed SDK toolchain change has been reconciled.
+Challenge claims with concrete file/line, artifact, test, and exact-head CI
+evidence.
+
 ## Required review
 
-1. H-1 identity: confirm pull-request checkout uses
-   `github.event.pull_request.head.sha`, push/main uses `github.sha`, the
-   checked-out HEAD equals the intended SHA, and the identity assertion compares
-   Git HEAD, `release-manifest.json.sourceCommit`, and
-   `wwwroot/build-identity.json.commit`. Reject any `refs/pull/*/merge` artifact
-   identity.
-2. M-1 determinism: confirm exact .NET/Node/npm pins, recorded manifest
-   `dotnetSdkVersion`, `nodeVersion`, and `npmVersion`, accurate same-source+
-   same-toolchain reproducibility scope, deterministic timestamp/hash/input/ZIP
-   behavior, and two same-toolchain byte-identical artifacts.
-3. M-2 offline gate: inspect and run the real verifier. It must scan emitted
-   HTML/HTM/CSS/JS/MJS/JSON/SVG and any emitted web-manifest/XML text assets,
-   reject absolute and resource-bearing protocol-relative external targets,
-   reject CDN/fonts, and allow only exact documented framework metadata and the
-   exact approved internal POS origins. Prove negative cases for external HTML,
-   CSS, SVG, JSON, CDN/font, and an executable URL on an inertly allowed host.
-4. M-3 package safety: confirm root `appsettings.json` is an exact sanitized
-   Testing template copy; DeploymentTier is Testing; custom endpoints are off;
-   every Production registration is disabled; Production database overrides,
-   real endpoint topology, secrets, and customer Testing values are absent.
-   Confirm the package verifier and artifact safety regression reject prohibited
-   mutations, while authorized Testing configuration remains external.
-5. Package/integrity: confirm ZIP root shape, path safety, sidecar, required
-   backend/frontend/web.config/manifest/schema/docs files, source/build identity,
-   toolchain manifest, every integrity hash, fresh extraction, exclusions, and
-   no `.env`, local/development settings, certificates/keys, maps/PDBs,
-   `node_modules`, `.angular`, `bin`, `obj`, or runtime `var`.
-6. Packaged smoke: when evidence is available, inspect or rerun the fresh-
-   extraction smoke for startup, `/`, live/ready with writable `var/drafts`,
-   `/api/modules`, SPA deep link, served identity, hashed main JS, and local
-   assets. Confirm it does not contact RMS gateways or databases.
-7. Safety boundary: confirm Testing remains server-owned, omitted tier defaults
-   to Testing, Production is denied under Testing, the browser exposes no raw
-   connection strings/probe URLs/custom endpoint authority, capability truth is
-   used, and no POS architecture or P0-A scope was expanded.
-8. CI/delivery: inspect the workflow for actual paths, pinned actions/toolchains,
-   Release tests/build, frontend tests/production build, Riyal, PowerShell,
-   memory/diff, RC generation, fresh verification, identity assertion, offline
-   negatives, safety test, and smoke. Check the exact final PR head and confirm
-   existing POS CI was not disturbed. Do not require artifact retention for P0-B.
-9. Operations boundary: confirm deployment/rollback/smoke docs state that this
-   task did not deploy IIS, require the .NET 10 Hosting Bundle, IIS module/pool,
-   server-owned configuration, and `var/drafts` ACL, and make no Production or
-   live customer/RMS acceptance claim.
-10. L-1/L-2/L-3/L-4: confirm durable state is reconciled; dead/overbroad
-    allowlist entries and inaccurate rationale are closed; PowerShell dead
-  `$LASTEXITCODE` checks are closed or explicitly deferred with evidence.
+1. **SDK drift resolution.** Confirm commit `cb60d7f` ("ci(sdk): update SDK
+   version to 10.0.400 and enable latestPatch rollForward") was reverted at
+   `9af49d6`, and that a later commit re-applied a .NET SDK 10.0.400 pin only
+   after explicit owner direction (recorded in `.ai/STATE.md` and `.ai/HISTORY.md`).
+   Confirm no other hidden or partial SDK/toolchain upgrade remains: `global.json`
+   must read `"version": "10.0.400"`, `"rollForward": "disable"`,
+   `"allowPrerelease": false`; `.github/workflows/support-hub-ci.yml` and every
+   `setup-dotnet` step in `.github/workflows/pos-ci.yml` must install `10.0.400`;
+   `scripts/build-release-candidate.ps1` and `scripts/verify-release-candidate.ps1`
+   must set `$ExpectedDotnetSdkVersion = '10.0.400'`. Confirm the literal string
+   `10.0.302` no longer appears anywhere in the repository.
+2. **M-1 closure — reproducibility contract.** Confirm the old unconditional
+   claim ("Byte identity is guaranteed for the same source commit, recorded
+   toolchain, and pipeline logic.") is gone, and that
+   `scripts/build-release-candidate.ps1` (manifest writer),
+   `scripts/verify-release-candidate.ps1` (manifest verifier — must reject a
+   manifest whose `reproducibility` field does not match exactly), and
+   `docs/release/DEPLOYMENT.md` all state the identical narrowed contract:
+   byte identity is verified for repeated builds from the same source commit
+   using the recorded toolchain in an equivalent build environment, including
+   checkout byte materialization; cross-environment byte identity is not
+   guaranteed. Confirm no conflicting reproducibility claim exists elsewhere
+   (builder says A / verifier expects B / docs claim C is not acceptable).
+   Confirm the manifest's `dotnetSdkVersion`/`nodeVersion`/`npmVersion` fields
+   and `frontend/scripts/build-identity.mjs` were not altered beyond the SDK
+   version literal.
+3. **Same-environment determinism proof.** Confirm two release candidates
+   generated from the same final head, in the same local environment, using
+   the pinned 10.0.400/24.18.0/12.0.1 toolchain, produce identical ZIP
+   SHA-256, identical Build ID, identical `release-manifest.json`
+   reproducibility strings, and byte-identical `file-integrity.sha256`.
+   Confirm cross-environment byte equality (e.g., against a prior GitHub CI
+   artifact hash) is explicitly not claimed or required.
+4. **H-1 identity** remains closed: pull-request checkout uses
+   `github.event.pull_request.head.sha`, push/main uses `github.sha`, and the
+   identity assertion compares Git HEAD, `release-manifest.json.sourceCommit`,
+   and `wwwroot/build-identity.json.commit`.
+5. **M-2 offline gate** and **M-3 package safety** remain closed: rerun or
+   inspect the real verifier and package-safety regression; no regression
+   introduced by the SDK or contract-wording changes.
+6. **CI/delivery.** Confirm the exact final PR head passed both Support Hub CI
+   (backend/frontend tests, RC generation, fresh verification, identity
+   assertion, offline negatives, safety test, packaged smoke) and POS CI, and
+   that POS CI's SDK version bump did not disturb any other POS CI scope or
+   behavior.
+7. **Low findings.** Confirm L-4 (PowerShell `$LASTEXITCODE` checks),
+   L-5 (`docs/release/SMOKE.md` operator `PackageRoot` example), L-6 (offline
+   scanner `ws://`/`wss://` coverage), and L-7 (stale local publish evidence,
+   removed as hygiene this session) are explicitly recorded as non-blocking/
+   deferred, not silently dropped.
+8. **npm advisories.** Confirm `npm audit` (5 dev/build findings) vs.
+   `npm audit --omit=dev` (0 findings) remains accurately recorded, and no
+   dependency file was modified.
+9. **Operations/safety boundary.** Confirm no IIS deployment, Production/
+   customer mutation, RMS gateway probe, or order mutation occurred.
+
 ## Evidence commands
+
 ```powershell
 git status --short --branch
 git rev-parse HEAD
 git diff main...HEAD --check
 python .ai/scripts/context.py
 python .ai/scripts/check_memory.py
+Get-Content global.json
 Get-Content .github/workflows/support-hub-ci.yml
+Get-Content .github/workflows/pos-ci.yml
 Get-Content scripts/build-release-candidate.ps1
 Get-Content scripts/verify-release-candidate.ps1
-Get-Content scripts/verify-offline-runtime.ps1
-Get-Content scripts/smoke-test-release-candidate.ps1
+Get-Content docs/release/DEPLOYMENT.md
 ```
+
 If a final ZIP/sidecar/evidence set is unavailable, state exactly why; never
-call an unavailable check passed. Review only the task-related diff and tests.
+call an unavailable check passed. Review only the task-related diff and
+tests.
+
 ## Required output
+
 Return only:
+
 ### Result
 `APPROVE`, `REQUEST CHANGES`, or `BLOCKED`, with a concise reason.
 
@@ -96,23 +121,27 @@ Return only:
 Concrete Critical/High/Medium/Low findings with file/line evidence and
 criterion; explicitly state zero findings at empty severities.
 
+### SDK Toolchain
+Confirm 10.0.400 is consistently pinned repo-wide with no stale 10.0.302
+reference and no hidden further drift.
+
+### M-1
+CLOSED or OPEN, with the exact contract wording found in each of the three
+locations and whether they match.
+
 ### Determinism / Artifact
-Exact head, toolchain, reproducibility scope, identity, manifest, hash, sidecar,
-fresh extraction, package shape, and exclusion evidence.
-
-### Offline / Runtime Smoke
-Scanner coverage, exact allowances, negative tests, local assets, startup,
-health, catalogue, fallback, served identity, and unavailable evidence.
-
-### Testing / Safety
-N-2/default, Testing authority, Production denial, sanitized configuration,
-browser authority, and no-mutation evidence.
+Exact head, toolchain, reproducibility scope, identity, manifest, hash,
+sidecar, fresh extraction, package shape, and exclusion evidence.
 
 ### CI / Exact Head
 Reviewed commit, PR state, workflow source SHA, RC identity equality, check
-status, and stale or missing gates.
+status for both Support Hub CI and POS CI.
 
 ### Remaining
 Only unresolved P0-B findings, unavailable external evidence, and deferred
-external gates. Do not create implementation work. Stop after this bounded
-review; do not merge, deploy, or begin P0-C.
+external gates.
+
+### P0-B
+`ACCEPTED FOR MERGE` or `DO NOT MERGE`.
+
+No modifications. No commit. No push. No merge. No P0-C.

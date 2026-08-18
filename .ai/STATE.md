@@ -2,8 +2,8 @@
 
 - **Updated:** 2026-08-18
 - **Active branch:** `feat/staging-release-candidate-pipeline`, based on merged P0-A `main` baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`.
-- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. The bounded remediation is complete in implementation commits `6ec14dc`, `30d3339`, and `6ead799`; the current exact implementation/CI head is `9f98b021c679c892c7a0649a86996096acf10223`. Support Hub CI run `32141953842` and the existing POS CI run `32141953825` are green at that exact head. PR #24 remains open, draft, and unmerged, awaiting independent Opus re-review and Sol acceptance. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
-- **Next task:** hand the complete review-only Opus re-review prompt in `TASK.md` to the independent reviewer. Verify the PR metadata and exact head again before acceptance; do not merge, deploy, or begin P0-C.
+- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. A second bounded Opus re-review at `ccdaa8db05f3b1e8db67bce08d5bb4911e55660b` closed H-1, M-2, and M-3, leaving only M-1 (reproducibility contract scope) open and L-4 non-blocking. After that review, unreviewed commit `cb60d7f` drifted `global.json` to .NET SDK 10.0.400/`rollForward: latestPatch`, breaking exact-head CI (which still installed 10.0.302). This session reverted `cb60d7f` (`9af49d6`), then closed M-1 by narrowing the reproducibility claim to same-source/same-toolchain/equivalent-environment including checkout byte materialization, applied identically in `build-release-candidate.ps1`, `verify-release-candidate.ps1`, and `docs/release/DEPLOYMENT.md` (`f8a7af3`). The repository owner then explicitly directed the toolchain to move to .NET SDK 10.0.400 (the 10.0.302 SDK was removed from the workstation), superseding the revert: `global.json`, both CI workflows' `setup-dotnet` steps, and the `ExpectedDotnetSdkVersion` constants in both release-candidate scripts were re-pinned to 10.0.400 (`b6baecd`). 10.0.302 no longer appears anywhere in the repository. PR #24 remains open, draft, and unmerged, awaiting a further bounded Opus re-review and Sol acceptance. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
+- **Next task:** hand the complete review-only Opus re-review prompt in `TASK.md` to the independent reviewer. Verify the PR metadata, exact head, and the SDK 10.0.400 toolchain again before acceptance; do not merge, deploy, or begin P0-C.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
@@ -63,9 +63,49 @@
 - Exact implementation/CI head `9f98b021c679c892c7a0649a86996096acf10223`
   passed Support Hub CI end-to-end, including the explicit npm 12.0.1 pin, RC
   generation, fresh extraction, identity, sanitized-package safety, and
-  packaged smoke; all applicable POS CI jobs also passed at that same SHA. PR
-  #24 remains open, draft, and unmerged pending bounded Opus re-review and Sol
-  acceptance.
+  packaged smoke; all applicable POS CI jobs also passed at that same SHA.
+
+## P0-B final M-1 closure and SDK toolchain correction
+
+- **M-1 root cause:** the prior release manifest/verifier/docs reproducibility
+  statement ("byte identity is guaranteed for the same source commit,
+  recorded toolchain, and pipeline logic") was an unconditional claim. Git
+  checkout byte materialization (e.g., this workstation's `core.autocrlf`
+  converting LF blobs to CRLF) is also a build input the old wording ignored,
+  so same-source/same-toolchain builds are not guaranteed byte-identical
+  across differing checkout environments.
+- **Remediation:** the reproducibility statement was narrowed to "Byte
+  identity is verified for repeated builds from the same source commit using
+  the recorded toolchain in an equivalent build environment, including
+  checkout byte materialization; cross-environment byte identity is not
+  guaranteed," applied identically in `scripts/build-release-candidate.ps1`
+  (manifest writer), `scripts/verify-release-candidate.ps1` (manifest
+  verifier), and `docs/release/DEPLOYMENT.md`. The manifest's
+  `dotnetSdkVersion`/`nodeVersion`/`npmVersion` fields and the build-identity
+  hashing algorithm (`frontend/scripts/build-identity.mjs`) were not changed.
+- **SDK toolchain:** owner-directed departure from the Opus-reviewed 10.0.302
+  pin. The workstation's 10.0.302 SDK was removed and replaced with 10.0.400;
+  the repository now pins 10.0.400 everywhere: `global.json`
+  (`rollForward: disable`, exact pin), `.github/workflows/support-hub-ci.yml`,
+  `.github/workflows/pos-ci.yml` (5 `setup-dotnet` steps, since `global.json`
+  is repo-wide and POS CI would otherwise mismatch), and
+  `ExpectedDotnetSdkVersion` in both release-candidate scripts. No other POS
+  CI scope changed.
+- **Deferred, non-blocking backlog (unchanged, not chased this session):**
+  - P0-B L-4: PowerShell scripts carry `$LASTEXITCODE` checks that some
+    reviewers judged partially dead/fail-safe (31 occurrences across 12
+    files under `scripts/`); no behavior change proposed.
+  - P0-B L-5: `docs/release/SMOKE.md:32` operator example
+    (`-PackageRoot .\verification\RmsSupportHub-IIS`) may not match the
+    actual default extraction path used by current scripts.
+  - P0-B L-6: the offline URL scanner's negative-case coverage does not
+    include an explicit `ws://`/`wss://` case.
+  - P0-B L-7: stale local pre-remediation `publish/` extraction/ZIP evidence
+    from earlier same-day runs was removed as local hygiene (gitignored,
+    generated, not committed, not needed as evidence).
+- **npm advisories:** `npm audit` reports 5 findings (1 moderate, 4 high);
+  `npm audit --omit=dev` reports 0. All 5 are build/dev-tooling only, not
+  runtime/production. No dependency changes were made.
 
 ## External release gates (unresolved, outside repository scope)
 
