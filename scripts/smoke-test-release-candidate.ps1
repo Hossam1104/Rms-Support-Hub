@@ -41,8 +41,6 @@ Assert-True ($manifest.buildId -eq $identity.buildId) 'Build identity buildId do
 $baseUrl = "http://127.0.0.1:$Port"
 $logRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('rms-support-hub-smoke-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
-$stdoutPath = Join-Path $logRoot 'stdout.log'
-$stderrPath = Join-Path $logRoot 'stderr.log'
 $process = $null
 
 try {
@@ -52,21 +50,13 @@ try {
   $startInfo.WorkingDirectory = $PackageRoot
   $startInfo.UseShellExecute = $false
   $startInfo.CreateNoWindow = $true
-  $startInfo.RedirectStandardOutput = $true
-  $startInfo.RedirectStandardError = $true
   $startInfo.Environment['ASPNETCORE_ENVIRONMENT'] = 'Testing'
   $startInfo.Environment['ASPNETCORE_URLS'] = $baseUrl
   $startInfo.Environment['DOTNET_NOLOGO'] = '1'
 
   $process = [System.Diagnostics.Process]::new()
   $process.StartInfo = $startInfo
-  $stdout = [System.IO.StreamWriter]::new($stdoutPath, $false, [System.Text.UTF8Encoding]::new($false))
-  $stderr = [System.IO.StreamWriter]::new($stderrPath, $false, [System.Text.UTF8Encoding]::new($false))
-  $process.add_OutputDataReceived({ param($sender, $event) if ($null -ne $event.Data) { $stdout.WriteLine($event.Data); $stdout.Flush() } })
-  $process.add_ErrorDataReceived({ param($sender, $event) if ($null -ne $event.Data) { $stderr.WriteLine($event.Data); $stderr.Flush() } })
   Assert-True $process.Start() 'Could not start dotnet for packaged runtime smoke testing.'
-  $process.BeginOutputReadLine()
-  $process.BeginErrorReadLine()
 
   $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
   $live = $null
@@ -79,7 +69,8 @@ try {
       Start-Sleep -Milliseconds 250
     }
   }
-  Assert-True ($null -ne $live -and $live.StatusCode -eq 200) "Packaged API did not become live within $TimeoutSeconds seconds.`n$(Get-Content -Raw $stderrPath)"
+  $exitDetail = if ($process.HasExited) { " Process exited with code $($process.ExitCode)." } else { '' }
+  Assert-True ($null -ne $live -and $live.StatusCode -eq 200) "Packaged API did not become live within $TimeoutSeconds seconds.$exitDetail"
 
   $liveBody = $live.Content | ConvertFrom-Json
   Assert-True ($liveBody.status -eq 'healthy') 'API liveness response was not healthy.'
@@ -122,8 +113,6 @@ try {
 }
 catch {
   Write-Host $_.Exception.Message -ForegroundColor Red
-  if (Test-Path -LiteralPath $stdoutPath) { Write-Host (Get-Content -Raw $stdoutPath) }
-  if (Test-Path -LiteralPath $stderrPath) { Write-Host (Get-Content -Raw $stderrPath) }
   exit 1
 }
 finally {
@@ -140,7 +129,5 @@ finally {
     } catch { }
     $process.Dispose()
   }
-  if ($null -ne $stdout) { $stdout.Dispose() }
-  if ($null -ne $stderr) { $stderr.Dispose() }
   if (Test-Path -LiteralPath $logRoot) { Remove-Item -LiteralPath $logRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
