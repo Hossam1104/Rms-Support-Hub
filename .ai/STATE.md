@@ -2,8 +2,8 @@
 
 - **Updated:** 2026-08-18
 - **Active branch:** `feat/staging-release-candidate-pipeline`, based on merged P0-A `main` baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`.
-- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. The bounded remediation is implemented for draft PR #24; it remains open, draft, and unmerged. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
-- **Next task:** commit/push the remediation, validate the exact durable PR-head package and CI checks, then hand the review-only Opus re-review prompt in `TASK.md` to the independent reviewer.
+- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. The bounded remediation is complete in implementation commits `6ec14dc` and `30d3339`; PR #24 remains open, draft, and unmerged, awaiting exact-head CI and independent Opus re-review. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
+- **Next task:** push the implementation plus this state reconciliation, record the exact pushed PR head from Git/PR metadata, wait for Support Hub CI and POS CI at that head, then hand the review-only Opus re-review prompt in `TASK.md` to the independent reviewer.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
@@ -52,12 +52,14 @@
   exact documented framework metadata plus the exact approved internal POS
   origins; configured RMS gateway URLs remain explicit server-side
   dependencies.
-- Local evidence: backend Release 253/253 tests, frontend 362/362 tests in
-  59 files, Release build with 0 warnings/0 errors, production build, Riyal
-  verifier, broad `scripts/build.ps1`, 33-file PowerShell quality gate,
-  fresh-extraction integrity verification, repeated identical ZIP hash, and
-  packaged runtime smoke all passed. Exact final artifact identity is reported
-  from the synchronized final head.
+- Local evidence at implementation head `30d33395e5f279d883c9c9c2c4b9a90e27ea43dc`:
+  backend Release 253/253 tests and 0-warning/0-error build, frontend
+  362/362 tests in 59 files, production build, Riyal verifier, 37-file
+  PowerShell quality gate, context/memory/diff checks, offline negative cases,
+  two byte-identical RC ZIPs, fresh-extraction integrity verification,
+  package-safety rejection, and packaged runtime smoke all passed. The
+  repository `scripts/build.ps1` wrapper reached its tests but its implicit
+  restore hit this machine's inaccessible `C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config`; the equivalent pinned Release build with the user NuGet config passed. Exact pushed-head artifact evidence remains an external CI gate.
 
 ## External release gates (unresolved, outside repository scope)
 
