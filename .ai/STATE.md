@@ -1,14 +1,14 @@
 # Current Project State
 
 - **Updated:** 2026-08-18
-- **Active branch:** `feat/staging-environment-safety` (P0-A accepted and merge-authorized; PR #23; based on `f24e2fef1818f6aea3655fc7255dd894a4b53e71`).
-- **Status:** P0-A server-owned Testing/Staging environment authority is accepted for merge by GPT-5.6 Sol following Claude Opus 5 HIGH bounded re-review (0 Critical / 0 High / 0 Medium). M-1 is closed. P0-B is the next programme phase. No external deployment or customer/Production mutation was performed.
-- **Next task:** see `TASK.md` for the full `GPT-5.6 LUNA MAX HIGH` P0-B release candidate pipeline prompt.
+- **Active branch:** `main` at merged P0-A baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`; implementation branch for P0-B: `feat/staging-release-candidate-pipeline`.
+- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. M-1 is closed. P0-B deterministic Testing/Staging Release Candidate pipeline is the active programme phase. No external deployment or customer/Production mutation was performed.
+- **Next task:** execute the full P0-B release candidate pipeline in `TASK.md`; after completion, the next owner is the bounded Opus review prompt written there.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
 - **Scope:** Server-owned `SupportHub:DeploymentTier` (defaults to `Testing`), server-side environment endpoint and database configuration resolution, Testing-tier Production denial, browser authority removal (no raw connection strings, probe URLs, or custom endpoint overrides), safe error envelopes, and policy-aware health projection.
-- **Opus review & M-1 closure:** Initial Opus review at `04304ed` (0 Crit / 0 High / 1 Med / 3 Low). Sol required M-1 fixed before merge. Remediation at `500a8b3` introduced `DeploymentTierParser.TryParseExact` strict textual allowlist in Core used by validator and composition root. Final bounded Opus re-review: 0 Critical / 0 High / 0 Medium; M-1 CLOSED; P0-A ACCEPTED. Sol: MERGE AUTHORIZED.
+- **Opus review & M-1 closure:** Initial Opus review at `04304ed` (0 Crit / 0 High / 1 Med / 3 Low). Sol required M-1 fixed before merge. Remediation at `500a8b3` introduced `DeploymentTierParser.TryParseExact` strict textual allowlist in Core used by validator and composition root. Final bounded Opus re-review: 0 Critical / 0 High / 0 Medium; M-1 CLOSED; P0-A COMPLETE and merged as PR #23.
 - **Deferred findings & observations:**
   - P0-A L-1: URL safety validation completeness for optional endpoint templates.
   - P0-A L-2: legacy policy-free `IOrderModule.GetEnvironment`/`ModuleEnvironmentResolver` path.

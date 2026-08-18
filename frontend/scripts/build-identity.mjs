@@ -108,6 +108,16 @@ function resolveSourceState(explicit) {
   }
 }
 
+function resolveBuiltAtUtc(explicit) {
+  if (explicit === undefined) return new Date().toISOString();
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,7})?Z$/.test(explicit)) {
+    fail('--built-at-utc must be an ISO-8601 UTC timestamp ending in Z');
+  }
+  const parsed = Date.parse(explicit);
+  if (!Number.isFinite(parsed)) fail('--built-at-utc is not a valid timestamp');
+  return explicit;
+}
+
 /** Exactly one hashed entry bundle must exist; it is the served parity probe. */
 function resolveMainBundle(files, hashes) {
   const candidates = files.filter(file => /^main-[A-Za-z0-9]+\.js$/.test(file));
@@ -136,7 +146,7 @@ function finalize(options) {
     sourceState: resolveSourceState(options['source-state']),
     buildId,
     assetCount: files.length,
-    builtAtUtc: new Date().toISOString(),
+    builtAtUtc: resolveBuiltAtUtc(options['built-at-utc']),
     indexHtmlSha256: hashes.get('index.html'),
     mainBundle: resolveMainBundle(files, hashes)
   };

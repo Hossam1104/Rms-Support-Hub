@@ -1,0 +1,26 @@
+{
+  "schemaId": "rms-support-hub.configuration",
+  "schemaVersion": 1,
+  "section": "SupportHub",
+  "deploymentTier": {
+    "path": "SupportHub:DeploymentTier",
+    "type": "string",
+    "allowed": ["Testing", "Production"],
+    "default": "Testing"
+  },
+  "healthProbe": {
+    "path": "SupportHub:HealthProbe",
+    "enabledDefault": true,
+    "timeoutSecondsRange": [1, 30]
+  },
+  "environmentRegistration": {
+    "path": "SupportHub:Environments:<ModuleKey>:<EnvironmentKey>",
+    "endpointAuthority": "server-owned ModuleEndpoints and ModuleCancelEndpoints keys",
+    "databaseAuthority": "server-owned ConnectionStrings name",
+    "customEndpoints": "disabled"
+  },
+  "runtimeStorage": {
+    "path": "var/drafts",
+    "requiredAccess": "IIS application-pool identity Modify"
+  }
+}

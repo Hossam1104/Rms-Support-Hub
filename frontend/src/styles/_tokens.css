@@ -169,8 +169,8 @@
   --form-gap: var(--panel-gap);
 
   /* ---- Typography ---- */
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-main: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
   --text-xs: .75rem;
   --text-sm: .86rem;
   --text-md: 1rem;
