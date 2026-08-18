@@ -2,8 +2,8 @@
 
 - **Updated:** 2026-08-18
 - **Active branch:** `feat/staging-release-candidate-pipeline`, based on merged P0-A `main` baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`.
-- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. M-1 is closed. P0-B implementation is complete locally; exact-head CI and the draft PR are the remaining Git gates before independent review. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
-- **Next task:** run the final synchronized-branch CI/package evidence and hand the review-only Opus prompt in `TASK.md` to the independent reviewer.
+- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. M-1 is closed. P0-B implementation is pushed in draft PR #24; the Support Hub CI job passed against the exact branch head `3f9bed46d9227b31090e5fcf61dbe65369f76ec5`, while one unrelated POS infrastructure job failed 42 ACL/rollback tests. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
+- **Next task:** complete synchronized final package/smoke evidence, then hand the review-only Opus prompt in `TASK.md` to the independent reviewer.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
@@ -27,7 +27,7 @@
 ## Validation baseline
 
 - Merged baseline validation: Backend 252 passed / 0 failed (206 baseline + 46 M-1 tests); Frontend 362 passed / 0 failed across 59 files; Production frontend build passed; POS 420 passed; Pester 172 passed; PowerShell quality 29 files clean; `build.ps1`, `context.py`, and `check_memory.py` clean.
-- POS CI workflows remain green. P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates.
+- P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates. On draft PR #24, Support Hub CI passed at the exact head; the unrelated POS Windows build/infrastructure job failed 42 tests with `UnauthorizedAccessException: The control file ACL could not be verified` in the POS trust/rollback fixture path.
 
 ## P0-B deterministic release candidate pipeline
 
