@@ -4,10 +4,18 @@ param(
   [ValidateSet('Testing')]
   [string]$Environment = 'Testing',
   [string]$BuildTimestampUtc = '',
+  [string]$ExpectedSourceCommit = '',
   [switch]$SkipDependencyInstall
 )
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+Import-Module (Join-Path $PSScriptRoot 'ReleaseCandidateConfiguration.psm1') -Force
+
+$ExpectedDotnetSdkVersion = '10.0.302'
+$ExpectedNodeVersion = '24.18.0'
+$ExpectedNpmVersion = '12.0.1'
 
 function Write-Utf8NoBom([string]$Path, [string]$Content) {
   $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -31,6 +39,31 @@ function Invoke-Checked([string]$FilePath, [string[]]$ArgumentList, [string]$Wor
   & $FilePath @ArgumentList
   if ($LASTEXITCODE -ne 0) {
     throw "$FilePath failed with exit code $LASTEXITCODE."
+  }
+}
+
+function Get-ToolchainIdentity {
+  $dotnetSdkVersion = (& dotnet --version).Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'Could not determine the .NET SDK version.' }
+  $nodeVersion = (& node --version).Trim().TrimStart('v')
+  if ($LASTEXITCODE -ne 0) { throw 'Could not determine the Node.js version.' }
+  $npmVersion = (& npm --version).Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'Could not determine the npm version.' }
+
+  if ($dotnetSdkVersion -ne $ExpectedDotnetSdkVersion) {
+    throw "Release candidate requires .NET SDK $ExpectedDotnetSdkVersion, got $dotnetSdkVersion."
+  }
+  if ($nodeVersion -ne $ExpectedNodeVersion) {
+    throw "Release candidate requires Node.js $ExpectedNodeVersion, got $nodeVersion."
+  }
+  if ($npmVersion -ne $ExpectedNpmVersion) {
+    throw "Release candidate requires npm $ExpectedNpmVersion, got $npmVersion."
+  }
+
+  return [ordered]@{
+    dotnetSdkVersion = $dotnetSdkVersion
+    nodeVersion = $nodeVersion
+    npmVersion = $npmVersion
   }
 }
 
@@ -109,7 +142,12 @@ try {
   $stagingRoot = Join-Path $OutputRoot 'RmsSupportHub-IIS'
   $zipPath = Join-Path $OutputRoot 'RmsSupportHub-IIS.zip'
   $verificationRoot = Join-Path $OutputRoot 'verification'
-  foreach ($requiredPath in @($backendProject, (Join-Path $frontendRoot 'package-lock.json'), (Join-Path $frontendRoot 'scripts\build-identity.mjs'))) {
+  foreach ($requiredPath in @(
+      $backendProject,
+      (Join-Path $frontendRoot 'package-lock.json'),
+      (Join-Path $frontendRoot 'scripts\build-identity.mjs'),
+      (Join-Path $RepositoryRoot 'docs\release\appsettings.Testing.template.json')
+    )) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "Required build input is missing: $requiredPath" }
   }
 
@@ -117,10 +155,14 @@ try {
   if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
     throw 'The release candidate source commit is not a lowercase full Git SHA.'
   }
+  if (-not [string]::IsNullOrWhiteSpace($ExpectedSourceCommit) -and $ExpectedSourceCommit -ne $sourceCommit) {
+    throw "Release candidate source '$sourceCommit' does not match expected workflow source '$ExpectedSourceCommit'."
+  }
   $sourceStatus = (@(& git -C $RepositoryRoot status --porcelain) -join "`n").Trim()
   if (-not [string]::IsNullOrWhiteSpace($sourceStatus)) {
     throw 'Release candidate generation requires a clean source tree; commit or remove tracked changes first.'
   }
+  $toolchain = Get-ToolchainIdentity
   $buildTimestamp = Get-DeterministicBuildTimestamp $BuildTimestampUtc $RepositoryRoot $sourceCommit
 
   Write-Step 'Cleaning previous release candidate output'
@@ -189,6 +231,11 @@ try {
   }
   Get-ChildItem -LiteralPath $stagingRoot -Recurse -File -Filter '*.pdb' -ErrorAction SilentlyContinue | Remove-Item -Force
 
+  Write-Step 'Replacing published configuration with sanitized Testing defaults'
+  $testingTemplatePath = Join-Path $RepositoryRoot 'docs\release\appsettings.Testing.template.json'
+  Assert-SanitizedTestingConfiguration -Path $testingTemplatePath | Out-Null
+  Copy-Item -LiteralPath $testingTemplatePath -Destination (Join-Path $stagingRoot 'appsettings.json') -Force
+
   Write-Step 'Adding deployment and configuration documentation'
   $deploymentRoot = Join-Path $stagingRoot 'deployment'
   New-Item -ItemType Directory -Path $deploymentRoot -Force | Out-Null
@@ -206,6 +253,8 @@ try {
     sourceCommit = $sourceCommit
     sourceState = 'clean'
     buildId = ((Get-Content -Raw -LiteralPath (Join-Path $wwwRoot 'build-identity.json') | ConvertFrom-Json).buildId)
+    toolchain = $toolchain
+    reproducibility = 'Byte identity is guaranteed for the same source commit, recorded toolchain, and pipeline logic.'
     configurationSchemaId = 'rms-support-hub.configuration'
     configurationSchemaVersion = 1
     configurationTemplate = 'deployment/appsettings.Testing.template.json'
@@ -224,7 +273,6 @@ try {
 
   Write-Step 'Scanning staged runtime for public dependency URLs'
   & (Join-Path $RepositoryRoot 'scripts\verify-offline-runtime.ps1') -PackageRoot $stagingRoot
-  if ($LASTEXITCODE -ne 0) { throw 'Offline runtime verification failed for staged output.' }
 
   Write-Step 'Writing package file-integrity manifest'
   Write-IntegrityManifest $stagingRoot (Join-Path $stagingRoot 'file-integrity.sha256')
@@ -236,7 +284,6 @@ try {
 
   Write-Step 'Unpacking and verifying the release candidate in a fresh directory'
   & (Join-Path $RepositoryRoot 'scripts\verify-release-candidate.ps1') -ZipPath $zipPath -ExtractionRoot $verificationRoot
-  if ($LASTEXITCODE -ne 0) { throw 'Release candidate fresh-extraction verification failed.' }
 
   Write-Host ''
   Write-Host 'Release candidate generated.' -ForegroundColor Green

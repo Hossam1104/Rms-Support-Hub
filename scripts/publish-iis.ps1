@@ -4,6 +4,7 @@ param(
   [ValidateSet('Testing')]
   [string]$Environment = 'Testing',
   [string]$BuildTimestampUtc = '',
+  [string]$ExpectedSourceCommit = '',
   [switch]$SkipDependencyInstall
 )
 
@@ -17,6 +18,7 @@ $arguments = @{
 }
 if (-not [string]::IsNullOrWhiteSpace($OutputRoot)) { $arguments.OutputRoot = $OutputRoot }
 if (-not [string]::IsNullOrWhiteSpace($BuildTimestampUtc)) { $arguments.BuildTimestampUtc = $BuildTimestampUtc }
+if (-not [string]::IsNullOrWhiteSpace($ExpectedSourceCommit)) { $arguments.ExpectedSourceCommit = $ExpectedSourceCommit }
 if ($SkipDependencyInstall) { $arguments.SkipDependencyInstall = $true }
 
 & (Join-Path $PSScriptRoot 'build-release-candidate.ps1') @arguments

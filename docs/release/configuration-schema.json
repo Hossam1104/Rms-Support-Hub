@@ -19,6 +19,15 @@
     "databaseAuthority": "server-owned ConnectionStrings name",
     "customEndpoints": "disabled"
   },
+  "packagedTestingDefaults": {
+    "runtimePath": "appsettings.json",
+    "sourceTemplate": "deployment/appsettings.Testing.template.json",
+    "deploymentTier": "Testing",
+    "productionRegistrations": "disabled",
+    "endpointValues": "placeholders or empty; inject authorized Testing values outside the package",
+    "connectionStringValues": "placeholders or empty; inject authorized secrets outside the package",
+    "productionDatabaseOverrides": "absent"
+  },
   "runtimeStorage": {
     "path": "var/drafts",
     "requiredAccess": "IIS application-pool identity Modify"

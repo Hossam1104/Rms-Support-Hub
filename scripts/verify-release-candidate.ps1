@@ -5,6 +5,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+Import-Module (Join-Path $PSScriptRoot 'ReleaseCandidateConfiguration.psm1') -Force
+
+$ExpectedDotnetSdkVersion = '10.0.302'
+$ExpectedNodeVersion = '24.18.0'
+$ExpectedNpmVersion = '12.0.1'
 
 function Get-Sha256([string]$Path) {
   return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -98,6 +105,7 @@ Expand-Archive -LiteralPath $ZipPath -DestinationPath $ExtractionRoot -Force
 
 $requiredFiles = @(
   'RmsSupportHub.Api.dll',
+  'appsettings.json',
   'web.config',
   'wwwroot/index.html',
   'wwwroot/build-identity.json',
@@ -128,6 +136,15 @@ if ($manifest.sourceCommit -notmatch '^[0-9a-f]{40}$') {
 if ($manifest.buildId -notmatch '^[0-9a-f]{64}$') {
   throw 'Release manifest buildId must be a lowercase SHA-256 value.'
 }
+if ($null -eq $manifest.toolchain -or
+    $manifest.toolchain.dotnetSdkVersion -ne $ExpectedDotnetSdkVersion -or
+    $manifest.toolchain.nodeVersion -ne $ExpectedNodeVersion -or
+    $manifest.toolchain.npmVersion -ne $ExpectedNpmVersion) {
+  throw "Release manifest toolchain must record .NET SDK $ExpectedDotnetSdkVersion, Node.js $ExpectedNodeVersion, and npm $ExpectedNpmVersion."
+}
+if ($manifest.reproducibility -ne 'Byte identity is guaranteed for the same source commit, recorded toolchain, and pipeline logic.') {
+  throw 'Release manifest reproducibility scope is missing or inaccurate.'
+}
 if ($manifest.configurationSchemaId -ne 'rms-support-hub.configuration' -or $manifest.configurationSchemaVersion -ne 1) {
   throw 'Release manifest configuration schema identity is unsupported.'
 }
@@ -148,6 +165,14 @@ if ($identity.schemaVersion -ne 1 -or $identity.environment -ne 'Testing' -or $i
 }
 if ($identity.commit -ne $manifest.sourceCommit -or $identity.buildId -ne $manifest.buildId) {
   throw 'Packaged build identity does not match release-manifest source/build identity.'
+}
+
+$packagedConfigurationPath = Join-Path $ExtractionRoot 'appsettings.json'
+$templateConfigurationPath = Join-Path $ExtractionRoot 'deployment\appsettings.Testing.template.json'
+Assert-SanitizedTestingConfiguration -Path $packagedConfigurationPath | Out-Null
+Assert-SanitizedTestingConfiguration -Path $templateConfigurationPath | Out-Null
+if ((Get-Sha256 $packagedConfigurationPath) -ne (Get-Sha256 $templateConfigurationPath)) {
+  throw 'Packaged appsettings.json must be the exact sanitized Testing template copy.'
 }
 
 $integrityPath = Join-Path $ExtractionRoot 'file-integrity.sha256'
@@ -185,7 +210,6 @@ foreach ($relativePath in $integrity.Keys) {
 
 $offlineScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts\verify-offline-runtime.ps1'
 & $offlineScript -PackageRoot $ExtractionRoot
-if ($LASTEXITCODE -ne 0) { throw 'Offline runtime verification failed.' }
 
 Write-Output "Release candidate verified from fresh extraction: $ExtractionRoot"
 Write-Output "ZIP SHA-256: $actualZipHash"

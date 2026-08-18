@@ -11,7 +11,15 @@ on:
       - 'scripts/smoke-test-release-candidate.ps1'
       - 'scripts/verify-offline-runtime.ps1'
       - 'scripts/verify-release-candidate.ps1'
+      - 'scripts/assert-release-candidate-identity.ps1'
+      - 'scripts/ReleaseCandidateConfiguration.psm1'
       - 'scripts/verify-riyal-asset.ps1'
+      - 'scripts/test-offline-runtime.ps1'
+      - 'scripts/test-release-candidate-safety.ps1'
+      - 'global.json'
+      - 'frontend/.nvmrc'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
       - 'docs/release/**'
       - '.ai/scripts/**'
       - '.github/workflows/support-hub-ci.yml'
@@ -24,7 +32,15 @@ on:
       - 'scripts/smoke-test-release-candidate.ps1'
       - 'scripts/verify-offline-runtime.ps1'
       - 'scripts/verify-release-candidate.ps1'
+      - 'scripts/assert-release-candidate-identity.ps1'
+      - 'scripts/ReleaseCandidateConfiguration.psm1'
       - 'scripts/verify-riyal-asset.ps1'
+      - 'scripts/test-offline-runtime.ps1'
+      - 'scripts/test-release-candidate-safety.ps1'
+      - 'global.json'
+      - 'frontend/.nvmrc'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
       - 'docs/release/**'
       - '.ai/scripts/**'
       - '.github/workflows/support-hub-ci.yml'
@@ -39,10 +55,24 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
+      SUPPORT_HUB_EXPECTED_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert durable workflow source identity
+        shell: pwsh
+        run: |
+          $head = (git rev-parse HEAD).Trim()
+          if ($head -ne $env:SUPPORT_HUB_EXPECTED_SOURCE_SHA) {
+            throw "Workflow checked out '$head' but expected durable source '$env:SUPPORT_HUB_EXPECTED_SOURCE_SHA'."
+          }
+          Write-Output "Durable workflow source: $head"
 
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
@@ -52,7 +82,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '24.x'
+          node-version: '24.18.0'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -88,6 +118,10 @@ jobs:
         working-directory: frontend
         run: npm run test:riyal-asset
 
+      - name: Run offline runtime negative tests
+        shell: pwsh
+        run: .\scripts\test-offline-runtime.ps1
+
       - name: Run PowerShell quality gate
         shell: pwsh
         run: .\scripts\test-powershell-quality.ps1
@@ -101,7 +135,15 @@ jobs:
 
       - name: Generate and fresh-extraction verify Testing release candidate
         shell: pwsh
-        run: .\scripts\build-release-candidate.ps1 -SkipDependencyInstall
+        run: .\scripts\build-release-candidate.ps1 -SkipDependencyInstall -ExpectedSourceCommit $env:SUPPORT_HUB_EXPECTED_SOURCE_SHA
+
+      - name: Assert RC source and artifact identities
+        shell: pwsh
+        run: .\scripts\assert-release-candidate-identity.ps1 -PackageRoot .\publish\RmsSupportHub-IIS -ExpectedSourceCommit $env:SUPPORT_HUB_EXPECTED_SOURCE_SHA
+
+      - name: Assert sanitized Testing package configuration
+        shell: pwsh
+        run: .\scripts\test-release-candidate-safety.ps1 -PackageRoot .\publish\RmsSupportHub-IIS
 
       - name: Run packaged runtime smoke test
         shell: pwsh

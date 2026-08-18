@@ -2,8 +2,8 @@
 
 - **Updated:** 2026-08-18
 - **Active branch:** `feat/staging-release-candidate-pipeline`, based on merged P0-A `main` baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`.
-- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. M-1 is closed. P0-B implementation is pushed in draft PR #24; the Support Hub CI job passed against the exact branch head `3f9bed46d9227b31090e5fcf61dbe65369f76ec5`, while one unrelated POS infrastructure job failed 42 ACL/rollback tests. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
-- **Next task:** complete synchronized final package/smoke evidence, then hand the review-only Opus prompt in `TASK.md` to the independent reviewer.
+- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. The bounded remediation is implemented for draft PR #24; it remains open, draft, and unmerged. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
+- **Next task:** commit/push the remediation, validate the exact durable PR-head package and CI checks, then hand the review-only Opus re-review prompt in `TASK.md` to the independent reviewer.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
@@ -27,28 +27,31 @@
 ## Validation baseline
 
 - Merged baseline validation: Backend 252 passed / 0 failed (206 baseline + 46 M-1 tests); Frontend 362 passed / 0 failed across 59 files; Production frontend build passed; POS 420 passed; Pester 172 passed; PowerShell quality 29 files clean; `build.ps1`, `context.py`, and `check_memory.py` clean.
-- P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates. On draft PR #24, Support Hub CI passed at the exact head; the unrelated POS Windows build/infrastructure job failed 42 tests with `UnauthorizedAccessException: The control file ACL could not be verified` in the POS trust/rollback fixture path.
+- P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates. The remediation checks out the durable PR head, pins .NET SDK 10.0.302 / Node.js 24.18.0 / npm 12.0.1, asserts artifact identity, scans all emitted web text formats with exact URL allowances, and verifies sanitized Testing package configuration. Existing POS CI scope is unchanged.
 
 ## P0-B deterministic release candidate pipeline
 
 - `scripts/build-release-candidate.ps1` performs clean-source Testing builds,
   fixed-timestamp frontend identity generation, framework-dependent .NET 10
-  publish, package exclusions, local runtime URL scanning, sorted file hashes,
+  publish, sanitized `appsettings.json` generation from the Testing template,
+  package exclusions, local runtime URL scanning, sorted file hashes,
   deterministic ZIP creation, ZIP SHA-256 sidecar creation, and fresh-
   extraction verification. `publish-iis.ps1` delegates to this pipeline and
   never deploys IIS.
 - The package carries `release-manifest.json`, `wwwroot/build-identity.json`,
-  `file-integrity.sha256`, `web.config`, Angular assets, a names/placeholders-
-  only Testing configuration template, configuration schema identity, and
-  deployment/rollback/smoke documentation. Runtime prerequisites include the
-  .NET 10 Hosting Bundle and writable `var/drafts` storage.
+  `file-integrity.sha256`, `web.config`, Angular assets, an exact sanitized
+  Testing `appsettings.json`/template pair with disabled registrations and no
+  concrete topology, configuration schema identity, and deployment/rollback/
+  smoke documentation. Runtime prerequisites include the .NET 10 Hosting
+  Bundle and writable `var/drafts` storage.
 - `/api/health/live` and `/api/health/ready` are local process/storage checks;
   packaged smoke does not contact RMS gateways or databases. The server-owned
   Testing tier remains the default and Production remains denied under Testing.
 - Public Google Fonts/runtime CDN references were removed. The offline scan
-  covers emitted HTML/CSS/JS and allows only documented framework metadata and
-  approved internal POS origins; configured RMS gateway URLs remain explicit
-  server-side dependencies.
+  covers emitted HTML/HTM/CSS/JS/MJS/JSON/SVG/web-manifest/XML and allows only
+  exact documented framework metadata plus the exact approved internal POS
+  origins; configured RMS gateway URLs remain explicit server-side
+  dependencies.
 - Local evidence: backend Release 253/253 tests, frontend 362/362 tests in
   59 files, Release build with 0 warnings/0 errors, production build, Riyal
   verifier, broad `scripts/build.ps1`, 33-file PowerShell quality gate,
