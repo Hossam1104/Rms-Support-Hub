@@ -2,8 +2,8 @@
 
 - **Updated:** 2026-08-18
 - **Active branch:** `feat/staging-release-candidate-pipeline`, based on merged P0-A `main` baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`.
-- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. The bounded remediation is complete in implementation commits `6ec14dc` and `30d3339`; PR #24 remains open, draft, and unmerged, awaiting exact-head CI and independent Opus re-review. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
-- **Next task:** push the implementation plus this state reconciliation, record the exact pushed PR head from Git/PR metadata, wait for Support Hub CI and POS CI at that head, then hand the review-only Opus re-review prompt in `TASK.md` to the independent reviewer.
+- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. The bounded remediation is complete in implementation commits `6ec14dc`, `30d3339`, and `6ead799`; Support Hub CI and the existing POS CI are green at the exact CI-validated head `6ead7992d4b1350edc8fb1a99c6955eea5d270cc`. PR #24 remains open, draft, and unmerged, awaiting independent Opus re-review and Sol acceptance. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
+- **Next task:** hand the review-only Opus re-review prompt in `TASK.md` to the independent reviewer. This memory reconciliation is a follow-on documentation commit; read `git rev-parse HEAD` and PR metadata again before any acceptance because the exact branch head advances with this update.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
@@ -60,6 +60,10 @@
   package-safety rejection, and packaged runtime smoke all passed. The
   repository `scripts/build.ps1` wrapper reached its tests but its implicit
   restore hit this machine's inaccessible `C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config`; the equivalent pinned Release build with the user NuGet config passed. Exact pushed-head artifact evidence remains an external CI gate.
+- Exact CI-validated head `6ead7992d4b1350edc8fb1a99c6955eea5d270cc` passed
+  Support Hub CI end-to-end, including the explicit npm 12.0.1 pin, RC
+  generation, fresh extraction, identity, sanitized-package safety, and
+  packaged smoke; all applicable POS CI jobs also passed at that same SHA.
 
 ## External release gates (unresolved, outside repository scope)
 
