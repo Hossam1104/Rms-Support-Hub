@@ -142,7 +142,7 @@ if ($null -eq $manifest.toolchain -or
     $manifest.toolchain.npmVersion -ne $ExpectedNpmVersion) {
   throw "Release manifest toolchain must record .NET SDK $ExpectedDotnetSdkVersion, Node.js $ExpectedNodeVersion, and npm $ExpectedNpmVersion."
 }
-if ($manifest.reproducibility -ne 'Byte identity is guaranteed for the same source commit, recorded toolchain, and pipeline logic.') {
+if ($manifest.reproducibility -ne 'Byte identity is verified for repeated builds from the same source commit using the recorded toolchain in an equivalent build environment, including checkout byte materialization; cross-environment byte identity is not guaranteed.') {
   throw 'Release manifest reproducibility scope is missing or inaccurate.'
 }
 if ($manifest.configurationSchemaId -ne 'rms-support-hub.configuration' -or $manifest.configurationSchemaVersion -ne 1) {

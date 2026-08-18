@@ -254,7 +254,7 @@ try {
     sourceState = 'clean'
     buildId = ((Get-Content -Raw -LiteralPath (Join-Path $wwwRoot 'build-identity.json') | ConvertFrom-Json).buildId)
     toolchain = $toolchain
-    reproducibility = 'Byte identity is guaranteed for the same source commit, recorded toolchain, and pipeline logic.'
+    reproducibility = 'Byte identity is verified for repeated builds from the same source commit using the recorded toolchain in an equivalent build environment, including checkout byte materialization; cross-environment byte identity is not guaranteed.'
     configurationSchemaId = 'rms-support-hub.configuration'
     configurationSchemaVersion = 1
     configurationTemplate = 'deployment/appsettings.Testing.template.json'

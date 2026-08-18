@@ -15,9 +15,10 @@ directory. The package contains the framework-dependent .NET 10 publish output,
 `appsettings.json`, and this deployment folder.
 
 The release manifest records the exact .NET SDK, Node.js, and npm versions used
-to build the artifact. Byte-level reproducibility is scoped to the same source
-commit, recorded/pinned toolchain, and pipeline logic; arbitrary toolchain
-versions are not claimed to produce identical bytes.
+to build the artifact. Byte identity is verified for repeated builds from the
+same source commit using the recorded toolchain in an equivalent build
+environment, including checkout byte materialization; cross-environment byte
+identity is not guaranteed.
 
 ## Prerequisites
 
