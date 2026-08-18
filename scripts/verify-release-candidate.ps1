@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 
 Import-Module (Join-Path $PSScriptRoot 'ReleaseCandidateConfiguration.psm1') -Force
 
-$ExpectedDotnetSdkVersion = '10.0.302'
+$ExpectedDotnetSdkVersion = '10.0.400'
 $ExpectedNodeVersion = '24.18.0'
 $ExpectedNpmVersion = '12.0.1'
 

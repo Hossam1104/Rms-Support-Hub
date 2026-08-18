@@ -27,7 +27,7 @@
 ## Validation baseline
 
 - Merged baseline validation: Backend 252 passed / 0 failed (206 baseline + 46 M-1 tests); Frontend 362 passed / 0 failed across 59 files; Production frontend build passed; POS 420 passed; Pester 172 passed; PowerShell quality 29 files clean; `build.ps1`, `context.py`, and `check_memory.py` clean.
-- P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates. The remediation checks out the durable PR head, pins .NET SDK 10.0.302 / Node.js 24.18.0 / npm 12.0.1, asserts artifact identity, scans all emitted web text formats with exact URL allowances, and verifies sanitized Testing package configuration. Existing POS CI scope is unchanged.
+- P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates. The remediation checks out the durable PR head, pins .NET SDK 10.0.400 / Node.js 24.18.0 / npm 12.0.1, asserts artifact identity, scans all emitted web text formats with exact URL allowances, and verifies sanitized Testing package configuration. `global.json` is repo-wide, so `.github/workflows/pos-ci.yml` SDK pins were updated to the same 10.0.400 version to avoid drift; no other POS CI scope changed.
 
 ## P0-B deterministic release candidate pipeline
 
