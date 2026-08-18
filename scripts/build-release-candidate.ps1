@@ -64,6 +64,7 @@ function Write-IntegrityManifest([string]$Root, [string]$Path) {
 }
 
 function Write-DeterministicZip([string]$Root, [string]$ZipPath, [string]$TimestampUtc) {
+  Add-Type -AssemblyName System.IO.Compression
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $timestamp = [DateTimeOffset]::Parse($TimestampUtc, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AssumeUniversal)
   $relativePaths = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force | ForEach-Object {
