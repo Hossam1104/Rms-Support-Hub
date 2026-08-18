@@ -130,7 +130,11 @@ finally {
   if ($null -ne $process) {
     try {
       if (-not $process.HasExited) {
-        $process.Kill($true)
+        # Windows PowerShell 5.1 binds to the .NET Framework Process API,
+        # which has Kill() but not the .NET Core Kill(entireProcessTree)
+        # overload. The packaged API has no child process, so Kill() is the
+        # precise and portable cleanup operation here.
+        $process.Kill()
         $process.WaitForExit(5000)
       }
     } catch { }
