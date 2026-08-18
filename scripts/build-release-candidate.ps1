@@ -247,5 +247,7 @@ try {
 }
 catch {
   Write-Host $_.Exception.Message -ForegroundColor Red
+  Write-Host $_.InvocationInfo.PositionMessage -ForegroundColor DarkRed
+  Write-Host $_.ScriptStackTrace -ForegroundColor DarkRed
   exit 1
 }
