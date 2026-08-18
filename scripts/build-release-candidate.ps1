@@ -116,8 +116,7 @@ try {
   if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
     throw 'The release candidate source commit is not a lowercase full Git SHA.'
   }
-  $sourceStatus = [string](& git -C $RepositoryRoot status --porcelain)
-  $sourceStatus = $sourceStatus.Trim()
+  $sourceStatus = (@(& git -C $RepositoryRoot status --porcelain) -join "`n").Trim()
   if (-not [string]::IsNullOrWhiteSpace($sourceStatus)) {
     throw 'Release candidate generation requires a clean source tree; commit or remove tracked changes first.'
   }
