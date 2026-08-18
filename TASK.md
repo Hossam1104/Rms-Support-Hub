@@ -74,11 +74,19 @@ evidence.
 5. **M-2 offline gate** and **M-3 package safety** remain closed: rerun or
    inspect the real verifier and package-safety regression; no regression
    introduced by the SDK or contract-wording changes.
-6. **CI/delivery.** Confirm the exact final PR head passed both Support Hub CI
+6. **CI/delivery.** Confirm the exact final PR head passed Support Hub CI
    (backend/frontend tests, RC generation, fresh verification, identity
-   assertion, offline negatives, safety test, packaged smoke) and POS CI, and
-   that POS CI's SDK version bump did not disturb any other POS CI scope or
-   behavior.
+   assertion, offline negatives, safety test, packaged smoke). POS CI's
+   "POS Windows build and Infrastructure tests" job is currently RED at this
+   head (`RmsSupportHub.Pos.Infrastructure.Tests`, 42/155 failed,
+   `UnauthorizedAccessException: The control file ACL could not be
+   verified.`). Independently confirm this is pre-existing and unrelated to
+   this PR: the already-accepted, previously-green commit `05b0e54` (still
+   pinned to SDK 10.0.302) was rerun on a fresh `windows-latest` runner and
+   now fails with the identical signature — see `.ai/STATE.md` for the run
+   evidence. Verify no other POS CI job or scope was disturbed by the SDK
+   version bump, and treat the ACL test failure as an unresolved external
+   blocker requiring separate investigation, not a P0-B regression.
 7. **Low findings.** Confirm L-4 (PowerShell `$LASTEXITCODE` checks),
    L-5 (`docs/release/SMOKE.md` operator `PackageRoot` example), L-6 (offline
    scanner `ws://`/`wss://` coverage), and L-7 (stale local publish evidence,
