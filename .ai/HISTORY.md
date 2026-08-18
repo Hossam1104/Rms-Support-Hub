@@ -45,13 +45,10 @@ the linked planning/evidence documents.
 | P0-B exact-head CI delivery | Implementation/CI head `9f98b021c679c892c7a0649a86996096acf10223`; Support Hub CI run `32141953842`; POS CI run `32141953825` | Explicitly installed npm 12.0.1 on the Node 24.18.0 runner. Support Hub RC generation, identity, sanitized safety, and packaged smoke passed; all applicable POS CI jobs passed at the same exact SHA. PR #24 remains open/draft/unmerged pending bounded Opus re-review and Sol acceptance. |
 | P0-B second Opus re-review | Opus review of `ccdaa8db05f3b1e8db67bce08d5bb4911e55660b`; 0 Critical / 0 High / 1 Medium (M-1) / 4 Low | Closed H-1, M-2, M-3; only M-1 (reproducibility contract scope) remained merge-blocking; L-4 remained non-blocking. |
 | P0-B final M-1 closure and SDK toolchain correction | Commits `9af49d6` (revert unreviewed SDK drift), `f8a7af3` (narrow reproducibility contract), `b6baecd` (owner-directed re-pin to .NET SDK 10.0.400 repo-wide) | Closed M-1 by narrowing the manifest/verifier/docs reproducibility claim to same-source/same-toolchain/equivalent-environment including checkout byte materialization. Unreviewed commit `cb60d7f` (SDK 10.0.400 drift) was first reverted, then the owner explicitly directed the toolchain to 10.0.400 (10.0.302 removed from the workstation), so `global.json`, both CI workflows, and both release-candidate scripts were re-pinned to 10.0.400 for consistency; `pos-ci.yml` required the same change since `global.json` is repo-wide. L-4/L-5/L-6/L-7 and npm dev/build advisories remain deferred, non-blocking backlog. |
+| P0-B final review, Sol acceptance, and merge | Opus final review APPROVE (0 Crit / 0 High / 0 Med); Sol merge authorization; Support Hub CI run `32184944831` & POS CI run `32184944709` green; PR #24 merged to `main` | Final review closed M-1, H-1, M-2, M-3; .NET SDK 10.0.400 pinned repo-wide; P0-B accepted for merge and merged to `main`. Next milestone is P0-C (approval-gated Testing/Staging IIS deployment & read-only acceptance). External gates remain open. |
 
 
-INT-00 through INT-13, Slice B, and Slice C (including PR #22 deferred hardening)
-are repository-validated and merged to `main`. Slice C remains subject to
-external representative-machine, Production signing/PKI, fleet, and customer
-gates.
+INT-00 through INT-13, Slice B, Slice C, P0-A, and P0-B are repository-validated and merged to `main`.
 
 No Production, customer, RMS, Main Server, database, registry, certificate,
-SCM, browser-policy, or live package-activation mutation has been executed by
-the Slice C work. No private key was exported or committed.
+SCM, browser-policy, or live package-activation mutation has been executed.

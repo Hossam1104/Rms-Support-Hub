@@ -1,11 +1,12 @@
 # Current Project State
 
-- **Updated:** 2026-08-18
-- **Active branch:** `feat/staging-release-candidate-pipeline`, based on merged P0-A `main` baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`.
-- **Status:** P0-A server-owned Testing/Staging environment authority is complete and PR #23 is merged. Initial Opus review of P0-B at `bfbbc71a0885f7f60d567ab2635cd50b4f65a3d9` was `REQUEST CHANGES` with 0 Critical, 1 High, 3 Medium, and 4 Low findings. A second bounded Opus re-review at `ccdaa8db05f3b1e8db67bce08d5bb4911e55660b` closed H-1, M-2, and M-3, leaving only M-1 (reproducibility contract scope) open and L-4 non-blocking. After that review, unreviewed commit `cb60d7f` drifted `global.json` to .NET SDK 10.0.400/`rollForward: latestPatch`, breaking exact-head CI (which still installed 10.0.302). This session reverted `cb60d7f` (`9af49d6`), then closed M-1 by narrowing the reproducibility claim to same-source/same-toolchain/equivalent-environment including checkout byte materialization, applied identically in `build-release-candidate.ps1`, `verify-release-candidate.ps1`, and `docs/release/DEPLOYMENT.md` (`f8a7af3`). The repository owner then explicitly directed the toolchain to move to .NET SDK 10.0.400 (the 10.0.302 SDK was removed from the workstation), superseding the revert: `global.json`, both CI workflows' `setup-dotnet` steps, and the `ExpectedDotnetSdkVersion` constants in both release-candidate scripts were re-pinned to 10.0.400 (`b6baecd`). 10.0.302 no longer appears anywhere in the repository. PR #24 remains open, draft, and unmerged, awaiting a further bounded Opus re-review and Sol acceptance. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
-- **Next task:** hand the complete review-only Opus re-review prompt in `TASK.md` to the independent reviewer. Verify the PR metadata, exact head, and the SDK 10.0.400 toolchain again before acceptance; do not merge, deploy, or begin P0-C.
-- **Exact final head:** `aebd6d082c0a35073dae4d15fefe1c96b4f1e683` is the last commit touching a `support-hub-ci.yml` trigger path; the actual PR head after this is a docs-only trailing commit (`9399829`, `.ai/STATE.md` and `TASK.md` only) that does not match any CI path filter, so no new CI run fires for it and `aebd6d0`'s result remains the valid exact-head CI evidence for the current tree. Support Hub CI run `32184317595` is green at that head (backend/frontend tests, RC generation, fresh extraction, identity, sanitized safety, and packaged smoke all passed). Local same-environment determinism proof at this exact head: two independent `build-release-candidate.ps1` runs produced identical ZIP SHA-256 `f8c7ba2864dc9ef20527a29cf0c573e640b78150acf958340c214892c1c9fbe2`, identical Build ID `c372ecaee6a7d7bc0f026599b1d793f4f1d342f5ce479fa1809e37fa7b900a46`, byte-identical `file-integrity.sha256`, and identical manifest `reproducibility` strings; both packages independently passed `verify-release-candidate.ps1`, `test-release-candidate-safety.ps1`, and `smoke-test-release-candidate.ps1`.
-- **POS CI at this head is RED, but proven unrelated to this PR's changes.** Job "POS Windows build and Infrastructure tests" fails 42/155 `RmsSupportHub.Pos.Infrastructure.Tests` with `System.UnauthorizedAccessException: The control file ACL could not be verified.` (`ServiceOwnedDirectoryProvisioner.EnsureControlFileAcl`, `pos/src/RmsSupportHub.Pos.Infrastructure/Configuration/ServiceOwnedDirectoryProvisioner.cs:178`). To isolate cause, the already-accepted, previously-green commit `05b0e54` (run `32142825367`, SDK 10.0.302, success at 2026-08-18T13:31) was rerun on a fresh `windows-latest` runner today and now fails with the identical signature (run rerun at ~20:51, 42/155 failed, same exception). Since this reproduces on a commit untouched by this session and still pinned to the old SDK, the failure is a GitHub-hosted `windows-latest` runner/environment change (most likely default file-owner/ACL resolution for the `runneradmin` account), not a regression introduced by the SDK 10.0.400 re-pin or any other change in this PR. Fixing the POS ACL test/runner assumption is POS Slice C security-test infrastructure, out of this session's authorized scope, and was not attempted. This is a new external blocker for POS CI specifically (Support Hub CI is unaffected and green) and needs an owner decision on how to proceed.
+- **Updated:** 2026-08-19
+- **Active branch:** `feat/staging-release-candidate-pipeline` (closing into `main` via PR #24 merge baseline `ae4712cd0280c6f5b48797233f6574bec9ccea88`).
+- **Status:** P0-B deterministic release candidate pipeline is ACCEPTED FOR MERGE. Independent Opus review concluded APPROVE with 0 Critical, 0 High, 0 Medium, and 0 Low new blocking findings (M-1, H-1, M-2, and M-3 all CLOSED). Sol merge authorized. .NET SDK 10.0.400 repository-wide pin is verified and in place. Both exact-head workflows on the accepted implementation head (`d811c5fa842887e01453a15decbda38f2a509df4`) are green: Support Hub CI run `32184944831` (SUCCESS) and POS CI run `32184944709` (SUCCESS, all jobs including POS Windows build and Infrastructure tests passed). PR #24 is ready for merge commit closure. No IIS deployment, Production/customer mutation, RMS gateway probe, or order mutation was performed.
+- **Next milestone:** P0-C — Controlled Testing/Staging IIS Deployment and Read-Only Acceptance Evidence (Claude Sonnet 5 HIGH). NO external write or deployment may occur until the user provides fresh explicit approval for the specific Testing/Staging target.
+- **Exact accepted technical head:** `d811c5fa842887e01453a15decbda38f2a509df4`.
+- **Workflow trigger paths (L-8 correction):** `.ai/STATE.md`, `.ai/HISTORY.md`, and `TASK.md` are active workflow trigger paths in `.github/workflows/support-hub-ci.yml` and `.github/workflows/pos-ci.yml`. Any commit modifying these files triggers fresh CI runs.
+- **POS CI status (L-9 correction):** POS CI run `32184944709` at accepted head `d811c5f` passed all 6 jobs without failure, including POS Windows build and Infrastructure tests.
 
 ## P0-A acceptance, M-1 closure, and merge handoff
 
@@ -28,8 +29,8 @@
 
 ## Validation baseline
 
-- Merged baseline validation: Backend 252 passed / 0 failed (206 baseline + 46 M-1 tests); Frontend 362 passed / 0 failed across 59 files; Production frontend build passed; POS 420 passed; Pester 172 passed; PowerShell quality 29 files clean; `build.ps1`, `context.py`, and `check_memory.py` clean.
-- P0-B adds `.github/workflows/support-hub-ci.yml` for the backend/frontend paths and release-candidate gates. The remediation checks out the durable PR head, pins .NET SDK 10.0.400 / Node.js 24.18.0 / npm 12.0.1, asserts artifact identity, scans all emitted web text formats with exact URL allowances, and verifies sanitized Testing package configuration. `global.json` is repo-wide, so `.github/workflows/pos-ci.yml` SDK pins were updated to the same 10.0.400 version to avoid drift; no other POS CI scope changed.
+- Merged baseline validation: Backend 253 passed / 0 failed; Frontend 362 passed / 0 failed across 59 files; Production frontend build passed; POS 420 passed; Pester 172 passed; PowerShell quality clean; `build.ps1`, `context.py`, and `check_memory.py` clean.
+- P0-B adds `.github/workflows/support-hub-ci.yml` for backend/frontend paths and release-candidate gates. Toolchain is pinned to .NET SDK 10.0.400 / Node.js 24.18.0 / npm 12.0.1 repo-wide across `global.json`, `support-hub-ci.yml`, and `pos-ci.yml`.
 
 ## P0-B deterministic release candidate pipeline
 
@@ -54,60 +55,24 @@
   exact documented framework metadata plus the exact approved internal POS
   origins; configured RMS gateway URLs remain explicit server-side
   dependencies.
-- Local evidence at implementation head `30d33395e5f279d883c9c9c2c4b9a90e27ea43dc`:
-  backend Release 253/253 tests and 0-warning/0-error build, frontend
-  362/362 tests in 59 files, production build, Riyal verifier, 37-file
-  PowerShell quality gate, context/memory/diff checks, offline negative cases,
-  two byte-identical RC ZIPs, fresh-extraction integrity verification,
-  package-safety rejection, and packaged runtime smoke all passed. The
-  repository `scripts/build.ps1` wrapper reached its tests but its implicit
-  restore hit this machine's inaccessible `C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config`; the equivalent pinned Release build with the user NuGet config passed. Exact pushed-head evidence is recorded below.
-- Exact implementation/CI head `9f98b021c679c892c7a0649a86996096acf10223`
-  passed Support Hub CI end-to-end, including the explicit npm 12.0.1 pin, RC
-  generation, fresh extraction, identity, sanitized-package safety, and
-  packaged smoke; all applicable POS CI jobs also passed at that same SHA.
 
-## P0-B final M-1 closure and SDK toolchain correction
+## P0-B review, closure, and deferred backlog
 
-- **M-1 root cause:** the prior release manifest/verifier/docs reproducibility
-  statement ("byte identity is guaranteed for the same source commit,
-  recorded toolchain, and pipeline logic") was an unconditional claim. Git
-  checkout byte materialization (e.g., this workstation's `core.autocrlf`
-  converting LF blobs to CRLF) is also a build input the old wording ignored,
-  so same-source/same-toolchain builds are not guaranteed byte-identical
-  across differing checkout environments.
-- **Remediation:** the reproducibility statement was narrowed to "Byte
-  identity is verified for repeated builds from the same source commit using
-  the recorded toolchain in an equivalent build environment, including
-  checkout byte materialization; cross-environment byte identity is not
-  guaranteed," applied identically in `scripts/build-release-candidate.ps1`
-  (manifest writer), `scripts/verify-release-candidate.ps1` (manifest
-  verifier), and `docs/release/DEPLOYMENT.md`. The manifest's
-  `dotnetSdkVersion`/`nodeVersion`/`npmVersion` fields and the build-identity
-  hashing algorithm (`frontend/scripts/build-identity.mjs`) were not changed.
-- **SDK toolchain:** owner-directed departure from the Opus-reviewed 10.0.302
-  pin. The workstation's 10.0.302 SDK was removed and replaced with 10.0.400;
-  the repository now pins 10.0.400 everywhere: `global.json`
-  (`rollForward: disable`, exact pin), `.github/workflows/support-hub-ci.yml`,
-  `.github/workflows/pos-ci.yml` (5 `setup-dotnet` steps, since `global.json`
-  is repo-wide and POS CI would otherwise mismatch), and
-  `ExpectedDotnetSdkVersion` in both release-candidate scripts. No other POS
-  CI scope changed.
-- **Deferred, non-blocking backlog (unchanged, not chased this session):**
-  - P0-B L-4: PowerShell scripts carry `$LASTEXITCODE` checks that some
-    reviewers judged partially dead/fail-safe (31 occurrences across 12
-    files under `scripts/`); no behavior change proposed.
-  - P0-B L-5: `docs/release/SMOKE.md:32` operator example
-    (`-PackageRoot .\verification\RmsSupportHub-IIS`) may not match the
-    actual default extraction path used by current scripts.
-  - P0-B L-6: the offline URL scanner's negative-case coverage does not
-    include an explicit `ws://`/`wss://` case.
-  - P0-B L-7: stale local pre-remediation `publish/` extraction/ZIP evidence
-    from earlier same-day runs was removed as local hygiene (gitignored,
-    generated, not committed, not needed as evidence).
-- **npm advisories:** `npm audit` reports 5 findings (1 moderate, 4 high);
-  `npm audit --omit=dev` reports 0. All 5 are build/dev-tooling only, not
-  runtime/production. No dependency changes were made.
+- **Review summary:**
+  - Opus final review: APPROVE (0 Critical, 0 High, 0 Medium, 0 Low new blocking)
+  - M-1 (reproducibility contract): CLOSED (narrowed to same-source/same-toolchain/equivalent-environment including checkout byte materialization)
+  - H-1 (CI PR-head identity): CLOSED (`github.event.pull_request.head.sha` checkout and identity assertions verified)
+  - M-2 (offline runtime gate): CLOSED (allowlist-strict offline URL scan with negative tests)
+  - M-3 (sanitized Testing package configuration): CLOSED (template-driven sanitized `appsettings.json`, Production denial verified)
+  - Sol: MERGE AUTHORIZED
+- **Accepted reproducibility contract:** "Byte identity is verified for repeated builds from the same source commit using the recorded toolchain in an equivalent build environment, including checkout byte materialization; cross-environment byte identity is not guaranteed."
+- **Deferred non-blocking backlog:**
+  - P0-B L-4: PowerShell scripts `$LASTEXITCODE` cleanup observations.
+  - P0-B L-5: `docs/release/SMOKE.md` operator `PackageRoot` example alignment.
+  - P0-B L-6: Offline URL scanner negative coverage for `ws://`/`wss://`.
+  - P0-B L-7: Local generated artifact hygiene.
+  - L-8 / L-9: Corrected in durable state during closure.
+  - npm advisories: 5 dev/build-tooling findings (`npm audit`), 0 production/runtime (`npm audit --omit=dev`).
 
 ## External release gates (unresolved, outside repository scope)
 
