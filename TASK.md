@@ -1,53 +1,23 @@
-# P0-C HOSSAM FINAL IIS DEPLOYMENT — EXPLICIT OWNER APPROVAL REQUIRED
+# P0-D — TESTING INTEGRATION & OPERATIONAL READINESS
 
 MODEL: Claude Sonnet 5 HIGH | ROLE: Implement / Operational Verification
-PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-C HOSSAM Controlled Testing Deployment & Read-Only Acceptance
+PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-D Testing Integration & Operational Readiness
 Repository: `D:\AI Tools\DBS\Rms-Support-Hub` | Target: `HOSSAM` (Local Windows IIS)
 
-### 1. MANDATORY APPROVAL GATE
-NO DEPLOYMENT, IIS MUTATION, SITE CREATION, OR FILE SYSTEM MUTATION MAY OCCUR UNTIL THE USER PROVIDES EXPLICIT APPROVAL FOR THE EXACT APPROVAL PACKET BELOW.
-TASK.md EXISTING DOES NOT AUTHORIZE DEPLOYMENT.
+### 1. OBJECTIVE
+Verify operational readiness of the deployed `RmsSupportHub.Testing` IIS site on host `HOSSAM` with authorized Testing external configuration and complete end-to-end integration workflows against authorized Testing endpoints.
 
-### 2. P0-C DEPLOYMENT OBJECTIVE
-Once explicitly authorized by the owner, execute the controlled initial deployment of the fresh Release Candidate to local IIS on host `HOSSAM` in the `Testing` environment and collect read-only acceptance evidence.
-
-### 3. APPROVED LOCAL TARGET SPECIFICATION
-- Host: `HOSSAM`
-- Environment: `Testing`
-- IIS Site: `RmsSupportHub.Testing`
-- Application Pool: `RmsSupportHub.Testing` (No Managed Code, Integrated, ApplicationPoolIdentity)
+### 2. DEPLOYED BASELINE ON HOSSAM
+- IIS Site: `RmsSupportHub.Testing` (http://localhost:8080)
+- App Pool: `RmsSupportHub.Testing` (No Managed Code, Integrated, ApplicationPoolIdentity)
 - Physical Path: `C:\inetpub\RmsSupportHub.Testing`
-- Binding: `http://*:8080/`
-- External Config Path Authority: `SUPPORTHUB_EXTERNAL_CONFIG_PATH`
-- External Config File: `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json`
-- Runtime Writable Path: `C:\inetpub\RmsSupportHub.Testing\var\drafts`
-- Hosting Bundle / ANCM: Ready (ASP.NET Core Module v2 verified)
+- External Config: `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json` (SUPPORTHUB_EXTERNAL_CONFIG_PATH)
+- Writable Storage: `C:\inetpub\RmsSupportHub.Testing\var\drafts`
+- Release Candidate: Built from merged `main@13d590674e894ea720d2f4e3407c23d560923273` (Build ID: `c372ecaee6a7d7bc0f026599b1d793f4f1d342f5ce479fa1809e37fa7b900a46`)
 
-### 4. REQUIRED MUTATION SEQUENCE (PENDING OWNER APPROVAL)
-1. Create external configuration directory `C:\ProgramData\RmsSupportHub\Testing`.
-2. Write owner-authorized Testing configuration `appsettings.override.json`.
-3. Apply config ACL: Administrators (Full Control), `IIS AppPool\RmsSupportHub.Testing` (Read).
-4. Create IIS application pool `RmsSupportHub.Testing`.
-5. Create deployment directory `C:\inetpub\RmsSupportHub.Testing`.
-6. Extract verified Release Candidate package into deployment directory.
-7. Create runtime directory `C:\inetpub\RmsSupportHub.Testing\var\drafts`.
-8. Grant `IIS AppPool\RmsSupportHub.Testing` Modify permission on `var\drafts`.
-9. Configure environment variable `SUPPORTHUB_EXTERNAL_CONFIG_PATH=C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json` on the IIS application pool.
-10. Create IIS site `RmsSupportHub.Testing` bound to `http://*:8080/`.
-11. Start site and application pool.
-12. Run read-only acceptance probes.
-
-### 5. READ-ONLY ACCEPTANCE PROBES
-Only the following read-only HTTP probes are permitted:
-- `GET http://localhost:8080/`
-- `GET http://localhost:8080/api/health/live`
-- `GET http://localhost:8080/api/health/ready`
-- `GET http://localhost:8080/api/modules`
-- `GET http://localhost:8080/build-identity.json`
-- SPA deep-link navigation and local static assets
-
-STRICT PROHIBITIONS:
-- No RMS gateway, API, or database probe without separate explicit authorization.
-- No order send, cancel, or resend.
-- No Main Server mutation or native RMS service control.
-- No Production requests.
+### 3. SCOPE & SAFETY BOUNDARIES
+- Inject authorized Testing endpoints/secrets into `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json` only when explicitly provided/authorized by the owner.
+- Maintain `SupportHub:DeploymentTier = Testing`.
+- Production registrations and custom endpoints must remain disabled unless separately authorized.
+- Do NOT perform live order mutation, cancellation, or resend against Production.
+- Do NOT commit credentials, connection strings, or customer data to Git.
