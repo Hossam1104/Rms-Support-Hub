@@ -1,40 +1,53 @@
-# GPT-5.6 SOL
-## P0-C — External Server Configuration Acceptance Review
+# P0-C HOSSAM FINAL IIS DEPLOYMENT — EXPLICIT OWNER APPROVAL REQUIRED
 
-MODEL: GPT-5.6 SOL | ROLE: Review-only
-PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-C External Server Configuration Review
-Repository: `D:\AI Tools\DBS\Rms-Support-Hub` | Branch: `feat/p0c-external-server-config`
+MODEL: Claude Sonnet 5 HIGH | ROLE: Implement / Operational Verification
+PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-C HOSSAM Controlled Testing Deployment & Read-Only Acceptance
+Repository: `D:\AI Tools\DBS\Rms-Support-Hub` | Target: `HOSSAM` (Local Windows IIS)
 
-### 1. REVIEW OBJECTIVE
-Perform an independent, strict acceptance review of the P0-C external server-owned JSON configuration implementation and verified local Hosting Bundle prerequisite.
+### 1. MANDATORY APPROVAL GATE
+NO DEPLOYMENT, IIS MUTATION, SITE CREATION, OR FILE SYSTEM MUTATION MAY OCCUR UNTIL THE USER PROVIDES EXPLICIT APPROVAL FOR THE EXACT APPROVAL PACKET BELOW.
+TASK.md EXISTING DOES NOT AUTHORIZE DEPLOYMENT.
 
-This is a **REVIEW-ONLY** session.
-DO NOT merge automatically.
-DO NOT create IIS sites or application pools.
-DO NOT deploy the application or create real Testing configuration files.
+### 2. P0-C DEPLOYMENT OBJECTIVE
+Once explicitly authorized by the owner, execute the controlled initial deployment of the fresh Release Candidate to local IIS on host `HOSSAM` in the `Testing` environment and collect read-only acceptance evidence.
 
-### 2. VERIFICATION REQUIREMENTS
-The reviewer must independently inspect and verify:
-1. **Exact PR Head Identity:** Verify git HEAD and remote PR head match exactly.
-2. **Diff Review:** Inspect the complete technical diff for `feat/p0c-external-server-config` against `main`.
-3. **Configuration Precedence:** Confirm effective resolution order:
-   `packaged appsettings.json` < `packaged appsettings.{Environment}.json` < `server-owned external JSON` < `environment variables` < `command-line arguments`.
-4. **Path & Security Boundaries:** Verify that `SUPPORTHUB_EXTERNAL_CONFIG_PATH`:
-   - Rejects URLs (`http://`, `https://`, `ftp://`, `file://`), UNC/network paths (`\\...`, `//...`), relative paths, and paths inside the application content root.
-   - Fails closed on missing file, unreadable file, or malformed JSON without disclosing secrets.
-   - Maintains server-owned boundaries (no browser authority, no client path control).
-5. **Package Gates & Exclusions:** Verify that `appsettings.override.json` and `*.override.json` are strictly excluded from git, publish outputs, and RC packages.
-6. **Validation Suite:** Run and verify:
-   - Backend Release build (0 warnings, 0 errors with `--warnaserror`).
-   - Full backend Release tests (`dotnet test backend/RmsSupportHub.slnx -c Release`).
-   - Full frontend tests (`npx ng test --watch=false --progress=false`).
-   - Frontend production build (`npm run build -- --configuration production`).
-   - Riyal asset verification (`npm run test:riyal-asset`).
-   - Offline runtime tests (`.\scripts\test-offline-runtime.ps1`).
-   - PowerShell quality checks (`.\scripts\test-powershell-quality.ps1`).
-   - Memory and context checks (`python .ai/scripts/context.py`, `python .ai/scripts/check_memory.py`, `git diff --check`).
-7. **Exact-Head CI Workflows:** Verify exact-head runs for both `Support Hub CI` and `POS CI`.
+### 3. APPROVED LOCAL TARGET SPECIFICATION
+- Host: `HOSSAM`
+- Environment: `Testing`
+- IIS Site: `RmsSupportHub.Testing`
+- Application Pool: `RmsSupportHub.Testing` (No Managed Code, Integrated, ApplicationPoolIdentity)
+- Physical Path: `C:\inetpub\RmsSupportHub.Testing`
+- Binding: `http://*:8080/`
+- External Config Path Authority: `SUPPORTHUB_EXTERNAL_CONFIG_PATH`
+- External Config File: `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json`
+- Runtime Writable Path: `C:\inetpub\RmsSupportHub.Testing\var\drafts`
+- Hosting Bundle / ANCM: Ready (ASP.NET Core Module v2 verified)
 
-### 3. OUTCOME
-Conclude with a clear verdict: **ACCEPT** or **REQUEST CHANGES**.
-If accepted, record approval for subsequent owner merge action.
+### 4. REQUIRED MUTATION SEQUENCE (PENDING OWNER APPROVAL)
+1. Create external configuration directory `C:\ProgramData\RmsSupportHub\Testing`.
+2. Write owner-authorized Testing configuration `appsettings.override.json`.
+3. Apply config ACL: Administrators (Full Control), `IIS AppPool\RmsSupportHub.Testing` (Read).
+4. Create IIS application pool `RmsSupportHub.Testing`.
+5. Create deployment directory `C:\inetpub\RmsSupportHub.Testing`.
+6. Extract verified Release Candidate package into deployment directory.
+7. Create runtime directory `C:\inetpub\RmsSupportHub.Testing\var\drafts`.
+8. Grant `IIS AppPool\RmsSupportHub.Testing` Modify permission on `var\drafts`.
+9. Configure environment variable `SUPPORTHUB_EXTERNAL_CONFIG_PATH=C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json` on the IIS application pool.
+10. Create IIS site `RmsSupportHub.Testing` bound to `http://*:8080/`.
+11. Start site and application pool.
+12. Run read-only acceptance probes.
+
+### 5. READ-ONLY ACCEPTANCE PROBES
+Only the following read-only HTTP probes are permitted:
+- `GET http://localhost:8080/`
+- `GET http://localhost:8080/api/health/live`
+- `GET http://localhost:8080/api/health/ready`
+- `GET http://localhost:8080/api/modules`
+- `GET http://localhost:8080/build-identity.json`
+- SPA deep-link navigation and local static assets
+
+STRICT PROHIBITIONS:
+- No RMS gateway, API, or database probe without separate explicit authorization.
+- No order send, cancel, or resend.
+- No Main Server mutation or native RMS service control.
+- No Production requests.
