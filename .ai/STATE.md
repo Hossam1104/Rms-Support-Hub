@@ -1,10 +1,11 @@
 # Current Project State
 
 - **Updated:** 2026-08-20
-- **Active branch:** `main` (commit `13d590674e894ea720d2f4e3407c23d560923273`).
+- **Current repository:** `main@72793b878430a6ec57f2ca4ae79c2a73715ffba6` (docs/state reconciliation; working tree clean).
+- **Deployed HOSSAM Testing RC source:** `13d590674e894ea720d2f4e3407c23d560923273` (PR #25 merge commit).
 - **Status:** P0-C Testing IIS deployment completed and verified on HOSSAM; PR #25 merged to `main`.
   - **PR #25 Merge:** Accepted technical head `ef5e459`, final PR head `c6f2ab9`, merge commit `13d590674e894ea720d2f4e3407c23d560923273`.
-  - **CI Verification:** Support Hub CI run `32308207050` (SUCCESS) and POS CI run `32308207074` (SUCCESS) verified on merged `main`.
+  - **CI Verification:** Support Hub CI run `32308207050` (SUCCESS) and POS CI run `32308207074` (SUCCESS) verified on merged `main@13d5906`.
   - **Release Candidate:** Build ID `c372ecaee6a7d7bc0f026599b1d793f4f1d342f5ce479fa1809e37fa7b900a46`, ZIP SHA-256 `664e7db24224788a1dddc4a4ffdb5b874f78299477e53cbab52e25b9c9a661ab`.
   - **HOSSAM IIS Deployment:**
     - Site: `RmsSupportHub.Testing` (bound to `http://*:8080/`).
@@ -14,7 +15,7 @@
     - External config authority: `SUPPORTHUB_EXTERNAL_CONFIG_PATH`.
     - Runtime storage: `C:\inetpub\RmsSupportHub.Testing\var\drafts` (ACL: Modify granted).
   - **Acceptance Evidence:** All 7 read-only acceptance probes on `http://localhost:8080` passed (GET `/`, `/api/health/live`, `/api/health/ready`, `/api/modules`, `/build-identity.json`, SPA deep link, `/assets/Saudi_Riyal.svg`).
-  - **Development Runtime:** Backend active on `http://localhost:5200` (live), Frontend active on `http://localhost:4200`.
+  - **Development Runtime:** Backend active on `http://localhost:5200` (live), Frontend active on `http://localhost:4200` (live).
   - **Readiness:** REPOSITORY READY = YES, HOSTING PREREQUISITE = READY, EXTERNAL CONFIG SUPPORT = ACCEPTED, TESTING DEPLOYED = YES, TESTING ACCEPTED = YES, PRODUCTION READY = NO.
   - **Non-blocking Low backlog:**
     - `L-P0C-1`: External-config path validation rejects UNC/URL paths but does not independently classify mapped drive letters as DriveType.Network. Local `C:\ProgramData` approved for HOSSAM target.
