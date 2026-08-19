@@ -11,6 +11,7 @@ using RmsSupportHub.Data;
 using RmsSupportHub.Data.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddExternalServerConfiguration();
 
 // Add Controllers with JSON camelCase formatting
 builder.Services.AddControllers()

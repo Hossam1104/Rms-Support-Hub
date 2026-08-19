@@ -13,6 +13,7 @@ namespace RmsSupportHub.Tests;
 /// running host with the matching authority. No fake/in-memory config
 /// duplicates the validator's parsing rules; both go through
 /// DeploymentTierParser.TryParseExact.</summary>
+[Collection("HostEnvironmentCollection")]
 public sealed class DeploymentTierHostStartupTests
 {
     [Theory]

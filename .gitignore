@@ -8,6 +8,9 @@ obj/
 .vscode/
 appsettings.Local.json
 appsettings.*.local.json
+appsettings.override.json
+appsettings.*.override.json
+*.override.json
 
 # Angular / Node
 node_modules/

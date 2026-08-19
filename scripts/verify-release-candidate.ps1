@@ -58,7 +58,8 @@ function Assert-PackageExclusions([string]$Root) {
       $_.Name -eq '.env' -or
       $_.Name -match '(?i)(^|\.)\.env$' -or
       $_.Name -match '(?i)\.(pfx|p12|pem|key|cer|crt|map|pdb)$' -or
-      $_.Name -in @('appsettings.Development.json', 'appsettings.Local.json') -or
+      $_.Name -in @('appsettings.Development.json', 'appsettings.Local.json', 'appsettings.override.json') -or
+      $_.Name -match '(?i)\.override\.json$' -or
       $_.Name -match '(?i)\.local\.json$'
     }
   })
