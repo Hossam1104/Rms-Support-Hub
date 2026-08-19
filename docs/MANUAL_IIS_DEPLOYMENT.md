@@ -27,7 +27,7 @@ The ZIP root is the application itself. It contains the framework-dependent
 .NET 10 API publish output, `web.config`, Angular assets under `wwwroot`, a
 Testing build identity, `release-manifest.json`, `file-integrity.sha256`, and
 deployment/configuration documentation. It excludes secrets, local settings,
-certificates/private keys, source maps, compiler symbols, and runtime `var`.
+server-owned override configuration, certificates/private keys, source maps, compiler symbols, and runtime `var`.
 
 The package builder installs frontend dependencies with `npm ci`, builds the
 Angular production bundle, publishes the API in Release, finalizes identity

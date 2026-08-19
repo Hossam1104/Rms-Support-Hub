@@ -34,10 +34,28 @@ identity is not guaranteed.
   configuration: `SupportHub:DeploymentTier` is `Testing`, custom endpoints are
   disabled, every Production registration is disabled, endpoint values are
   placeholders only, and Production database overrides are absent.
+- Server-owned configuration override lives outside the deployable application
+  directory in an external JSON file discovered via the server environment
+  variable:
+  `SUPPORTHUB_EXTERNAL_CONFIG_PATH`
+  Example target path:
+  `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json`
+- Recommended ACL for the external configuration file and directory:
+  - **Administrators**: Full Control
+  - **IIS AppPool\RmsSupportHub.Testing**: Read
+- Configuration Precedence (lower to higher priority):
+  1. Packaged `appsettings.json`
+  2. Packaged `appsettings.{Environment}.json`
+  3. Server-owned external JSON (`SUPPORTHUB_EXTERNAL_CONFIG_PATH`)
+  4. Environment variables
+  5. Command-line arguments
 - Keep connection strings, authorized Testing gateway values, and all other
   server-owned environment overrides outside Git and outside the ZIP. Inject
   them through the approved server configuration source after extraction; the
   package never contains customer Testing secrets or Production configuration.
+- Configuration backup and application binary backup are separate rollback
+  artifacts. Package replacement must not touch or overwrite the external
+  configuration file.
 - A Testing host rejects Production operations before downstream calls. This
   package is not Production configuration or Production acceptance evidence.
 

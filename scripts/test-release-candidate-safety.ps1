@@ -87,7 +87,38 @@ try {
   if (-not $rejected) {
     throw 'Release candidate verifier accepted a package with Production topology/defaults.'
   }
-  Write-Output 'Package safety passed: sanitized defaults are present and the real package verifier rejects prohibited Production topology.'
+
+  # Verify that an embedded external server configuration file (appsettings.override.json) is rejected
+  $overridePackageRoot = Join-Path $temporaryRoot 'override-package'
+  $overrideZipPath = Join-Path $temporaryRoot 'override-package.zip'
+  $overrideExtractionRoot = Join-Path $temporaryRoot 'override-verification'
+  New-Item -ItemType Directory -Path $overridePackageRoot -Force | Out-Null
+  Copy-Item -Path (Join-Path $PackageRoot '*') -Destination $overridePackageRoot -Recurse -Force
+  [System.IO.File]::WriteAllText(
+    (Join-Path $overridePackageRoot 'appsettings.override.json'),
+    "{}`n",
+    [System.Text.UTF8Encoding]::new($false)
+  )
+  Write-IntegrityManifest $overridePackageRoot
+  Compress-Archive -Path (Join-Path $overridePackageRoot '*') -DestinationPath $overrideZipPath -CompressionLevel Optimal -Force
+  $overrideZipHash = (Get-FileHash -LiteralPath $overrideZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  [System.IO.File]::WriteAllText(
+    "$overrideZipPath.sha256",
+    "$overrideZipHash  $([System.IO.Path]::GetFileName($overrideZipPath))`n",
+    [System.Text.UTF8Encoding]::new($false)
+  )
+
+  $overrideRejected = $false
+  try {
+    & $verifier -ZipPath $overrideZipPath -ExtractionRoot $overrideExtractionRoot | Out-Null
+  } catch {
+    $overrideRejected = $true
+  }
+  if (-not $overrideRejected) {
+    throw 'Release candidate verifier accepted a package containing an embedded appsettings.override.json.'
+  }
+
+  Write-Output 'Package safety passed: sanitized defaults are present and the real package verifier rejects prohibited Production topology and embedded server override configuration.'
 } finally {
   if (Test-Path -LiteralPath $temporaryRoot) {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue

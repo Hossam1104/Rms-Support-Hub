@@ -225,7 +225,7 @@ try {
   # Development settings and compiler symbols are never runtime package
   # inputs. Runtime storage is created by the host and is intentionally not
   # copied from the developer checkout.
-  foreach ($developmentFile in @('appsettings.Development.json')) {
+  foreach ($developmentFile in @('appsettings.Development.json', 'appsettings.override.json')) {
     $path = Join-Path $stagingRoot $developmentFile
     if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
   }
@@ -266,7 +266,7 @@ try {
       writablePaths = @('var/drafts')
       runtimeStorage = 'Create var/drafts and grant the IIS app-pool identity Modify access.'
     }
-    packageExclusions = @('.env', 'appsettings.Development.json', '*.local.json', '*.pfx', '*.p12', '*.pem', '*.key', '*.cer', '*.crt', '*.map', '*.pdb', 'var/**', 'node_modules/**', '.angular/**')
+    packageExclusions = @('.env', 'appsettings.Development.json', '*.local.json', '*.override.json', '*.pfx', '*.p12', '*.pem', '*.key', '*.cer', '*.crt', '*.map', '*.pdb', 'var/**', 'node_modules/**', '.angular/**')
   }
   $manifestPath = Join-Path $stagingRoot 'release-manifest.json'
   Write-Utf8NoBom $manifestPath (($releaseManifest | ConvertTo-Json -Depth 10) + "`n")
