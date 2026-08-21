@@ -13,6 +13,20 @@
 - **Planned** — agreed or repository-documented future work.
 - **Conditional** — implement only when an authoritative upstream contract or data source exists.
 
+## Area & Iteration Classification Strategy
+
+To ensure effortless navigation across functional domains and delivery phases, Azure DevOps items are classified by:
+
+1. **Area Path (Product / Functional Domain Ownership):**
+   - `Rms_Support_Hub\Platform` — Unified application shell, shared infrastructure, CI/CD, deployment, and cross-domain governance.
+   - `Rms_Support_Hub\QA` — Prompt Studio authoring tools, test case generation, and export utilities.
+   - `Rms_Support_Hub\Online Orders` — Integration adapters, environment selection, payload authoring, and request lifecycle (UPC, GHC, Uni-Commerce, future OMS/Call Center).
+   - `Rms_Support_Hub\POS` — Local POS Support Agent service, Windows loopback boundary, diagnostics, guarded restore, and machine-owned package trust lifecycle.
+
+2. **Iteration Path (Delivery Phase / Milestone):**
+   - Delivery-phase iterations (e.g. `QA-01 - Prompt Studio`, `OO-01 - Core Platform`, `POS-01 - Secure Agent Foundation`, `PLAT-01 - Platform Foundation`) reflect engineering milestones rather than calendar sprints.
+   - Historical completed work remains truthfully marked as **Closed** and is readily discoverable via Area Path filters, Iteration Path milestones, team backlogs (configured with `includeChildren=true`), and Shared Queries.
+
 ---
 
 # E01 — Platform Foundation & Unified Support Hub
@@ -223,7 +237,7 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 
 ---
 
-# E07 — POS Secure Agent Foundation
+# E07 — POS Maintenance — Secure Agent Foundation
 **Epic Status:** Done
 
 ### US-E07-01 — Permanent RMS Support Agent service
@@ -252,7 +266,7 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 
 ---
 
-# E08 — POS Diagnostics & Recovery
+# E08 — POS Maintenance — Diagnostics & Recovery
 **Epic Status:** Done
 
 ### US-E08-01 — RMS installation discovery
@@ -299,7 +313,7 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 
 ---
 
-# E09 — POS Package Lifecycle & Security Hardening
+# E09 — POS Maintenance — Package Lifecycle & Security
 **Epic Status:** Done as architecture
 
 ### US-E09-01 — Canonical machine-owned package trust
