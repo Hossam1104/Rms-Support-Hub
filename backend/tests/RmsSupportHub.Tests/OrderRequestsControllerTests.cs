@@ -26,27 +26,31 @@ public class OrderRequestsControllerTests
         new UniCommerceValidator(),
         new FlatOrderItemRepository(new SqlServerConnectionFactory()),
         new GhcConsumerRepository(new SqlServerConnectionFactory()),
+        new GhcUnicommerceConsumerRepository(new SqlServerConnectionFactory()),
         new UpcItemRepository(new SqlServerConnectionFactory()),
         new UpcConsumerRepository(new SqlServerConnectionFactory()),
-        TestEnvironmentCatalog.UpcOnly());
+        TestEnvironmentCatalog.UpcAndGhcUni());
 
     private static IConfiguration BuildConfiguration() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:UpcEcommerceTest"] = "Server=fake;Database=fake;"
+            ["ConnectionStrings:UpcEcommerceTest"] = "Server=fake;Database=fake;",
+            ["ConnectionStrings:GhcUnicommerceTest"] = "Server=fake;Database=fake;"
         })
         .Build();
 
     private static OrderRequestsController BuildController(
         IOrderRequestRepository repository,
         IApiClient apiClient,
-        DeploymentTier deploymentTier = DeploymentTier.Testing) =>
+        DeploymentTier deploymentTier = DeploymentTier.Testing,
+        IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null) =>
         new(
             BuildRegistry(),
             repository,
             apiClient,
             new RmsSupportHub.Api.ServerConnectionStringResolver(BuildConfiguration()),
-            new EnvironmentPolicy(deploymentTier));
+            new EnvironmentPolicy(deploymentTier),
+            ghcUnicommerceRepository);
 
     private static OrderRequestDetailDto MakeDetail(int orderStatus) => new(
         Id: 42,
@@ -136,6 +140,11 @@ public class OrderRequestsControllerTests
             ConnectionStrings.Add(connectionString);
             return Task.FromResult(new OrderRequestLineageDto(null, new List<OrderRequestLineageNodeDto>()));
         }
+    }
+
+    private sealed class FakeGhcUnicommerceOrderRequestRepository : FakeOrderRequestRepository,
+        IGhcUnicommerceOrderRequestRepository
+    {
     }
 
     private class FakeApiClient : IApiClient
@@ -346,6 +355,69 @@ public class OrderRequestsControllerTests
         Assert.Equal(new[] { 6, 7 }, repo.LastFilters.Statuses);
         Assert.Equal(2, repo.LastPage);
         Assert.Equal(cancellation.Token, repo.LastCancellationToken);
+    }
+
+    [Fact]
+    public async Task UniCommerceList_UsesTheCapabilitySelectedReadOnlyAdapter()
+    {
+        var standard = new FakeOrderRequestRepository();
+        var uni = new FakeGhcUnicommerceOrderRequestRepository();
+        var controller = BuildController(standard, new FakeApiClient(), ghcUnicommerceRepository: uni);
+        var query = new OrderRequestListQuery(
+            Q: "UNI-1", OrderNumber: null, Phone: null, BranchCode: null,
+            Status: null, Statuses: null, Succeeded: false, HasException: null,
+            DateFrom: null, DateTo: null, Page: 1, PageSize: 25,
+            Sort: null, ExactMatch: true);
+
+        var result = await controller.List(
+            "ghc_unicommerce", query, "GHC Uni-Commerce Testing");
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
+        Assert.Empty(standard.ConnectionStrings);
+        Assert.NotEmpty(uni.ConnectionStrings);
+        Assert.Equal("UNI-1", uni.LastFilters!.OrderNumber);
+        Assert.False(uni.LastFilters.Succeeded == true);
+    }
+
+    [Fact]
+    public async Task UniCommerceList_RejectsUnsupportedBranchFilterBeforeDatabaseReads()
+    {
+        var standard = new FakeOrderRequestRepository();
+        var uni = new FakeGhcUnicommerceOrderRequestRepository();
+        var controller = BuildController(standard, new FakeApiClient(), ghcUnicommerceRepository: uni);
+        var query = new OrderRequestListQuery(
+            Q: null, OrderNumber: null, Phone: null, BranchCode: "P001",
+            Status: null, Statuses: null, Succeeded: null, HasException: null,
+            DateFrom: null, DateTo: null, Page: 1, PageSize: 25,
+            Sort: null, ExactMatch: true);
+
+        var result = await controller.List(
+            "ghc_unicommerce", query, "GHC Uni-Commerce Testing");
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+        Assert.Empty(standard.ConnectionStrings);
+        Assert.Empty(uni.ConnectionStrings);
+    }
+
+    [Fact]
+    public async Task UniCommerceList_RejectsUnverifiedExceptionFilterBeforeDatabaseReads()
+    {
+        var standard = new FakeOrderRequestRepository();
+        var uni = new FakeGhcUnicommerceOrderRequestRepository();
+        var controller = BuildController(standard, new FakeApiClient(), ghcUnicommerceRepository: uni);
+        var query = new OrderRequestListQuery(
+            Q: null, OrderNumber: null, Phone: null, BranchCode: null,
+            Status: null, Statuses: null, Succeeded: null, HasException: true,
+            DateFrom: null, DateTo: null, Page: 1, PageSize: 25,
+            Sort: null, ExactMatch: true);
+
+        var result = await controller.List(
+            "ghc_unicommerce", query, "GHC Uni-Commerce Testing");
+
+        var badRequest = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+        Assert.Contains("exception state is unavailable", badRequest.Value?.ToString());
+        Assert.Empty(standard.ConnectionStrings);
+        Assert.Empty(uni.ConnectionStrings);
     }
 
     [Fact]

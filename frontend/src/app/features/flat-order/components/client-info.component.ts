@@ -31,6 +31,15 @@ import { normalizeLocalPhone } from '../../../core/utils/phone.util';
           <ui-input inputId="field-client-phone" type="tel" [value]="textValue('client_phone')" autocomplete="tel" [invalid]="hasError('client_phone')" [ariaDescribedBy]="phoneField.describedBy()" (valueChange)="onFieldChange('client_phone', $event)"></ui-input>
         </ui-field>
 
+        <ng-container *ngIf="moduleKey === 'ghc_ecommerce'">
+          <ui-field label="Order country code" forId="field-order-country-code">
+            <ui-input inputId="field-order-country-code" type="tel" [value]="textValue('order_country_code')" placeholder="966" (valueChange)="onFieldChange('order_country_code', $event)"></ui-input>
+          </ui-field>
+          <ui-field label="Order phone" forId="field-order-phone" hint="Local number only — sent separately from the order country code.">
+            <ui-input inputId="field-order-phone" type="tel" [value]="textValue('order_phone')" (valueChange)="onFieldChange('order_phone', $event)"></ui-input>
+          </ui-field>
+        </ng-container>
+
         <ui-field #firstNameField label="First name" forId="field-client-first-name" [required]="true" [error]="fieldError('client_first_name')">
           <ui-input inputId="field-client-first-name" autocomplete="given-name" [value]="textValue('client_first_name')" [invalid]="hasError('client_first_name')" [ariaDescribedBy]="firstNameField.describedBy()" (valueChange)="onFieldChange('client_first_name', $event)"></ui-input>
         </ui-field>
@@ -81,6 +90,7 @@ import { normalizeLocalPhone } from '../../../core/utils/phone.util';
   `]
 })
 export class ClientInfoComponent {
+  @Input() moduleKey = '';
   @Input() orderData: Record<string, unknown> = {};
   @Input() fieldErrors: Record<string, string[]> = {};
   @Output() fieldChange = new EventEmitter<{ fieldName: string, value: unknown }>();
@@ -94,12 +104,15 @@ export class ClientInfoComponent {
 
   hasError(fieldName: string): boolean { return (this.fieldErrors[fieldName]?.length ?? 0) > 0; }
   fieldError(fieldName: string): string | null { return this.fieldErrors[fieldName]?.join(' ') || null; }
-  /** `client_phone` is stripped of a leading Saudi country code on the way
-   * into the draft (typed or pasted) so the field settles on the local number
-   * the separate country-code field already accounts for. Every other field
-   * is passed through untouched. */
+  /** Client phone, plus GHC's separate order phone, are stripped of a leading
+   * Saudi country code on the way into the draft (typed or pasted). The
+   * separate country-code fields and every other field are passed through
+   * untouched. */
   onFieldChange(fieldName: string, value: unknown) {
-    const applied = fieldName === 'client_phone' ? normalizeLocalPhone(value) : value;
+    const applied = fieldName === 'client_phone'
+      || (fieldName === 'order_phone' && this.moduleKey === 'ghc_ecommerce')
+      ? normalizeLocalPhone(value)
+      : value;
     this.fieldChange.emit({ fieldName, value: applied });
   }
 

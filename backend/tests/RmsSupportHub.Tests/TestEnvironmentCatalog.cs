@@ -32,4 +32,21 @@ internal static class TestEnvironmentCatalog
         {
             ["upc_ecommerce"] = Upc()
         };
+
+    public static IReadOnlyDictionary<string, IReadOnlyDictionary<string, ModuleEnvironment>> UpcAndGhcUni() =>
+        new Dictionary<string, IReadOnlyDictionary<string, ModuleEnvironment>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["upc_ecommerce"] = Upc(),
+            ["ghc_unicommerce"] = ModuleEnvironmentDefaults.GhcUnicommerce()
+                .ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value with
+                    {
+                        Available = true,
+                        ApiUrl = "http://uni.example/create",
+                        ConnectionStringName = "GhcUnicommerceTest",
+                        HealthProbeEnabled = true
+                    },
+                    StringComparer.OrdinalIgnoreCase)
+        };
 }

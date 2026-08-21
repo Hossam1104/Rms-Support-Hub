@@ -10,4 +10,5 @@ public interface IConsumerRepository
 /// <summary>See IGhcItemRepository/IUpcItemRepository in IItemRepository.cs
 /// for why these marker interfaces exist.</summary>
 public interface IGhcConsumerRepository : IConsumerRepository { }
+public interface IGhcUnicommerceConsumerRepository : IConsumerRepository { }
 public interface IUpcConsumerRepository : IConsumerRepository { }

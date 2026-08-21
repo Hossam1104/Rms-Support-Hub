@@ -159,16 +159,24 @@ described in section 4 alongside item and consumer lookup capabilities.
 
 ## 5. Order Requests (R4/R5 — the `OrderRequests` table as source of truth)
 
-Every route below is gated by `Capabilities.OrderRequests`. As of R5 this is
-`true` only for `upc_ecommerce`; GHC returns:
+Every route below is gated by `Capabilities.OrderRequests`. Standard UPC and
+GHC E-Commerce history uses the verified `OrderRequests` workflow. GHC
+Uni-Commerce uses a separate bounded read-only adapter over its verified
+`ExternalInvoiceRequests` table. That adapter supports reference/order-number,
+outcome, and date filters only; the verified table has no exception flag, so
+failed business outcomes are not presented as application exceptions. Branch,
+phone, status, totals, line-item, cancel, and resend behavior are not
+fabricated for the narrower Uni schema.
+
+Modules without an applicable history source return:
 
 ```
 501 Not Implemented
-{ "error": "'order-requests' is not available for module 'ghc_ecommerce'." }
+{ "error": "'order-requests' is not available for module 'oms'." }
 ```
 
-(`GhcEcommerceModule.Capabilities.OrderRequests` carries a `// TODO(db-creds)`
-naming the one-line flip once GHC's live database credentials are confirmed.)
+The module capability selects the repository shape; controllers do not compare
+module-key strings to choose a database query.
 
 All routes accept `?envKey={envKey}` to pick the registered environment (and
 therefore the server-side connection mapping) to query. The active deployment
@@ -181,6 +189,11 @@ detail route is `/order-requests/{id}` and replaces the former validation and
 drawer surfaces.
 
 ### List
+
+For Uni-Commerce, `hasException` is rejected because the verified table has no
+exception flag. Its `HasResponse` value is true only when a verified message or
+external invoice identifier is present.
+
 - **`GET /api/modules/{key}/order-requests`**
 - **Query**: `q` (alias for `orderNumber`), `orderNumber`, `exactMatch` (optional; defaults to `true`), `phone`, `branchCode`, `status` (single value, 1–9), `statuses` (repeated, e.g. `?statuses=6&statuses=7` — multi-select status chips; takes precedence over `status` when both are given), `succeeded` (bool), `hasException` (bool), `dateFrom`, `dateTo`, `page` (default 1), `pageSize` (default 25, clamped to ≤200), `sort` (`order_date`\|`net_total`\|`item_count`, optionally prefixed `-`/`+`; default `order_date DESC` for filtered results). When no header-derived filters are present, the dashboard/search path intentionally returns only the ten newest matching `OrderRequests` by `Id DESC`.
 - **Response `200 OK`**: `{ items: OrderRequestListItemDto[], page, pageSize, total, totalPages, stats: OrderRequestStatsDto }`.
@@ -190,6 +203,12 @@ drawer surfaces.
 - The Angular route keeps one canonical applied-filter model. Clear All resets that model to its fresh defaults on page 1, including the current-month-to-date window, removes canonical and legacy route-filter aliases through the router's null merge (`orderNumber`, `q`, `request`, `branch`, and `statuses` included), preserves the selected page size, and issues one base-filtered list request for the ten newest matching requests. Reload, manual refresh, auto-refresh, and browser history consume the cleared model rather than restoring the removed filters.
 
 ### Detail
+
+For Uni-Commerce, the bounded `responseJson` projection contains verified
+`Message`/`ExternalInvoiceId` values when present. `exceptionMessage` and
+attempt `hasException` remain empty/false because no exception column is
+verified.
+
 - **`GET /api/modules/{key}/order-requests/{id}`**
 - **Response `200 OK`**: `{ request: OrderRequestDetailDto, attempts: OrderRequestAttemptDto[], lineage: OrderRequestLineageDto }`. `request` is the only shape carrying `requestJson`/`responseJson`/`exceptionMessage`. `request.header.rejectionMessage` (R9) surfaces `RequestOrderHeaders.RejectionMessage` — a verified real column that R4 never selected.
 - **`404 Not Found`** if the id doesn't exist.

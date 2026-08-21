@@ -1,4 +1,5 @@
 using RmsSupportHub.Core.Models;
+using RmsSupportHub.Core.Repositories;
 using RmsSupportHub.Core.Services;
 
 namespace RmsSupportHub.Core.Modules;
@@ -7,14 +8,17 @@ public class GhcUnicommerceModule : IOrderModule
 {
     private readonly IUniCommercePayloadBuilder _payloadBuilder;
     private readonly IUniCommerceValidator _validator;
+    private readonly IGhcUnicommerceConsumerRepository _consumerRepository;
 
     public GhcUnicommerceModule(
         IUniCommercePayloadBuilder payloadBuilder,
         IUniCommerceValidator validator,
+        IGhcUnicommerceConsumerRepository consumerRepository,
         IReadOnlyDictionary<string, ModuleEnvironment>? environments = null)
     {
         _payloadBuilder = payloadBuilder;
         _validator = validator;
+        _consumerRepository = consumerRepository;
         Environments = environments ?? ModuleEnvironmentDefaults.GhcUnicommerce();
     }
 
@@ -23,16 +27,14 @@ public class GhcUnicommerceModule : IOrderModule
     public string Client => "GHC";
     public bool Available => true;
 
-    /// <summary>No item/consumer repository was ever built for Uni-Commerce,
-    /// and its environments have no ApiUrl yet, so Cancel/Resend/OrderRequests
-    /// stay false until that lands.</summary>
     public ModuleCapabilities Capabilities { get; } = new(
         DraftKind: "unicommerce",
         ItemLookup: false,
-        ConsumerLookup: false,
-        OrderRequests: false,
+        ConsumerLookup: true,
+        OrderRequests: true,
         Cancel: false,
-        Resend: false);
+        Resend: false,
+        OrderRequestHistory: OrderRequestHistoryMode.ExternalInvoiceRequests);
 
     public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; }
 
@@ -90,8 +92,9 @@ public class GhcUnicommerceModule : IOrderModule
     }
 
     public Task<Product?> LookupItemAsync(string connectionString, string code, string? branchCode = null) =>
-        throw new NotSupportedException("Item lookup is not available for GHC Uni-Commerce.");
+        Task.FromException<Product?>(new NotSupportedException(
+            "GHC Uni-Commerce Testing has no verified item master/catalog table."));
 
     public Task<Consumer?> LookupConsumerByPhoneAsync(string connectionString, string phone) =>
-        throw new NotSupportedException("Consumer lookup is not available for GHC Uni-Commerce.");
+        _consumerRepository.LookupConsumerByPhoneAsync(connectionString, phone);
 }

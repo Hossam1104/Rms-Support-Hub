@@ -32,6 +32,12 @@ import { PAYMENT_STATUS_OPTIONS, defaultPaymentMethod, defaultPaymentStatus, pay
           <ui-field label="Transaction ID" forId="payment-transaction-id">
             <ui-input inputId="payment-transaction-id" placeholder="Optional" [value]="payment.transactionId || ''" (valueChange)="payment.transactionId = $any($event) || ''"></ui-input>
           </ui-field>
+          <ui-field *ngIf="showGhcCardFields()" label="Card name" forId="payment-card-name">
+            <ui-input inputId="payment-card-name" placeholder="Optional" [value]="payment.cardName || ''" (valueChange)="payment.cardName = $any($event) || ''"></ui-input>
+          </ui-field>
+          <ui-field *ngIf="showGhcCardFields()" label="Bank code" forId="payment-bank-code">
+            <ui-input inputId="payment-bank-code" placeholder="Optional" [value]="payment.bankCode || ''" (valueChange)="payment.bankCode = $any($event) || ''"></ui-input>
+          </ui-field>
           <ui-field *ngIf="payment.paymentMethod === 'PostToCredit' && moduleKey === 'ghc_ecommerce'" label="Credit Customer Name" forId="payment-customer-name" [required]="true" class="full-width">
             <ui-input inputId="payment-customer-name" [value]="payment.customerName || ''" (valueChange)="payment.customerName = $any($event) || ''"></ui-input>
           </ui-field>
@@ -72,7 +78,7 @@ export class AddPaymentDialogComponent implements OnChanges {
     return paymentMethodOptions(this.moduleKey);
   }
   readonly paymentStatusOptions = PAYMENT_STATUS_OPTIONS;
-  payment: Payment = { paymentMethod: 'COD', paymentStatus: 'not_payment', paymentAmount: 0, transactionId: '', customerName: '', customerNumber: '' };
+  payment: Payment = { paymentMethod: 'COD', paymentStatus: 'not_payment', paymentAmount: 0, transactionId: '', customerName: '', customerNumber: '', cardName: '', bankCode: '' };
   private amountAutoFilled = false;
 
   ngOnChanges(changes: SimpleChanges) {
@@ -106,7 +112,9 @@ export class AddPaymentDialogComponent implements OnChanges {
       paymentAmount: method === 'COD' ? 0 : this.normalizedRequiredAmount(),
       transactionId: '',
       customerName: '',
-      customerNumber: ''
+      customerNumber: '',
+      cardName: '',
+      bankCode: ''
     };
     this.amountAutoFilled = method !== 'COD';
   }
@@ -126,6 +134,14 @@ export class AddPaymentDialogComponent implements OnChanges {
 
   private statusForMethod(): string {
     return defaultPaymentStatus(this.payment.paymentMethod);
+  }
+
+  /** Card/bank metadata is part of the GHC payment contract only. It is not
+   * shown for COD or credit-posting rows, where those fields have no meaning. */
+  showGhcCardFields(): boolean {
+    return this.moduleKey === 'ghc_ecommerce'
+      && this.payment.paymentMethod !== 'COD'
+      && this.payment.paymentMethod !== 'PostToCredit';
   }
 
   private normalizedRequiredAmount(): number {

@@ -33,7 +33,12 @@ public class PayloadAndValidationTests
                 ["client_last_name"] = "Doe",
                 ["client_phone"] = "0501234567",
                 ["order_address"] = "Main St",
+                ["order_country_code"] = "SA",
+                ["order_phone"] = "0507654321",
                 ["delivery_date"] = "2026-07-25",
+                ["delivery_from_time"] = "09:00",
+                ["delivery_to_time"] = "12:00",
+                ["shipping_address_2"] = "Building 2",
                 ["fullfilment_plant"] = "PLANT-1"
             },
             Products = new List<Product>
@@ -42,7 +47,15 @@ public class PayloadAndValidationTests
             },
             Payments = new List<Payment>
             {
-                new() { PaymentMethod = "COD", PaymentStatus = "not_payment", PaymentAmount = 115m }
+                new()
+                {
+                    PaymentMethod = "PostToCredit",
+                    PaymentAmount = 115m,
+                    CardName = "Local Card",
+                    BankCode = "BANK-1",
+                    CustomerName = "Credit Customer",
+                    CustomerNumber = "CREDIT-1"
+                }
             }
         };
 
@@ -50,15 +63,20 @@ public class PayloadAndValidationTests
 
         Assert.True(payload.ContainsKey("delivery_date"));
         Assert.Equal("2026-07-25", payload["delivery_date"]);
+        Assert.Equal("09:00:00", payload["delivery_from_time"]);
+        Assert.Equal("12:00:00", payload["delivery_to_time"]);
+        Assert.Equal("Building 2", payload["shipping_address_2"]);
         Assert.True(payload.ContainsKey("fullfilment_plant"));
         Assert.Equal("PLANT-1", payload["fullfilment_plant"]);
-        Assert.True(payload.ContainsKey("order_country_code"));
-        Assert.True(payload.ContainsKey("order_phone"));
+        Assert.Equal("SA", payload["order_country_code"]);
+        Assert.Equal("507654321", payload["order_phone"]);
 
         var payments = Assert.IsType<List<Dictionary<string, object?>>>(payload["payment_methods_with_options"]);
-        Assert.True(payments[0].ContainsKey("card_name"));
-        Assert.True(payments[0].ContainsKey("bank_code"));
-        Assert.True(payments[0].ContainsKey("credit_customer_info"));
+        Assert.Equal("Local Card", payments[0]["card_name"]);
+        Assert.Equal("BANK-1", payments[0]["bank_code"]);
+        var creditCustomer = Assert.IsType<Dictionary<string, object?>>(payments[0]["credit_customer_info"]);
+        Assert.Equal("CREDIT-1", creditCustomer["customer_number"]);
+        Assert.Equal("Credit Customer", creditCustomer["customer_name"]);
         Assert.False(payments[0].ContainsKey("payment_status"));
     }
 

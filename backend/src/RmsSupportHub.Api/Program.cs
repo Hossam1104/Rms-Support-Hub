@@ -66,6 +66,7 @@ builder.Services.AddSingleton<IModuleRegistry>(serviceProvider =>
         serviceProvider.GetRequiredService<IUniCommerceValidator>(),
         serviceProvider.GetRequiredService<IGhcItemRepository>(),
         serviceProvider.GetRequiredService<IGhcConsumerRepository>(),
+        serviceProvider.GetRequiredService<IGhcUnicommerceConsumerRepository>(),
         serviceProvider.GetRequiredService<IUpcItemRepository>(),
         serviceProvider.GetRequiredService<IUpcConsumerRepository>(),
         ConfiguredEnvironmentCatalog.Build(configuration, options));
@@ -88,9 +89,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IGhcItemRepository, FlatOrderItemRepository>();
 builder.Services.AddSingleton<IUpcItemRepository, UpcItemRepository>();
 builder.Services.AddSingleton<IGhcConsumerRepository, GhcConsumerRepository>();
+builder.Services.AddSingleton<IGhcUnicommerceConsumerRepository, GhcUnicommerceConsumerRepository>();
 builder.Services.AddSingleton<IUpcConsumerRepository, UpcConsumerRepository>();
 builder.Services.AddSingleton<IBranchRepository, BranchRepository>();
 builder.Services.AddSingleton<IOrderRequestRepository, OrderRequestRepository>();
+builder.Services.AddSingleton<IGhcUnicommerceOrderRequestRepository, GhcUnicommerceOrderRequestRepository>();
 
 // Outbound TLS certificate validation is bypassed by default because the
 // internal RMS hosts (10.10.x.x) present self-signed certificates -- but

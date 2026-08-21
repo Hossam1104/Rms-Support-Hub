@@ -15,6 +15,7 @@ public class ModuleHealthServiceTests
         new UniCommerceValidator(),
         new FlatOrderItemRepository(new SqlServerConnectionFactory()),
         new GhcConsumerRepository(new SqlServerConnectionFactory()),
+        new GhcUnicommerceConsumerRepository(new SqlServerConnectionFactory()),
         new UpcItemRepository(new SqlServerConnectionFactory()),
         new UpcConsumerRepository(new SqlServerConnectionFactory()),
         TestEnvironmentCatalog.UpcOnly());

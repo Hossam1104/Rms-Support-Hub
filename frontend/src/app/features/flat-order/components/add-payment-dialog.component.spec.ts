@@ -57,6 +57,25 @@ describe('AddPaymentDialogComponent', () => {
     expect(component.payment.paymentAmount).toBe(0);
   });
 
+  it('shows GHC card metadata only for card-like payments', () => {
+    const component = new AddPaymentDialogComponent();
+    openFor(component, 'ghc_ecommerce');
+
+    expect(component.showGhcCardFields()).toBe(false);
+    component.onMethodChange('Visa');
+    expect(component.showGhcCardFields()).toBe(true);
+    component.onMethodChange('PostToCredit');
+    expect(component.showGhcCardFields()).toBe(false);
+  });
+
+  it('does not expose GHC card metadata for UPC', () => {
+    const component = new AddPaymentDialogComponent();
+    openFor(component, 'upc_ecommerce');
+    component.onMethodChange('Visa');
+
+    expect(component.showGhcCardFields()).toBe(false);
+  });
+
   it('defaults each UPC method to done_payment as soon as it is selected', () => {
     const component = new AddPaymentDialogComponent();
     component.requiredAmount = 107.9;
