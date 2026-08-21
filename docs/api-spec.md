@@ -155,10 +155,10 @@ returned to, or logged for the browser.
 - **`POST /api/modules/{key}/production-unlock`**
 - **Request Body**: `{ password: string }` — the value is checked only against the server-owned owner-configured Production unlock secret.
 - **Response `200 OK`**: `{ token: string, expiresAt: string }`. The password, secret configuration, and downstream credentials are never returned.
-- The opaque token is random, short-lived, held only in frontend memory, bound to the current server session and module's `Production` lane, and accepted only by Production mutation routes. It is not a credential for Testing and is invalid after expiry, page reload, session change, or module change.
+- The opaque token is random, short-lived, held only in frontend memory, bound to the original server session, module, and `Production` lane, and accepted only by Production mutation routes. A page reload or module/environment switch clears the browser context; it does not revoke the server-side token early. The server token automatically expires after its bounded lifetime, and no browser persistence is used.
 - **`401`**: `production_unlock_failed` or `production_unlock_expired`; **`423`**: `production_mutation_locked`; **`503`**: `production_unlock_unavailable` when the owner-configured secret is not provisioned.
 - Production `send-request`, `cancel-order`, and supported Order Requests cancel/resend routes require `X-SupportHub-Production-Unlock`. Testing requests do not require or receive this header. Read-only Order Requests GET routes do not require unlock.
-- Failed unlock attempts are bounded per session/module. Logs contain only non-sensitive module/operation/outcome context; they never contain the password or token.
+- Failed unlock attempts are bounded by three server-side partitions: session/module, server-observed remote-source/module, and a conservative process-wide module ceiling. The source identity is taken from the connection and does not trust arbitrary browser-supplied forwarding headers. All buckets expire automatically; logs contain only non-sensitive module/operation/outcome context and never contain the password or token.
 
 ### Diagnostics
 - **`POST /api/modules/{key}/test-endpoint?envKey={envKey}`** → `{ status: "Online"|"Offline" }`.

@@ -13,9 +13,13 @@ describe('productionBuilderGuard', () => {
     } as unknown as ActivatedRouteSnapshot;
   }
 
-  function setup(environment: 'Testing' | 'Production', unlocked: boolean) {
+  function setup(environment: 'Testing' | 'Production' | null, unlocked: boolean) {
     const redirect = {} as UrlTree;
-    const moduleService = { selectedEnvironment: vi.fn(() => ({ key: `UPC ${environment}`, environment })) };
+    const moduleService = {
+      selectedEnvironment: vi.fn(() => environment
+        ? { key: `UPC ${environment}`, environment }
+        : null)
+    };
     const unlock = {
       isUnlocked: vi.fn(() => unlocked),
       open: vi.fn()
@@ -65,5 +69,17 @@ describe('productionBuilderGuard', () => {
 
     expect(result).toBe(true);
     expect(dependencies.unlock.isUnlocked).toHaveBeenCalledWith('upc_ecommerce', 'UPC Production');
+  });
+
+  it('redirects instead of guessing when module or environment metadata is unavailable', () => {
+    const dependencies = setup(null, false);
+
+    const result = TestBed.runInInjectionContext(() => productionBuilderGuard(route('order'), state));
+
+    expect(result).toBe(dependencies.redirect);
+    expect(dependencies.unlock.open).not.toHaveBeenCalled();
+    expect(dependencies.router.createUrlTree).toHaveBeenCalledWith([
+      '/tools/online-orders/modules', 'upc_ecommerce', 'order-requests'
+    ]);
   });
 });

@@ -294,7 +294,11 @@ public class OrderController : ControllerBase
         if (!_environmentPolicy.IsAllowed(production))
             throw new EnvironmentNotAllowedException();
 
-        var result = _productionGate.Unlock(module.Key, SessionIdForGate(), request.Password);
+        var result = _productionGate.Unlock(
+            module.Key,
+            SessionIdForGate(),
+            request.Password,
+            HttpContext.Connection.RemoteIpAddress?.ToString());
         return Ok(new ProductionUnlockResponse(result.Token, result.ExpiresAt));
     }
 

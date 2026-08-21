@@ -81,7 +81,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
               <app-riyal [size]="0.9"></app-riyal>{{ detail.request.netTotal | number:'1.2-2' }}
             </span>
             <button
-              *ngIf="canResend(detail.request)"
+              *ngIf="supportsResend(detail.request)"
               type="button"
               class="action-btn brand"
               [disabled]="!canResend(detail.request) || resendSubmitting()"
@@ -92,7 +92,7 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
               {{ resendSubmitting() ? 'Resending...' : 'Resend' }}
             </button>
             <button
-              *ngIf="canCancel(detail.request)"
+              *ngIf="supportsCancel(detail.request)"
               type="button"
               class="action-btn danger"
               [disabled]="!canCancel(detail.request) || cancelSubmitting()"
@@ -527,9 +527,19 @@ export class OrderRequestDetailsComponent implements OnDestroy {
     return capability !== false && !!header && canResendStatus(header.orderStatus ?? header.orderStatusLabel);
   }
 
+  supportsResend(detail: OrderRequestDetail | null | undefined): boolean {
+    return this.moduleService.activeModule()?.capabilities?.resend !== false
+      && !!detail?.header;
+  }
+
   canCancel(detail: OrderRequestDetail | null | undefined): boolean {
     const capability = this.moduleService.activeModule()?.capabilities?.cancel;
     return capability !== false && !!detail?.header?.canCancel;
+  }
+
+  supportsCancel(detail: OrderRequestDetail | null | undefined): boolean {
+    return this.moduleService.activeModule()?.capabilities?.cancel !== false
+      && !!detail?.header;
   }
 
   productionLocked(): boolean {

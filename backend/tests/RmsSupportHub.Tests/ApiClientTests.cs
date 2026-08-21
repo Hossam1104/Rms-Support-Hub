@@ -37,6 +37,23 @@ public sealed class ApiClientTests
         Assert.False(handler.Request.Headers.Contains("Authorization"));
     }
 
+    [Fact]
+    public async Task SendOrderWithMissingApiKeyFailsBeforeOutboundCall()
+    {
+        var handler = new RecordingHandler();
+        using var httpClient = new HttpClient(handler);
+        var client = new ApiClient(httpClient);
+
+        var result = await client.SendOrderWithApiKeyAsync(
+            "https://uni.testing.example/create",
+            new { order = "synthetic" },
+            " ");
+
+        Assert.False(result.Success);
+        Assert.Null(handler.Request);
+        Assert.DoesNotContain("X-Api-Key", result.ResponseText, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
         public HttpRequestMessage? Request { get; private set; }

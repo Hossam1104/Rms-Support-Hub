@@ -1,84 +1,92 @@
-# P0-D - Testing Integration & Operational Readiness
+# P0-F — Production Mutation Gate / Draft PR #30 Acceptance and Finalization
 
-MODEL: Gemini 3.7 | ROLE: Implementation Executor / Operational Readiness
-PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-D Testing Integration & Operational Readiness
-Repository: `D:\AI Tools\DBS\Rms-Support-Hub` | Target: `HOSSAM` (Local Windows IIS)
+MODEL: Implementation and validation executor
+AUTHORITY: GPT-5.6 Sol remains Planner / Architect / Acceptance Authority
+PROGRAMME: Staging-Safe Release Candidate v1
+REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
+BRANCH: `feat/p0-f-production-mutation-gate`
+PR: #30, `feat: protect Production order mutations and remediate Testing flows`
+STATUS: Draft; awaiting independent Sol re-review and acceptance
 
-## 1. Objective and execution preference
+## Current state
 
-Prepare and verify the deployed `RmsSupportHub.Testing` IIS site on HOSSAM with
-authorized Testing external configuration and bounded end-to-end workflows.
-Use Gemini 3.7 for bounded preparation, validation, docs, and config work;
-do not consume Luna without Sol escalation for a genuinely high-risk problem.
+P0-F implements the server-enforced Production mutation gate for supported
+UPC E-Commerce, GHC E-Commerce, and GHC Uni-Commerce send/cancel/resend
+operations. Production Order Requests reads remain read-only without unlock;
+Testing does not require the unlock ceremony. The gate uses a server-owned
+secret, opaque in-memory tokens, exact module + Production + original-session
+scope, bounded expiry, constant-time comparison, session/source/module
+throttling, and generic errors. The browser stores no password or persistent
+unlock token.
 
-## 2. Environment boundaries
+PR #30 is not merged and must remain Draft until Sol independently accepts the
+exact correction head. Do not create another PR, merge, or mark the PR ready.
+Do not contact Production or execute a live Production mutation during this
+acceptance/finalization task.
 
-- Local HOSSAM work includes IIS, local config, development servers, builds, and tests.
-- Shared/customer Testing RMS APIs, databases, and gateways require an explicit operation packet before first contact.
-- Standing owner authorization is granted for the planned Testing-track implementation, bounded Testing connectivity,
-  reviewed read-only SQL, and controlled Testing Send/Cancel/Resend with dedicated synthetic data; no repeated
-  conversational approval is required. Missing configuration or other technical prerequisites remain blockers.
-- Production is strictly forbidden and outside P0-D authorization.
+## Security and configuration boundaries
 
-## 3. Current deployed baseline
+- Never reveal, print, log, screenshot, commit, or store the real Production
+  unlock secret or any real downstream API key.
+- Keep Production unlock/API-key values outside Git, packages, CI output,
+  screenshots, and `.ai/` memory files. Only configuration-key names may be
+  tracked.
+- Preserve `SupportHub:DeploymentTier`, `Outbound:VerifyTls`, exact
+  server-owned endpoint authority, CORS, capability gates, and disabled
+  Production registrations in Testing deployments.
+- Do not trust browser-selected endpoints, connection strings, SQL, headers,
+  or arbitrary forwarding headers for security decisions.
+- Do not send, cancel, resend, insert, update, delete, merge, or execute a
+  side-effecting procedure against Production. Do not mutate customer orders,
+  Main Server configuration, POS machines, or native RMS services.
+- Treat missing configuration as unavailable and fail closed. Configuration
+  presence alone never proves downstream health.
 
-- Host/site/pool: `HOSSAM` / `RmsSupportHub.Testing` / No Managed Code, Integrated, ApplicationPoolIdentity.
-- URL: `http://localhost:8080/`; physical path: `C:\inetpub\RmsSupportHub.Testing`.
-- External config: `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json`; authority: `SUPPORTHUB_EXTERNAL_CONFIG_PATH`.
-- Current external config: `{}`. Deployed RC source: `13d590674e894ea720d2f4e3407c23d560923273`; build ID: `c372ecaee6a7d7bc0f026599b1d793f4f1d342f5ce479fa1809e37fa7b900a46`.
+## Exact next executable work after PR #30 acceptance
 
-## 4. Mandatory safety gates
+1. Re-read the accepted exact head, `TASK.md`, `.ai/STATE.md`, and the empty
+   handoff. Verify branch, `origin/main`, clean status, and all acceptance
+   evidence without reconstructing prior chat.
+2. Prepare the owner-controlled Production configuration outside the repository:
+   the unlock secret, required server-owned Uni `X-Api-Key`, endpoint/database
+   registrations, TLS policy, and disabled/allowed environment map. Validate
+   JSON, tier, TLS, endpoint authority, secret presence, API-key presence,
+   redaction, and restart persistence offline. Never copy values into tracked
+   files or reports.
+3. Keep Production readiness **NO** until the separate controlled acceptance
+   packet is complete. That packet must identify environment, system,
+   method/route/query, body/data, expected effect, reason, rollback/recovery,
+   operator authorization, and read-only/mutating classification. Only after
+   that gate may an authorized owner-led Production acceptance proceed.
+4. Revalidate Testing using synthetic/read-only evidence. The Uni Testing
+   gateway's HTTP:90 `502 Bad Gateway` remains an external blocker; do not
+   reroute Testing to a suspected Production or directly observed HTTPS route.
+5. Keep real release PKI/trust material open under Azure #12943 and keep the
+   final integrated Online Order + POS smoke open under #12947. Do not claim
+   Production or POS readiness from code/test evidence alone.
+6. Update `.ai/STATE.md`, `.ai/HANDOFF.md`, and `.ai/HISTORY.md` with facts,
+   exact validation evidence, unresolved external blockers, and the exact
+   accepted head. Keep PR #30 Draft until Sol records acceptance.
 
-Do not guess, print, log, commit, or screenshot real Testing values. Approved
-local owner-controlled sources may be inspected without exposing values, but
-configuration must be classified as Testing before promotion to the deployed
-external file. Configuration presence never authorizes downstream action.
-Every shared Testing contact must identify environment,
-system, method/action, route/query, body/data, expected effect, reason,
-rollback/recovery, and read-only/mutating classification. Without separate
-authorization prohibit send, cancel, resend, DB INSERT/UPDATE/DELETE/MERGE,
-side-effecting procedures, Main Server/native RMS/customer configuration
-mutation, and POS machine mutation. Production is always forbidden.
+## Validation and delivery rules
 
-## 5. Initial executable scope
+- Run focused backend/frontend remediation tests first, then the repository
+  supported Release backend suite, frontend `npm test -- --no-watch`, frontend
+  production build, `.\scripts\build.ps1`, any separate PowerShell quality
+  gate, `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`,
+  and `git diff --check` as applicable.
+- Do not use the unsupported Angular `--run` argument.
+- Distinguish unavailable external dependencies from test/build failures.
+- Review every changed file and run secret/configuration scans before delivery.
+- Push only authorized corrections to this same branch, never force-push,
+  merge, or create a new PR. Report the new exact-head Support Hub CI run and
+  keep PR #30 Draft.
 
-1. Verify `http://localhost:8080/api/health/ready` and local HOSSAM baseline.
-2. Inventory required Testing keys from current repository contracts and produce an OWNER INPUT REQUIRED matrix.
-3. Validate JSON, tier, TLS, custom-endpoint prohibition, disabled Production registrations, Testing-only resolution, cancel keys, and redaction offline.
-4. Prepare separate exact read-only and mutating packets; execute neither shared probes nor mutations without explicit authorization.
-5. Keep external config outside Git/package and maintain REPOSITORY READY=YES, TESTING DEPLOYED=YES, TESTING ACCEPTED=YES, PRODUCTION READY=NO.
-6. Update durable state with facts only and stop at a missing configuration or technical prerequisite; standing owner authorization is not itself a stop.
+## Durable safety facts to preserve
 
-## 6. FULL NEXT EXECUTABLE PROMPT - P0-D1 owner-authorized continuation
-
-Continue from repository code, `.ai/STATE.md`, and `.ai/HANDOFF.md`; do not
-reconstruct prior work from chat. Preserve
-`SupportHub:DeploymentTier=Testing`, `Outbound:VerifyTls=true`,
-`SupportHub:AllowCustomEndpoints=false`, and disabled Production registrations;
-when configured, the external file (never Git, logs, screenshots, CI, or memory
-files) must supply the six actual Testing values:
-`ConnectionStrings:GhcEcommerce`, `ModuleEndpoints:GhcTesting`,
-`ModuleCancelEndpoints:GhcTesting`, `ConnectionStrings:UpcEcommerceTest`,
-`ModuleEndpoints:UpcTesting`, and `ModuleCancelEndpoints:UpcTesting`; it must
-also set these two non-secret activation flags to true:
-`SupportHub:Environments:ghc_ecommerce:GHC Testing:Enabled` and
-`SupportHub:Environments:upc_ecommerce:UPC Testing:Enabled`. Standing owner
-authorization covers the exact shared read-only packets; no repeated approval
-prompt is required.
-
-1. Recheck status, HEAD, origin/main, `python .ai/scripts/context.py`, and handoff; preserve user work.
-2. Parse/validate external JSON offline. Confirm Testing, TLS, custom endpoints false, Production disabled, GHC/UPC Testing/cancel resolution, and redaction. Never expose values.
-3. Validate local root, readiness, modules, `/api/modules/health`, Online Orders deep links/cards, unavailable/error paths, redaction, and restart persistence. Treat `/api/modules/health` and `POST /api/modules/{key}/test-endpoint?envKey=...` as TCP connectivity checks only, not HTTP/API functional validation.
-4. After authorization only, run bounded GHC and UPC Testing TCP checks: local `GET /api/modules/health` for the sweep or `POST /api/modules/{key}/test-endpoint?envKey=GHC%20Testing|UPC%20Testing` per module. Record DNS, host/port classification, TCP result, timeout, TLS applicability, and target environment. Never call Production or send a payload.
-5. After separate authorization and exact SQL review, run only existing bounded read-only database work: `POST /api/modules/{key}/test-db?envKey=...` for connection health (no SQL), `GET /api/modules/upc_ecommerce/branches?envKey=UPC%20Testing`, `GET /api/modules/upc_ecommerce/lookup/item?code=<owner-approved>&branchCode=<owner-approved>&envKey=UPC%20Testing`, `GET /api/modules/upc_ecommerce/lookup/consumer?phone=<owner-approved>&envKey=UPC%20Testing`, and UPC `GET /api/modules/upc_ecommerce/order-requests?envKey=UPC%20Testing&page=1&pageSize=25` plus detail/by-order reads using returned identifiers. GHC item/consumer SQL is explicitly unverified; accept it only after schema/query review. GHC OrderRequests remains unavailable. Reject DML, dynamic mutation SQL, persistent temp workflows, unverified procedures, and ambiguous connections.
-6. Classify GHC Uni-Commerce from current source as a registered-but-disabled placeholder until a real Testing API/DB contract and read-only workflow exist. Do not invent endpoints or claim acceptance.
-7. Keep separate prohibited-operation packets for `POST /api/modules/{key}/send-request`, `POST /api/modules/{key}/cancel-order`, `POST /api/modules/{key}/order-requests/{id}/cancel`, and `POST /api/modules/{key}/order-requests/{id}/resend`. Do not execute them; any future authorization must include environment, system, method, route/body, expected effect, reason, rollback/recovery, and mutating classification. Also prohibit all DML/procedures, Production, Main Server/customer mutation, and POS mutation.
-8. Run focused tests, required build/test suite, frontend production build, config/environment safety, OpenAPI/client drift where applicable, `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and `git diff --check`; report exact counts and distinguish external unavailability from failures.
-9. Change product code only for a proven defect, with a minimal regression-tested fix and exact-head/CI review stop. Never patch around missing owner config.
-10. Update STATE/HANDOFF with facts, preserve the P0-D0 POS release-PKI blocker and Production readiness NO, keep external config outside Git, and stop at any remaining technical prerequisite.
-
-Required report: starting/ending SHA, changed files, redacted key matrix,
-authorized contacts or `NONE`, GHC/UPC discovery/connectivity/read-only
-results, Uni-Commerce maturity/gap, exact validation counts, unchanged POS
-blocker, explicit no-Production/no-unauthorized-contact/no-order-mutation/
-no-DB-mutation/no-Main-Server-mutation statement, and next milestone.
+- Uni Testing HTTP:90 gateway blocker remains unresolved.
+- External Production unlock-secret/API-key provisioning remains required.
+- POS release PKI/trust work item #12943 remains open.
+- Integrated Online Order + POS smoke work item #12947 remains open.
+- Production readiness remains **NO** until the controlled acceptance gates,
+  configuration, PKI/trust, rollback, and integrated evidence are complete.

@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RmsSupportHub.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\RmsSupportHub.Core\RmsSupportHub.Core.csproj" />
     <ProjectReference Include="..\RmsSupportHub.Data\RmsSupportHub.Data.csproj" />
   </ItemGroup>

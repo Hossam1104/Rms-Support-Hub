@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Moq;
 using RmsSupportHub.Core.Models;
+using RmsSupportHub.Core.Modules;
+using RmsSupportHub.Core.Repositories;
 using RmsSupportHub.Core.Services;
 using Xunit;
 
@@ -387,17 +390,43 @@ public class PayloadAndValidationTests
     }
 
     [Fact]
-    public void GhcValidationRejectsProductTotalMismatchButAcceptsCompiledRowsThatMatch()
+    public void GhcModuleFlowRejectsMissingDeliveryAndKeepsCompiledTotalsAligned()
     {
-        var payload = _flatBuilder.BuildPayload(GhcValidationDraft(isDelivery: false), FlatVariant.GhcVariant);
+        var module = new GhcEcommerceModule(
+            _flatBuilder,
+            _flatValidator,
+            Mock.Of<IItemRepository>(),
+            Mock.Of<IConsumerRepository>());
 
-        var matchingErrors = _flatValidator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid: 0m);
-        Assert.DoesNotContain(matchingErrors, error => error.Contains("order_product_total_value", StringComparison.Ordinal));
+        var missingDeliveryDraft = GhcValidationDraft(isDelivery: true);
+        var missingDeliveryErrors = module.Validate(missingDeliveryDraft);
+        Assert.Contains(missingDeliveryErrors, error => error.Contains("delivery_date", StringComparison.Ordinal));
+        Assert.Contains(missingDeliveryErrors, error => error.Contains("delivery_from_time", StringComparison.Ordinal));
+        Assert.Contains(missingDeliveryErrors, error => error.Contains("delivery_to_time", StringComparison.Ordinal));
 
-        payload["order_product_total_value"] = Convert.ToDecimal(payload["order_product_total_value"]) + 1m;
-        var mismatchErrors = _flatValidator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid: 0m);
+        var cleanDraft = GhcValidationDraft(isDelivery: true);
+        cleanDraft.OrderData["delivery_date"] = "2026-08-25";
+        cleanDraft.OrderData["delivery_from_time"] = "12:00";
+        cleanDraft.OrderData["delivery_to_time"] = "14:00";
+        cleanDraft.OrderData["shipping_address_2"] = "Cairo";
+        cleanDraft.OrderData["fullfilment_plant"] = "1000";
 
-        Assert.Contains(mismatchErrors, error => error.Contains("order_product_total_value", StringComparison.Ordinal));
+        var payload = module.BuildPayload(cleanDraft);
+        var cleanErrors = module.Validate(cleanDraft);
+
+        Assert.DoesNotContain(cleanErrors, error => error.Contains("delivery", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(cleanErrors, error => error.Contains("order_product_total_value", StringComparison.Ordinal));
+
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(payload["order_products"]);
+        var rowTotal = rows.Sum(row => Convert.ToDecimal(row["row_net_total"]));
+        var compiledTotal = Convert.ToDecimal(payload["order_product_total_value"]);
+
+        Assert.Equal(39.39m, compiledTotal); // 34.25 + (34.25 * 15% VAT), VAT-inclusive.
+        Assert.Equal(compiledTotal, rowTotal);
+        Assert.Equal("2026-08-25", payload["delivery_date"]);
+        Assert.Equal("12:00:00", payload["delivery_from_time"]);
+        Assert.Equal("14:00:00", payload["delivery_to_time"]);
+        Assert.Equal("500000000", payload["client_phone"]);
     }
 
     [Fact]

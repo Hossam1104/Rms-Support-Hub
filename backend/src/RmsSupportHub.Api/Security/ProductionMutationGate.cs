@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RmsSupportHub.Api.Exceptions;
 using RmsSupportHub.Core.Models;
@@ -10,7 +10,11 @@ namespace RmsSupportHub.Api.Security;
 
 public interface IProductionMutationGate
 {
-    ProductionUnlockResult Unlock(string moduleKey, string sessionId, string password);
+    ProductionUnlockResult Unlock(
+        string moduleKey,
+        string sessionId,
+        string password,
+        string? remoteIpAddress = null);
 
     void RequireUnlocked(
         IOrderModule module,
@@ -27,33 +31,57 @@ public sealed record ProductionUnlockResult(string Token, DateTimeOffset Expires
 /// session-bound, module/environment-scoped, short-lived and never persisted.
 /// The owner secret is retained only as non-string bytes for comparison and
 /// is never logged or returned.</summary>
-public sealed class ProductionMutationGate : IProductionMutationGate
+public sealed class ProductionMutationGate : IProductionMutationGate, IDisposable
 {
     public const string UnlockHeaderName = "X-SupportHub-Production-Unlock";
 
     private static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan AttemptWindow = TimeSpan.FromMinutes(1);
-    private const int MaxFailedAttempts = 5;
+    private const int MaxFailedAttemptsPerSession = 5;
+    private const int MaxFailedAttemptsPerSource = 5;
+    private const int MaxFailedAttemptsPerModule = 20;
+    private const int MaxTrackedEntries = 4096;
 
     private readonly byte[]? _passwordBytes;
     private readonly ILogger<ProductionMutationGate> _logger;
     private readonly Func<DateTimeOffset> _utcNow;
-    private readonly ConcurrentDictionary<string, UnlockSession> _tokens = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, AttemptWindowState> _attempts = new(StringComparer.Ordinal);
+    private readonly TimeSpan _tokenLifetime;
+    private readonly TimeSpan _attemptWindow;
+    private readonly MemoryCache _tokens;
+    private readonly MemoryCache _attempts;
+    private readonly object _attemptsLock = new();
 
     public ProductionMutationGate(
         string? password,
         ILogger<ProductionMutationGate> logger,
         Func<DateTimeOffset>? utcNow = null)
+        : this(password, logger, utcNow, TokenLifetime, AttemptWindow)
+    {
+    }
+
+    internal ProductionMutationGate(
+        string? password,
+        ILogger<ProductionMutationGate> logger,
+        Func<DateTimeOffset>? utcNow,
+        TimeSpan tokenLifetime,
+        TimeSpan attemptWindow)
     {
         _passwordBytes = string.IsNullOrEmpty(password)
             ? null
             : Encoding.UTF8.GetBytes(password);
         _logger = logger;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
+        _tokenLifetime = tokenLifetime;
+        _attemptWindow = attemptWindow;
+        _tokens = CreateCache();
+        _attempts = CreateCache();
     }
 
-    public ProductionUnlockResult Unlock(string moduleKey, string sessionId, string password)
+    public ProductionUnlockResult Unlock(
+        string moduleKey,
+        string sessionId,
+        string password,
+        string? remoteIpAddress = null)
     {
         if (_passwordBytes is null)
         {
@@ -62,8 +90,16 @@ public sealed class ProductionMutationGate : IProductionMutationGate
         }
 
         var now = _utcNow();
-        var attemptKey = $"{sessionId}:{moduleKey}";
-        if (!TryConsumeAttempt(attemptKey, now))
+        var sessionPartition = BuildPartition("session", moduleKey, sessionId);
+        var sourcePartition = BuildPartition(
+            "source",
+            moduleKey,
+            string.IsNullOrWhiteSpace(remoteIpAddress) ? "unknown" : remoteIpAddress);
+        var modulePartition = BuildPartition("module", moduleKey, "all");
+
+        if (!TryConsumeAttempt(sessionPartition, now, MaxFailedAttemptsPerSession)
+            || !TryConsumeAttempt(sourcePartition, now, MaxFailedAttemptsPerSource)
+            || !TryConsumeAttempt(modulePartition, now, MaxFailedAttemptsPerModule))
         {
             _logger.LogWarning("Production unlock throttled for module {ModuleKey}.", moduleKey);
             throw new ProductionUnlockFailedException();
@@ -75,10 +111,18 @@ public sealed class ProductionMutationGate : IProductionMutationGate
             throw new ProductionUnlockFailedException();
         }
 
-        _attempts.TryRemove(attemptKey, out _);
+        RemoveAttemptPartitions(sessionPartition, sourcePartition, modulePartition);
         var token = CreateOpaqueToken();
-        var expiresAt = now.Add(TokenLifetime);
-        _tokens[token] = new UnlockSession(moduleKey, "Production", sessionId, expiresAt);
+        var expiresAt = now.Add(_tokenLifetime);
+        _tokens.Set(
+            token,
+            new UnlockSession(moduleKey, "Production", sessionId, expiresAt),
+            EntryOptions(_tokenLifetime));
+
+        // A full bounded cache must fail closed rather than return a token
+        // which the server could not retain for later mutation authorization.
+        if (!_tokens.TryGetValue(token, out _))
+            throw new ProductionUnlockFailedException();
 
         _logger.LogInformation("Production unlock succeeded for module {ModuleKey}.", moduleKey);
         return new ProductionUnlockResult(token, expiresAt);
@@ -100,7 +144,8 @@ public sealed class ProductionMutationGate : IProductionMutationGate
             throw new ProductionMutationLockedException();
         }
 
-        if (!_tokens.TryGetValue(token, out var session))
+        if (!_tokens.TryGetValue(token, out var sessionValue)
+            || sessionValue is not UnlockSession session)
         {
             _logger.LogWarning("Blocked Production mutation {Operation} for module {ModuleKey}: invalid unlock.", operation, module.Key);
             throw new ProductionMutationLockedException();
@@ -109,7 +154,7 @@ public sealed class ProductionMutationGate : IProductionMutationGate
         var now = _utcNow();
         if (session.ExpiresAt <= now)
         {
-            _tokens.TryRemove(token, out _);
+            _tokens.Remove(token);
             _logger.LogWarning("Blocked expired Production mutation {Operation} for module {ModuleKey}.", operation, module.Key);
             throw new ProductionUnlockExpiredException();
         }
@@ -125,23 +170,63 @@ public sealed class ProductionMutationGate : IProductionMutationGate
         _logger.LogInformation("Production mutation unlock accepted for module {ModuleKey}, operation {Operation}.", module.Key, operation);
     }
 
-    private bool TryConsumeAttempt(string key, DateTimeOffset now)
+    private bool TryConsumeAttempt(string key, DateTimeOffset now, int maximum)
     {
-        while (true)
+        // The lock makes logical expiry and replacement one operation.
+        // MemoryCache supplies automatic expiry when entries are never read;
+        // the injected clock comparison also handles deterministic tests
+        // advancing beyond the window without a TryAdd spin loop.
+        lock (_attemptsLock)
         {
-            if (!_attempts.TryGetValue(key, out var current) || current.WindowStarted + AttemptWindow <= now)
+            if (_attempts.TryGetValue(key, out var currentValue)
+                && currentValue is AttemptWindowState current
+                && current.WindowStarted + _attemptWindow > now)
             {
-                if (_attempts.TryAdd(key, new AttemptWindowState(now, 1)))
-                    return true;
-                continue;
+                if (current.Count >= maximum)
+                    return false;
+
+                _attempts.Set(
+                    key,
+                    current with { Count = current.Count + 1 },
+                    EntryOptions(_attemptWindow));
+                return _attempts.TryGetValue(key, out _);
             }
 
-            if (current.Count >= MaxFailedAttempts)
-                return false;
-
-            if (_attempts.TryUpdate(key, current with { Count = current.Count + 1 }, current))
-                return true;
+            _attempts.Set(key, new AttemptWindowState(now, 1), EntryOptions(_attemptWindow));
+            return _attempts.TryGetValue(key, out _);
         }
+    }
+
+    private void RemoveAttemptPartitions(params string[] partitions)
+    {
+        lock (_attemptsLock)
+        {
+            foreach (var partition in partitions)
+                _attempts.Remove(partition);
+        }
+    }
+
+    private static MemoryCache CreateCache() => new(new MemoryCacheOptions
+    {
+        SizeLimit = MaxTrackedEntries,
+        ExpirationScanFrequency = TimeSpan.FromSeconds(1)
+    });
+
+    private static string BuildPartition(string kind, string moduleKey, string identity) =>
+        $"{kind}:{moduleKey}:{identity}";
+
+    private static MemoryCacheEntryOptions EntryOptions(TimeSpan lifetime) =>
+        new MemoryCacheEntryOptions()
+            .SetAbsoluteExpiration(lifetime)
+            .SetSize(1);
+
+    internal int TrackedTokenCount => _tokens.Count;
+    internal int TrackedAttemptCount => _attempts.Count;
+
+    public void Dispose()
+    {
+        _tokens.Dispose();
+        _attempts.Dispose();
     }
 
     private static bool FixedTimeEquals(byte[] expected, string supplied)

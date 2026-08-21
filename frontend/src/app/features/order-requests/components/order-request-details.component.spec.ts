@@ -64,6 +64,10 @@ function detailResponse(overrides: Partial<OrderRequestDetail> = {}): OrderReque
 }
 
 describe('OrderRequestDetailsComponent', () => {
+  let mockModuleService: {
+    activeModule: ReturnType<typeof signal>;
+    activeEnvironment: ReturnType<typeof signal>;
+  };
   let mockStore: {
     moduleKey: ReturnType<typeof signal<string>>;
     envKey: ReturnType<typeof signal<string | null>>;
@@ -96,12 +100,20 @@ describe('OrderRequestDetailsComponent', () => {
       refresh: vi.fn(),
       refreshDetailInPlace: vi.fn()
     };
+    mockModuleService = {
+      activeModule: signal({
+        label: 'UPC Ecommerce',
+        key: 'upc_ecommerce',
+        capabilities: { cancel: true, resend: true }
+      }),
+      activeEnvironment: signal({ key: 'UPC Testing', environment: 'Testing' })
+    };
 
     await TestBed.configureTestingModule({
       imports: [OrderRequestDetailsComponent],
       providers: [
         { provide: OrderRequestsStore, useValue: mockStore },
-        { provide: ModuleService, useValue: { activeModule: signal({ label: 'UPC Ecommerce', key: 'upc_ecommerce' }), activeEnvironment: signal({ key: 'UPC Testing', environment: 'Testing' }) } },
+        { provide: ModuleService, useValue: mockModuleService },
         { provide: ApiService, useValue: { get: vi.fn(() => of({})), post: vi.fn(() => of({})) } },
         { provide: ToastService, useValue: { showError: vi.fn(), showSuccess: vi.fn() } },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ orderId: '501' })), snapshot: { paramMap: convertToParamMap({ orderId: '501' }) } } },
@@ -213,5 +225,50 @@ describe('OrderRequestDetailsComponent', () => {
     const fixture = createFixture();
 
     expect(fixture.nativeElement.querySelector('.oi-notes')).toBeNull();
+  });
+
+  it('keeps supported but status-blocked actions visible and disabled with a reason', () => {
+    mockStore.selected.set(detailResponse({
+      header: header({ canCancel: false, orderStatus: 1, orderStatusLabel: 'New' })
+    }));
+    const fixture = createFixture();
+
+    const resend = fixture.nativeElement.querySelector('.header-actions .brand') as HTMLButtonElement;
+    const cancel = fixture.nativeElement.querySelector('.header-actions .danger') as HTMLButtonElement;
+    expect(resend).not.toBeNull();
+    expect(cancel).not.toBeNull();
+    expect(resend.disabled).toBe(true);
+    expect(cancel.disabled).toBe(true);
+    expect(resend.title).toContain('New');
+    expect(cancel.title).toContain('Blocked: order status New');
+  });
+
+  it('omits actions when the module capability is unsupported', () => {
+    mockModuleService.activeModule.set({
+      label: 'UPC Ecommerce',
+      key: 'upc_ecommerce',
+      capabilities: { cancel: false, resend: false }
+    });
+    mockStore.selected.set(detailResponse());
+    const fixture = createFixture();
+
+    expect(fixture.nativeElement.querySelector('.header-actions .brand')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.header-actions .danger')).toBeNull();
+  });
+
+  it('keeps valid Testing actions enabled and marks valid locked Production actions visibly', () => {
+    mockStore.selected.set(detailResponse());
+    const testingFixture = createFixture();
+    expect((testingFixture.nativeElement.querySelector('.header-actions .brand') as HTMLButtonElement).disabled).toBe(false);
+    expect((testingFixture.nativeElement.querySelector('.header-actions .danger') as HTMLButtonElement).disabled).toBe(false);
+
+    mockModuleService.activeEnvironment.set({ key: 'UPC Production', environment: 'Production' });
+    const productionFixture = createFixture();
+    const resend = productionFixture.nativeElement.querySelector('.header-actions .brand') as HTMLButtonElement;
+    const cancel = productionFixture.nativeElement.querySelector('.header-actions .danger') as HTMLButtonElement;
+    expect(resend.disabled).toBe(false);
+    expect(cancel.disabled).toBe(false);
+    expect(resend.classList.contains('action-btn--locked')).toBe(true);
+    expect(cancel.classList.contains('action-btn--locked')).toBe(true);
   });
 });

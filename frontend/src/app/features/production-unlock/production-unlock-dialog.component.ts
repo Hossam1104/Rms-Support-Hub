@@ -80,6 +80,11 @@ export class ProductionUnlockDialogComponent {
   password = '';
 
   close(): void {
+    // The backdrop and Cancel button share this method. Keeping the dialog
+    // open while the request is in flight prevents a late successful response
+    // from installing an unlock context after the user believes they
+    // cancelled the operation.
+    if (this.submitting()) return;
     this.password = '';
     this.errorMessage.set(null);
     this.unlock.close();

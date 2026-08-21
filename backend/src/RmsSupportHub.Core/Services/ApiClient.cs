@@ -8,8 +8,7 @@ public interface IApiClient
     Task<ApiResponseResult> SendOrderAsync(string url, object payloadJson);
     /// <summary>Fixed Uni-Commerce authentication seam. This is deliberately
     /// not a generic caller-controlled header dictionary.</summary>
-    Task<ApiResponseResult> SendOrderWithApiKeyAsync(string url, object payloadJson, string apiKey) =>
-        SendOrderAsync(url, payloadJson);
+    Task<ApiResponseResult> SendOrderWithApiKeyAsync(string url, object payloadJson, string apiKey);
     Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null);
 }
 
@@ -33,7 +32,18 @@ public class ApiClient : IApiClient
         => await SendOrderCoreAsync(url, payload, apiKey: null);
 
     public async Task<ApiResponseResult> SendOrderWithApiKeyAsync(string url, object payload, string apiKey)
-        => await SendOrderCoreAsync(url, payload, apiKey);
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return new ApiResponseResult(
+                StatusCode: 500,
+                ResponseText: "The downstream operation could not be completed.",
+                UrlSent: url,
+                Success: false);
+        }
+
+        return await SendOrderCoreAsync(url, payload, apiKey);
+    }
 
     private async Task<ApiResponseResult> SendOrderCoreAsync(string url, object payload, string? apiKey)
     {

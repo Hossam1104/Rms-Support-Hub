@@ -32,10 +32,14 @@ public static class ConfiguredEnvironmentCatalog
                 var secretAvailable = !templateEntry.Value.RequiresDatabase ||
                     (!string.IsNullOrWhiteSpace(registration?.ConnectionStringName) &&
                      !string.IsNullOrWhiteSpace(configuration.GetConnectionString(registration.ConnectionStringName)));
+                var apiKeyAvailable = !templateEntry.Value.RequiresApiKey ||
+                    (!string.IsNullOrWhiteSpace(registration?.ApiKeyConfigurationKey) &&
+                     !string.IsNullOrWhiteSpace(configuration[$"ModuleApiKeys:{registration.ApiKeyConfigurationKey}"]));
                 var structurallyAvailable = enabled &&
                     (!templateEntry.Value.RequiresApiEndpoint || !string.IsNullOrWhiteSpace(apiUrl)) &&
                     (!templateEntry.Value.RequiresCancelEndpoint || !string.IsNullOrWhiteSpace(cancelUrl)) &&
-                    secretAvailable;
+                    secretAvailable &&
+                    apiKeyAvailable;
 
                 environments[templateEntry.Key] = templateEntry.Value with
                 {

@@ -39,6 +39,11 @@ public class ModuleHealthServiceTests
             return Task.FromResult(new ApiResponseResult(200, "{}", url, true));
         }
 
+        public Task<ApiResponseResult> SendOrderWithApiKeyAsync(string url, object payloadJson, string apiKey) =>
+            string.IsNullOrWhiteSpace(apiKey)
+                ? Task.FromResult(new ApiResponseResult(500, "", url, false))
+                : SendOrderAsync(url, payloadJson);
+
         public Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null)
         {
             ProbedUrls.Add(url);

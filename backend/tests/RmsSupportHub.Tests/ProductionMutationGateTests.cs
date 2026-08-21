@@ -89,6 +89,83 @@ public sealed class ProductionMutationGateTests
         }
     }
 
+    [Fact]
+    public void ExpiredAttemptWindowResetsWithoutSpinning()
+    {
+        var now = new DateTimeOffset(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
+        var gate = new ProductionMutationGate(
+            Password,
+            NullLogger<ProductionMutationGate>.Instance,
+            () => now);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+                "upc_ecommerce", "session-1", "wrong-password", "198.51.100.10"));
+        }
+
+        now = now.AddMinutes(1).AddSeconds(1);
+
+        var unlock = gate.Unlock(
+            "upc_ecommerce", "session-1", Password, "198.51.100.10");
+
+        Assert.NotEmpty(unlock.Token);
+    }
+
+    [Fact]
+    public void RotatingSessionIdsStillHitsSourceLimiterUntilWindowExpires()
+    {
+        var now = new DateTimeOffset(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
+        var gate = new ProductionMutationGate(
+            Password,
+            NullLogger<ProductionMutationGate>.Instance,
+            () => now);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+                "upc_ecommerce", $"rotated-session-{attempt}", "wrong-password", "198.51.100.11"));
+        }
+
+        Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+            "upc_ecommerce", "fresh-session", Password, "198.51.100.11"));
+
+        now = now.AddMinutes(1).AddSeconds(1);
+        var unlock = gate.Unlock(
+            "upc_ecommerce", "fresh-session", Password, "198.51.100.11");
+
+        Assert.NotEmpty(unlock.Token);
+    }
+
+    [Fact]
+    public void AttemptAndTokenCachesAreBoundedAndTokenEntriesSelfEvict()
+    {
+        var gate = new ProductionMutationGate(
+            Password,
+            NullLogger<ProductionMutationGate>.Instance,
+            utcNow: null,
+            tokenLifetime: TimeSpan.FromMilliseconds(100),
+            attemptWindow: TimeSpan.FromMilliseconds(100));
+
+        Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+            "upc_ecommerce", "session-1", "wrong-password", "198.51.100.12"));
+        Assert.InRange(gate.TrackedAttemptCount, 1, 3);
+
+        var unlock = gate.Unlock(
+            "ghc_ecommerce", "session-2", Password, "198.51.100.12");
+        Assert.Equal(1, gate.TrackedTokenCount);
+
+        Thread.Sleep(250);
+        var expirationError = Assert.ThrowsAny<ApiException>(() => gate.RequireUnlocked(
+            Mock.Of<IOrderModule>(m => m.Key == "ghc_ecommerce"),
+            ProductionEnvironment("GHC Production"),
+            unlock.Token,
+            "session-2",
+            "send"));
+        Assert.Contains(expirationError.Code, new[] { "production_mutation_locked", "production_unlock_expired" });
+        Assert.Equal(0, gate.TrackedTokenCount);
+    }
+
     private static ModuleEnvironment ProductionEnvironment(string key) => new()
     {
         Key = key,

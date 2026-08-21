@@ -164,6 +164,11 @@ public class OrderRequestsControllerTests
             return Task.FromResult(new ApiResponseResult(200, "{\"ok\":true}", url, true));
         }
 
+        public Task<ApiResponseResult> SendOrderWithApiKeyAsync(string url, object payloadJson, string apiKey) =>
+            string.IsNullOrWhiteSpace(apiKey)
+                ? Task.FromResult(new ApiResponseResult(500, "", url, false))
+                : SendOrderAsync(url, payloadJson);
+
         public Task<bool> TestEndpointAsync(string url, TimeSpan? timeout = null) => Task.FromResult(true);
     }
 
