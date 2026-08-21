@@ -23,8 +23,10 @@
 
 ## Remaining
 
-- Downstream GHC and Uni-Commerce send rejection diagnosis remains open (#12892, #12899).
-- Uni item lookup (#12900) and Uni cancel/resend (#12901, #12902) remain conditional upon authoritative external contracts.
-- Real Testing configuration/schema authority and downstream diagnosis remain external prerequisites; no values or contracts are guessed.
-- HOSSAM still lacks established real Testing/Production signer identities and canonical release trust material for POS acceptance (#12943).
-- Final end-to-end Online Order + POS local integrated smoke acceptance remains pending (#12947).
+- Downstream GHC send rejection diagnosis remains open (#12892).
+- Downstream Uni-Commerce send rejection diagnosis remains open (#12899).
+- Uni item lookup (#12900) remains unavailable without a verified external item catalog.
+- Uni cancel (#12901) and resend (#12902) remain unavailable without verified upstream contracts.
+- Real POS Testing and Production release signer identities and canonical release trust material remain unresolved (#12943).
+- Final Online Order + POS local integrated smoke acceptance remains pending (#12947).
+- Production readiness remains **NO**.
