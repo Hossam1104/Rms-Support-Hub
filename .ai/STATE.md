@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Updated:** 2026-08-22
-- **Repository:** `feat/p0-f-production-mutation-gate`; Draft PR #30 targets `main` at `7cb1351ccb5e06379415675ea2409c22dd3ba6fb`. The authorized correction is implemented locally and will be delivered to the same branch; the exact final correction SHA is reported with delivery evidence.
+- **Repository:** `feat/p0-f-production-mutation-gate`; Draft PR #30 targets `main` at `7cb1351ccb5e06379415675ea2409c22dd3ba6fb`. The authorized correction commit `5c025fec12a84899cadb4f4952c301e2605bdf4f` is pushed to the same branch; exact-head Support Hub CI run `32528347621` completed successfully.
 - **Status:** P0-F Sol-remediation implementation and validation are complete; PR #30 remains Draft and awaits independent Sol re-review. No merge or acceptance is claimed.
 
 ## Current facts
@@ -22,10 +22,11 @@
 - Broad `.\scripts\build.ps1`: passed after stopping the stale project-owned Debug API process that held assemblies; Debug tests 322/322, Release build 0 warnings/0 errors, frontend production build passed.
 - PowerShell native parse gate: **37/37 passed**; PSScriptAnalyzer was unavailable and is recorded as an unavailable optional dependency, not a code failure.
 - `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and `git diff --check`: passed.
+- Pushed correction commit `5c025fec12a84899cadb4f4952c301e2605bdf4f`; exact-head GitHub Actions run `32528347621` / `Support Hub CI` passed, including the packaged Testing release candidate and runtime smoke test.
 
 ## Safety and remaining work
 
 - No Production contact, customer order mutation, database mutation, POS trust bypass, Main Server mutation, Azure CRUD, or secret provisioning was performed. Synthetic credentials were used only in tests; the stale project-owned process stopped for build validation was the local Debug API executable.
 - External owner Production unlock-secret/API-key provisioning, Uni gateway remediation, POS release PKI/trust material (#12943), and final integrated Online Order + POS smoke (#12947) remain outside this correction. Production readiness remains **NO**.
 - Azure traceability maps BR-026 to existing #12949 Production Online Order acceptance; no new Azure work item was created.
-- Next review action: verify the new exact-head Support Hub CI run after the authorized same-branch push, keep PR #30 Draft, and await Sol independent re-review.
+- Next review action: keep PR #30 Draft and await Sol independent re-review; no merge or acceptance is claimed.
