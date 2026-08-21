@@ -10,9 +10,10 @@ using RmsSupportHub.Data.Repositories;
 
 namespace RmsSupportHub.Api.Controllers;
 
-/// <summary>Reads and acts on the real OrderRequests table (via R4's
-/// OrderRequestRepository) -- the source of truth for what this tool sent
-/// and what came back, replacing the deleted order-history JSON files and
+/// <summary>Reads module-selected upstream request-history tables (the
+/// standard OrderRequests workflow or a verified bounded adapter) -- the
+/// source of truth for what this tool sent and what came back, replacing the
+/// deleted order-history JSON files and
 /// the deleted UPC-only ValidationController/UpcOrderValidationRepository
 /// (which read RequestOrderHeaders-first and never surfaced
 /// ResponseJson/ExceptionMessage; see remediation_plan.md B6-B11).</summary>
@@ -22,6 +23,7 @@ public class OrderRequestsController : ControllerBase
 {
     private readonly IModuleRegistry _moduleRegistry;
     private readonly IOrderRequestRepository _repository;
+    private readonly IGhcUnicommerceOrderRequestRepository? _ghcUnicommerceRepository;
     private readonly IApiClient _apiClient;
     private readonly IConnectionStringResolver _connectionStrings;
     private readonly IEnvironmentPolicy _environmentPolicy;
@@ -31,10 +33,12 @@ public class OrderRequestsController : ControllerBase
         IOrderRequestRepository repository,
         IApiClient apiClient,
         IConnectionStringResolver connectionStrings,
-        IEnvironmentPolicy environmentPolicy)
+        IEnvironmentPolicy environmentPolicy,
+        IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null)
     {
         _moduleRegistry = moduleRegistry;
         _repository = repository;
+        _ghcUnicommerceRepository = ghcUnicommerceRepository;
         _apiClient = apiClient;
         _connectionStrings = connectionStrings;
         _environmentPolicy = environmentPolicy;
@@ -86,12 +90,17 @@ public class OrderRequestsController : ControllerBase
             DateTo: query.DateTo,
             ExactOrderNumber: query.ExactMatch ?? true);
 
+        var filterGuard = ValidateHistoryQuery(module!, query);
+        if (filterGuard != null) return filterGuard;
+
+        var repository = RepositoryFor(module!);
+
         // These reads share the same filter set but are independent. Run them
         // together so a slow count or aggregate cannot hold the page data
         // behind two other sequential database round trips.
-        var itemsTask = _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort, cancellationToken);
-        var totalTask = _repository.CountAsync(connStr!, filters, cancellationToken);
-        var statsTask = _repository.StatsAsync(connStr!, filters, cancellationToken);
+        var itemsTask = repository.ListAsync(connStr!, filters, page, pageSize, query.Sort, cancellationToken);
+        var totalTask = repository.CountAsync(connStr!, filters, cancellationToken);
+        var statsTask = repository.StatsAsync(connStr!, filters, cancellationToken);
         try
         {
             await Task.WhenAll(itemsTask, totalTask, statsTask);
@@ -121,7 +130,7 @@ public class OrderRequestsController : ControllerBase
             page = totalPages;
             try
             {
-                items = await _repository.ListAsync(connStr!, filters, page, pageSize, query.Sort, cancellationToken);
+                items = await repository.ListAsync(connStr!, filters, page, pageSize, query.Sort, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -143,11 +152,12 @@ public class OrderRequestsController : ControllerBase
         var (module, connStr, guard) = Resolve(key, envKey);
         if (guard != null) return guard;
 
-        var detail = await _repository.GetDetailAsync(connStr!, id);
+        var repository = RepositoryFor(module!);
+        var detail = await repository.GetDetailAsync(connStr!, id);
         if (detail == null) return NotFound(new { error = $"Order request '{id}' not found." });
 
-        var attempts = await _repository.ListAttemptsAsync(connStr!, detail.OrderNumber);
-        var lineage = await _repository.GetLineageAsync(connStr!, detail.OrderNumber, detail.Header?.ParentOrderNumber);
+        var attempts = await repository.ListAttemptsAsync(connStr!, detail.OrderNumber);
+        var lineage = await repository.GetLineageAsync(connStr!, detail.OrderNumber, detail.Header?.ParentOrderNumber);
 
         return Ok(new { request = detail, attempts, lineage });
     }
@@ -158,12 +168,13 @@ public class OrderRequestsController : ControllerBase
         var (module, connStr, guard) = Resolve(key, envKey);
         if (guard != null) return guard;
 
-        var attempts = await _repository.ListAttemptsAsync(connStr!, orderNumber);
+        var repository = RepositoryFor(module!);
+        var attempts = await repository.ListAttemptsAsync(connStr!, orderNumber);
         if (attempts.Count == 0) return NotFound(new { error = $"No requests found for order '{orderNumber}'." });
 
         var latestId = attempts.Max(a => a.Id);
-        var detail = await _repository.GetDetailAsync(connStr!, latestId);
-        var lineage = await _repository.GetLineageAsync(connStr!, orderNumber, detail?.Header?.ParentOrderNumber);
+        var detail = await repository.GetDetailAsync(connStr!, latestId);
+        var lineage = await repository.GetLineageAsync(connStr!, orderNumber, detail?.Header?.ParentOrderNumber);
 
         return Ok(new { request = detail, attempts, lineage });
     }
@@ -178,7 +189,8 @@ public class OrderRequestsController : ControllerBase
         var (module, connStr, guard) = Resolve(key, envKey, requireCancel: true);
         if (guard != null) return guard;
 
-        var detail = await _repository.GetDetailAsync(connStr!, id);
+        var repository = RepositoryFor(module!);
+        var detail = await repository.GetDetailAsync(connStr!, id);
         if (detail == null) return NotFound(new { error = $"Order request '{id}' not found." });
         if (detail.Header == null)
             return BadRequest(new { error = "This request has no order header; there is nothing to cancel." });
@@ -200,7 +212,7 @@ public class OrderRequestsController : ControllerBase
         var cancelPayload = new { order_number = detail.OrderNumber, cancel_reason = request.Reason };
         var apiResult = await _apiClient.SendOrderAsync(cancelUrl, cancelPayload);
 
-        var refreshed = await _repository.GetDetailAsync(connStr!, id);
+        var refreshed = await repository.GetDetailAsync(connStr!, id);
 
         return Ok(new
         {
@@ -223,7 +235,8 @@ public class OrderRequestsController : ControllerBase
         var (module, connStr, guard) = Resolve(key, envKey, requireResend: true);
         if (guard != null) return guard;
 
-        var detail = await _repository.GetDetailAsync(connStr!, id);
+        var repository = RepositoryFor(module!);
+        var detail = await repository.GetDetailAsync(connStr!, id);
         if (detail == null) return NotFound(new { error = $"Order request '{id}' not found." });
         if (detail.Header == null)
             return BadRequest(new { error = "This request has no order header; there is nothing to resend." });
@@ -332,5 +345,45 @@ public class OrderRequestsController : ControllerBase
         var connStr = _connectionStrings.RequireForEnvironment(env);
 
         return (module, connStr, null);
+    }
+
+    private IOrderRequestRepository RepositoryFor(IOrderModule module)
+    {
+        if (module.Capabilities.OrderRequestHistory == OrderRequestHistoryMode.ExternalInvoiceRequests)
+        {
+            return _ghcUnicommerceRepository
+                ?? throw new InvalidOperationException(
+                    "The configured module history adapter is not registered.");
+        }
+
+        return _repository;
+    }
+
+    private static ObjectResult? ValidateHistoryQuery(IOrderModule module, OrderRequestListQuery query)
+    {
+        if (module.Capabilities.OrderRequestHistory != OrderRequestHistoryMode.ExternalInvoiceRequests)
+            return null;
+
+        if (!string.IsNullOrWhiteSpace(query.Phone)
+            || !string.IsNullOrWhiteSpace(query.BranchCode)
+            || query.Status.HasValue
+            || query.Statuses is { Length: > 0 })
+        {
+            return new BadRequestObjectResult(new
+            {
+                error = "Uni-Commerce history supports order/reference, outcome, exception, and date filters only."
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Sort)
+            && !string.Equals(query.Sort.TrimStart('+', '-'), "order_date", StringComparison.OrdinalIgnoreCase))
+        {
+            return new BadRequestObjectResult(new
+            {
+                error = "Uni-Commerce history supports sorting by order date only."
+            });
+        }
+
+        return null;
     }
 }

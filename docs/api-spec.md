@@ -159,16 +159,23 @@ described in section 4 alongside item and consumer lookup capabilities.
 
 ## 5. Order Requests (R4/R5 — the `OrderRequests` table as source of truth)
 
-Every route below is gated by `Capabilities.OrderRequests`. As of R5 this is
-`true` only for `upc_ecommerce`; GHC returns:
+Every route below is gated by `Capabilities.OrderRequests`. Standard UPC and
+GHC E-Commerce history uses the verified `OrderRequests` workflow. GHC
+Uni-Commerce uses a separate bounded read-only adapter over its verified
+`ExternalInvoiceRequests` table. That adapter supports reference/order-number,
+outcome, exception, and date filters only; branch, phone, status, totals,
+line-item, cancel, and resend behavior are not fabricated for the narrower
+Uni schema.
+
+Modules without an applicable history source return:
 
 ```
 501 Not Implemented
-{ "error": "'order-requests' is not available for module 'ghc_ecommerce'." }
+{ "error": "'order-requests' is not available for module 'oms'." }
 ```
 
-(`GhcEcommerceModule.Capabilities.OrderRequests` carries a `// TODO(db-creds)`
-naming the one-line flip once GHC's live database credentials are confirmed.)
+The module capability selects the repository shape; controllers do not compare
+module-key strings to choose a database query.
 
 All routes accept `?envKey={envKey}` to pick the registered environment (and
 therefore the server-side connection mapping) to query. The active deployment

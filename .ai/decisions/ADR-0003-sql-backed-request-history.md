@@ -10,7 +10,13 @@ Local JSON history could only observe activity from one application instance and
 
 ## Decision
 
-Use SQL `OrderRequests` as the base and sole request-history source. Read large request/response blobs only for detail. Resolve related headers and invoices to the most recent matching row. Resend from the selected attempt's stored request, overriding only the selected branch.
+Use SQL `OrderRequests` as the standard request-history source. Read large
+request/response blobs only for detail. Resolve related headers and invoices to
+the most recent matching row. Resend from the selected attempt's stored
+request, overriding only the selected branch. A module with a verified,
+incompatible authoritative history table may use a capability-selected,
+read-only adapter that exposes only the common attempt shape; it must not
+invent missing business fields or mutation behavior.
 
 ## Consequences
 
@@ -18,6 +24,8 @@ Use SQL `OrderRequests` as the base and sole request-history source. Read large 
 - List queries avoid transferring large blobs.
 - Missing live indexes can make filters over related tables expensive.
 - Capability flags remain disabled where a module's database contract is unverified.
+- GHC Uni-Commerce uses this exception for `ExternalInvoiceRequests`; its
+  branch/status/totals/line-item/cancel/resend fields remain unavailable.
 
 ## Revisit When
 

@@ -80,7 +80,9 @@ public class ModuleRegistryTests
         Assert.True(ecommerce.Capabilities.OrderRequests);
         Assert.False(uniCommerce.Capabilities.ItemLookup);
         Assert.True(uniCommerce.Capabilities.ConsumerLookup);
-        Assert.False(uniCommerce.Capabilities.OrderRequests);
+        Assert.True(uniCommerce.Capabilities.OrderRequests);
+        Assert.Equal(OrderRequestHistoryMode.ExternalInvoiceRequests,
+            uniCommerce.Capabilities.OrderRequestHistory);
     }
 
     [Fact]

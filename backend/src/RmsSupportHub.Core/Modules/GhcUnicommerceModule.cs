@@ -31,9 +31,10 @@ public class GhcUnicommerceModule : IOrderModule
         DraftKind: "unicommerce",
         ItemLookup: false,
         ConsumerLookup: true,
-        OrderRequests: false,
+        OrderRequests: true,
         Cancel: false,
-        Resend: false);
+        Resend: false,
+        OrderRequestHistory: OrderRequestHistoryMode.ExternalInvoiceRequests);
 
     public IReadOnlyDictionary<string, ModuleEnvironment> Environments { get; }
 

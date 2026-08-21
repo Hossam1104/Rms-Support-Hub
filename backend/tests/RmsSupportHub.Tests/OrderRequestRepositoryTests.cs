@@ -317,3 +317,44 @@ public class OrderRequestRepositoryTests
             < statsSql.IndexOf("LatestRequestOrderNumbers", StringComparison.Ordinal));
     }
 }
+
+public class GhcUnicommerceOrderRequestRepositoryTests
+{
+    [Fact]
+    public void ListSql_IsBoundedAndReadsOnlyExternalInvoiceRequests()
+    {
+        var sql = GhcUnicommerceOrderRequestRepository.BuildListSql("");
+
+        Assert.Contains("FROM dbo.ExternalInvoiceRequests AS R", sql);
+        Assert.Contains("OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY", sql);
+        Assert.DoesNotContain("RequestJson,", sql);
+        Assert.DoesNotMatch(@"OFFSET\s+\d+\s+ROWS", sql);
+    }
+
+    [Fact]
+    public void ListSql_AllowsOnlyTheVerifiedDateSort()
+    {
+        var ascending = GhcUnicommerceOrderRequestRepository.BuildListSql("", "+order_date");
+        var descending = GhcUnicommerceOrderRequestRepository.BuildListSql("", "-order_date");
+
+        Assert.Contains("R.RequestUtcDate ASC, R.Id ASC", ascending);
+        Assert.Contains("R.RequestUtcDate DESC, R.Id DESC", descending);
+    }
+
+    [Fact]
+    public void FiltersUseReferenceNumberAndDoNotInventUnavailableColumns()
+    {
+        var (sql, parameters) = GhcUnicommerceOrderRequestRepository.BuildFilters(
+            new OrderRequestFilters(
+                OrderNumber: "UNI-1",
+                Succeeded: false,
+                DateFrom: new DateTime(2026, 1, 1),
+                ExactOrderNumber: true));
+
+        Assert.Contains("R.ReferenceNumber = @OrderNumber", sql);
+        Assert.Contains("R.Success = @Succeeded", sql);
+        Assert.Contains("R.RequestUtcDate >= @DateFrom", sql);
+        Assert.DoesNotContain("BranchCode", sql);
+        Assert.Equal("UNI-1", parameters.Get<string>("OrderNumber"));
+    }
+}

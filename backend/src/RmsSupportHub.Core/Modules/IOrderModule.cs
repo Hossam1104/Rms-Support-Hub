@@ -7,6 +7,12 @@ namespace RmsSupportHub.Core.Modules;
 /// DraftKind selects which draft/payload shape a module uses ("flat" for
 /// GHC/UPC E-Commerce, "unicommerce" for GHC Uni-Commerce, null for the
 /// not-yet-available placeholders).</summary>
+public enum OrderRequestHistoryMode
+{
+    Standard,
+    ExternalInvoiceRequests
+}
+
 public record ModuleCapabilities(
     string? DraftKind,
     bool ItemLookup,
@@ -23,7 +29,13 @@ public record ModuleCapabilities(
     /// backing GET /api/modules/{key}/branches (U3 branch lookup contract)
     /// -- true only for upc_ecommerce today; GHC stays false pending
     /// confirmed credentials/schema.</summary>
-    bool BranchLookup = false
+    bool BranchLookup = false,
+    /// <summary>Identifies the read-only request-history shape selected by the
+    /// module. Standard modules read dbo.OrderRequests; the Uni-Commerce
+    /// adapter reads dbo.ExternalInvoiceRequests, whose schema is deliberately
+    /// narrower and therefore does not expose branch/status/cancel/resend
+    /// behavior.</summary>
+    OrderRequestHistoryMode OrderRequestHistory = OrderRequestHistoryMode.Standard
 );
 
 public interface IOrderModule

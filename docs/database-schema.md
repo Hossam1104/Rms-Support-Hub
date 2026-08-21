@@ -72,6 +72,19 @@ projection of a single latest header/invoice row must preserve the
 while header-filtered list/count/stats paths use the equivalent ranked
 `LatestHeaders` CTE. A plain unranked join would multiply request rows.
 
+## Uni-Commerce Testing history and catalog boundary
+
+The separate Uni-Commerce Testing catalog `RmsEcommerceStg` was verified on
+the approved Testing SQL host. Its request-history source is a different,
+bounded integration-attempt table:
+
+| Table | Columns | Notes |
+|---|---|---|
+| `ExternalInvoiceRequests` | `Id, ReferenceNumber, RequestJson, Success, Message, RequestUtcDate, ExternalInvoiceId` | One row per Uni-Commerce external-invoice attempt. `ReferenceNumber` is the searchable order/reference key; `RequestUtcDate` is the history timestamp; `Success` and `Message` provide the outcome. It has no branch, business-status, totals, line, or cancellation columns, so `GhcUnicommerceOrderRequestRepository` exposes only the common read-only attempt shape and does not invent the missing fields. |
+
+The verified Uni-Commerce catalog contains no item master/catalog table. Item
+lookup therefore remains capability-gated rather than using a guessed query.
+
 ## 2. Order status decode map
 
 | Code | Label | Resend blocked | Cancel blocked |
