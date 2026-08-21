@@ -1,20 +1,20 @@
 # RMS+ Support Hub — Azure DevOps Traceability Matrix
 
-**Azure Organization:** `DBSMENA`  
-**Azure Project:** `Rms_Support_Hub`  
-**Process Template:** `Agile-RMS` (Hierarchy: Epic -> User Story)  
-**Bootstrap Date:** `2026-08-21`  
-**BRD Source:** [`BRD.md`](../BRD.md)  
-**Backlog Blueprint:** [`docs/AZURE_DEVOPS_BACKLOG.md`](AZURE_DEVOPS_BACKLOG.md)  
+**Azure Organization:** `DBSMENA`
+**Azure Project:** `Rms_Support_Hub`
+**Process Template:** `Agile-RMS` (Hierarchy: Epic -> User Story)
+**Bootstrap Date:** `2026-08-21`
+**BRD Source:** [`BRD.md`](../BRD.md)
+**Backlog Blueprint:** [`docs/AZURE_DEVOPS_BACKLOG.md`](AZURE_DEVOPS_BACKLOG.md)
 
 ## Delivery Hierarchy Summary
 
 - **Total Epics:** 15 (8 Closed, 4 Active, 3 New)
-- **Total User Stories:** 120 (74 Closed, 19 Active, 27 New)
-- **Total Work Items:** 135
-- **Closed (Done):** 74 Stories / 8 Epics
-- **Active (In Review / Governance):** 19 Stories / 4 Epics
-- **New (Planned / Conditional):** 27 Stories / 3 Epics
+- **Total User Stories:** 124 (91 Closed, 2 Active, 31 New)
+- **Total Work Items:** 139
+- **Closed (Done):** 91 Stories / 8 Epics
+- **Active (In Review / Governance):** 2 Stories / 4 Epics
+- **New (Planned / Conditional):** 31 Stories / 3 Epics
 
 ## Azure Classification Structure
 
@@ -109,21 +109,21 @@ Closed historical work remains truthful as **Closed** and is discoverable throug
 | US-E04-09 | 12881 | User Story | [US-E04-09] UPC safe cancellation | E04 (#12842) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-02 - UPC E-Commerce | BR-011 | Merged to main |
 | US-E04-10 | 12882 | User Story | [US-E04-10] UPC same-number resend | E04 (#12842) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-02 - UPC E-Commerce | BR-012 | Merged to main |
 | US-E04-11 | 12883 | User Story | [US-E04-11] UPC Production policy gate | E04 (#12842) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-02 - UPC E-Commerce | BR-003, BR-023 | [PR #23](https://github.com/Hossam1104/Rms-Support-Hub/pull/23) |
-| US-E05-01 | 12884 | User Story | [US-E05-01] Verify GHC Testing database schema | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-004, BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-02 | 12885 | User Story | [US-E05-02] GHC item lookup | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-03 | 12886 | User Story | [US-E05-03] GHC consumer lookup | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-04 | 12887 | User Story | [US-E05-04] Preserve GHC-specific order fields | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-007 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-05 | 12888 | User Story | [US-E05-05] GHC payment metadata | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-008 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-06 | 12889 | User Story | [US-E05-06] GHC request history | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-07 | 12890 | User Story | [US-E05-07] GHC Testing environment activation | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-003, BR-004 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E05-08 | 12891 | User Story | [US-E05-08] GHC synthetic Testing send | E05 (#12843) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-01 | 12884 | User Story | [US-E05-01] Verify GHC Testing database schema | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-004, BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-02 | 12885 | User Story | [US-E05-02] GHC item lookup | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-03 | 12886 | User Story | [US-E05-03] GHC consumer lookup | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-04 | 12887 | User Story | [US-E05-04] Preserve GHC-specific order fields | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-007 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-05 | 12888 | User Story | [US-E05-05] GHC payment metadata | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-008 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-06 | 12889 | User Story | [US-E05-06] GHC request history | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-07 | 12890 | User Story | [US-E05-07] GHC Testing environment activation | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-003, BR-004 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E05-08 | 12891 | User Story | [US-E05-08] GHC synthetic Testing send | E05 (#12843) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
 | US-E05-09 | 12892 | User Story | [US-E05-09] Diagnose downstream GHC send rejection | E05 (#12843) | New | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-006, BR-010 | Planned after PR #26 |
 | US-E06-01 | 12893 | User Story | [US-E06-01] Specialized invoice payload builder | E06 (#12844) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-006, BR-007 | Merged to main |
-| US-E06-02 | 12894 | User Story | [US-E06-02] Complete Uni-Commerce draft persistence | E06 (#12844) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-001, BR-006 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E06-03 | 12895 | User Story | [US-E06-03] Uni-Commerce Testing environment configuration | E06 (#12844) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-003, BR-004 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E06-04 | 12896 | User Story | [US-E06-04] Uni-Commerce consumer lookup | E06 (#12844) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E06-05 | 12897 | User Story | [US-E06-05] Uni-Commerce request/invoice history adapter | E06 (#12844) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E06-06 | 12898 | User Story | [US-E06-06] Uni-Commerce synthetic Testing send | E06 (#12844) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-006, BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E06-02 | 12894 | User Story | [US-E06-02] Complete Uni-Commerce draft persistence | E06 (#12844) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-001, BR-006 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E06-03 | 12895 | User Story | [US-E06-03] Uni-Commerce Testing environment configuration | E06 (#12844) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-003, BR-004 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E06-04 | 12896 | User Story | [US-E06-04] Uni-Commerce consumer lookup | E06 (#12844) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-009 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E06-05 | 12897 | User Story | [US-E06-05] Uni-Commerce request/invoice history adapter | E06 (#12844) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E06-06 | 12898 | User Story | [US-E06-06] Uni-Commerce synthetic Testing send | E06 (#12844) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-006, BR-010 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
 | US-E06-07 | 12899 | User Story | [US-E06-07] Diagnose downstream Uni-Commerce send rejection | E06 (#12844) | New | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-006, BR-010 | Planned after PR #26 |
 | US-E06-08 | 12900 | User Story | [US-E06-08] Uni-Commerce item lookup | E06 (#12844) | New | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-009, BR-023 | Blocked: No item master in RmsEcommerceStg |
 | US-E06-09 | 12901 | User Story | [US-E06-09] Uni-Commerce cancellation | E06 (#12844) | New | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-011, BR-023 | Blocked: No upstream cancellation API |
@@ -134,7 +134,7 @@ Closed historical work remains truthful as **Closed** and is discoverable throug
 | US-E07-04 | 12906 | User Story | [US-E07-04] Local Administrators authorization | E07 (#12845) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-014 | [PR #8](https://github.com/Hossam1104/Rms-Support-Hub/pull/8) |
 | US-E07-05 | 12907 | User Story | [US-E07-05] Exact-origin CORS | E07 (#12845) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-015 | [PR #17](https://github.com/Hossam1104/Rms-Support-Hub/pull/17) |
 | US-E07-06 | 12908 | User Story | [US-E07-06] Direct browser-to-Agent boundary | E07 (#12845) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-013, BR-015 | [PR #17](https://github.com/Hossam1104/Rms-Support-Hub/pull/17) |
-| US-E07-07 | 12909 | User Story | [US-E07-07] Ownership-aware Testing provisioning | E07 (#12845) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-013, BR-021 | [PR #15](https://github.com/Hossam1104/Rms-Support-Hub/pull/15) |
+| US-E07-07 | 12909 | User Story | [US-E07-08] Ownership-aware Testing provisioning | E07 (#12845) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-013, BR-021 | [PR #15](https://github.com/Hossam1104/Rms-Support-Hub/pull/15) |
 | US-E07-08 | 12910 | User Story | [US-E07-08] Build identity and runtime ownership validation | E07 (#12845) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-021 | [PR #18](https://github.com/Hossam1104/Rms-Support-Hub/pull/18) |
 | US-E08-01 | 12911 | User Story | [US-E08-01] RMS installation discovery | E08 (#12846) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-02 - Diagnostics and Recovery | BR-016 | Merged to main |
 | US-E08-02 | 12912 | User Story | [US-E08-02] RMS service health | E08 (#12846) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-02 - Diagnostics and Recovery | BR-016 | Merged to main |
@@ -167,11 +167,11 @@ Closed historical work remains truthful as **Closed** and is discoverable throug
 | US-E10-06 | 12939 | User Story | [US-E10-06] IIS Testing deployment | E10 (#12848) | Closed | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-02 - Release and Testing Deployment | BR-021, BR-022 | Merged to main |
 | US-E10-07 | 12940 | User Story | [US-E10-07] Exact build identity verification | E10 (#12848) | Closed | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-02 - Release and Testing Deployment | BR-021 | [PR #24](https://github.com/Hossam1104/Rms-Support-Hub/pull/24) |
 | US-E10-08 | 12941 | User Story | [US-E10-08] Backend/frontend/POS CI gates | E10 (#12848) | Closed | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-02 - Release and Testing Deployment | BR-021, BR-025 | Merged to main |
-| US-E11-01 | 12942 | User Story | [US-E11-01] Protected GHC/Uni Testing configuration | E11 (#12849) | Active | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | BR-003, BR-004, BR-023 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E11-01 | 12942 | User Story | [US-E11-01] Protected GHC/Uni Testing configuration | E11 (#12849) | Closed | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | BR-003, BR-004, BR-023 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
 | US-E11-02 | 12943 | User Story | [US-E11-02] Local Testing POS signing/trust boundary | E11 (#12849) | Active | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-015, BR-019 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E11-03 | 12944 | User Story | [US-E11-03] Secure Support Hub local origin | E11 (#12849) | Active | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-015 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E11-04 | 12945 | User Story | [US-E11-04] POS Agent local runtime | E11 (#12849) | Active | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-013, BR-015 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| US-E11-05 | 12946 | User Story | [US-E11-05] Preserve native RMS services during cleanup | E11 (#12849) | Active | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-016 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E11-03 | 12944 | User Story | [US-E11-03] Secure Support Hub local origin | E11 (#12849) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-015 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E11-04 | 12945 | User Story | [US-E11-04] POS Agent local runtime | E11 (#12849) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-013, BR-015 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| US-E11-05 | 12946 | User Story | [US-E11-05] Preserve native RMS services during cleanup | E11 (#12849) | Closed | Rms_Support_Hub\POS | Rms_Support_Hub\POS-04 - Local Integration and Acceptance | BR-016 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
 | US-E11-06 | 12947 | User Story | [US-E11-06] End-to-end Online Order + POS local smoke | E11 (#12849) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-03 - Integration Acceptance | BR-003, BR-004, BR-013 | Planned after PR #26 acceptance |
 | US-E12-01 | 12948 | User Story | [US-E12-01] Authoritative Production Support Hub configuration | E12 (#12850) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-04 - Production Readiness | BR-003, BR-004, BR-022 | Planned roadmap |
 | US-E12-02 | 12949 | User Story | [US-E12-02] Production Online Order acceptance | E12 (#12850) | New | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-06 - Production Readiness | BR-003, BR-006 | Planned roadmap |
@@ -194,6 +194,10 @@ Closed historical work remains truthful as **Closed** and is discoverable throug
 | US-E14-04 | 12966 | User Story | [US-E14-04] Resolve platform-specific ACL test reliability | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-023 | Planned roadmap |
 | US-E14-05 | 12967 | User Story | [US-E14-05] Operational runbook consolidation | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-020 | Planned roadmap |
 | US-E14-06 | 12968 | User Story | [US-E14-06] Support diagnostics UX refinement | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-017 | Planned roadmap |
+| US-E14-07 | 12974 | User Story | [US-E14-07] Uni-Commerce read-query timeout and consumer lookup performance hardening | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-017, BR-023 | Planned backlog (Opus review) |
+| US-E14-08 | 12975 | User Story | [US-E14-08] Capability-driven GHC frontend field gating | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-001, BR-024 | Planned backlog (Opus review) |
+| US-E14-09 | 12976 | User Story | [US-E14-09] Uni draft persistence and export preview resilience | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-001, BR-023 | Planned backlog (Opus review) |
+| US-E14-10 | 12977 | User Story | [US-E14-10] Order-history ascending sort URL query contract | E14 (#12852) | New | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-004, BR-023 | Planned backlog (Opus review) |
 | US-E15-01 | 12969 | User Story | [US-E15-01] Establish Azure DevOps hierarchy | E15 (#12853) | Closed | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-06 - Governance and Traceability | BR-025 | [PR #27](https://github.com/Hossam1104/Rms-Support-Hub/pull/27) |
 | US-E15-02 | 12970 | User Story | [US-E15-02] Link User Stories to GitHub PRs | E15 (#12853) | Closed | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-06 - Governance and Traceability | BR-025 | [PR #27](https://github.com/Hossam1104/Rms-Support-Hub/pull/27) |
 | US-E15-03 | 12971 | User Story | [US-E15-03] Add acceptance criteria to active work | E15 (#12853) | Closed | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-06 - Governance and Traceability | BR-025 | [PR #27](https://github.com/Hossam1104/Rms-Support-Hub/pull/27) |

@@ -1,8 +1,8 @@
 # Current Project State
 
 - **Updated:** 2026-08-21
-- **Repository:** `feat/p0-d-ghc-unicommerce-local-pos` at `307e5eac15eff0e1690ddd2d15f96c548ae96bf2`, based on the normal merge of `origin/main@b04c8e4`; PR #26 remains open and Draft.
-- **Status:** PR #26 acceptance corrections are pushed and exact-head Support Hub CI run `32448440015` passed. The branch has not been merged. The correction closes the Uni-Commerce complete-draft write race, adds deterministic browser persistence/send ordering regressions, corrects Uni environment metadata, normalizes GHC `order_phone`, and makes Uni history response/exception semantics match the verified `ExternalInvoiceRequests` schema.
+- **Repository:** `main` at `fce6a66b9b81a2cb80fa9fc509d5073f456fe744`; PR #26 merged and accepted.
+- **Status:** PR #26 delivered the bounded GHC and Uni-Commerce Testing integration and closed acceptance gaps. Final reviewed PR head `b7d1153e0cc4bf087b316ca04059a421e6ef51f9` passed exact-head Support Hub CI run `32448707628` (SUCCESS), received independent review APPROVE WITH NON-BLOCKING OBSERVATIONS from Claude Opus 5, and received final acceptance from GPT-5.6 Sol before merge by owner.
 
 ## Validation evidence
 
@@ -17,12 +17,14 @@
 ## Safety and boundaries
 
 - No Production contact, activation, order mutation, database mutation, Main Server/customer mutation, or POS trust bypass was performed.
-- Known QA-only synthetic GHC and Uni Testing sends remain downstream-rejected outcomes, not Support Hub successes; no cancellation was attempted.
+- Known QA-only synthetic GHC and Uni Testing sends reached the Testing boundary and were rejected downstream; they remain downstream-rejected outcomes, not Support Hub successes; no cancellation was attempted.
 - The test-created canonical POS trust file was removed after validation; the P0-D0 release-PKI/trust-material blocker remains open. Production readiness remains **NO**.
 - Uni item lookup remains unavailable without a verified item catalog. Uni cancel/resend remain disabled without verified upstream contracts.
 
 ## Remaining
 
-- Sol re-review and merge of Draft PR #26 remain pending.
+- Downstream GHC and Uni-Commerce send rejection diagnosis remains open (#12892, #12899).
+- Uni item lookup (#12900) and Uni cancel/resend (#12901, #12902) remain conditional upon authoritative external contracts.
 - Real Testing configuration/schema authority and downstream diagnosis remain external prerequisites; no values or contracts are guessed.
-- HOSSAM still lacks established real Testing/Production signer identities and canonical trust material for POS acceptance.
+- HOSSAM still lacks established real Testing/Production signer identities and canonical release trust material for POS acceptance (#12943).
+- Final end-to-end Online Order + POS local integrated smoke acceptance remains pending (#12947).

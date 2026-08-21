@@ -1,7 +1,7 @@
 # RMS+ Support Hub — Azure DevOps Backlog Blueprint
 
-**Azure DevOps Project:** `Rms_Support_Hub`  
-**Implementation Source of Truth:** `Hossam1104/Rms-Support-Hub`  
+**Azure DevOps Project:** `Rms_Support_Hub`
+**Implementation Source of Truth:** `Hossam1104/Rms-Support-Hub`
 **Prepared:** 2026-08-21
 
 > Planning aliases below are temporary. Azure DevOps will assign the real work-item IDs.
@@ -33,7 +33,7 @@ To ensure effortless navigation across functional domains and delivery phases, A
 **Epic Status:** Done
 
 ### US-E01-01 — Unified application shell
-**Status:** Done  
+**Status:** Done
 As an operator, I want one Support Hub shell so that QA, Online Orders and POS tools are available in one workspace.
 
 **Acceptance Criteria**
@@ -66,7 +66,7 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 **Status:** Done
 
 ### US-E02-04 — Multi-format export
-**Status:** Done  
+**Status:** Done
 **Acceptance Criteria:** Generic Markdown, Jira-oriented and Azure DevOps-oriented formats are supported.
 
 ### US-E02-05 — Deterministic quality feedback
@@ -148,10 +148,10 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 ---
 
 # E05 — GHC E-Commerce
-**Epic Status:** In Review — Draft PR #26
+**Epic Status:** Active (Downstream diagnosis remains Planned)
 
 ### US-E05-01 — Verify GHC Testing database schema
-**Status:** In Review
+**Status:** Done
 
 **Acceptance Criteria**
 - Item and consumer queries use verified Testing schema.
@@ -159,20 +159,20 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 - Schema documentation reflects verified behavior.
 
 ### US-E05-02 — GHC item lookup
-**Status:** In Review
+**Status:** Done
 
 ### US-E05-03 — GHC consumer lookup
-**Status:** In Review
+**Status:** Done
 
 ### US-E05-04 — Preserve GHC-specific order fields
-**Status:** In Review
+**Status:** Done
 
 **Acceptance Criteria**
 - GHC contact/delivery fields are supported.
 - GHC-only fields do not leak into UPC payloads.
 
 ### US-E05-05 — GHC payment metadata
-**Status:** In Review
+**Status:** Done
 
 **Acceptance Criteria**
 - Card/bank metadata is supported where required.
@@ -180,13 +180,13 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 - UPC behavior is unchanged.
 
 ### US-E05-06 — GHC request history
-**Status:** In Review
+**Status:** Done
 
 ### US-E05-07 — GHC Testing environment activation
-**Status:** In Review
+**Status:** Done
 
 ### US-E05-08 — GHC synthetic Testing send
-**Status:** In Review
+**Status:** Done (Testing transport verified; downstream diagnosis tracked separately)
 
 ### US-E05-09 — Diagnose downstream GHC send rejection
 **Status:** Planned
@@ -200,39 +200,39 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 ---
 
 # E06 — GHC Uni-Commerce
-**Epic Status:** In Review / Planned
+**Epic Status:** Active (Downstream diagnosis and conditional capabilities remain open)
 
 ### US-E06-01 — Specialized invoice payload builder
 **Status:** Done
 
 ### US-E06-02 — Complete Uni-Commerce draft persistence
-**Status:** In Review
+**Status:** Done
 
 ### US-E06-03 — Uni-Commerce Testing environment configuration
-**Status:** In Review
+**Status:** Done
 
 ### US-E06-04 — Uni-Commerce consumer lookup
-**Status:** In Review
+**Status:** Done
 
 ### US-E06-05 — Uni-Commerce request/invoice history adapter
-**Status:** In Review where verified data exists
+**Status:** Done
 
 ### US-E06-06 — Uni-Commerce synthetic Testing send
-**Status:** In Review
+**Status:** Done (Testing transport verified; downstream diagnosis tracked separately)
 
 ### US-E06-07 — Diagnose downstream Uni-Commerce send rejection
 **Status:** Planned
 
 ### US-E06-08 — Uni-Commerce item lookup
-**Status:** Conditional  
+**Status:** Conditional
 **Acceptance Criteria:** Implement only when an authoritative compatible item source is identified.
 
 ### US-E06-09 — Uni-Commerce cancellation
-**Status:** Conditional  
+**Status:** Conditional
 **Acceptance Criteria:** Requires verified upstream cancellation contract.
 
 ### US-E06-10 — Uni-Commerce resend
-**Status:** Conditional  
+**Status:** Conditional
 **Acceptance Criteria:** Requires verified upstream resend contract.
 
 ---
@@ -375,22 +375,22 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 ---
 
 # E11 — Local Integrated Testing Acceptance
-**Epic Status:** In Review — Draft PR #26
+**Epic Status:** Active (Release PKI and final integrated smoke acceptance remain open)
 
 ### US-E11-01 — Protected GHC/Uni Testing configuration
-**Status:** In Review
+**Status:** Done
 
 ### US-E11-02 — Local Testing POS signing/trust boundary
-**Status:** In Review
+**Status:** Active / Ongoing (Release-PKI/trust-material blocker remains open)
 
 ### US-E11-03 — Secure Support Hub local origin
-**Status:** In Review
+**Status:** Done
 
 ### US-E11-04 — POS Agent local runtime
-**Status:** In Review
+**Status:** Done
 
 ### US-E11-05 — Preserve native RMS services during cleanup
-**Status:** In Review
+**Status:** Done
 
 ### US-E11-06 — End-to-end Online Order + POS local smoke
 **Status:** Planned after PR #26 acceptance and downstream fixes
@@ -471,6 +471,18 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 **Status:** Planned
 
 ### US-E14-06 — Support diagnostics UX refinement
+**Status:** Planned
+
+### US-E14-07 — Uni-Commerce read-query timeout and consumer lookup performance hardening
+**Status:** Planned
+
+### US-E14-08 — Capability-driven GHC frontend field gating
+**Status:** Planned
+
+### US-E14-09 — Uni draft persistence and export preview resilience
+**Status:** Planned
+
+### US-E14-10 — Order-history ascending sort URL query contract
 **Status:** Planned
 
 ---
