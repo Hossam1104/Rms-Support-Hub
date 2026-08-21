@@ -1,8 +1,8 @@
 # Current Project State
 
 - **Updated:** 2026-08-21
-- **Repository:** `feat/p0-f-production-mutation-gate` from baseline `7cb1351ccb5e06379415675ea2409c22dd3ba6fb`.
-- **Status:** P0-F implementation is complete locally and awaiting independent Sol review. The branch adds the Production mutation gate and closes the approved GHC E-commerce / GHC Uni-Commerce remediation scope.
+- **Repository:** `feat/p0-f-production-mutation-gate` at `7141b84`, from baseline `7cb1351ccb5e06379415675ea2409c22dd3ba6fb`; draft PR #30 targets `main`.
+- **Status:** P0-F implementation is complete and pushed, awaiting independent Sol review. The branch adds the Production mutation gate and closes the approved GHC E-commerce / GHC Uni-Commerce remediation scope.
 
 ## Current facts
 
