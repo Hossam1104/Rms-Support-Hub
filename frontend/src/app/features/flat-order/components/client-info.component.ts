@@ -104,12 +104,15 @@ export class ClientInfoComponent {
 
   hasError(fieldName: string): boolean { return (this.fieldErrors[fieldName]?.length ?? 0) > 0; }
   fieldError(fieldName: string): string | null { return this.fieldErrors[fieldName]?.join(' ') || null; }
-  /** `client_phone` is stripped of a leading Saudi country code on the way
-   * into the draft (typed or pasted) so the field settles on the local number
-   * the separate country-code field already accounts for. Every other field
-   * is passed through untouched. */
+  /** Client phone, plus GHC's separate order phone, are stripped of a leading
+   * Saudi country code on the way into the draft (typed or pasted). The
+   * separate country-code fields and every other field are passed through
+   * untouched. */
   onFieldChange(fieldName: string, value: unknown) {
-    const applied = fieldName === 'client_phone' ? normalizeLocalPhone(value) : value;
+    const applied = fieldName === 'client_phone'
+      || (fieldName === 'order_phone' && this.moduleKey === 'ghc_ecommerce')
+      ? normalizeLocalPhone(value)
+      : value;
     this.fieldChange.emit({ fieldName, value: applied });
   }
 

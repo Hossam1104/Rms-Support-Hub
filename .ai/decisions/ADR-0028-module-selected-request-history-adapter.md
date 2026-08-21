@@ -26,6 +26,10 @@ remain disabled.
 - Uni-Commerce history is visible without pretending its schema is generic.
 - List reads never transfer Uni request JSON; detail is the only raw-payload
   read.
+- `Success` is the verified outcome field. `Message` and
+  `ExternalInvoiceId` are exposed in the bounded response projection when
+  present; the schema has no verified exception flag, so failed business
+  outcomes do not populate `ExceptionMessage` or `HasException`.
 - Missing Uni business fields remain empty/unavailable in the shared DTO shape.
 - Future Uni schema changes must be verified before expanding capabilities.
 

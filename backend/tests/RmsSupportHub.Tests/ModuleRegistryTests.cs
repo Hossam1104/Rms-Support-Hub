@@ -85,15 +85,26 @@ public class ModuleRegistryTests
             uniCommerce.Capabilities.OrderRequestHistory);
     }
 
-    [Fact]
-    public void GhcUniCommerceTestingRequiresApiAndDatabase()
+    [Theory]
+    [InlineData("GHC Uni-Commerce Testing")]
+    [InlineData("GHC Uni-Commerce Production")]
+    public void GhcUniCommerceLanesRequireApiAndDatabaseButNotCancel(string environmentKey)
     {
         var environment = _registry.GetModuleOrThrow("ghc_unicommerce")
-            .GetEnvironment("GHC Uni-Commerce Testing");
+            .GetEnvironment(environmentKey);
 
         Assert.True(environment.RequiresApiEndpoint);
         Assert.True(environment.RequiresDatabase);
         Assert.False(environment.RequiresCancelEndpoint);
+    }
+
+    [Fact]
+    public void GhcUniCommerceTestingUsesTheExistingQaLaneLabel()
+    {
+        var environment = _registry.GetModuleOrThrow("ghc_unicommerce")
+            .GetEnvironment("GHC Uni-Commerce Testing");
+
+        Assert.Equal("QA lane", environment.RouteLabel);
     }
 
     [Fact]

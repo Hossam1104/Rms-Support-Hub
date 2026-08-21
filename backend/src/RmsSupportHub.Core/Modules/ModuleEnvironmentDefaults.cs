@@ -90,7 +90,7 @@ public static class ModuleEnvironmentDefaults
                 visualUrl: "static/assets/whites_logo.svg",
                 visualAlt: "GHC Uni-Commerce logo",
                 isDefault: false,
-                requiresDatabase: false,
+                requiresDatabase: true,
                 requiresApiEndpoint: true,
                 requiresCancelEndpoint: false),
             ["GHC Uni-Commerce Testing"] = Create(
@@ -100,7 +100,7 @@ public static class ModuleEnvironmentDefaults
                 accent: "violet",
                 cue: "Staging",
                 icon: "bi-hourglass-split",
-                routeLabel: "Pending lane",
+                routeLabel: "QA lane",
                 visualUrl: "static/assets/whites_logo.svg",
                 visualAlt: "GHC Uni-Commerce logo",
                 isDefault: true,

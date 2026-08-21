@@ -53,15 +53,6 @@ public sealed class GhcUnicommerceOrderRequestRepository : IGhcUnicommerceOrderR
             parameters.Add("Succeeded", filters.Succeeded.Value);
         }
 
-        if (filters.HasException.HasValue)
-        {
-            // Uni-Commerce records a message for every attempt. The bounded
-            // common contract treats an unsuccessful attempt as the adapter's
-            // exception/failure state.
-            clauses.Add("R.Success = @HasExceptionSuccess");
-            parameters.Add("HasExceptionSuccess", !filters.HasException.Value);
-        }
-
         if (filters.DateFrom.HasValue)
         {
             clauses.Add("R.RequestUtcDate >= @DateFrom");
@@ -90,7 +81,8 @@ public sealed class GhcUnicommerceOrderRequestRepository : IGhcUnicommerceOrderR
             CAST(0 AS int) AS ItemCount,
             R.Success AS IsSucceeded,
             DATALENGTH(R.RequestJson) AS RequestBytes,
-            CAST(1 AS bit) AS HasResponse
+            CASE WHEN R.Message IS NOT NULL OR R.ExternalInvoiceId IS NOT NULL
+                 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS HasResponse
         FROM dbo.ExternalInvoiceRequests AS R
         {whereSql}
         ORDER BY R.RequestUtcDate {orderDirection}, R.Id {orderDirection}
@@ -185,11 +177,7 @@ public sealed class GhcUnicommerceOrderRequestRepository : IGhcUnicommerceOrderR
         var row = await connection.QuerySingleOrDefaultAsync<DetailRow>(sql, new { RequestId = requestId });
         if (row is null) return null;
 
-        var responseJson = JsonSerializer.Serialize(new
-        {
-            message = row.Message,
-            externalInvoiceId = row.ExternalInvoiceId
-        });
+        var response = BuildResponseProjection(row.Message, row.ExternalInvoiceId);
 
         return new OrderRequestDetailDto(
             row.Id,
@@ -198,9 +186,9 @@ public sealed class GhcUnicommerceOrderRequestRepository : IGhcUnicommerceOrderR
             0m,
             0,
             row.Success,
-            row.Success ? null : row.Message,
+            response.ExceptionMessage,
             row.RequestJson,
-            responseJson,
+            response.ResponseJson,
             null,
             new List<OrderRequestDetailLineDto>(),
             new List<OrderRequestTransactionDto>(),
@@ -219,7 +207,7 @@ public sealed class GhcUnicommerceOrderRequestRepository : IGhcUnicommerceOrderR
         using var connection = _connectionFactory.CreateConnection(connectionString);
         var rows = await connection.QueryAsync<AttemptRow>(sql, new { OrderNumber = orderNumber });
         return rows.Select(row => new OrderRequestAttemptDto(
-            row.Id, row.OrderDate, row.IsSucceeded, row.IsSucceeded != true)).ToList();
+            row.Id, row.OrderDate, row.IsSucceeded, HasException: false)).ToList();
     }
 
     public Task<OrderRequestLineageDto> GetLineageAsync(
@@ -227,6 +215,21 @@ public sealed class GhcUnicommerceOrderRequestRepository : IGhcUnicommerceOrderR
         Task.FromResult(new OrderRequestLineageDto(
             Parent: null,
             Children: new List<OrderRequestLineageNodeDto>()));
+
+    /// <summary>ExternalInvoiceRequests has a message and optional external
+    /// invoice identifier, but no verified exception flag or exception text.
+    /// Keep failed business outcomes in the response projection and leave the
+    /// generic exception fields explicitly empty.</summary>
+    internal static (string? ExceptionMessage, string? ResponseJson, bool HasResponse)
+        BuildResponseProjection(string? message, long? externalInvoiceId)
+    {
+        var hasResponse = message is not null || externalInvoiceId.HasValue;
+        var responseJson = hasResponse
+            ? JsonSerializer.Serialize(new { message, externalInvoiceId })
+            : null;
+
+        return (ExceptionMessage: null, ResponseJson: responseJson, HasResponse: hasResponse);
+    }
 
     private static string EscapeLikePattern(string value) => value
         .Replace("\\", "\\\\", StringComparison.Ordinal)

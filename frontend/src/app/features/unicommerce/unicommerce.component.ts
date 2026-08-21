@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { finalize } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -16,6 +16,12 @@ import { ApiConfigComponent } from '../flat-order/components/api-config.componen
 function asNumber(value: unknown, fallback = 0): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+class DraftPersistenceError extends Error {
+  constructor() {
+    super('The latest invoice draft could not be saved.');
+  }
 }
 
 @Component({
@@ -102,8 +108,16 @@ export class UnicommerceComponent implements OnInit {
   /** U4 (D13): the active environment's resolved endpoint, displayed
    * read-only in the shared API configuration component. */
   activeEndpoint = signal<ModuleEndpoint | null>(null);
-  /** U4 (D13): real send-request lifecycle state (finalize-cleared). */
+  /** U4 (D13): real send-request lifecycle state. */
   sending = signal(false);
+
+  /** Complete-draft writes must stay in browser order. `persistenceTail`
+   * keeps later edits moving after a failed write, while
+   * `latestPersistence` lets Send reject the current draft if its own write
+   * failed. Each queued operation also refreshes compiled JSON only after its
+   * PUT has completed, so an older export cannot overtake a newer draft. */
+  private persistenceTail: Promise<void> = Promise.resolve();
+  private latestPersistence: Promise<void> = Promise.resolve();
 
   showAddRowItemDialog = signal<boolean>(false);
 
@@ -150,14 +164,12 @@ export class UnicommerceComponent implements OnInit {
     const next = { ...this.draft(), orderData: { ...this.draft().orderData, [event.fieldName]: event.value } };
     this.draft.set(next);
     this.recalculate();
-    this.refreshCompiledJson();
     this.persistDraft(next);
   }
 
   onConsumerFieldChange(event: { fieldName: string, value: unknown }) {
     const next = { ...this.draft(), consumer: { ...this.draft().consumer, [event.fieldName]: event.value } };
     this.draft.set(next);
-    this.refreshCompiledJson();
     this.persistDraft(next);
   }
 
@@ -165,7 +177,6 @@ export class UnicommerceComponent implements OnInit {
     const next = { ...this.draft(), delivery: { ...this.draft().delivery, [event.fieldName]: event.value } };
     this.draft.set(next);
     this.recalculate();
-    this.refreshCompiledJson();
     this.persistDraft(next);
   }
 
@@ -173,7 +184,6 @@ export class UnicommerceComponent implements OnInit {
     const next = { ...this.draft(), rowItems: [...this.draft().rowItems, item] };
     this.draft.set(next);
     this.recalculate();
-    this.refreshCompiledJson();
     this.persistDraft(next);
     this.showAddRowItemDialog.set(false);
     this.toast.showSuccess('Row item added to invoice.');
@@ -183,7 +193,6 @@ export class UnicommerceComponent implements OnInit {
     const next = { ...this.draft(), rowItems: this.draft().rowItems.filter((_, i) => i !== index) };
     this.draft.set(next);
     this.recalculate();
-    this.refreshCompiledJson();
     this.persistDraft(next);
     this.toast.showInfo('Row item removed.');
   }
@@ -207,7 +216,6 @@ export class UnicommerceComponent implements OnInit {
           this.draft.set(next);
           this.persistDraft(next);
           this.toast.showSuccess('Consumer details populated from DB.');
-          this.refreshCompiledJson();
         } else {
           this.toast.showInfo(`No consumer record found for phone ${phone}.`);
         }
@@ -223,26 +231,32 @@ export class UnicommerceComponent implements OnInit {
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
     this.sending.set(true);
-    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })
-      .pipe(finalize(() => this.sending.set(false)))
-      .subscribe({
-        next: res => {
-          this.apiResponse.set(res);
-          if (res.success) {
-            this.toast.showSuccess(`Invoice submitted successfully! Status: ${res.statusCode}`);
-          } else {
-            this.toast.showError(`Invoice submission failed. Status: ${res.statusCode}`);
-          }
-        },
-        error: (err: ApiError) => {
-          // Contract validation failures (400 { success:false, errors })
-          // keep their raw error list visible for diagnostics.
-          const responseText = err.code === 'validation_failed' && Array.isArray(err.details)
-            ? (err.details as string[]).join('\n')
-            : 'The request could not be completed.';
-          this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText, urlSent: '' });
+    this.flushLatestPersistence()
+      .then(() => firstValueFrom(this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })))
+      .then(res => {
+        this.apiResponse.set(res);
+        if (res.success) {
+          this.toast.showSuccess(`Invoice submitted successfully! Status: ${res.statusCode}`);
+        } else {
+          this.toast.showError(`Invoice submission failed. Status: ${res.statusCode}`);
         }
-      });
+      })
+      .catch((err: ApiError | DraftPersistenceError) => {
+        if (err instanceof DraftPersistenceError) {
+          const responseText = 'The latest invoice draft could not be saved. The invoice was not sent.';
+          this.apiResponse.set({ success: false, statusCode: 0, responseText, urlSent: '' });
+          this.toast.showError(responseText);
+          return;
+        }
+
+        // Contract validation failures (400 { success:false, errors })
+        // keep their raw error list visible for diagnostics.
+        const responseText = err.code === 'validation_failed' && Array.isArray(err.details)
+          ? (err.details as string[]).join('\n')
+          : 'The request could not be completed.';
+        this.apiResponse.set({ success: false, statusCode: err.status || 0, responseText, urlSent: '' });
+      })
+      .finally(() => this.sending.set(false));
   }
 
   recalculate() {
@@ -281,9 +295,34 @@ export class UnicommerceComponent implements OnInit {
     });
   }
 
-  private persistDraft(draft: OrderDraft) {
-    this.api.put(`modules/${this.moduleKey()}/state`, draft).subscribe({
-      error: () => {}
+  private persistDraft(draft: OrderDraft): Promise<void> {
+    const previous = this.persistenceTail;
+    const operation = previous
+      .then(() => firstValueFrom(this.api.put(`modules/${this.moduleKey()}/state`, draft)))
+      .then(() => firstValueFrom(this.api.get<Record<string, unknown>>(`modules/${this.moduleKey()}/export-json`)))
+      .then(json => this.compiledJson.set(json));
+
+    // Keep the queue alive after a failed edit so a later edit can recover,
+    // but retain the actual latest operation for Send to await and reject.
+    this.persistenceTail = operation.catch(() => undefined);
+    this.latestPersistence = operation;
+    operation.catch(() => {
+      this.toast.showError('The latest invoice draft could not be saved. Sending is blocked until it is saved.');
     });
+    return operation;
+  }
+
+  private async flushLatestPersistence(): Promise<void> {
+    let operation = this.latestPersistence;
+    while (true) {
+      try {
+        await operation;
+      } catch {
+        throw new DraftPersistenceError();
+      }
+
+      if (operation === this.latestPersistence) return;
+      operation = this.latestPersistence;
+    }
   }
 }

@@ -357,4 +357,28 @@ public class GhcUnicommerceOrderRequestRepositoryTests
         Assert.DoesNotContain("BranchCode", sql);
         Assert.Equal("UNI-1", parameters.Get<string>("OrderNumber"));
     }
+
+    [Fact]
+    public void FailedBusinessOutcomeDoesNotBecomeAnApplicationException()
+    {
+        var response = GhcUnicommerceOrderRequestRepository.BuildResponseProjection(
+            message: "Rejected by the external invoice service",
+            externalInvoiceId: null);
+
+        Assert.Null(response.ExceptionMessage);
+        Assert.True(response.HasResponse);
+        Assert.Contains("Rejected by the external invoice service", response.ResponseJson);
+    }
+
+    [Fact]
+    public void EmptyUniResponseDoesNotAdvertiseAResponseOrException()
+    {
+        var response = GhcUnicommerceOrderRequestRepository.BuildResponseProjection(
+            message: null,
+            externalInvoiceId: null);
+
+        Assert.Null(response.ExceptionMessage);
+        Assert.Null(response.ResponseJson);
+        Assert.False(response.HasResponse);
+    }
 }

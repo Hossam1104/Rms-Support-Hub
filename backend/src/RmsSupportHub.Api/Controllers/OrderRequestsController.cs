@@ -367,11 +367,12 @@ public class OrderRequestsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(query.Phone)
             || !string.IsNullOrWhiteSpace(query.BranchCode)
             || query.Status.HasValue
-            || query.Statuses is { Length: > 0 })
+            || query.Statuses is { Length: > 0 }
+            || query.HasException.HasValue)
         {
             return new BadRequestObjectResult(new
             {
-                error = "Uni-Commerce history supports order/reference, outcome, exception, and date filters only."
+                error = "Uni-Commerce history supports order/reference, outcome, and date filters only; exception state is unavailable."
             });
         }
 

@@ -400,6 +400,27 @@ public class OrderRequestsControllerTests
     }
 
     [Fact]
+    public async Task UniCommerceList_RejectsUnverifiedExceptionFilterBeforeDatabaseReads()
+    {
+        var standard = new FakeOrderRequestRepository();
+        var uni = new FakeGhcUnicommerceOrderRequestRepository();
+        var controller = BuildController(standard, new FakeApiClient(), ghcUnicommerceRepository: uni);
+        var query = new OrderRequestListQuery(
+            Q: null, OrderNumber: null, Phone: null, BranchCode: null,
+            Status: null, Statuses: null, Succeeded: null, HasException: true,
+            DateFrom: null, DateTo: null, Page: 1, PageSize: 25,
+            Sort: null, ExactMatch: true);
+
+        var result = await controller.List(
+            "ghc_unicommerce", query, "GHC Uni-Commerce Testing");
+
+        var badRequest = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+        Assert.Contains("exception state is unavailable", badRequest.Value?.ToString());
+        Assert.Empty(standard.ConnectionStrings);
+        Assert.Empty(uni.ConnectionStrings);
+    }
+
+    [Fact]
     public async Task ProductionListAndDetailReadsUseTheProductionCatalog()
     {
         var repo = new FakeOrderRequestRepository();

@@ -1,37 +1,28 @@
 # Current Project State
 
 - **Updated:** 2026-08-21
-- **Repository:** feature branch `feat/p0-d-ghc-unicommerce-local-pos`, based on `origin/main@87d4673edbb95b5400d9a632e3795bde12df4960`.
-- **Status:** P0-D bounded GHC E-Commerce and GHC Uni-Commerce Testing implementation is complete locally; Draft PR #26 is open against `main`, with hosted CI required for each pushed head.
-
-## Testing configuration and schema evidence
-
-- The external Testing override is populated at `C:\ProgramData\RmsSupportHub\Testing\appsettings.override.json`; it is outside the repository and is not tracked.
-- Effective policy is Testing-only: `DeploymentTier=Testing`, `Outbound:VerifyTls=true`, `SupportHub:AllowCustomEndpoints=false`, all Production registrations disabled, GHC Testing enabled, Uni-Commerce Testing enabled, and UPC left unconfigured/disabled.
-- Read-only SQL verification succeeded for GHC E-Commerce `RmsMainStg` and Uni-Commerce `RmsEcommerceStg` on the approved Testing SQL host. No credentials are stored in project memory.
-- GHC item lookup now uses the verified live `Items`/branch-UOM/barcode/price/branch/tax schema. GHC consumer lookup uses the verified consumer/address schema. Uni consumer lookup uses the verified `Consumers.PrimaryPhoneNumber` schema.
-- Uni-Commerce has no item master/catalog table in the verified database. Item lookup remains capability-gated and returns HTTP 501; this is an evidence-backed boundary, not a guessed query.
-- Uni-Commerce `ExternalInvoiceRequests` is not the generic `OrderRequests` workflow; `GhcUnicommerceOrderRequestRepository` now provides a capability-selected, bounded read-only adapter. It supports reference/outcome/exception/date filters only; cancel/resend and unsupported branch/phone/status/sort behavior remain disabled.
-
-## Runtime and POS state
-
-- Secure Testing Support Hub is running and verified at `https://support-hub.integration.test:4443`.
-- Canonical Agent service is `RmsSupportHub.Pos.Agent`, verified at `https://rms-pos-agent.localhost:5001`; the disposable INT-13 TestService is also retained for Testing validation.
-- Local Testing code-signing certificates and the protected canonical trust file under `C:\ProgramData\DBS\RmsSupportAgent\Trust\package-trust.json` were created for this local Testing session only. They are not Production PKI and do not authorize Production mode.
-- No `RMS.BranchService`, `RMS.CashierService`, `RMSServiceManager`, Production service, customer system, or native RMS service was changed.
-- Synthetic GHC and Uni sends used QA-only order data. GHC reached the Testing route and was rejected with downstream HTTP 400; Uni reached the Testing route and was rejected with downstream status 502. Neither was accepted, and no cancellation was attempted. Live Uni history list/detail probes now return HTTP 200 from `ExternalInvoiceRequests`.
+- **Repository:** `feat/p0-d-ghc-unicommerce-local-pos`, based on the normal merge of `origin/main@b04c8e4`; PR #26 remains open and Draft.
+- **Status:** PR #26 acceptance corrections are implemented locally. The branch has not been merged. The correction closes the Uni-Commerce complete-draft write race, adds deterministic browser persistence/send ordering regressions, corrects Uni environment metadata, normalizes GHC `order_phone`, and makes Uni history response/exception semantics match the verified `ExternalInvoiceRequests` schema.
 
 ## Validation evidence
 
-- Backend focused tests: 290 passed.
-- Frontend tests: 367 passed across 60 files.
-- POS Domain: 12 passed; Application: 82 passed; Infrastructure: 155 passed; Agent Integration/OpenAPI: 171 passed in the intended clean-trust validation run.
-- PowerShell provisioning/lifecycle tests: 172 passed.
-- Production frontend build passed. `scripts/build.ps1` passed its backend tests, Release build with 0 warnings/0 errors, production Angular build, and final checks.
-- Runtime probes passed for Hub readiness, module catalog/health, Agent readiness, GHC/Uni endpoint and database checks, and the configured local secure origins.
+- Backend Release tests: **295 passed / 0 failed**.
+- Frontend tests: **373 passed / 0 failed across 60 files**.
+- Frontend production build: passed.
+- `scripts/build.ps1`: passed; backend tests passed, Release build passed with 0 warnings / 0 errors, and production frontend build passed.
+- Focused frontend persistence/normalization tests: **11 passed**; focused backend correction tests: **63 passed**.
+- PowerShell quality: **37 files passed**; offline runtime regression cases passed.
+- POS validation with the documented Testing Support Hub origin generated OpenAPI; Domain **12/12**, Application **82/82**, Infrastructure **154/155**, Agent Integration **170/171**. The two failures are host/environment-gated (machine-wide privileged lease availability and the missing-trust startup fixture); no POS product files changed.
 
-## Remaining boundary
+## Safety and boundaries
 
-- Uni item lookup remains unavailable because the verified Uni schema has no item master/catalog table. Uni history is available through the bounded adapter, but branch/phone/status/totals/line-item/cancel/resend fields remain unavailable because the verified table does not contain them.
-- Both synthetic Testing sends were rejected downstream; no accepted synthetic order exists to cancel.
-- Production remains disabled and is not ready for use without real Production authority, PKI, and explicit approval.
+- No Production contact, activation, order mutation, database mutation, Main Server/customer mutation, or POS trust bypass was performed.
+- Known QA-only synthetic GHC and Uni Testing sends remain downstream-rejected outcomes, not Support Hub successes; no cancellation was attempted.
+- The test-created canonical POS trust file was removed after validation; the P0-D0 release-PKI/trust-material blocker remains open. Production readiness remains **NO**.
+- Uni item lookup remains unavailable without a verified item catalog. Uni cancel/resend remain disabled without verified upstream contracts.
+
+## Remaining
+
+- Sol re-review and merge of Draft PR #26 remain pending.
+- Real Testing configuration/schema authority and downstream diagnosis remain external prerequisites; no values or contracts are guessed.
+- HOSSAM still lacks established real Testing/Production signer identities and canonical trust material for POS acceptance.
