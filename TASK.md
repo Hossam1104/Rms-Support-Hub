@@ -1,6 +1,6 @@
 # P0-D - Testing Integration & Operational Readiness
 
-MODEL: Gemini 3.7 | ROLE: Implementation Preparation / Operational Readiness
+MODEL: Gemini 3.7 | ROLE: Implementation Executor / Operational Readiness
 PROGRAMME: Staging-Safe Release Candidate v1 | MILESTONE: P0-D Testing Integration & Operational Readiness
 Repository: `D:\AI Tools\DBS\Rms-Support-Hub` | Target: `HOSSAM` (Local Windows IIS)
 
@@ -15,6 +15,9 @@ do not consume Luna without Sol escalation for a genuinely high-risk problem.
 
 - Local HOSSAM work includes IIS, local config, development servers, builds, and tests.
 - Shared/customer Testing RMS APIs, databases, and gateways require an explicit operation packet before first contact.
+- Standing owner authorization is granted for the planned Testing-track implementation, bounded Testing connectivity,
+  reviewed read-only SQL, and controlled Testing Send/Cancel/Resend with dedicated synthetic data; no repeated
+  conversational approval is required. Missing configuration or other technical prerequisites remain blockers.
 - Production is strictly forbidden and outside P0-D authorization.
 
 ## 3. Current deployed baseline
@@ -26,10 +29,11 @@ do not consume Luna without Sol escalation for a genuinely high-risk problem.
 
 ## 4. Mandatory safety gates
 
-Do not guess, discover, print, log, commit, or screenshot real Testing values.
-Owner input is required for endpoints, connection strings, credentials,
-registrations, and database overrides. Configuration presence never authorizes
-downstream action. Every shared Testing contact must identify environment,
+Do not guess, print, log, commit, or screenshot real Testing values. Approved
+local owner-controlled sources may be inspected without exposing values, but
+configuration must be classified as Testing before promotion to the deployed
+external file. Configuration presence never authorizes downstream action.
+Every shared Testing contact must identify environment,
 system, method/action, route/query, body/data, expected effect, reason,
 rollback/recovery, and read-only/mutating classification. Without separate
 authorization prohibit send, cancel, resend, DB INSERT/UPDATE/DELETE/MERGE,
@@ -43,20 +47,24 @@ mutation, and POS machine mutation. Production is always forbidden.
 3. Validate JSON, tier, TLS, custom-endpoint prohibition, disabled Production registrations, Testing-only resolution, cancel keys, and redaction offline.
 4. Prepare separate exact read-only and mutating packets; execute neither shared probes nor mutations without explicit authorization.
 5. Keep external config outside Git/package and maintain REPOSITORY READY=YES, TESTING DEPLOYED=YES, TESTING ACCEPTED=YES, PRODUCTION READY=NO.
-6. Update durable state with facts only and stop at the authorization boundary.
+6. Update durable state with facts only and stop at a missing configuration or technical prerequisite; standing owner authorization is not itself a stop.
 
 ## 6. FULL NEXT EXECUTABLE PROMPT - P0-D1 owner-authorized continuation
 
 Continue from repository code, `.ai/STATE.md`, and `.ai/HANDOFF.md`; do not
-reconstruct prior work from chat. Preconditions: preserve
+reconstruct prior work from chat. Preserve
 `SupportHub:DeploymentTier=Testing`, `Outbound:VerifyTls=true`,
 `SupportHub:AllowCustomEndpoints=false`, and disabled Production registrations;
-the owner has supplied the six values through the external file (never Git,
-logs, screenshots, CI, or memory files):
+when configured, the external file (never Git, logs, screenshots, CI, or memory
+files) must supply the six actual Testing values:
 `ConnectionStrings:GhcEcommerce`, `ModuleEndpoints:GhcTesting`,
 `ModuleCancelEndpoints:GhcTesting`, `ConnectionStrings:UpcEcommerceTest`,
-`ModuleEndpoints:UpcTesting`, and `ModuleCancelEndpoints:UpcTesting`; and the
-owner has separately authorized each exact shared read-only packet.
+`ModuleEndpoints:UpcTesting`, and `ModuleCancelEndpoints:UpcTesting`; it must
+also set these two non-secret activation flags to true:
+`SupportHub:Environments:ghc_ecommerce:GHC Testing:Enabled` and
+`SupportHub:Environments:upc_ecommerce:UPC Testing:Enabled`. Standing owner
+authorization covers the exact shared read-only packets; no repeated approval
+prompt is required.
 
 1. Recheck status, HEAD, origin/main, `python .ai/scripts/context.py`, and handoff; preserve user work.
 2. Parse/validate external JSON offline. Confirm Testing, TLS, custom endpoints false, Production disabled, GHC/UPC Testing/cancel resolution, and redaction. Never expose values.
@@ -67,7 +75,7 @@ owner has separately authorized each exact shared read-only packet.
 7. Keep separate prohibited-operation packets for `POST /api/modules/{key}/send-request`, `POST /api/modules/{key}/cancel-order`, `POST /api/modules/{key}/order-requests/{id}/cancel`, and `POST /api/modules/{key}/order-requests/{id}/resend`. Do not execute them; any future authorization must include environment, system, method, route/body, expected effect, reason, rollback/recovery, and mutating classification. Also prohibit all DML/procedures, Production, Main Server/customer mutation, and POS mutation.
 8. Run focused tests, required build/test suite, frontend production build, config/environment safety, OpenAPI/client drift where applicable, `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and `git diff --check`; report exact counts and distinguish external unavailability from failures.
 9. Change product code only for a proven defect, with a minimal regression-tested fix and exact-head/CI review stop. Never patch around missing owner config.
-10. Update STATE/HANDOFF with facts, preserve the P0-D0 POS release-PKI blocker and Production readiness NO, keep external config outside Git, and stop at authorization.
+10. Update STATE/HANDOFF with facts, preserve the P0-D0 POS release-PKI blocker and Production readiness NO, keep external config outside Git, and stop at any remaining technical prerequisite.
 
 Required report: starting/ending SHA, changed files, redacted key matrix,
 authorized contacts or `NONE`, GHC/UPC discovery/connectivity/read-only

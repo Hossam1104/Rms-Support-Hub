@@ -1,23 +1,19 @@
 Status: Blocked
 
-Current turn:
-- P0-D1 preparation completed on `main@9daa6d549f546ffc6bea4629cc6ea95a17406666`, equal to `origin/main`; no product code, commit, push, or PR change.
-- External Contact: NONE. No Testing RMS API, database, gateway, TCP, Production, Main Server, or POS mutation was performed.
-- Existing P0-D0 POS blocker is unchanged: HOSSAM lacks the canonical package-trust file and genuine Production/Testing signer identities; POS remains NOT ACCEPTED.
-
-Completed:
-- HOSSAM IIS Testing site served readiness 200 with `deploymentTier=Testing`; root, liveness, module discovery, module health, Online Orders deep links, and redaction checks passed.
-- Deployed package and external override were inspected without exposing values. External override is `{}`; six GHC/UPC owner values remain missing. Testing TLS is enabled, custom endpoints are disabled, and all deployed Production registrations are disabled.
-- Source review confirmed module health is TCP-connectivity-only; UPC read-only SQL is parameterized SELECT/aggregate work; GHC item/consumer SQL remains explicitly unverified; GHC OrderRequests and Uni-Commerce workflows are unavailable.
-- Read-only and prohibited-operation packets are recorded in `TASK.md` and the final report. No product fix was necessary.
-
-Authorization boundary:
-- Owner must provide the six Testing values through the external config path and separately authorize exact bounded read-only gateway/DB packets before any shared-environment contact.
-- Do not send, cancel, resend, execute DML/side-effecting procedures, contact Production, mutate Main Server/customer configuration, or alter POS trust architecture.
+Current turn (2026-08-21):
+- Rechecked `main@7f29e6653b632cd6463a55d87b49db7358282f81`; it equals `origin/main`.
+- No product code, generated contract, commit, push, PR, external Testing contact, DB action, order mutation, Production contact, or POS trust mutation.
+- IIS `RmsSupportHub.Testing` remains healthy on `http://localhost:8080`: root, live, ready, modules, module health, Online Orders, and POS deep links returned 200.
+- External override remains valid JSON `{}`; all six required GHC/UPC Testing values and both Testing activation flags remain absent. The safe stop is unchanged.
+- Local Agent start was attempted through the supported Windows service and failed; service remains stopped. Canonical trust file is absent and ports 4443/5001 have no listeners.
 
 Validation:
-- Release build 0 warnings/0 errors; backend 281/281; focused configuration/routing/health slice 116/116; frontend 362/362 across 59 files; production build passed.
-- Offline runtime, PowerShell quality, deployed package safety, local IIS readiness, and redaction checks passed. `test-release-candidate-safety.ps1` passed against the deployed package with explicit paths.
+- Backend Release build: 0 warnings / 0 errors; backend tests: 281 passed / 0 failed.
+- Frontend tests: 362 passed / 0 failed across 59 files; production build passed.
+- Offline runtime, PowerShell quality, deployed package safety, memory checks, and `git diff --check` passed.
+- POS solution: Domain 12/12 and Application 82/82 passed; Infrastructure 113 passed / 42 failed / 155 total because ACL-dependent fixtures throw `UnauthorizedAccessException` in this session. With `PosAgentSecurity__SupportHubOrigin=https://support-hub.integration.test:4443`, OpenAPI generation completed and the tracked document stayed unchanged.
 
-Exact next action:
-- Owner supplies configuration and authorization, then rerun only the bounded Testing TCP and reviewed read-only SQL checks. Preserve the POS release-PKI blocker and stop again at any new authorization boundary.
+Blockers and exact next action:
+- Owner-controlled external Testing configuration must be populated and classified as Testing before the bounded GHC/UPC TCP and reviewed read-only SQL packets can run. No values may be guessed or promoted from ambiguous local sources.
+- HOSSAM needs canonical local Testing trust material with distinct valid signer identities and protected ACLs; do not fabricate pins or weaken Production trust.
+- After both prerequisites exist: restart only `RmsSupportHub.Testing`, verify Testing-only resolution, run authorized bounded read-only checks, and preserve `PRODUCTION READY=NO`.
