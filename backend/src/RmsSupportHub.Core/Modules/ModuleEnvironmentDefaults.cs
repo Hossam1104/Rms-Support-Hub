@@ -82,7 +82,7 @@ public static class ModuleEnvironmentDefaults
             ["GHC Uni-Commerce Production"] = Create(
                 key: "GHC Uni-Commerce Production",
                 environment: "Production",
-                description: "GHC Uni-Commerce live routing (pending API URL).",
+                description: "GHC Uni-Commerce live routing.",
                 accent: "aurora",
                 cue: "Automation",
                 icon: "bi-cpu",
@@ -91,12 +91,12 @@ public static class ModuleEnvironmentDefaults
                 visualAlt: "GHC Uni-Commerce logo",
                 isDefault: false,
                 requiresDatabase: false,
-                requiresApiEndpoint: false,
+                requiresApiEndpoint: true,
                 requiresCancelEndpoint: false),
             ["GHC Uni-Commerce Testing"] = Create(
                 key: "GHC Uni-Commerce Testing",
                 environment: "Testing",
-                description: "GHC Uni-Commerce QA routing (pending API URL).",
+                description: "GHC Uni-Commerce QA routing.",
                 accent: "violet",
                 cue: "Staging",
                 icon: "bi-hourglass-split",
@@ -104,8 +104,8 @@ public static class ModuleEnvironmentDefaults
                 visualUrl: "static/assets/whites_logo.svg",
                 visualAlt: "GHC Uni-Commerce logo",
                 isDefault: true,
-                requiresDatabase: false,
-                requiresApiEndpoint: false,
+                requiresDatabase: true,
+                requiresApiEndpoint: true,
                 requiresCancelEndpoint: false)
         };
 

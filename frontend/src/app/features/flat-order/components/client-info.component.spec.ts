@@ -26,4 +26,19 @@ describe('ClientInfoComponent', () => {
       { fieldName: 'client_first_name', value: '  Jane  ' }
     ]);
   });
+
+  it('accepts the GHC-only order contact fields through the normal field contract', () => {
+    const component = new ClientInfoComponent();
+    component.moduleKey = 'ghc_ecommerce';
+    const emitted: { fieldName: string; value: unknown }[] = [];
+    component.fieldChange.subscribe(change => emitted.push(change));
+
+    component.onFieldChange('order_country_code', '966');
+    component.onFieldChange('order_phone', '556028080');
+
+    expect(emitted).toEqual([
+      { fieldName: 'order_country_code', value: '966' },
+      { fieldName: 'order_phone', value: '556028080' }
+    ]);
+  });
 });

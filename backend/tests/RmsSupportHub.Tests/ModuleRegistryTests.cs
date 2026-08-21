@@ -1,4 +1,6 @@
 using RmsSupportHub.Core.Modules;
+using RmsSupportHub.Core.Models;
+using RmsSupportHub.Core.Repositories;
 using RmsSupportHub.Core.Services;
 using RmsSupportHub.Data;
 using RmsSupportHub.Data.Repositories;
@@ -15,6 +17,7 @@ public class ModuleRegistryTests
         new UniCommerceValidator(),
         new FlatOrderItemRepository(new SqlServerConnectionFactory()),
         new GhcConsumerRepository(new SqlServerConnectionFactory()),
+        new GhcUnicommerceConsumerRepository(new SqlServerConnectionFactory()),
         new UpcItemRepository(new SqlServerConnectionFactory()),
         new UpcConsumerRepository(new SqlServerConnectionFactory()));
 
@@ -66,5 +69,55 @@ public class ModuleRegistryTests
         Assert.Null(testEnv.DatabaseOverride);
         Assert.False(testEnv.Available);
         Assert.True(testEnv.RequiresDatabase);
+    }
+
+    [Fact]
+    public void GhcCapabilities_EnableOrderRequestsAndVerifiedUniCommerceConsumerLookup()
+    {
+        var ecommerce = _registry.GetModuleOrThrow("ghc_ecommerce");
+        var uniCommerce = _registry.GetModuleOrThrow("ghc_unicommerce");
+
+        Assert.True(ecommerce.Capabilities.OrderRequests);
+        Assert.False(uniCommerce.Capabilities.ItemLookup);
+        Assert.True(uniCommerce.Capabilities.ConsumerLookup);
+        Assert.False(uniCommerce.Capabilities.OrderRequests);
+    }
+
+    [Fact]
+    public void GhcUniCommerceTestingRequiresApiAndDatabase()
+    {
+        var environment = _registry.GetModuleOrThrow("ghc_unicommerce")
+            .GetEnvironment("GHC Uni-Commerce Testing");
+
+        Assert.True(environment.RequiresApiEndpoint);
+        Assert.True(environment.RequiresDatabase);
+        Assert.False(environment.RequiresCancelEndpoint);
+    }
+
+    [Fact]
+    public async Task GhcUniCommerceConsumerLookupUsesTheVerifiedUniRepository()
+    {
+        var consumer = new Consumer { ConsumerCode = "C-1" };
+        var consumerRepository = new RecordingConsumerRepository(consumer);
+        var module = new GhcUnicommerceModule(
+            new UniCommercePayloadBuilder(),
+            new UniCommerceValidator(),
+            consumerRepository);
+
+        var lookedUpConsumer = await module.LookupConsumerByPhoneAsync("Server=fake;", "0555000000");
+
+        Assert.Same(consumer, lookedUpConsumer);
+        Assert.Equal(("Server=fake;", "0555000000"), consumerRepository.LastCall);
+    }
+
+    private sealed class RecordingConsumerRepository(Consumer result) : IGhcUnicommerceConsumerRepository
+    {
+        public (string, string) LastCall { get; private set; } = default;
+
+        public Task<Consumer?> LookupConsumerByPhoneAsync(string connectionString, string phone)
+        {
+            LastCall = (connectionString, phone);
+            return Task.FromResult<Consumer?>(result);
+        }
     }
 }

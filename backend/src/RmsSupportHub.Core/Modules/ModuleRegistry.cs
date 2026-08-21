@@ -27,6 +27,7 @@ public class ModuleRegistry : IModuleRegistry
         IUniCommerceValidator uniValidator,
         IGhcItemRepository ghcItemRepository,
         IGhcConsumerRepository ghcConsumerRepository,
+        IGhcUnicommerceConsumerRepository ghcUnicommerceConsumerRepository,
         IUpcItemRepository upcItemRepository,
         IUpcConsumerRepository upcConsumerRepository,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, ModuleEnvironment>>? configuredEnvironments = null)
@@ -53,6 +54,7 @@ public class ModuleRegistry : IModuleRegistry
         Register(new GhcUnicommerceModule(
             uniPayloadBuilder,
             uniValidator,
+            ghcUnicommerceConsumerRepository,
             EnvironmentsFor("ghc_unicommerce", ModuleEnvironmentDefaults.GhcUnicommerce())));
         Register(new OmsModule());
         Register(new CallCenterModule());

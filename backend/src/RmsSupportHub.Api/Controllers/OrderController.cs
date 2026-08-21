@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using RmsSupportHub.Api.Exceptions;
 using RmsSupportHub.Api.Middleware;
 using RmsSupportHub.Core.DTOs;
+using RmsSupportHub.Core.Models;
 using RmsSupportHub.Core.Modules;
 using RmsSupportHub.Core.Services;
 using RmsSupportHub.Data;
@@ -43,6 +44,20 @@ public class OrderController : ControllerBase
 
         var draft = await _draftManager.LoadDraftAsync(HttpContext.GetSessionId(), key) ?? module.DefaultState();
         return Ok(draft);
+    }
+
+    /// <summary>Persists the complete module draft for workflows whose state
+    /// is not represented by OrderData alone, such as Uni-Commerce row items,
+    /// consumer details, and delivery details. The browser still receives the
+    /// same per-session isolation as the field patch route.</summary>
+    [HttpPut("state")]
+    public async Task<ActionResult> PutState(string key, [FromBody] OrderDraft draft)
+    {
+        var module = _moduleRegistry.GetModule(key);
+        if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
+
+        await _draftManager.SaveDraftAsync(HttpContext.GetSessionId(), key, draft);
+        return Ok(new { success = true, state = draft });
     }
 
     /// <summary>U4 (UI_Rework_Plan.md D13): the active environment's resolved

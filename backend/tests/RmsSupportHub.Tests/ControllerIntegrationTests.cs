@@ -114,15 +114,14 @@ public class ControllerIntegrationTests : IClassFixture<TestingWebApplicationFac
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    /// <summary>GHC has Capabilities.OrderRequests = false (database
-    /// credentials pending, see GhcEcommerceModule's TODO(db-creds)), so the
-    /// new order-requests surface must 501, not silently return empty/wrong
-    /// data for a module it isn't wired up for.</summary>
+    /// <summary>GHC now uses the shared OrderRequests workflow. With no
+    /// connection string in this isolated test host, the route fails at the
+    /// environment boundary rather than pretending the history is empty.</summary>
     [Fact]
-    public async Task OrderRequests_GhcEcommerce_Returns501()
+    public async Task OrderRequests_GhcEcommerce_RequiresConfiguredTestingDatabase()
     {
         var response = await _client.GetAsync("/api/modules/ghc_ecommerce/order-requests");
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
     /// <summary>Proves the R6 fix for remediation_plan.md B19: DraftManager
@@ -182,6 +181,55 @@ public class ControllerIntegrationTests : IClassFixture<TestingWebApplicationFac
         Assert.Equal("Elbanna", draft.OrderData["client_last_name"]?.ToString());
         Assert.Equal("0556028080", draft.OrderData["client_phone"]?.ToString());
         Assert.Equal("Test Address", draft.OrderData["order_address"]?.ToString());
+    }
+
+    /// <summary>The complete draft route preserves Uni-Commerce state that is
+    /// outside OrderData, including row items and consumer/delivery details.</summary>
+    [Fact]
+    public async Task PutState_PreservesCompleteUniCommerceDraft()
+    {
+        var draft = new OrderDraft
+        {
+            OrderData = new Dictionary<string, object?>
+            {
+                ["reference_number"] = "STATE-TEST-001",
+                ["online_order_number"] = "STATE-TEST-001"
+            },
+            Consumer = new Consumer
+            {
+                FirstName = "State",
+                LastName = "Test",
+                PrimaryPhoneNumber = "000000000"
+            },
+            Delivery = new DeliveryDetails
+            {
+                DeliveryAddress = "Testing address",
+                DeliveryFees = 2m
+            },
+            RowItems = new List<RowItem>
+            {
+                new()
+                {
+                    Quantity = 1m,
+                    MaterialNumber = "STATE-ITEM",
+                    Barcode = "STATE-ITEM",
+                    ItemPrice = 10m
+                }
+            }
+        };
+
+        var response = await _client.PutAsJsonAsync("/api/modules/ghc_unicommerce/state", draft);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var stateResponse = await _client.GetAsync("/api/modules/ghc_unicommerce/state");
+        var saved = await stateResponse.Content.ReadFromJsonAsync<OrderDraft>();
+
+        Assert.NotNull(saved);
+        Assert.Equal("STATE-TEST-001", saved!.OrderData["reference_number"]?.ToString());
+        Assert.Equal("State", saved.Consumer.FirstName);
+        Assert.Equal("Testing address", saved.Delivery.DeliveryAddress);
+        Assert.Single(saved.RowItems);
+        Assert.Equal("STATE-ITEM", saved.RowItems[0].MaterialNumber);
     }
 
     /// <summary>An empty field set is a caller error, not a silent no-op.</summary>

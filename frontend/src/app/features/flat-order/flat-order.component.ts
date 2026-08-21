@@ -151,6 +151,7 @@ const TOTALS_DEBOUNCE_MS = 300;
                 [hasIssues]="section('customer').hasIssues"
                 [issueCount]="section('customer').issueCount">
                 <app-client-info
+                  [moduleKey]="moduleKey()"
                   [orderData]="draftStore.draft().orderData"
                   [fieldErrors]="fieldErrors()"
                   (fieldChange)="onFieldChange($event)"
@@ -516,7 +517,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     const orderData = draft.orderData;
     const issueCount = (keys: string[]) => keys.reduce((count, key) => count + (errors[key]?.length ?? 0), 0);
     const orderHeaderIssues = issueCount(['branch_code', 'order_code', 'parent_order_code', 'order_delivery_cost', 'order_status', 'order_notes', 'order_gps']);
-    const customerIssues = issueCount(['client_country_code', 'client_phone', 'client_first_name', 'client_middle_name', 'client_last_name', 'client_email', 'client_birthdate', 'client_gender', 'order_address', 'address_code']);
+    const customerIssues = issueCount(['client_country_code', 'client_phone', 'client_first_name', 'client_middle_name', 'client_last_name', 'client_email', 'client_birthdate', 'client_gender', 'order_address', 'address_code', 'order_country_code', 'order_phone']);
     const deliveryIssues = issueCount(['delivery_date', 'delivery_from_time', 'delivery_to_time', 'fullfilment_plant', 'shipping_address_2']);
     const productIssues = errors['products']?.length ?? 0;
     const paymentIssues = errors['payments']?.length ?? 0;
@@ -1013,7 +1014,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   /** OrderRequests is written by the upstream API itself (see
    * OrderController.SendRequest), not this call -- so the landed row is
    * looked up by order number just after send, only for modules with
-   * Capabilities.OrderRequests (UPC today; GHC 501s here pending db-creds). */
+   * Capabilities.OrderRequests (server-owned for each verified module). */
   private lookupLandedRequest() {
     if (!this.moduleService.activeModule()?.capabilities?.orderRequests) return;
 
@@ -1139,7 +1140,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private sectionIdForValidationKey(key: string): string | null {
     if (['branch_code', 'order_code', 'parent_order_code', 'order_delivery_cost', 'order_status', 'order_notes', 'order_gps'].includes(key)) return 'order-header-section';
-    if (['client_country_code', 'client_phone', 'client_first_name', 'client_middle_name', 'client_last_name', 'client_email', 'client_birthdate', 'client_gender', 'order_address', 'address_code'].includes(key)) return 'customer-section';
+    if (['client_country_code', 'client_phone', 'client_first_name', 'client_middle_name', 'client_last_name', 'client_email', 'client_birthdate', 'client_gender', 'order_address', 'address_code', 'order_country_code', 'order_phone'].includes(key)) return 'customer-section';
     if (['delivery_date', 'delivery_from_time', 'delivery_to_time', 'fullfilment_plant', 'shipping_address_2'].includes(key)) return 'delivery-section';
     if (key === 'products') return 'products-section';
     if (key === 'payments') return 'payments-section';

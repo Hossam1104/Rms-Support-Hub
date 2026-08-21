@@ -13,23 +13,12 @@ public class FlatOrderItemRepository : IGhcItemRepository
         _connectionFactory = connectionFactory;
     }
 
-    /// <summary>GHC item lookup by 6-digit material number. UNVERIFIED --
-    /// GHC database credentials have never been confirmed against a live
-    /// database; this is the best available reference, ported from
-    /// _legacy_flask/modules/flat_order.py::lookup_item (itself marked
-    /// "still-guessed" in that source). See docs/database-schema.md §3.1.
-    ///
-    /// branchCode is accepted for IItemRepository parity with UpcItemRepository
-    /// but unused -- GHC pricing in the legacy source is not branch-specific.
-    ///
-    /// The legacy query also supports optional customer_number / sap_tax_code /
-    /// sap_mat_generic filters (an EXISTS(dbo.Customers ...) check and two
-    /// I.SapTaxCode / I.SapMatGeneric equality filters). They are not wired
-    /// here: IItemRepository.LookupItemAsync has no parameters for them today,
-    /// and nothing in LookupController currently sends them either. Adding
-    /// them cleanly needs a small interface change (an optional filters
-    /// parameter) threaded through LookupController -- left for a follow-up
-    /// session rather than changing the shared interface's shape here.</summary>
+    /// <summary>
+    /// GHC item lookup by six-digit material suffix. The query uses the live
+    /// GHC Testing schema: Items, BranchItemUnitOfMeasures,
+    /// ItemUnitOfMeasureBarCodes, ItemUnitOfMeasurePrices, Branches, and
+    /// TaxTypes. See docs/database-schema.md for the verified mapping.
+    /// </summary>
     public async Task<Product?> LookupItemAsync(string connectionString, string materialNumber, string? branchCode = null)
     {
         if (string.IsNullOrWhiteSpace(materialNumber) || !materialNumber.All(char.IsDigit) || materialNumber.Length != 6)
@@ -47,17 +36,26 @@ public class FlatOrderItemRepository : IGhcItemRepository
                 TT.Rate AS VatPercentage
             FROM dbo.Items AS I
                 LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
-                INNER JOIN dbo.ItemUnitOfMeasures AS IUM ON I.Id = IUM.ItemId
-                INNER JOIN dbo.ItemUnitOfMeasureBarCodes AS IUOMB ON IUM.Id = IUOMB.ItemUnitOfMeasureId
-                LEFT JOIN dbo.ItemPrices AS IP ON IUM.Id = IP.ItemUnitOfMeasureId
+                INNER JOIN dbo.BranchItemUnitOfMeasures AS BIUOM ON I.Id = BIUOM.ItemId
+                INNER JOIN dbo.ItemUnitOfMeasureBarCodes AS IUOMB ON BIUOM.Id = IUOMB.BranchItemUnitOfMeasureId
+                LEFT JOIN dbo.ItemUnitOfMeasurePrices AS IP ON BIUOM.Id = IP.BranchItemUnitOfMeasureId
+                LEFT JOIN dbo.Branches AS B ON B.Id = BIUOM.BranchId
             WHERE RIGHT(I.MaterialNumber, 6) = @MaterialNumber
+              AND I.IsDeleted = 0
+              AND (@BranchCode IS NULL OR B.BranchCode = @BranchCode)
               AND IP.IsActive = 1
               AND IP.Price IS NOT NULL
-              AND IP.ToDate > GETDATE()
-            ORDER BY I.Id DESC";
+              AND (IP.ToDate IS NULL OR IP.ToDate > GETDATE())
+            ORDER BY I.Id DESC, BIUOM.IsBase DESC, IP.Price DESC";
 
         using var connection = _connectionFactory.CreateConnection(connectionString);
-        var row = await connection.QueryFirstOrDefaultAsync<GhcItemQueryResult>(sql, new { MaterialNumber = materialNumber });
+        var row = await connection.QueryFirstOrDefaultAsync<GhcItemQueryResult>(
+            sql,
+            new
+            {
+                MaterialNumber = materialNumber,
+                BranchCode = string.IsNullOrWhiteSpace(branchCode) ? null : branchCode.Trim()
+            });
 
         if (row == null) return null;
 
@@ -74,7 +72,7 @@ public class FlatOrderItemRepository : IGhcItemRepository
         };
     }
 
-    private class GhcItemQueryResult
+    private sealed class GhcItemQueryResult
     {
         public string? ItemCode { get; set; }
         public string? ItemBarcode { get; set; }

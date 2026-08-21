@@ -19,8 +19,8 @@
 > the original source) and have since been superseded in places by the
 > actual C# implementation; where they differ, **the C# source under
 > `backend/src/RmsSupportHub.Data/Repositories/` is authoritative**, not
-> this document. GHC's `lookup_item` query (§3.1) is still carried over
-> **unverified** — GHC database credentials have never been confirmed live.
+> this document. GHC's `lookup_item` query (§3.1) is verified against the
+> live GHC Testing schema on `10.10.20.199/RmsMainStg`.
 
 ## Environment routing
 
@@ -97,41 +97,39 @@ Ported line-for-line from `_legacy_flask/modules/flat_order.py`. Do not
 rephrase, reorder joins, or rename columns — treat these as the executable
 spec.
 
-### 3.1 GHC item lookup (`FlatOrderItemRepository`) — **unverified, best-guess**
+### 3.1 GHC item lookup (`FlatOrderItemRepository`) — **verified live**
 
-Legacy source calls this "still-guessed" — GHC database credentials have
-never been confirmed, so this is the best available reference, not a
-verified query. Confirm it live the same way §3.2–3.4 were confirmed as soon
-as GHC credentials are available.
+The query is verified read-only against GHC Testing `RmsMainStg` on
+`10.10.20.199`. The live schema uses `BranchItemUnitOfMeasures` and
+`ItemUnitOfMeasurePrices`; `branchCode` is optional in the shared lookup
+contract and narrows the branch-specific price row when supplied.
 
 ```sql
 SELECT TOP 1
-    I.MaterialNumber, IUOMB.UniversalBarCode,
-    I.Name AS EnglishName,
-    I.NativeName AS ArabicName,
+    I.MaterialNumber AS ItemCode,
+    IUOMB.UniversalBarCode AS ItemBarcode,
+    I.Name AS ItemNameEn,
+    I.NativeName AS ItemNameAr,
     IP.Price AS UnitPrice,
-    TT.Rate AS VatRate,
-    CAST(ROUND(((IP.Price * TT.Rate) / 100) + IP.Price, 2) AS DECIMAL(10, 2)) AS NetPrice
+    TT.Rate AS VatPercentage
 FROM dbo.Items AS I
     LEFT JOIN dbo.TaxTypes AS TT ON I.SapTaxCode = TT.Code
-    INNER JOIN dbo.ItemUnitOfMeasures AS IUM ON I.Id = IUM.ItemId
-    INNER JOIN dbo.ItemUnitOfMeasureBarCodes AS IUOMB ON IUM.Id = IUOMB.ItemUnitOfMeasureId
-    LEFT JOIN dbo.ItemPrices AS IP ON IUM.Id = IP.ItemUnitOfMeasureId
+    INNER JOIN dbo.BranchItemUnitOfMeasures AS BIUOM ON I.Id = BIUOM.ItemId
+    INNER JOIN dbo.ItemUnitOfMeasureBarCodes AS IUOMB ON BIUOM.Id = IUOMB.BranchItemUnitOfMeasureId
+    LEFT JOIN dbo.ItemUnitOfMeasurePrices AS IP ON BIUOM.Id = IP.BranchItemUnitOfMeasureId
+    LEFT JOIN dbo.Branches AS B ON B.Id = BIUOM.BranchId
 WHERE RIGHT(I.MaterialNumber, 6) = @MaterialNumber
+  AND I.IsDeleted = 0
+  AND (@BranchCode IS NULL OR B.BranchCode = @BranchCode)
   AND IP.IsActive = 1
   AND IP.Price IS NOT NULL
-  AND IP.ToDate > GETDATE()
-  -- optional, only when supplied:
-  -- AND EXISTS (SELECT 1 FROM dbo.Customers WHERE CustomerNumber = @CustomerNumber AND IsActive = 1)
-  -- AND I.SapTaxCode = @SapTaxCode
-  -- AND I.SapMatGeneric = @SapMatGeneric
-ORDER BY I.Id DESC;
+  AND (IP.ToDate IS NULL OR IP.ToDate > GETDATE())
+ORDER BY I.Id DESC, BIUOM.IsBase DESC, IP.Price DESC;
 ```
 
 `@MaterialNumber` must be exactly 6 digits (validated before the query runs).
 Returns barcode (`UniversalBarCode`), English name (`Name`), Arabic name
-(`NativeName`), unit price, VAT rate, and a computed net price — all four of
-which were dropped by the previous rewrite (barcode and Arabic name).
+(`NativeName`), unit price, and VAT rate from the verified Testing schema.
 
 ### 3.2 UPC branch-ranked item lookup (`UpcItemRepository`) — **verified live**
 

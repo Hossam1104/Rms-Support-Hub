@@ -30,16 +30,11 @@ public class GhcEcommerceModule : IOrderModule
     public string Client => "GHC";
     public bool Available => true;
 
-    /// <summary>OrderRequests is false pending confirmed GHC database
-    /// credentials -- flip to true once GHC's OrderRequests table has been
-    /// verified live the same way UPC's was (see docs/database-schema.md).
-    /// That one flip is all OrderRequestsController needs; nothing else
-    /// keys off module identity. // TODO(db-creds)</summary>
     public ModuleCapabilities Capabilities { get; } = new(
         DraftKind: "flat",
         ItemLookup: true,
         ConsumerLookup: true,
-        OrderRequests: false,
+        OrderRequests: true,
         Cancel: true,
         Resend: false,
         HasDeliveryFields: true);

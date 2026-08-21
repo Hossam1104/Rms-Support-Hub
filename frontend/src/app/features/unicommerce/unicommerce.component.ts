@@ -144,44 +144,47 @@ export class UnicommerceComponent implements OnInit {
     });
   }
 
-  /** U4: writes go through the batched PATCH order-data route (U2,
-   * UI_Rework_Plan.md D1) -- the temporary per-field PUT order-field
-   * adapter is retired. The edit applies locally first and the response is
-   * never re-assigned over local state, so a late response cannot clobber
-   * newer edits. */
+  /** Keep the complete draft in the server-side session so send/export sees
+   * order, consumer, delivery, and row-item edits together. */
   onFieldChange(event: { fieldName: string, value: unknown }) {
-    const key = this.moduleKey();
-    this.draft.update(d => ({ ...d, orderData: { ...d.orderData, [event.fieldName]: event.value } }));
+    const next = { ...this.draft(), orderData: { ...this.draft().orderData, [event.fieldName]: event.value } };
+    this.draft.set(next);
     this.recalculate();
     this.refreshCompiledJson();
-    this.api.patch(`modules/${key}/order-data`, { fields: { [event.fieldName]: event.value } }).subscribe({
-      error: () => {}
-    });
+    this.persistDraft(next);
   }
 
   onConsumerFieldChange(event: { fieldName: string, value: unknown }) {
-    this.draft.update(d => ({ ...d, consumer: { ...d.consumer, [event.fieldName]: event.value } }));
+    const next = { ...this.draft(), consumer: { ...this.draft().consumer, [event.fieldName]: event.value } };
+    this.draft.set(next);
     this.refreshCompiledJson();
+    this.persistDraft(next);
   }
 
   onDeliveryFieldChange(event: { fieldName: string, value: unknown }) {
-    this.draft.update(d => ({ ...d, delivery: { ...d.delivery, [event.fieldName]: event.value } }));
+    const next = { ...this.draft(), delivery: { ...this.draft().delivery, [event.fieldName]: event.value } };
+    this.draft.set(next);
     this.recalculate();
     this.refreshCompiledJson();
+    this.persistDraft(next);
   }
 
   onAddRowItem(item: RowItem) {
-    this.draft.update(d => ({ ...d, rowItems: [...d.rowItems, item] }));
+    const next = { ...this.draft(), rowItems: [...this.draft().rowItems, item] };
+    this.draft.set(next);
     this.recalculate();
     this.refreshCompiledJson();
+    this.persistDraft(next);
     this.showAddRowItemDialog.set(false);
     this.toast.showSuccess('Row item added to invoice.');
   }
 
   onDeleteRowItem(index: number) {
-    this.draft.update(d => ({ ...d, rowItems: d.rowItems.filter((_, i) => i !== index) }));
+    const next = { ...this.draft(), rowItems: this.draft().rowItems.filter((_, i) => i !== index) };
+    this.draft.set(next);
     this.recalculate();
     this.refreshCompiledJson();
+    this.persistDraft(next);
     this.toast.showInfo('Row item removed.');
   }
 
@@ -191,16 +194,18 @@ export class UnicommerceComponent implements OnInit {
       next: res => {
         const c = res.data;
         if (res.success && c) {
-          this.draft.update(d => ({
-            ...d,
+          const next = {
+            ...this.draft(),
             consumer: {
-              ...d.consumer,
+              ...this.draft().consumer,
               firstName: c.firstName || '',
               lastName: c.lastName || '',
               primaryPhoneNumber: c.primaryPhoneNumber || phone,
               email: c.email || ''
             }
-          }));
+          };
+          this.draft.set(next);
+          this.persistDraft(next);
           this.toast.showSuccess('Consumer details populated from DB.');
           this.refreshCompiledJson();
         } else {
@@ -272,6 +277,12 @@ export class UnicommerceComponent implements OnInit {
     const key = this.moduleKey();
     this.api.get<Record<string, unknown>>(`modules/${key}/export-json`).subscribe({
       next: json => this.compiledJson.set(json),
+      error: () => {}
+    });
+  }
+
+  private persistDraft(draft: OrderDraft) {
+    this.api.put(`modules/${this.moduleKey()}/state`, draft).subscribe({
       error: () => {}
     });
   }

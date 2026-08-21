@@ -10,8 +10,8 @@ import { ModuleCapabilities } from '../models';
  * hardcoded module-key comparison -- see remediation_plan.md B21.
  * Redirects to the module's order builder with an explanatory toast when
  * the active module doesn't support the capability (e.g.
- * Capabilities.OrderRequests is false for ghc_ecommerce today, pending
- * database credentials -- see GhcEcommerceModule's TODO(db-creds)).
+ * Capabilities.OrderRequests is server-owned and reflects the verified
+ * database workflow for each module).
  */
 export function capabilityGuard(capability: keyof ModuleCapabilities): CanActivateFn {
   return (route) => {
