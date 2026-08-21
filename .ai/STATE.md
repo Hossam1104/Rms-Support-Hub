@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-22
 - **Repository:** `feat/p0-f-production-mutation-gate`; Draft PR #30 targets `main` at `7cb1351ccb5e06379415675ea2409c22dd3ba6fb`.
-- **Status:** Final bounded security remediation implementation and validation are complete locally; PR #30 remains Draft and awaits independent Sol re-review. No merge or acceptance is claimed.
+- **Status:** Final bounded security remediation implementation and validation are complete; the release-candidate safety scanner correction is included at implementation head `e0493f5`, Support Hub CI run `32534444783` passed at that exact head, and PR #30 remains Draft awaiting independent Sol re-review. No merge or acceptance is claimed.
 
 ## Current facts
 
@@ -23,7 +23,9 @@
 - Broad `.\scripts\build.ps1`: passed after stopping the stale project-owned Debug API process that held assemblies; Debug tests 342/342, Release build 0 warnings/0 errors, frontend production build passed.
 - PowerShell native parse gate: **37/37 passed**; PSScriptAnalyzer was unavailable and is recorded as an unavailable optional dependency, not a code failure.
 - `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and `git diff --check`: passed.
-- The prior exact-head Support Hub CI evidence remains historical; this remediation still requires a new same-branch push and exact-head CI run. New validation includes effective HTTP rejection, trusted-proxy normalization, HSTS, Secure cookie, bounded throttle/cache pressure, cross-module/unknown-source isolation, Testing preservation, and CR/LF API-key rejection.
+- Local Testing release-candidate generation, fresh extraction, sanitized configuration, offline scan, packaged smoke, and negative package-safety checks passed after the array-recursion correction in `scripts/ReleaseCandidateConfiguration.psm1`.
+- Exact-head Support Hub CI run `32534444783` passed the backend/frontend suites, release packaging, source/artifact identity, sanitized configuration, and packaged runtime smoke. New validation includes effective HTTP rejection, trusted-proxy normalization, HSTS, Secure cookie, bounded throttle/cache pressure, cross-module/unknown-source isolation, Testing preservation, and CR/LF API-key rejection.
+- A separate POS CI workflow reported one Windows infrastructure ACL test failure; no `pos/` files changed in this remediation and Support Hub CI is green.
 
 ## Safety and remaining work
 
