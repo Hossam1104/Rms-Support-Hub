@@ -1,4 +1,4 @@
-﻿# RMS+ Support Hub â€” Business Requirements Document (BRD)
+# RMS+ Support Hub — Business Requirements Document (BRD)
 
 **Version:** 1.0  
 **Status:** Baseline for delivery planning  
@@ -234,7 +234,7 @@ Default operational tier. Production resources remain policy-disabled. Testing c
 ### Production
 Separate authorized tier requiring authoritative configuration, release/package trust, PKI/certificates, deployment/rollback evidence and final acceptance.
 
-## 11. Current Delivery Status â€” 2026-08-21
+## 11. Current Delivery Status — 2026-08-21
 
 ### Delivered on `main`
 - Unified Support Hub shell
@@ -249,7 +249,7 @@ Separate authorized tier requiring authoritative configuration, release/package 
 - POS diagnostics, recovery and maintenance slices
 - POS package-trust/lifecycle architecture and security hardening
 
-### In Review â€” Draft PR #26
+### In Review — Draft PR #26
 - Verified GHC Testing-schema integration
 - GHC request-history work
 - Additional GHC-specific payload/UI fields

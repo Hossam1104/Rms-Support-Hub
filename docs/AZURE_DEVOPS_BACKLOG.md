@@ -1,4 +1,4 @@
-﻿# RMS+ Support Hub â€” Azure DevOps Backlog Blueprint
+# RMS+ Support Hub — Azure DevOps Backlog Blueprint
 
 **Azure DevOps Project:** `Rms_Support_Hub`  
 **Implementation Source of Truth:** `Hossam1104/Rms-Support-Hub`  
@@ -8,17 +8,17 @@
 
 ## Status Rules
 
-- **Done** â€” implemented and merged to `main`.
-- **In Review** â€” implemented on an open PR / awaiting acceptance.
-- **Planned** â€” agreed or repository-documented future work.
-- **Conditional** â€” implement only when an authoritative upstream contract or data source exists.
+- **Done** — implemented and merged to `main`.
+- **In Review** — implemented on an open PR / awaiting acceptance.
+- **Planned** — agreed or repository-documented future work.
+- **Conditional** — implement only when an authoritative upstream contract or data source exists.
 
 ---
 
-# E01 â€” Platform Foundation & Unified Support Hub
+# E01 — Platform Foundation & Unified Support Hub
 **Epic Status:** Done
 
-### US-E01-01 â€” Unified application shell
+### US-E01-01 — Unified application shell
 **Status:** Done  
 As an operator, I want one Support Hub shell so that QA, Online Orders and POS tools are available in one workspace.
 
@@ -28,115 +28,115 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 - Deep links resolve.
 - Shared UI controls are reused.
 
-### US-E01-02 â€” Shared responsive design system
+### US-E01-02 — Shared responsive design system
 **Status:** Done
 
-### US-E01-03 â€” Central API composition
+### US-E01-03 — Central API composition
 **Status:** Done
 
-### US-E01-04 â€” Health and readiness endpoints
+### US-E01-04 — Health and readiness endpoints
 **Status:** Done
 
 ---
 
-# E02 â€” QA Prompt Studio
+# E02 — QA Prompt Studio
 **Epic Status:** Done
 
-### US-E02-01 â€” Bug refinement
+### US-E02-01 — Bug refinement
 **Status:** Done
 
-### US-E02-02 â€” User-story refinement
+### US-E02-02 — User-story refinement
 **Status:** Done
 
-### US-E02-03 â€” Test-case generation
+### US-E02-03 — Test-case generation
 **Status:** Done
 
-### US-E02-04 â€” Multi-format export
+### US-E02-04 — Multi-format export
 **Status:** Done  
 **Acceptance Criteria:** Generic Markdown, Jira-oriented and Azure DevOps-oriented formats are supported.
 
-### US-E02-05 â€” Deterministic quality feedback
+### US-E02-05 — Deterministic quality feedback
 **Status:** Done
 
-### US-E02-06 â€” Client-side privacy and bounded history
-**Status:** Done
-
----
-
-# E03 â€” Online Order Core Platform
-**Epic Status:** Done
-
-### US-E03-01 â€” Module registry and capability model
-**Status:** Done
-
-### US-E03-02 â€” Server-owned environment selection
-**Status:** Done
-
-### US-E03-03 â€” Draft lifecycle
-**Status:** Done
-
-### US-E03-04 â€” Server-side totals and VAT calculations
-**Status:** Done
-
-### US-E03-05 â€” Exact compiled JSON preview
-**Status:** Done
-
-### US-E03-06 â€” Server-side payload validation
-**Status:** Done
-
-### US-E03-07 â€” Generic send workflow
-**Status:** Done
-
-### US-E03-08 â€” Bounded endpoint/database diagnostics
-**Status:** Done
-
-### US-E03-09 â€” Common item/consumer lookup contracts
+### US-E02-06 — Client-side privacy and bounded history
 **Status:** Done
 
 ---
 
-# E04 â€” UPC E-Commerce
+# E03 — Online Order Core Platform
 **Epic Status:** Done
 
-### US-E04-01 â€” UPC Testing environment
+### US-E03-01 — Module registry and capability model
 **Status:** Done
 
-### US-E04-02 â€” UPC branch lookup
+### US-E03-02 — Server-owned environment selection
 **Status:** Done
 
-### US-E04-03 â€” UPC item lookup
+### US-E03-03 — Draft lifecycle
 **Status:** Done
 
-### US-E04-04 â€” UPC consumer lookup
+### US-E03-04 — Server-side totals and VAT calculations
 **Status:** Done
 
-### US-E04-05 â€” UPC-specific order payload
+### US-E03-05 — Exact compiled JSON preview
 **Status:** Done
 
-### US-E04-06 â€” UPC order submission
+### US-E03-06 — Server-side payload validation
 **Status:** Done
 
-### US-E04-07 â€” UPC OrderRequests list and filters
+### US-E03-07 — Generic send workflow
 **Status:** Done
 
-### US-E04-08 â€” UPC OrderRequest detail
+### US-E03-08 — Bounded endpoint/database diagnostics
 **Status:** Done
 
-### US-E04-09 â€” UPC safe cancellation
+### US-E03-09 — Common item/consumer lookup contracts
 **Status:** Done
 
-### US-E04-10 â€” UPC same-number resend
+---
+
+# E04 — UPC E-Commerce
+**Epic Status:** Done
+
+### US-E04-01 — UPC Testing environment
 **Status:** Done
 
-### US-E04-11 â€” UPC Production policy gate
+### US-E04-02 — UPC branch lookup
+**Status:** Done
+
+### US-E04-03 — UPC item lookup
+**Status:** Done
+
+### US-E04-04 — UPC consumer lookup
+**Status:** Done
+
+### US-E04-05 — UPC-specific order payload
+**Status:** Done
+
+### US-E04-06 — UPC order submission
+**Status:** Done
+
+### US-E04-07 — UPC OrderRequests list and filters
+**Status:** Done
+
+### US-E04-08 — UPC OrderRequest detail
+**Status:** Done
+
+### US-E04-09 — UPC safe cancellation
+**Status:** Done
+
+### US-E04-10 — UPC same-number resend
+**Status:** Done
+
+### US-E04-11 — UPC Production policy gate
 **Status:** Done as architecture; operational Production acceptance belongs to E12.
 
 ---
 
-# E05 â€” GHC E-Commerce
-**Epic Status:** In Review â€” Draft PR #26
+# E05 — GHC E-Commerce
+**Epic Status:** In Review — Draft PR #26
 
-### US-E05-01 â€” Verify GHC Testing database schema
+### US-E05-01 — Verify GHC Testing database schema
 **Status:** In Review
 
 **Acceptance Criteria**
@@ -144,20 +144,20 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 - Queries are bounded and parameterized.
 - Schema documentation reflects verified behavior.
 
-### US-E05-02 â€” GHC item lookup
+### US-E05-02 — GHC item lookup
 **Status:** In Review
 
-### US-E05-03 â€” GHC consumer lookup
+### US-E05-03 — GHC consumer lookup
 **Status:** In Review
 
-### US-E05-04 â€” Preserve GHC-specific order fields
+### US-E05-04 — Preserve GHC-specific order fields
 **Status:** In Review
 
 **Acceptance Criteria**
 - GHC contact/delivery fields are supported.
 - GHC-only fields do not leak into UPC payloads.
 
-### US-E05-05 â€” GHC payment metadata
+### US-E05-05 — GHC payment metadata
 **Status:** In Review
 
 **Acceptance Criteria**
@@ -165,16 +165,16 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 - Credit-customer fields are supported.
 - UPC behavior is unchanged.
 
-### US-E05-06 â€” GHC request history
+### US-E05-06 — GHC request history
 **Status:** In Review
 
-### US-E05-07 â€” GHC Testing environment activation
+### US-E05-07 — GHC Testing environment activation
 **Status:** In Review
 
-### US-E05-08 â€” GHC synthetic Testing send
+### US-E05-08 — GHC synthetic Testing send
 **Status:** In Review
 
-### US-E05-09 â€” Diagnose downstream GHC send rejection
+### US-E05-09 — Diagnose downstream GHC send rejection
 **Status:** Planned
 
 **Acceptance Criteria**
@@ -185,287 +185,287 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 
 ---
 
-# E06 â€” GHC Uni-Commerce
+# E06 — GHC Uni-Commerce
 **Epic Status:** In Review / Planned
 
-### US-E06-01 â€” Specialized invoice payload builder
+### US-E06-01 — Specialized invoice payload builder
 **Status:** Done
 
-### US-E06-02 â€” Complete Uni-Commerce draft persistence
+### US-E06-02 — Complete Uni-Commerce draft persistence
 **Status:** In Review
 
-### US-E06-03 â€” Uni-Commerce Testing environment configuration
+### US-E06-03 — Uni-Commerce Testing environment configuration
 **Status:** In Review
 
-### US-E06-04 â€” Uni-Commerce consumer lookup
+### US-E06-04 — Uni-Commerce consumer lookup
 **Status:** In Review
 
-### US-E06-05 â€” Uni-Commerce request/invoice history adapter
+### US-E06-05 — Uni-Commerce request/invoice history adapter
 **Status:** In Review where verified data exists
 
-### US-E06-06 â€” Uni-Commerce synthetic Testing send
+### US-E06-06 — Uni-Commerce synthetic Testing send
 **Status:** In Review
 
-### US-E06-07 â€” Diagnose downstream Uni-Commerce send rejection
+### US-E06-07 — Diagnose downstream Uni-Commerce send rejection
 **Status:** Planned
 
-### US-E06-08 â€” Uni-Commerce item lookup
+### US-E06-08 — Uni-Commerce item lookup
 **Status:** Conditional  
 **Acceptance Criteria:** Implement only when an authoritative compatible item source is identified.
 
-### US-E06-09 â€” Uni-Commerce cancellation
+### US-E06-09 — Uni-Commerce cancellation
 **Status:** Conditional  
 **Acceptance Criteria:** Requires verified upstream cancellation contract.
 
-### US-E06-10 â€” Uni-Commerce resend
+### US-E06-10 — Uni-Commerce resend
 **Status:** Conditional  
 **Acceptance Criteria:** Requires verified upstream resend contract.
 
 ---
 
-# E07 â€” POS Secure Agent Foundation
+# E07 — POS Secure Agent Foundation
 **Epic Status:** Done
 
-### US-E07-01 â€” Permanent RMS Support Agent service
+### US-E07-01 — Permanent RMS Support Agent service
 **Status:** Done
 
-### US-E07-02 â€” HTTPS loopback listener
+### US-E07-02 — HTTPS loopback listener
 **Status:** Done
 
-### US-E07-03 â€” Windows Negotiate authentication
+### US-E07-03 — Windows Negotiate authentication
 **Status:** Done
 
-### US-E07-04 â€” Local Administrators authorization
+### US-E07-04 — Local Administrators authorization
 **Status:** Done
 
-### US-E07-05 â€” Exact-origin CORS
+### US-E07-05 — Exact-origin CORS
 **Status:** Done
 
-### US-E07-06 â€” Direct browser-to-Agent boundary
+### US-E07-06 — Direct browser-to-Agent boundary
 **Status:** Done
 
-### US-E07-07 â€” Ownership-aware Testing provisioning
+### US-E07-07 — Ownership-aware Testing provisioning
 **Status:** Done
 
-### US-E07-08 â€” Build identity and runtime ownership validation
+### US-E07-08 — Build identity and runtime ownership validation
 **Status:** Done
 
 ---
 
-# E08 â€” POS Diagnostics & Recovery
+# E08 — POS Diagnostics & Recovery
 **Epic Status:** Done
 
-### US-E08-01 â€” RMS installation discovery
+### US-E08-01 — RMS installation discovery
 **Status:** Done
 
-### US-E08-02 â€” RMS service health
+### US-E08-02 — RMS service health
 **Status:** Done
 
-### US-E08-03 â€” RMS database diagnostics
+### US-E08-03 — RMS database diagnostics
 **Status:** Done
 
-### US-E08-04 â€” Database backup
+### US-E08-04 — Database backup
 **Status:** Done
 
-### US-E08-05 â€” Guarded database restore
+### US-E08-05 — Guarded database restore
 **Status:** Done
 
-### US-E08-06 â€” DB backup downloader
+### US-E08-06 — DB backup downloader
 **Status:** Done
 
-### US-E08-07 â€” Cleanup preview and execution
+### US-E08-07 — Cleanup preview and execution
 **Status:** Done
 
-### US-E08-08 â€” Branch reset preview and execution
+### US-E08-08 — Branch reset preview and execution
 **Status:** Done
 
-### US-E08-09 â€” Operational health
+### US-E08-09 — Operational health
 **Status:** Done
 
-### US-E08-10 â€” Incident timeline
+### US-E08-10 — Incident timeline
 **Status:** Done
 
-### US-E08-11 â€” Safe Support Bundle
+### US-E08-11 — Safe Support Bundle
 **Status:** Done
 
-### US-E08-12 â€” Safety Snapshots
+### US-E08-12 — Safety Snapshots
 **Status:** Done
 
-### US-E08-13 â€” Constrained diagnostic console
+### US-E08-13 — Constrained diagnostic console
 **Status:** Done
 
-### US-E08-14 â€” Bounded Main Server profile/read workflow
+### US-E08-14 — Bounded Main Server profile/read workflow
 **Status:** Done
 
 ---
 
-# E09 â€” POS Package Lifecycle & Security Hardening
+# E09 — POS Package Lifecycle & Security Hardening
 **Epic Status:** Done as architecture
 
-### US-E09-01 â€” Canonical machine-owned package trust
+### US-E09-01 — Canonical machine-owned package trust
 **Status:** Done
 
-### US-E09-02 â€” Distinct signer-pin validation
+### US-E09-02 — Distinct signer-pin validation
 **Status:** Done
 
-### US-E09-03 â€” Immutable startup trust snapshot
+### US-E09-03 — Immutable startup trust snapshot
 **Status:** Done
 
-### US-E09-04 â€” Trusted package verification
+### US-E09-04 — Trusted package verification
 **Status:** Done
 
-### US-E09-05 â€” Install / Upgrade / Repair lifecycle
+### US-E09-05 — Install / Upgrade / Repair lifecycle
 **Status:** Done
 
-### US-E09-06 â€” Uninstall lifecycle
+### US-E09-06 — Uninstall lifecycle
 **Status:** Done
 
-### US-E09-07 â€” Rollback and recovery
+### US-E09-07 — Rollback and recovery
 **Status:** Done
 
-### US-E09-08 â€” Durable lifecycle audit
+### US-E09-08 — Durable lifecycle audit
 **Status:** Done
 
-### US-E09-09 â€” Deferred security hardening remediation
+### US-E09-09 — Deferred security hardening remediation
 **Status:** Done
 
 ---
 
-# E10 â€” Release, CI & Testing Deployment
+# E10 — Release, CI & Testing Deployment
 **Epic Status:** Done
 
-### US-E10-01 â€” Deterministic release candidate
+### US-E10-01 — Deterministic release candidate
 **Status:** Done
 
-### US-E10-02 â€” Release integrity manifest
+### US-E10-02 — Release integrity manifest
 **Status:** Done
 
-### US-E10-03 â€” Offline runtime validation
+### US-E10-03 — Offline runtime validation
 **Status:** Done
 
-### US-E10-04 â€” Sanitized Testing package configuration
+### US-E10-04 — Sanitized Testing package configuration
 **Status:** Done
 
-### US-E10-05 â€” External server-owned configuration
+### US-E10-05 — External server-owned configuration
 **Status:** Done
 
-### US-E10-06 â€” IIS Testing deployment
+### US-E10-06 — IIS Testing deployment
 **Status:** Done
 
-### US-E10-07 â€” Exact build identity verification
+### US-E10-07 — Exact build identity verification
 **Status:** Done
 
-### US-E10-08 â€” Backend/frontend/POS CI gates
+### US-E10-08 — Backend/frontend/POS CI gates
 **Status:** Done
 
 ---
 
-# E11 â€” Local Integrated Testing Acceptance
-**Epic Status:** In Review â€” Draft PR #26
+# E11 — Local Integrated Testing Acceptance
+**Epic Status:** In Review — Draft PR #26
 
-### US-E11-01 â€” Protected GHC/Uni Testing configuration
+### US-E11-01 — Protected GHC/Uni Testing configuration
 **Status:** In Review
 
-### US-E11-02 â€” Local Testing POS signing/trust boundary
+### US-E11-02 — Local Testing POS signing/trust boundary
 **Status:** In Review
 
-### US-E11-03 â€” Secure Support Hub local origin
+### US-E11-03 — Secure Support Hub local origin
 **Status:** In Review
 
-### US-E11-04 â€” POS Agent local runtime
+### US-E11-04 — POS Agent local runtime
 **Status:** In Review
 
-### US-E11-05 â€” Preserve native RMS services during cleanup
+### US-E11-05 — Preserve native RMS services during cleanup
 **Status:** In Review
 
-### US-E11-06 â€” End-to-end Online Order + POS local smoke
+### US-E11-06 — End-to-end Online Order + POS local smoke
 **Status:** Planned after PR #26 acceptance and downstream fixes
 
 ---
 
-# E12 â€” Production Readiness & Controlled Rollout
+# E12 — Production Readiness & Controlled Rollout
 **Epic Status:** Planned
 
-### US-E12-01 â€” Authoritative Production Support Hub configuration
+### US-E12-01 — Authoritative Production Support Hub configuration
 **Status:** Planned
 
-### US-E12-02 â€” Production Online Order acceptance
+### US-E12-02 — Production Online Order acceptance
 **Status:** Planned
 
-### US-E12-03 â€” Real Production package signer PKI
+### US-E12-03 — Real Production package signer PKI
 **Status:** Planned
 
-### US-E12-04 â€” Real Testing release signer PKI
+### US-E12-04 — Real Testing release signer PKI
 **Status:** Planned
 
-### US-E12-05 â€” Production certificate lifecycle
+### US-E12-05 — Production certificate lifecycle
 **Status:** Planned
 
-### US-E12-06 â€” Managed browser policy rollout
+### US-E12-06 — Managed browser policy rollout
 **Status:** Planned where required
 
-### US-E12-07 â€” Representative-machine Production rehearsal
+### US-E12-07 — Representative-machine Production rehearsal
 **Status:** Planned
 
-### US-E12-08 â€” Fleet/customer deployment procedure
+### US-E12-08 — Fleet/customer deployment procedure
 **Status:** Planned
 
-### US-E12-09 â€” Production rollback rehearsal
+### US-E12-09 — Production rollback rehearsal
 **Status:** Planned
 
-### US-E12-10 â€” Production go-live acceptance
-**Status:** Planned
-
----
-
-# E13 â€” Future Online Order Integrations
-**Epic Status:** Planned
-
-### US-E13-01 â€” OMS contract discovery
-**Status:** Planned
-
-### US-E13-02 â€” OMS implementation
-**Status:** Conditional on authoritative contract
-
-### US-E13-03 â€” Call Center contract discovery
-**Status:** Planned
-
-### US-E13-04 â€” Call Center implementation
-**Status:** Conditional on authoritative contract
-
-### US-E13-05 â€” Shared module onboarding checklist
+### US-E12-10 — Production go-live acceptance
 **Status:** Planned
 
 ---
 
-# E14 â€” Operational Hardening & Observability
+# E13 — Future Online Order Integrations
 **Epic Status:** Planned
 
-### US-E14-01 â€” Improve module-health reason visibility
+### US-E13-01 — OMS contract discovery
 **Status:** Planned
 
-### US-E14-02 â€” External-config mapped-drive classification
+### US-E13-02 — OMS implementation
+**Status:** Conditional on authoritative contract
+
+### US-E13-03 — Call Center contract discovery
 **Status:** Planned
 
-### US-E14-03 â€” Permission-denied external-config regression
+### US-E13-04 — Call Center implementation
+**Status:** Conditional on authoritative contract
+
+### US-E13-05 — Shared module onboarding checklist
 **Status:** Planned
 
-### US-E14-04 â€” Resolve platform-specific ACL test reliability
+---
+
+# E14 — Operational Hardening & Observability
+**Epic Status:** Planned
+
+### US-E14-01 — Improve module-health reason visibility
+**Status:** Planned
+
+### US-E14-02 — External-config mapped-drive classification
+**Status:** Planned
+
+### US-E14-03 — Permission-denied external-config regression
+**Status:** Planned
+
+### US-E14-04 — Resolve platform-specific ACL test reliability
 **Status:** Planned / verify against final PR #26 state
 
-### US-E14-05 â€” Operational runbook consolidation
+### US-E14-05 — Operational runbook consolidation
 **Status:** Planned
 
-### US-E14-06 â€” Support diagnostics UX refinement
+### US-E14-06 — Support diagnostics UX refinement
 **Status:** Planned
 
 ---
 
-# E15 â€” Delivery Governance & Traceability
-**Epic Status:** Planned
+# E15 — Delivery Governance & Traceability
+**Epic Status:** Active
 
-### US-E15-01 â€” Establish Azure DevOps hierarchy
-**Status:** Planned
+### US-E15-01 — Establish Azure DevOps hierarchy
+**Status:** Done
 
 **Acceptance Criteria**
 - Epics represent product capability areas.
@@ -474,17 +474,17 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 - Current PR work is Active/In Review.
 - Future work remains Planned.
 
-### US-E15-02 â€” Link User Stories to GitHub PRs
-**Status:** Planned
+### US-E15-02 — Link User Stories to GitHub PRs
+**Status:** Done
 
-### US-E15-03 â€” Add acceptance criteria to active work
-**Status:** Planned
+### US-E15-03 — Add acceptance criteria to active work
+**Status:** Done
 
-### US-E15-04 â€” Link validation evidence to work items
-**Status:** Planned
+### US-E15-04 — Link validation evidence to work items
+**Status:** Done
 
-### US-E15-05 â€” Maintain BRD-to-backlog traceability
-**Status:** Planned
+### US-E15-05 — Maintain BRD-to-backlog traceability
+**Status:** Active / Ongoing
 
 ---
 
@@ -518,7 +518,7 @@ Recommended tags:
 
 ## Recommended Creation Order
 
-1. Create E01â€“E15 Epics.
+1. Create E01–E15 Epics.
 2. Create historical Done stories to establish traceability.
 3. Create PR #26 stories under E05, E06 and E11 as Active/In Review.
 4. Make E12 Production Readiness the next major roadmap Epic.
