@@ -4,9 +4,9 @@ using RmsSupportHub.Core.Repositories;
 namespace RmsSupportHub.Data.Repositories;
 
 /// <summary>
-/// GHC and GHC Uni-Commerce use the same consumer master-data schema as the
-/// verified flat-order flow. Keep one SQL implementation for the shared
-/// Consumers/LoyaltyConsumerAddresses lookup so the two GHC lanes cannot drift.
+/// GHC E-Commerce reuses the verified compatible shared consumer logic with the
+/// flat-order flow (Consumers/LoyaltyConsumerAddresses lookup). GHC Uni-Commerce
+/// uses its own dedicated, verified dbo.Consumers repository (GhcUnicommerceConsumerRepository).
 /// </summary>
 public sealed class GhcConsumerRepository : IGhcConsumerRepository
 {

@@ -72,7 +72,7 @@ projection of a single latest header/invoice row must preserve the
 while header-filtered list/count/stats paths use the equivalent ranked
 `LatestHeaders` CTE. A plain unranked join would multiply request rows.
 
-## Uni-Commerce Testing history and catalog boundary
+## Uni-Commerce Testing history, consumer, and catalog boundary
 
 The separate Uni-Commerce Testing catalog `RmsEcommerceStg` was verified on
 the approved Testing SQL host. Its request-history source is a different,
@@ -81,6 +81,25 @@ bounded integration-attempt table:
 | Table | Columns | Notes |
 |---|---|---|
 | `ExternalInvoiceRequests` | `Id, ReferenceNumber, RequestJson, Success, Message, RequestUtcDate, ExternalInvoiceId` | One row per Uni-Commerce external-invoice attempt. `ReferenceNumber` is the searchable order/reference key; `RequestUtcDate` is the history timestamp; `Success` and `Message` provide the outcome. It has no branch, business-status, totals, line, or cancellation columns, so `GhcUnicommerceOrderRequestRepository` exposes only the common read-only attempt shape and does not invent the missing fields. |
+
+### Uni-Commerce Consumer Lookup (`GhcUnicommerceConsumerRepository`) — **verified live**
+
+The consumer query reads from `dbo.Consumers` in `RmsEcommerceStg`. It uses only verified columns:
+
+| Table | Columns | Notes |
+|---|---|---|
+| `Consumers` | `Id, FirstName, MiddleName, LastName, Email, PrimaryPhoneNumber, Gender, BirthDate, ConsumerCode` | Lookup key: `RIGHT(PrimaryPhoneNumber, 9) = @Phone9`. PK: `Id`. |
+
+```sql
+SELECT TOP 1
+    C.Id, C.FirstName, C.MiddleName, C.LastName,
+    C.Email, C.PrimaryPhoneNumber, C.Gender, C.BirthDate, C.ConsumerCode
+FROM dbo.Consumers AS C
+WHERE RIGHT(C.PrimaryPhoneNumber, 9) = @Phone9
+ORDER BY C.Id DESC;
+```
+
+`@Phone9` is the 9-digit normalized phone number via `NormalizePhoneSearch(phone)`. Uni-Commerce stores the consumer phone number in `PrimaryPhoneNumber` (unlike the flat-order schema's `PhoneNumber`). The Uni-Commerce database does not expose a verified loyalty-address table, so the consumer query intentionally does not assume an address source, returning empty strings for `Address` and `AddressCode`.
 
 The verified Uni-Commerce catalog contains no item master/catalog table. Item
 lookup therefore remains capability-gated rather than using a guessed query.
