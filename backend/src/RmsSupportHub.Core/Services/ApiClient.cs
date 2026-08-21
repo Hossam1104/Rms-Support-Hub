@@ -33,7 +33,9 @@ public class ApiClient : IApiClient
 
     public async Task<ApiResponseResult> SendOrderWithApiKeyAsync(string url, object payload, string apiKey)
     {
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (string.IsNullOrWhiteSpace(apiKey)
+            || apiKey.IndexOf('\r') >= 0
+            || apiKey.IndexOf('\n') >= 0)
         {
             return new ApiResponseResult(
                 StatusCode: 500,
@@ -56,7 +58,7 @@ public class ApiClient : IApiClient
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
             if (!string.IsNullOrWhiteSpace(apiKey))
-                request.Headers.TryAddWithoutValidation("X-Api-Key", apiKey);
+                request.Headers.Add("X-Api-Key", apiKey);
 
             var response = await _httpClient.SendAsync(request);
             var responseText = await response.Content.ReadAsStringAsync();

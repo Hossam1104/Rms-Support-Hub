@@ -11,8 +11,17 @@ public sealed class SupportHubOptions
     public string DeploymentTier { get; set; } = "Testing";
     public bool AllowCustomEndpoints { get; set; }
     public HealthProbeOptions HealthProbe { get; set; } = new();
+    public TrustedForwardedHeadersOptions ForwardedHeaders { get; set; } = new();
     public Dictionary<string, Dictionary<string, SupportHubEnvironmentOptions>> Environments { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
+}
+
+/// <summary>Server-owned proxy trust configuration. Empty lists deliberately
+/// disable forwarded-scheme trust; direct HTTPS remains the safe default.</summary>
+public sealed class TrustedForwardedHeadersOptions
+{
+    public List<string> KnownProxies { get; set; } = new();
+    public List<string> KnownNetworks { get; set; } = new();
 }
 
 public sealed class HealthProbeOptions
@@ -57,6 +66,25 @@ public sealed class SupportHubOptionsValidator : IValidateOptions<SupportHubOpti
 
         if (options.AllowCustomEndpoints)
             errors.Add("SupportHub:AllowCustomEndpoints must remain false; custom browser endpoints are disabled.");
+
+        if (options.ForwardedHeaders is null)
+        {
+            errors.Add("SupportHub:ForwardedHeaders must be configured as an object.");
+        }
+        else
+        {
+            foreach (var proxy in options.ForwardedHeaders.KnownProxies ?? new List<string>())
+            {
+                if (!TrustedForwardedHeadersConfiguration.IsValidProxy(proxy))
+                    errors.Add("SupportHub:ForwardedHeaders:KnownProxies contains an invalid IP address.");
+            }
+
+            foreach (var network in options.ForwardedHeaders.KnownNetworks ?? new List<string>())
+            {
+                if (!TrustedForwardedHeadersConfiguration.IsValidNetwork(network))
+                    errors.Add("SupportHub:ForwardedHeaders:KnownNetworks contains an invalid CIDR network.");
+            }
+        }
 
         var templates = Templates();
         foreach (var moduleEntry in options.Environments ?? new(StringComparer.OrdinalIgnoreCase))

@@ -77,16 +77,27 @@ public sealed class ProductionMutationGateTests
     }
 
     [Fact]
-    public void FailedUnlockAttemptsAreThrottledPerModuleAndSession()
+    public void CorrectPasswordIsRejectedDuringThrottleAndSucceedsAfterExpiry()
     {
-        var gate = new ProductionMutationGate(Password, NullLogger<ProductionMutationGate>.Instance);
+        var now = new DateTimeOffset(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
+        var gate = new ProductionMutationGate(
+            Password,
+            NullLogger<ProductionMutationGate>.Instance,
+            () => now);
 
-        for (var attempt = 0; attempt < 6; attempt++)
+        for (var attempt = 0; attempt < 5; attempt++)
         {
             var error = Assert.Throws<ProductionUnlockFailedException>(
                 () => gate.Unlock("upc_ecommerce", "session-1", "wrong-password"));
             Assert.Equal("production_unlock_failed", error.Code);
         }
+
+        Assert.Throws<ProductionUnlockFailedException>(
+            () => gate.Unlock("upc_ecommerce", "session-1", Password));
+
+        now = now.AddMinutes(1).AddSeconds(1);
+        var unlock = gate.Unlock("upc_ecommerce", "session-1", Password);
+        Assert.NotEmpty(unlock.Token);
     }
 
     [Fact]
@@ -135,6 +146,73 @@ public sealed class ProductionMutationGateTests
             "upc_ecommerce", "fresh-session", Password, "198.51.100.11");
 
         Assert.NotEmpty(unlock.Token);
+    }
+
+    [Fact]
+    public void UnknownSourceUsesOneSharedSourcePartition()
+    {
+        var now = new DateTimeOffset(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
+        var gate = new ProductionMutationGate(
+            Password,
+            NullLogger<ProductionMutationGate>.Instance,
+            () => now);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+                "upc_ecommerce", $"unknown-source-session-{attempt}", "wrong-password", null));
+        }
+
+        Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+            "upc_ecommerce", "unknown-source-fresh-session", Password, null));
+
+        now = now.AddMinutes(1).AddSeconds(1);
+        Assert.NotEmpty(gate.Unlock(
+            "upc_ecommerce", "unknown-source-fresh-session", Password, null).Token);
+    }
+
+    [Fact]
+    public void ModuleCeilingIsBoundedAndExpiresForLegitimateRecovery()
+    {
+        var now = new DateTimeOffset(2026, 8, 21, 12, 0, 0, TimeSpan.Zero);
+        var gate = new ProductionMutationGate(
+            Password,
+            NullLogger<ProductionMutationGate>.Instance,
+            () => now);
+
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+                "upc_ecommerce",
+                $"module-session-{attempt}",
+                "wrong-password",
+                $"198.51.100.{attempt + 1}"));
+        }
+
+        Assert.InRange(gate.TrackedAttemptCount, 1, 41);
+        Assert.Throws<ProductionUnlockFailedException>(() => gate.Unlock(
+            "upc_ecommerce", "module-fresh-session", Password, "203.0.113.10"));
+
+        now = now.AddMinutes(1).AddSeconds(1);
+        var unlock = gate.Unlock(
+            "upc_ecommerce", "module-fresh-session", Password, "203.0.113.10");
+        Assert.NotEmpty(unlock.Token);
+    }
+
+    [Fact]
+    public void TokenCannotCrossModuleBoundary()
+    {
+        var gate = new ProductionMutationGate(Password, NullLogger<ProductionMutationGate>.Instance);
+        var unlock = gate.Unlock("upc_ecommerce", "session-1", Password);
+
+        var error = Assert.Throws<ProductionMutationLockedException>(() => gate.RequireUnlocked(
+            Mock.Of<IOrderModule>(module => module.Key == "ghc_ecommerce"),
+            ProductionEnvironment("GHC Production"),
+            unlock.Token,
+            "session-1",
+            "send"));
+
+        Assert.Equal("production_mutation_locked", error.Code);
     }
 
     [Fact]

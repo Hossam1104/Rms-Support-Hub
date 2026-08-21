@@ -198,6 +198,7 @@ public class OrderRequestsController : ControllerBase
     [HttpPost("{id:long}/cancel")]
     public async Task<ActionResult> Cancel(string key, long id, [FromBody] OrderRequestCancelRequest request, [FromQuery] string? envKey = null)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var (module, connStr, guard) = Resolve(key, envKey, requireCancel: true);
         if (guard != null) return guard;
 
@@ -251,6 +252,7 @@ public class OrderRequestsController : ControllerBase
     [HttpPost("{id:long}/resend")]
     public async Task<ActionResult> Resend(string key, long id, [FromBody] OrderRequestResendRequest request, [FromQuery] string? envKey = null)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var (module, connStr, guard) = Resolve(key, envKey, requireResend: true);
         if (guard != null) return guard;
 
@@ -432,8 +434,7 @@ public class OrderRequestsController : ControllerBase
             : await _apiClient.SendOrderWithApiKeyAsync(url, payload, apiKey);
     }
 
-    private string SessionIdForGate() =>
-        HttpContext?.Items[SessionIdMiddleware.CookieName] as string ?? "direct-controller-session";
+    private string SessionIdForGate() => HttpContext.GetSessionId();
 
     private string? ProductionToken() =>
         ControllerContext?.HttpContext?.Request.Headers[ProductionMutationGate.UnlockHeaderName].FirstOrDefault();

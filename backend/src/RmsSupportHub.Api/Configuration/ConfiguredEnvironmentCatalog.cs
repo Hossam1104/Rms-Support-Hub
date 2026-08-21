@@ -34,7 +34,8 @@ public static class ConfiguredEnvironmentCatalog
                      !string.IsNullOrWhiteSpace(configuration.GetConnectionString(registration.ConnectionStringName)));
                 var apiKeyAvailable = !templateEntry.Value.RequiresApiKey ||
                     (!string.IsNullOrWhiteSpace(registration?.ApiKeyConfigurationKey) &&
-                     !string.IsNullOrWhiteSpace(configuration[$"ModuleApiKeys:{registration.ApiKeyConfigurationKey}"]));
+                     OutboundApiKeyValidation.IsSafeHeaderValue(
+                         configuration[$"ModuleApiKeys:{registration.ApiKeyConfigurationKey}"]));
                 var structurallyAvailable = enabled &&
                     (!templateEntry.Value.RequiresApiEndpoint || !string.IsNullOrWhiteSpace(apiUrl)) &&
                     (!templateEntry.Value.RequiresCancelEndpoint || !string.IsNullOrWhiteSpace(cancelUrl)) &&

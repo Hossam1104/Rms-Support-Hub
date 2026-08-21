@@ -90,16 +90,18 @@ public sealed class ProductionMutationGate : IProductionMutationGate, IDisposabl
         }
 
         var now = _utcNow();
-        var sessionPartition = BuildPartition("session", moduleKey, sessionId);
         var sourcePartition = BuildPartition(
             "source",
             moduleKey,
             string.IsNullOrWhiteSpace(remoteIpAddress) ? "unknown" : remoteIpAddress);
         var modulePartition = BuildPartition("module", moduleKey, "all");
+        var sessionPartition = BuildPartition("session", moduleKey, sessionId);
 
-        if (!TryConsumeAttempt(sessionPartition, now, MaxFailedAttemptsPerSession)
-            || !TryConsumeAttempt(sourcePartition, now, MaxFailedAttemptsPerSource)
-            || !TryConsumeAttempt(modulePartition, now, MaxFailedAttemptsPerModule))
+        // Low-cardinality source/module partitions must pass before the
+        // attacker-controlled session partition can allocate a new entry.
+        if (!TryConsumeAttempt(sourcePartition, now, MaxFailedAttemptsPerSource)
+            || !TryConsumeAttempt(modulePartition, now, MaxFailedAttemptsPerModule)
+            || !TryConsumeAttempt(sessionPartition, now, MaxFailedAttemptsPerSession))
         {
             _logger.LogWarning("Production unlock throttled for module {ModuleKey}.", moduleKey);
             throw new ProductionUnlockFailedException();

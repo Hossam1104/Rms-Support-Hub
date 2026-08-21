@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using RmsSupportHub.Api.Configuration;
 using RmsSupportHub.Api.Middleware;
@@ -125,6 +127,11 @@ builder.Services.AddTransient<IModuleHealthService, ModuleHealthService>();
 
 var app = builder.Build();
 
+var supportHubOptions = app.Services.GetRequiredService<IOptions<SupportHubOptions>>().Value;
+var environmentPolicy = app.Services.GetRequiredService<IEnvironmentPolicy>();
+var forwardedHeadersOptions = new ForwardedHeadersOptions();
+TrustedForwardedHeadersConfiguration.Apply(forwardedHeadersOptions, supportHubOptions.ForwardedHeaders);
+
 if (!verifyTls)
 {
     app.Logger.LogWarning(
@@ -133,6 +140,9 @@ if (!verifyTls)
         "intended only for the self-signed internal RMS hosts. Set Outbound:VerifyTls=true to enable validation.");
 }
 
+// Normalize only X-Forwarded-Proto from explicitly trusted server-owned
+// proxies/networks. With empty allowlists, forwarding headers are ignored.
+app.UseForwardedHeaders(forwardedHeadersOptions);
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<SessionIdMiddleware>();
 
@@ -142,6 +152,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AngularClient");
+if (environmentPolicy.DeploymentTier == DeploymentTier.Production)
+    app.UseHsts();
 app.UseHttpsRedirection();
 
 // Serve the Angular production build from wwwroot; UseDefaultFiles resolves

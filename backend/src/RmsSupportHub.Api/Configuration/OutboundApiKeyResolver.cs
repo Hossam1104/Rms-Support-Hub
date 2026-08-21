@@ -20,10 +20,22 @@ public sealed class ServerOutboundApiKeyResolver : IOutboundApiKeyResolver
         _configuration = configuration;
     }
 
-    public string? Resolve(ModuleEnvironment environment) =>
-        !environment.RequiresApiKey || string.IsNullOrWhiteSpace(environment.ApiKeyConfigurationKey)
-            ? null
-            : _configuration[$"ModuleApiKeys:{environment.ApiKeyConfigurationKey}"];
+    public string? Resolve(ModuleEnvironment environment)
+    {
+        if (!environment.RequiresApiKey || string.IsNullOrWhiteSpace(environment.ApiKeyConfigurationKey))
+            return null;
+
+        var value = _configuration[$"ModuleApiKeys:{environment.ApiKeyConfigurationKey}"];
+        return OutboundApiKeyValidation.IsSafeHeaderValue(value) ? value : null;
+    }
+}
+
+internal static class OutboundApiKeyValidation
+{
+    public static bool IsSafeHeaderValue(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && value.IndexOf('\r') < 0
+        && value.IndexOf('\n') < 0;
 }
 
 public sealed class EmptyOutboundApiKeyResolver : IOutboundApiKeyResolver

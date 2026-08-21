@@ -131,3 +131,10 @@ public sealed class ProductionUnlockExpiredException : ApiException
         : base(StatusCodes.Status401Unauthorized, "production_unlock_expired",
             "The Production unlock has expired. Unlock this module again before retrying.") { }
 }
+
+public sealed class ProductionSecureTransportRequiredException : ApiException
+{
+    public ProductionSecureTransportRequiredException()
+        : base(StatusCodes.Status400BadRequest, "production_secure_transport_required",
+            "Production operations require secure transport.") { }
+}

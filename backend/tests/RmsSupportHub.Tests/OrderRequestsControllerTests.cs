@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using RmsSupportHub.Api;
 using RmsSupportHub.Api.Controllers;
+using RmsSupportHub.Api.Middleware;
 using RmsSupportHub.Api.Security;
 using RmsSupportHub.Core.DTOs;
 using RmsSupportHub.Core.Modules;
@@ -45,8 +48,9 @@ public class OrderRequestsControllerTests
         IApiClient apiClient,
         DeploymentTier deploymentTier = DeploymentTier.Testing,
         IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null,
-        IProductionMutationGate? productionGate = null) =>
-        new(
+        IProductionMutationGate? productionGate = null)
+    {
+        var controller = new OrderRequestsController(
             BuildRegistry(),
             repository,
             apiClient,
@@ -54,6 +58,12 @@ public class OrderRequestsControllerTests
             new EnvironmentPolicy(deploymentTier),
             ghcUnicommerceRepository,
             productionGate);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "https";
+        httpContext.Items[SessionIdMiddleware.CookieName] = "synthetic-order-requests-session";
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        return controller;
+    }
 
     private static OrderRequestDetailDto MakeDetail(int orderStatus) => new(
         Id: 42,
@@ -271,6 +281,56 @@ public class OrderRequestsControllerTests
                 envKey: "UPC Production"));
 
         Assert.Equal("production_mutation_locked", error.Code);
+        Assert.Empty(repo.ConnectionStrings);
+        Assert.Null(apiClient.LastUrl);
+    }
+
+    [Fact]
+    public async Task ProductionHttpOrderRequestCancelIsRejectedBeforeHistoryRead()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var apiClient = new FakeApiClient();
+        var controller = BuildController(
+            repo,
+            apiClient,
+            DeploymentTier.Production,
+            productionGate: new ProductionMutationGate(
+                "synthetic-owner-password",
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductionMutationGate>.Instance));
+        controller.HttpContext.Request.Scheme = "http";
+
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.ProductionSecureTransportRequiredException>(() =>
+            controller.Cancel(
+                "upc_ecommerce", 42,
+                new OrderRequestCancelRequest("Customer request"),
+                envKey: "UPC Production"));
+
+        Assert.Equal("production_secure_transport_required", error.Code);
+        Assert.Empty(repo.ConnectionStrings);
+        Assert.Null(apiClient.LastUrl);
+    }
+
+    [Fact]
+    public async Task ProductionHttpOrderRequestResendIsRejectedBeforeHistoryRead()
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
+        var apiClient = new FakeApiClient();
+        var controller = BuildController(
+            repo,
+            apiClient,
+            DeploymentTier.Production,
+            productionGate: new ProductionMutationGate(
+                "synthetic-owner-password",
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductionMutationGate>.Instance));
+        controller.HttpContext.Request.Scheme = "http";
+
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.ProductionSecureTransportRequiredException>(() =>
+            controller.Resend(
+                "upc_ecommerce", 42,
+                new OrderRequestResendRequest("200"),
+                envKey: "UPC Production"));
+
+        Assert.Equal("production_secure_transport_required", error.Code);
         Assert.Empty(repo.ConnectionStrings);
         Assert.Null(apiClient.LastUrl);
     }

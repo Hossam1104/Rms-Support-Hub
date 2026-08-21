@@ -409,8 +409,10 @@ As an operator, I want one Support Hub shell so that QA, Online Orders and POS t
 **Traceability:** BR-003, BR-006, BR-026. This story owns the later controlled
 Production acceptance of the server-enforced send/cancel/resend mutation gate;
 it does not authorize live mutations before the separate acceptance packet,
-owner-configured secret/API-key provisioning, and Production readiness gates
-are complete. Draft PR #30 remains the implementation review gate.
+owner-configured secret/API-key provisioning, HTTPS-only binding, HSTS,
+restricted trusted-proxy forwarding where applicable, and all Production
+readiness gates are complete. Draft PR #30 remains the implementation review
+gate.
 
 ### US-E12-03 — Real Production package signer PKI
 **Status:** Planned

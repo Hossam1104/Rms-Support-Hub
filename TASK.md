@@ -16,8 +16,10 @@ operations. Production Order Requests reads remain read-only without unlock;
 Testing does not require the unlock ceremony. The gate uses a server-owned
 secret, opaque in-memory tokens, exact module + Production + original-session
 scope, bounded expiry, constant-time comparison, session/source/module
-throttling, and generic errors. The browser stores no password or persistent
-unlock token.
+throttling, generic errors, and a fail-closed effective-HTTPS transport guard
+for Production unlock/mutation requests. Production session cookies are
+Secure, and trusted TLS-terminating proxy forwarding is empty-by-default and
+allowlist-only. The browser stores no password or persistent unlock token.
 
 PR #30 is not merged and must remain Draft until Sol independently accepts the
 exact correction head. Do not create another PR, merge, or mark the PR ready.
@@ -41,6 +43,9 @@ acceptance/finalization task.
   Main Server configuration, POS machines, or native RMS services.
 - Treat missing configuration as unavailable and fail closed. Configuration
   presence alone never proves downstream health.
+- Production HTTPS transport is mandatory before the real unlock secret may be
+  provisioned; Production readiness remains **NO** until the controlled
+  acceptance packet and all external readiness evidence are complete.
 
 ## Exact next executable work after PR #30 acceptance
 
@@ -90,3 +95,17 @@ acceptance/finalization task.
 - Integrated Online Order + POS smoke work item #12947 remains open.
 - Production readiness remains **NO** until the controlled acceptance gates,
   configuration, PKI/trust, rollback, and integrated evidence are complete.
+
+## Post-PR architecture checkpoint
+
+After PR #30 final acceptance and merge, the owner has directed a hard
+architecture checkpoint before any next implementation milestone.
+
+WPF ARCHITECTURE DECISION POINT
+
+No next implementation milestone begins after PR #30 until GPT-5.6 Sol and the
+owner review the proposed migration from browser-local privileged integration
+toward a WPF/Windows agent structure supervised by the Angular Support Hub
+dashboard.
+
+WPF is not implemented in this task.

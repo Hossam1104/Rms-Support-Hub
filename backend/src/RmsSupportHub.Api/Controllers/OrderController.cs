@@ -158,6 +158,7 @@ public class OrderController : ControllerBase
     [HttpPost("send-request")]
     public async Task<ActionResult> SendRequest(string key, [FromBody] SendOrderRequest request)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
@@ -200,6 +201,7 @@ public class OrderController : ControllerBase
     [HttpPost("cancel-order")]
     public async Task<ActionResult> CancelOrder(string key, [FromBody] CancelOrderRequest request)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
@@ -283,6 +285,7 @@ public class OrderController : ControllerBase
     [HttpPost("production-unlock")]
     public ActionResult<ProductionUnlockResponse> ProductionUnlock(string key, [FromBody] ProductionUnlockRequest request)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
@@ -320,8 +323,7 @@ public class OrderController : ControllerBase
             : await _apiClient.SendOrderWithApiKeyAsync(url, payload, apiKey);
     }
 
-    private string SessionIdForGate() =>
-        HttpContext?.Items[SessionIdMiddleware.CookieName] as string ?? "direct-controller-session";
+    private string SessionIdForGate() => HttpContext.GetSessionId();
 
     private string? ProductionToken() =>
         ControllerContext?.HttpContext?.Request.Headers[ProductionMutationGate.UnlockHeaderName].FirstOrDefault();

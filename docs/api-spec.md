@@ -155,6 +155,7 @@ returned to, or logged for the browser.
 - **`POST /api/modules/{key}/production-unlock`**
 - **Request Body**: `{ password: string }` — the value is checked only against the server-owned owner-configured Production unlock secret.
 - **Response `200 OK`**: `{ token: string, expiresAt: string }`. The password, secret configuration, and downstream credentials are never returned.
+- Production unlock requests over effective HTTP return `400` with the stable `production_secure_transport_required` error. Effective HTTPS may be established only by direct TLS or by an explicitly configured trusted proxy/network forwarding `X-Forwarded-Proto`; unconfigured forwarding headers are ignored.
 - The opaque token is random, short-lived, held only in frontend memory, bound to the original server session, module, and `Production` lane, and accepted only by Production mutation routes. A page reload or module/environment switch clears the browser context; it does not revoke the server-side token early. The server token automatically expires after its bounded lifetime, and no browser persistence is used.
 - **`401`**: `production_unlock_failed` or `production_unlock_expired`; **`423`**: `production_mutation_locked`; **`503`**: `production_unlock_unavailable` when the owner-configured secret is not provisioned.
 - Production `send-request`, `cancel-order`, and supported Order Requests cancel/resend routes require `X-SupportHub-Production-Unlock`. Testing requests do not require or receive this header. Read-only Order Requests GET routes do not require unlock.

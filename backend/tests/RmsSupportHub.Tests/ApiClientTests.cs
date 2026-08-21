@@ -54,6 +54,25 @@ public sealed class ApiClientTests
         Assert.DoesNotContain("X-Api-Key", result.ResponseText, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("TEST-ONLY-API-KEY\r\nInjected: value")]
+    [InlineData("TEST-ONLY-API-KEY\nInjected: value")]
+    public async Task SendOrderWithHeaderLineBreakInApiKeyFailsBeforeOutboundCall(string invalidApiKey)
+    {
+        var handler = new RecordingHandler();
+        using var httpClient = new HttpClient(handler);
+        var client = new ApiClient(httpClient);
+
+        var result = await client.SendOrderWithApiKeyAsync(
+            "https://uni.testing.example/create",
+            new { order = "synthetic" },
+            invalidApiKey);
+
+        Assert.False(result.Success);
+        Assert.Null(handler.Request);
+        Assert.DoesNotContain("Injected", result.ResponseText, StringComparison.Ordinal);
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
         public HttpRequestMessage? Request { get; private set; }

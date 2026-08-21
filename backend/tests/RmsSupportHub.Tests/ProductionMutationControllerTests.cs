@@ -21,6 +21,86 @@ public sealed class ProductionMutationControllerTests
     private const string Password = "synthetic-owner-password";
 
     [Fact]
+    public void ProductionHttpUnlockIsRejectedBeforePasswordGate()
+    {
+        var registry = new Mock<IModuleRegistry>();
+        var gate = new ProductionMutationGate(Password, NullLogger<ProductionMutationGate>.Instance);
+        var controller = new OrderController(
+            registry.Object,
+            Mock.Of<IDraftManager>(),
+            Mock.Of<IApiClient>(),
+            Mock.Of<ISqlServerConnectionFactory>(),
+            new ServerConnectionStringResolver(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()),
+            new EnvironmentPolicy(DeploymentTier.Production),
+            gate);
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+        context.Items[SessionIdMiddleware.CookieName] = "synthetic-http-session";
+        controller.ControllerContext = new ControllerContext { HttpContext = context };
+
+        var error = Assert.Throws<ProductionSecureTransportRequiredException>(() => controller.ProductionUnlock(
+            "upc_ecommerce",
+            new ProductionUnlockRequest(Password)));
+
+        Assert.Equal("production_secure_transport_required", error.Code);
+        Assert.Equal(0, gate.TrackedAttemptCount);
+    }
+
+    [Fact]
+    public async Task ProductionHttpSendIsRejectedBeforeModuleOrOutboundAccess()
+    {
+        var registry = new Mock<IModuleRegistry>();
+        var apiClient = new Mock<IApiClient>();
+        var controller = new OrderController(
+            registry.Object,
+            Mock.Of<IDraftManager>(),
+            apiClient.Object,
+            Mock.Of<ISqlServerConnectionFactory>(),
+            new ServerConnectionStringResolver(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()),
+            new EnvironmentPolicy(DeploymentTier.Production),
+            new ProductionMutationGate(Password, NullLogger<ProductionMutationGate>.Instance));
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+        context.Items[SessionIdMiddleware.CookieName] = "synthetic-http-session";
+        controller.ControllerContext = new ControllerContext { HttpContext = context };
+
+        var error = await Assert.ThrowsAsync<ProductionSecureTransportRequiredException>(() => controller.SendRequest(
+            "upc_ecommerce",
+            new SendOrderRequest("UPC Production")));
+
+        Assert.Equal("production_secure_transport_required", error.Code);
+        registry.Verify(item => item.GetModule(It.IsAny<string>()), Times.Never);
+        apiClient.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ProductionHttpCancelIsRejectedBeforeModuleOrOutboundAccess()
+    {
+        var registry = new Mock<IModuleRegistry>();
+        var apiClient = new Mock<IApiClient>();
+        var controller = new OrderController(
+            registry.Object,
+            Mock.Of<IDraftManager>(),
+            apiClient.Object,
+            Mock.Of<ISqlServerConnectionFactory>(),
+            new ServerConnectionStringResolver(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()),
+            new EnvironmentPolicy(DeploymentTier.Production),
+            new ProductionMutationGate(Password, NullLogger<ProductionMutationGate>.Instance));
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+        context.Items[SessionIdMiddleware.CookieName] = "synthetic-http-session";
+        controller.ControllerContext = new ControllerContext { HttpContext = context };
+
+        var error = await Assert.ThrowsAsync<ProductionSecureTransportRequiredException>(() => controller.CancelOrder(
+            "upc_ecommerce",
+            new CancelOrderRequest("ORD-1", "synthetic test", "UPC Production")));
+
+        Assert.Equal("production_secure_transport_required", error.Code);
+        registry.Verify(item => item.GetModule(It.IsAny<string>()), Times.Never);
+        apiClient.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task OrderCancelBlocksProductionWithoutUnlockAndAllowsAValidScopedToken()
     {
         var module = new UpcEcommerceModule(
@@ -46,7 +126,8 @@ public sealed class ProductionMutationControllerTests
             gate,
             new RmsSupportHub.Api.Configuration.EmptyOutboundApiKeyResolver());
         var httpContext = new DefaultHttpContext();
-        httpContext.Items[SessionIdMiddleware.CookieName] = "direct-controller-session";
+        httpContext.Request.Scheme = "https";
+        httpContext.Items[SessionIdMiddleware.CookieName] = "synthetic-controller-session";
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
 
         var locked = await Assert.ThrowsAsync<ProductionMutationLockedException>(() => controller.CancelOrder(
@@ -55,7 +136,7 @@ public sealed class ProductionMutationControllerTests
         Assert.Equal("production_mutation_locked", locked.Code);
         apiClient.Verify(client => client.SendOrderAsync(It.IsAny<string>(), It.IsAny<object>()), Times.Never);
 
-        var unlock = gate.Unlock("upc_ecommerce", "direct-controller-session", Password);
+        var unlock = gate.Unlock("upc_ecommerce", "synthetic-controller-session", Password);
         httpContext.Request.Headers[ProductionMutationGate.UnlockHeaderName] = unlock.Token;
 
         var result = await controller.CancelOrder(
@@ -88,7 +169,10 @@ public sealed class ProductionMutationControllerTests
             new ServerConnectionStringResolver(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()),
             new EnvironmentPolicy(DeploymentTier.Production),
             gate);
-        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "https";
+        httpContext.Items[SessionIdMiddleware.CookieName] = "synthetic-controller-session";
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
 
         var action = controller.ProductionUnlock(
             "upc_ecommerce",
@@ -144,7 +228,8 @@ public sealed class ProductionMutationControllerTests
             new EnvironmentPolicy(DeploymentTier.Production),
             gate);
         var httpContext = new DefaultHttpContext();
-        httpContext.Items[SessionIdMiddleware.CookieName] = "direct-controller-session";
+        httpContext.Request.Scheme = "https";
+        httpContext.Items[SessionIdMiddleware.CookieName] = "synthetic-controller-session";
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
 
         var locked = await Assert.ThrowsAsync<ProductionMutationLockedException>(() => controller.SendRequest(
@@ -153,7 +238,7 @@ public sealed class ProductionMutationControllerTests
         Assert.Equal("production_mutation_locked", locked.Code);
         apiClient.Verify(client => client.SendOrderAsync(It.IsAny<string>(), It.IsAny<object>()), Times.Never);
 
-        var unlock = gate.Unlock("upc_ecommerce", "direct-controller-session", Password);
+        var unlock = gate.Unlock("upc_ecommerce", "synthetic-controller-session", Password);
         httpContext.Request.Headers[ProductionMutationGate.UnlockHeaderName] = unlock.Token;
 
         var result = await controller.SendRequest(
@@ -213,9 +298,10 @@ public sealed class ProductionMutationControllerTests
             gate,
             new RmsSupportHub.Api.Configuration.EmptyOutboundApiKeyResolver());
         var httpContext = new DefaultHttpContext();
-        httpContext.Items[SessionIdMiddleware.CookieName] = "direct-controller-session";
+        httpContext.Request.Scheme = "https";
+        httpContext.Items[SessionIdMiddleware.CookieName] = "synthetic-controller-session";
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
-        var unlock = gate.Unlock("ghc_unicommerce", "direct-controller-session", Password);
+        var unlock = gate.Unlock("ghc_unicommerce", "synthetic-controller-session", Password);
         httpContext.Request.Headers[ProductionMutationGate.UnlockHeaderName] = unlock.Token;
 
         var error = await Assert.ThrowsAsync<EnvironmentUnconfiguredException>(() => controller.SendRequest(

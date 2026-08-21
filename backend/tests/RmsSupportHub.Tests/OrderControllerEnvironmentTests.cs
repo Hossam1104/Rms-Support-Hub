@@ -1,6 +1,7 @@
 using Moq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RmsSupportHub.Api.Middleware;
 using RmsSupportHub.Api.Controllers;
 using RmsSupportHub.Core.DTOs;
 using RmsSupportHub.Core.Models;
@@ -52,6 +53,10 @@ public class OrderControllerEnvironmentTests
             new RmsSupportHub.Api.ServerConnectionStringResolver(
                 new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()),
             new EnvironmentPolicy(DeploymentTier.Testing));
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items[SessionIdMiddleware.CookieName] = "synthetic-testing-session";
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
 
         return controller;
     }
