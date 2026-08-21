@@ -74,6 +74,9 @@ Common capabilities:
 - payload validation;
 - exact JSON preview;
 - request submission;
+- Production order/invoice mutations require an owner-configured unlock
+  secret and remain server-gated; Production Order Requests reads stay
+  available without unlocking, while Testing remains immediately usable;
 - request-history inspection where supported;
 - cancellation/resend where supported by the downstream contract.
 
@@ -131,6 +134,7 @@ Common capabilities:
 - **BR-023 Fail Closed:** Missing or untrusted configuration shall block capability rather than fall back to guessed/browser-provided values.
 - **BR-024 Extensible Modules:** New integrations shall be introduced through module contracts and capability metadata.
 - **BR-025 Traceability:** Business requirements shall map to Azure DevOps work items, GitHub PRs, tests and release evidence.
+- **BR-026 Production Mutation Safety:** UPC E-Commerce, GHC E-Commerce and GHC Uni-Commerce Production send/cancel/resend mutations shall remain locked until an owner-configured Production unlock secret is verified server-side. Read-only Production Order Requests shall remain available without unlock, and Testing shall not require this ceremony.
 
 ## 7. Functional Requirements
 

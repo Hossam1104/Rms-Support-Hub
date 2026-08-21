@@ -92,7 +92,8 @@ public static class ModuleEnvironmentDefaults
                 isDefault: false,
                 requiresDatabase: true,
                 requiresApiEndpoint: true,
-                requiresCancelEndpoint: false),
+                requiresCancelEndpoint: false,
+                requiresApiKey: true),
             ["GHC Uni-Commerce Testing"] = Create(
                 key: "GHC Uni-Commerce Testing",
                 environment: "Testing",
@@ -106,7 +107,8 @@ public static class ModuleEnvironmentDefaults
                 isDefault: true,
                 requiresDatabase: true,
                 requiresApiEndpoint: true,
-                requiresCancelEndpoint: false)
+                requiresCancelEndpoint: false,
+                requiresApiKey: true)
         };
 
     private static ModuleEnvironment Create(
@@ -122,7 +124,8 @@ public static class ModuleEnvironmentDefaults
         bool isDefault,
         bool requiresDatabase,
         bool requiresApiEndpoint,
-        bool requiresCancelEndpoint) => new()
+        bool requiresCancelEndpoint,
+        bool requiresApiKey = false) => new()
     {
         Key = key,
         Environment = environment,
@@ -138,6 +141,7 @@ public static class ModuleEnvironmentDefaults
         RequiresDatabase = requiresDatabase,
         RequiresApiEndpoint = requiresApiEndpoint,
         RequiresCancelEndpoint = requiresCancelEndpoint,
+        RequiresApiKey = requiresApiKey,
         HealthProbeEnabled = false
     };
 }

@@ -26,7 +26,9 @@ public class UniCommerceInvoice
 
     public decimal GrossAmount => Math.Round(RowItems.Sum(r => r.GrossAmount), 2);
     public decimal TotalDiscount => Math.Round(RowItems.Sum(r => r.RowTotalDiscount), 2);
-    public decimal TotalVat => Math.Round(RowItems.Sum(r => r.RowTotalVat), 2);
-    public decimal NetAmount => Math.Round(RowItems.Sum(r => r.NetAmount) + Delivery.DeliveryFees, 2);
-    public decimal CustomerCreditAmount => Math.Round(NetAmount - PaidOnlineAmount - PaidWithPointsAmount, 2);
+    /// <summary>Uni-Commerce preserves VAT-derived amounts at four decimal
+    /// places through the invoice model as well as the outbound payload.</summary>
+    public decimal TotalVat => Math.Round(RowItems.Sum(r => r.RowTotalVat), 4);
+    public decimal NetAmount => Math.Round(RowItems.Sum(r => r.NetAmount) + Delivery.DeliveryFees, 4);
+    public decimal CustomerCreditAmount => Math.Round(NetAmount - PaidOnlineAmount - PaidWithPointsAmount, 4);
 }

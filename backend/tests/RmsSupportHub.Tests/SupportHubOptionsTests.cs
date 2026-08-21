@@ -79,6 +79,76 @@ public sealed class SupportHubOptionsTests
     }
 
     [Fact]
+    public void ValidatorRequiresAKeyReferenceForEnabledUniCommerce()
+    {
+        var options = new SupportHubOptions
+        {
+            Environments = new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ghc_unicommerce"] = new(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["GHC Uni-Commerce Testing"] = new()
+                    {
+                        Enabled = true,
+                        ApiEndpointKey = "UniTesting",
+                        ConnectionStringName = "GhcUnicommerceTest"
+                    }
+                }
+            }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ModuleEndpoints:UniTesting"] = "https://testing.example/invoice",
+                ["ConnectionStrings:GhcUnicommerceTest"] = "Server=127.0.0.1;Database=RmsEcommerceStg;"
+            })
+            .Build();
+
+        var result = Validate(options, configuration);
+
+        Assert.True(result.Failed);
+        Assert.Contains("ApiKeyConfigurationKey", result.FailureMessage);
+    }
+
+    [Fact]
+    public void CatalogAndResolverKeepUniApiKeyServerOwned()
+    {
+        var options = new SupportHubOptions
+        {
+            Environments = new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ghc_unicommerce"] = new(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["GHC Uni-Commerce Testing"] = new()
+                    {
+                        Enabled = true,
+                        ApiEndpointKey = "UniTesting",
+                        ApiKeyConfigurationKey = "UniTestingApiKey",
+                        ConnectionStringName = "GhcUnicommerceTest"
+                    }
+                }
+            }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ModuleEndpoints:UniTesting"] = "https://testing.example/invoice",
+                ["ConnectionStrings:GhcUnicommerceTest"] = "Server=127.0.0.1;Database=RmsEcommerceStg;",
+                ["ModuleApiKeys:UniTestingApiKey"] = "TEST-ONLY-API-KEY"
+            })
+            .Build();
+
+        var environment = ConfiguredEnvironmentCatalog.Build(configuration, options)
+            ["ghc_unicommerce"]["GHC Uni-Commerce Testing"];
+        var resolver = new ServerOutboundApiKeyResolver(configuration);
+
+        Assert.True(environment.Available);
+        Assert.True(environment.RequiresApiKey);
+        Assert.Equal("UniTestingApiKey", environment.ApiKeyConfigurationKey);
+        Assert.Equal("TEST-ONLY-API-KEY", resolver.Resolve(environment));
+    }
+
+    [Fact]
     public void ValidatorAllowsDisabledOptionalEnvironmentWithoutSecrets()
     {
         var options = new SupportHubOptions

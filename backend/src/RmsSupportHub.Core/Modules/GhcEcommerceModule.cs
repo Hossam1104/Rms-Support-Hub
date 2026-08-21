@@ -62,9 +62,12 @@ public class GhcEcommerceModule : IOrderModule
                 ["order_delivery_cost"] = 10.0m,
                 ["is_delivery"] = true,
                 ["order_status"] = "new",
-                ["delivery_date"] = "",
-                ["delivery_from_time"] = "",
-                ["delivery_to_time"] = "",
+                // New Testing drafts start with an editable next-day window.
+                // This is generated at draft creation time so it cannot go
+                // stale like a committed calendar date.
+                ["delivery_date"] = DateTime.UtcNow.Date.AddDays(1).ToString("yyyy-MM-dd"),
+                ["delivery_from_time"] = "09:00",
+                ["delivery_to_time"] = "12:00",
                 ["shipping_address_2"] = "",
                 ["fullfilment_plant"] = "MAIN",
                 ["order_notes"] = "Don't Ring the bell",

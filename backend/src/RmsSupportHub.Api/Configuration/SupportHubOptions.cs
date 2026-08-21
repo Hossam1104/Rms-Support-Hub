@@ -26,6 +26,7 @@ public sealed class SupportHubEnvironmentOptions
     public bool Enabled { get; set; }
     public string? ApiEndpointKey { get; set; }
     public string? CancelEndpointKey { get; set; }
+    public string? ApiKeyConfigurationKey { get; set; }
     public string? ConnectionStringName { get; set; }
     public string? DatabaseOverride { get; set; }
     public bool AllowCustomEndpoint { get; set; }
@@ -92,6 +93,9 @@ public sealed class SupportHubOptionsValidator : IValidateOptions<SupportHubOpti
                     else if (!IsSafeHttpUrl(apiUrl))
                         errors.Add($"ModuleEndpoints:{registration.ApiEndpointKey} must be an absolute HTTP(S) URL.");
                 }
+
+                if (template.RequiresApiKey && string.IsNullOrWhiteSpace(registration.ApiKeyConfigurationKey))
+                    errors.Add($"Enabled environment '{moduleEntry.Key}/{environmentEntry.Key}' requires ApiKeyConfigurationKey.");
 
                 if (template.RequiresCancelEndpoint)
                 {

@@ -40,8 +40,28 @@ public class FlatOrderValidator : IFlatOrderValidator
                 errors.Add($"Missing required field: {field}");
         }
 
-        if (!payload.TryGetValue("order_products", out var prodsObj) || prodsObj is not List<Dictionary<string, object?>> prods || prods.Count == 0)
+        var products = payload.GetValueOrDefault("order_products") as List<Dictionary<string, object?>>;
+        if (products is null || products.Count == 0)
             errors.Add("Order must contain at least one product.");
+
+        if (variant.RequireProductTotalAlignment && products is not null)
+        {
+            var compiledProductTotal = GetDecimal(payload, "order_product_total_value");
+            var rowProductTotal = Math.Round(products.Sum(row => GetDecimal(row, "row_net_total")), 2);
+            if (Math.Abs(compiledProductTotal - rowProductTotal) > 0.01m)
+            {
+                errors.Add($"order_product_total_value ({compiledProductTotal}) must equal the sum of order_products.row_net_total ({rowProductTotal}).");
+            }
+        }
+
+        if (variant.IncludeDeliveryFields && GetDecimal(payload, "is_delivery") == 1m)
+        {
+            foreach (var field in new[] { "delivery_date", "delivery_from_time", "delivery_to_time" })
+            {
+                if (!payload.TryGetValue(field, out var value) || string.IsNullOrWhiteSpace(value?.ToString()))
+                    errors.Add($"Missing required field for delivery order: {field}");
+            }
+        }
 
         // An order with no payment rows is NOT an error: it is the verified
         // Cash-on-Delivery shape. FlatOrderPayloadBuilder already emits exactly

@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
 import { SidebarStateService } from '../../core/services/sidebar-state.service';
+import { ModuleService } from '../../core/services/module.service';
 import { SidebarComponent } from './sidebar.component';
 
 describe('SidebarComponent', () => {
@@ -8,7 +10,7 @@ describe('SidebarComponent', () => {
         localStorage.removeItem('order-tool.sidebar-collapsed');
         await TestBed.configureTestingModule({
             imports: [SidebarComponent],
-            providers: [provideRouter([])]
+            providers: [provideRouter([]), provideHttpClient()]
         }).compileComponents();
     });
 
@@ -18,6 +20,11 @@ describe('SidebarComponent', () => {
         component.moduleKey = 'upc_ecommerce';
         component.moduleLabel = 'UPC E-commerce';
         component.clientName = 'UPC';
+        TestBed.inject(ModuleService).activeModule.set({
+            key: 'upc_ecommerce', label: 'UPC E-commerce', client: 'UPC', available: true,
+            environments: [],
+            capabilities: { draftKind: 'flat', itemLookup: true, consumerLookup: true, orderRequests: true, cancel: true, resend: true, hasDeliveryFields: false, branchLookup: true }
+        });
         TestBed.inject(SidebarStateService).setCollapsed(false);
         fixture.detectChanges();
 

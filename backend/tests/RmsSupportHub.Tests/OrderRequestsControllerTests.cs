@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using RmsSupportHub.Api;
 using RmsSupportHub.Api.Controllers;
+using RmsSupportHub.Api.Security;
 using RmsSupportHub.Core.DTOs;
 using RmsSupportHub.Core.Modules;
 using RmsSupportHub.Core.Services;
@@ -43,14 +44,16 @@ public class OrderRequestsControllerTests
         IOrderRequestRepository repository,
         IApiClient apiClient,
         DeploymentTier deploymentTier = DeploymentTier.Testing,
-        IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null) =>
+        IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null,
+        IProductionMutationGate? productionGate = null) =>
         new(
             BuildRegistry(),
             repository,
             apiClient,
             new RmsSupportHub.Api.ServerConnectionStringResolver(BuildConfiguration()),
             new EnvironmentPolicy(deploymentTier),
-            ghcUnicommerceRepository);
+            ghcUnicommerceRepository,
+            productionGate);
 
     private static OrderRequestDetailDto MakeDetail(int orderStatus) => new(
         Id: 42,
@@ -215,6 +218,99 @@ public class OrderRequestsControllerTests
         Assert.Equal("environment_not_allowed", error.Code);
         Assert.Null(apiClient.LastUrl);
         Assert.Empty(repo.ConnectionStrings);
+    }
+
+    [Fact]
+    public async Task ProductionCancelRequiresMutationUnlockBeforeReadingHistory()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var apiClient = new FakeApiClient();
+        var gate = new ProductionMutationGate(
+            "synthetic-owner-password",
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductionMutationGate>.Instance);
+        var controller = BuildController(
+            repo,
+            apiClient,
+            DeploymentTier.Production,
+            productionGate: gate);
+
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.ProductionMutationLockedException>(() =>
+            controller.Cancel(
+                "upc_ecommerce", 42,
+                new OrderRequestCancelRequest("Customer request"),
+                envKey: "UPC Production"));
+
+        Assert.Equal("production_mutation_locked", error.Code);
+        Assert.Empty(repo.ConnectionStrings);
+        Assert.Null(apiClient.LastUrl);
+    }
+
+    [Fact]
+    public async Task ProductionResendRequiresMutationUnlockBeforeReadingHistory()
+    {
+        var repo = new FakeOrderRequestRepository { Detail = MakeDetail(orderStatus: 2) };
+        var apiClient = new FakeApiClient();
+        var gate = new ProductionMutationGate(
+            "synthetic-owner-password",
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductionMutationGate>.Instance);
+        var controller = BuildController(
+            repo,
+            apiClient,
+            DeploymentTier.Production,
+            productionGate: gate);
+
+        var error = await Assert.ThrowsAsync<RmsSupportHub.Api.Exceptions.ProductionMutationLockedException>(() =>
+            controller.Resend(
+                "upc_ecommerce", 42,
+                new OrderRequestResendRequest("200"),
+                envKey: "UPC Production"));
+
+        Assert.Equal("production_mutation_locked", error.Code);
+        Assert.Empty(repo.ConnectionStrings);
+        Assert.Null(apiClient.LastUrl);
+    }
+
+    [Fact]
+    public async Task ProductionOrderRequestListRemainsReadOnlyWithoutMutationUnlock()
+    {
+        var repo = new FakeOrderRequestRepository();
+        var controller = BuildController(
+            repo,
+            new FakeApiClient(),
+            DeploymentTier.Production);
+
+        var result = await controller.List(
+            "upc_ecommerce",
+            new OrderRequestListQuery(
+                Q: null, OrderNumber: null, Phone: null, BranchCode: null,
+                Status: null, Statuses: null, Succeeded: null, HasException: null,
+                DateFrom: null, DateTo: null, Page: null, PageSize: null,
+                Sort: null, ExactMatch: null),
+            envKey: "UPC Production");
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result);
+        Assert.NotEmpty(repo.ConnectionStrings);
+    }
+
+    [Fact]
+    public async Task UniCommerceCancelAndResendRemainCapabilityUnavailable()
+    {
+        var standard = new FakeOrderRequestRepository();
+        var apiClient = new FakeApiClient();
+        var controller = BuildController(standard, apiClient);
+
+        var cancel = await controller.Cancel(
+            "ghc_unicommerce", 42,
+            new OrderRequestCancelRequest("synthetic"),
+            envKey: "GHC Uni-Commerce Testing");
+        var resend = await controller.Resend(
+            "ghc_unicommerce", 42,
+            new OrderRequestResendRequest("200"),
+            envKey: "GHC Uni-Commerce Testing");
+
+        Assert.Equal(501, Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(cancel).StatusCode);
+        Assert.Equal(501, Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(resend).StatusCode);
+        Assert.Null(apiClient.LastUrl);
     }
 
     [Fact]

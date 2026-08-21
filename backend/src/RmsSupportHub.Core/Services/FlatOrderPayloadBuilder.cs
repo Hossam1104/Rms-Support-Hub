@@ -16,7 +16,8 @@ public sealed record FlatVariant(
     bool IncludeCreditInfo,
     bool IncludeCardBankInfo,
     bool IncludePaymentStatus,
-    IReadOnlyList<string> AllowedPaymentMethods)
+    IReadOnlyList<string> AllowedPaymentMethods,
+    bool RequireProductTotalAlignment = false)
 {
     /// <summary>Every method the GHC flat-order API accepts on a payment row.</summary>
     public static readonly IReadOnlyList<string> GhcPaymentMethods = new[]
@@ -40,7 +41,8 @@ public sealed record FlatVariant(
         IncludeCreditInfo: true,
         IncludeCardBankInfo: true,
         IncludePaymentStatus: false,
-        AllowedPaymentMethods: GhcPaymentMethods);
+        AllowedPaymentMethods: GhcPaymentMethods,
+        RequireProductTotalAlignment: true);
 
     /// <summary>UPC's reference payload has none of the GHC-only fields above,
     /// but does include payment_status on every payment.</summary>

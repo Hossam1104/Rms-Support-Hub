@@ -1,11 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using RmsSupportHub.Api.Configuration;
 using RmsSupportHub.Api.Exceptions;
 using RmsSupportHub.Core;
 using RmsSupportHub.Core.DTOs;
+using RmsSupportHub.Core.Models;
 using RmsSupportHub.Core.Modules;
 using RmsSupportHub.Core.Services;
+using RmsSupportHub.Api.Middleware;
+using RmsSupportHub.Api.Security;
 using RmsSupportHub.Data.Repositories;
 
 namespace RmsSupportHub.Api.Controllers;
@@ -27,6 +32,8 @@ public class OrderRequestsController : ControllerBase
     private readonly IApiClient _apiClient;
     private readonly IConnectionStringResolver _connectionStrings;
     private readonly IEnvironmentPolicy _environmentPolicy;
+    private readonly IProductionMutationGate _productionGate;
+    private readonly IOutboundApiKeyResolver _apiKeys;
 
     public OrderRequestsController(
         IModuleRegistry moduleRegistry,
@@ -34,7 +41,9 @@ public class OrderRequestsController : ControllerBase
         IApiClient apiClient,
         IConnectionStringResolver connectionStrings,
         IEnvironmentPolicy environmentPolicy,
-        IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null)
+        IGhcUnicommerceOrderRequestRepository? ghcUnicommerceRepository = null,
+        IProductionMutationGate? productionGate = null,
+        IOutboundApiKeyResolver? apiKeys = null)
     {
         _moduleRegistry = moduleRegistry;
         _repository = repository;
@@ -42,6 +51,9 @@ public class OrderRequestsController : ControllerBase
         _apiClient = apiClient;
         _connectionStrings = connectionStrings;
         _environmentPolicy = environmentPolicy;
+        _productionGate = productionGate
+            ?? new ProductionMutationGate(null, NullLogger<ProductionMutationGate>.Instance);
+        _apiKeys = apiKeys ?? new EmptyOutboundApiKeyResolver();
     }
 
     [HttpGet]
@@ -189,6 +201,14 @@ public class OrderRequestsController : ControllerBase
         var (module, connStr, guard) = Resolve(key, envKey, requireCancel: true);
         if (guard != null) return guard;
 
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module!, envKey);
+        _productionGate.RequireUnlocked(
+            module!,
+            env,
+            ProductionToken(),
+            SessionIdForGate(),
+            "cancel");
+
         var repository = RepositoryFor(module!);
         var detail = await repository.GetDetailAsync(connStr!, id);
         if (detail == null) return NotFound(new { error = $"Order request '{id}' not found." });
@@ -204,13 +224,12 @@ public class OrderRequestsController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Reason))
             return BadRequest(new { error = "A cancellation reason is required." });
 
-        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module!, envKey);
         var cancelUrl = env.CancelUrl;
         if (string.IsNullOrWhiteSpace(cancelUrl))
             throw new Exceptions.EnvironmentUnconfiguredException();
 
         var cancelPayload = new { order_number = detail.OrderNumber, cancel_reason = request.Reason };
-        var apiResult = await _apiClient.SendOrderAsync(cancelUrl, cancelPayload);
+        var apiResult = await SendDownstreamAsync(env, cancelPayload, cancelUrl);
 
         var refreshed = await repository.GetDetailAsync(connStr!, id);
 
@@ -234,6 +253,14 @@ public class OrderRequestsController : ControllerBase
     {
         var (module, connStr, guard) = Resolve(key, envKey, requireResend: true);
         if (guard != null) return guard;
+
+        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module!, envKey);
+        _productionGate.RequireUnlocked(
+            module!,
+            env,
+            ProductionToken(),
+            SessionIdForGate(),
+            "resend");
 
         var repository = RepositoryFor(module!);
         var detail = await repository.GetDetailAsync(connStr!, id);
@@ -301,12 +328,11 @@ public class OrderRequestsController : ControllerBase
         // order_code and every unknown payload field remain untouched.
         payload["branch_code"] = targetBranchCode;
 
-        var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module!, envKey);
         var url = env.ApiUrl;
         if (string.IsNullOrWhiteSpace(url))
             throw new Exceptions.EnvironmentUnconfiguredException();
 
-        var apiResult = await _apiClient.SendOrderAsync(url, payload);
+        var apiResult = await SendDownstreamAsync(env, payload, url);
 
         return Ok(new
         {
@@ -387,4 +413,28 @@ public class OrderRequestsController : ControllerBase
 
         return null;
     }
+
+    private async Task<ApiResponseResult> SendDownstreamAsync(
+        ModuleEnvironment environment,
+        object payload,
+        string? urlOverride = null)
+    {
+        var url = urlOverride ?? environment.ApiUrl;
+        if (string.IsNullOrWhiteSpace(url))
+            throw new EnvironmentUnconfiguredException();
+
+        var apiKey = _apiKeys.Resolve(environment);
+        if (environment.RequiresApiKey && string.IsNullOrWhiteSpace(apiKey))
+            throw new EnvironmentUnconfiguredException();
+
+        return string.IsNullOrWhiteSpace(apiKey)
+            ? await _apiClient.SendOrderAsync(url, payload)
+            : await _apiClient.SendOrderWithApiKeyAsync(url, payload, apiKey);
+    }
+
+    private string SessionIdForGate() =>
+        HttpContext?.Items[SessionIdMiddleware.CookieName] as string ?? "direct-controller-session";
+
+    private string? ProductionToken() =>
+        ControllerContext?.HttpContext?.Request.Headers[ProductionMutationGate.UnlockHeaderName].FirstOrDefault();
 }

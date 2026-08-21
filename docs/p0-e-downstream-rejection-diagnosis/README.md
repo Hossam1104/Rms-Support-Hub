@@ -8,6 +8,18 @@
 
 ---
 
+## P0-F implementation status
+
+The P0-F implementation applies the GHC delivery/total validation and dynamic
+new-draft defaults, preserves the accepted phone normalization, and carries
+the Uni-Commerce four-decimal VAT and bounded server-owned `X-Api-Key`
+transport into the Support Hub code. The configured Uni-Commerce Testing
+gateway remains an external `HTTP :90 -> 502 Bad Gateway` blocker; it was not
+rerouted to the separately observed HTTPS route, and no Production invoice or
+order call was made during implementation.
+
+---
+
 ## 1. Executive Summary
 
 This diagnostic investigation isolated and reproduced the downstream rejections observed during synthetic Testing order/invoice submissions for **GHC E-Commerce** and **GHC Uni-Commerce**.

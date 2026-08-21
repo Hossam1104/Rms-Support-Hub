@@ -30,6 +30,12 @@ database catalog, or connection string.
 The capability object also includes `branchLookup`; it gates the branch route
 described in section 4 alongside item and consumer lookup capabilities.
 
+GHC Uni-Commerce environments that require downstream authentication carry
+only a server-owned API-key configuration reference. The key value is resolved
+outside tracked application settings and is sent only as the fixed
+`X-Api-Key` header by the backend outbound client. It is never accepted from,
+returned to, or logged for the browser.
+
 ### Environment Reachability
 - **`GET /api/modules/health`**
 - **Response `200 OK`**: `EnvironmentHealthDto[]` — `{ moduleKey, environmentKey, status, checkedAt }`, one entry per environment of every module.
@@ -145,6 +151,15 @@ described in section 4 alongside item and consumer lookup capabilities.
 - **Response `200 OK`**: `{ success: boolean, statusCode: int, responseText: string }`
 - Posts to the active environment's `CancelUrl` (never `ApiUrl`). Prefer **section 5's** `POST /order-requests/{id}/cancel` when cancelling a specific recorded request — it additionally re-checks `CancelBlockedStatuses` server-side and returns the refreshed request detail.
 
+### Production Mutation Unlock
+- **`POST /api/modules/{key}/production-unlock`**
+- **Request Body**: `{ password: string }` — the value is checked only against the server-owned owner-configured Production unlock secret.
+- **Response `200 OK`**: `{ token: string, expiresAt: string }`. The password, secret configuration, and downstream credentials are never returned.
+- The opaque token is random, short-lived, held only in frontend memory, bound to the current server session and module's `Production` lane, and accepted only by Production mutation routes. It is not a credential for Testing and is invalid after expiry, page reload, session change, or module change.
+- **`401`**: `production_unlock_failed` or `production_unlock_expired`; **`423`**: `production_mutation_locked`; **`503`**: `production_unlock_unavailable` when the owner-configured secret is not provisioned.
+- Production `send-request`, `cancel-order`, and supported Order Requests cancel/resend routes require `X-SupportHub-Production-Unlock`. Testing requests do not require or receive this header. Read-only Order Requests GET routes do not require unlock.
+- Failed unlock attempts are bounded per session/module. Logs contain only non-sensitive module/operation/outcome context; they never contain the password or token.
+
 ### Diagnostics
 - **`POST /api/modules/{key}/test-endpoint?envKey={envKey}`** → `{ status: "Online"|"Offline" }`.
   The server resolves the URL from the registered module/environment mapping.
@@ -250,7 +265,9 @@ the browser:
 
 The principal codes are `invalid_environment` (`400`),
 `environment_not_allowed` (`403`), `environment_unconfigured` (`503`),
-`capability_unavailable` (`501`), `downstream_unreachable` (`502`), and
+`capability_unavailable` (`501`), `production_mutation_locked` (`423`),
+`production_unlock_failed`/`production_unlock_expired` (`401`),
+`production_unlock_unavailable` (`503`), `downstream_unreachable` (`502`), and
 `downstream_timeout` (`504`).
 
 ---

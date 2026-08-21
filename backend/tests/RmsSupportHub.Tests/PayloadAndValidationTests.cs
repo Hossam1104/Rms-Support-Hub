@@ -367,4 +367,79 @@ public class PayloadAndValidationTests
         var errors = _uniValidator.ValidatePayload(payload);
         Assert.Empty(errors);
     }
+
+    [Fact]
+    public void GhcValidation_RequiresDeliveryWindowOnlyWhenDeliveryIsEnabled()
+    {
+        var deliveryDraft = GhcValidationDraft(isDelivery: true);
+        var deliveryPayload = _flatBuilder.BuildPayload(deliveryDraft, FlatVariant.GhcVariant);
+        var deliveryErrors = _flatValidator.ValidatePayload(deliveryPayload, FlatVariant.GhcVariant, totalPaid: 0m);
+
+        Assert.Contains(deliveryErrors, error => error.Contains("delivery_date", StringComparison.Ordinal));
+        Assert.Contains(deliveryErrors, error => error.Contains("delivery_from_time", StringComparison.Ordinal));
+        Assert.Contains(deliveryErrors, error => error.Contains("delivery_to_time", StringComparison.Ordinal));
+
+        var nonDeliveryDraft = GhcValidationDraft(isDelivery: false);
+        var nonDeliveryPayload = _flatBuilder.BuildPayload(nonDeliveryDraft, FlatVariant.GhcVariant);
+        var nonDeliveryErrors = _flatValidator.ValidatePayload(nonDeliveryPayload, FlatVariant.GhcVariant, totalPaid: 0m);
+
+        Assert.DoesNotContain(nonDeliveryErrors, error => error.Contains("required field for delivery order", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void GhcValidationRejectsProductTotalMismatchButAcceptsCompiledRowsThatMatch()
+    {
+        var payload = _flatBuilder.BuildPayload(GhcValidationDraft(isDelivery: false), FlatVariant.GhcVariant);
+
+        var matchingErrors = _flatValidator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid: 0m);
+        Assert.DoesNotContain(matchingErrors, error => error.Contains("order_product_total_value", StringComparison.Ordinal));
+
+        payload["order_product_total_value"] = Convert.ToDecimal(payload["order_product_total_value"]) + 1m;
+        var mismatchErrors = _flatValidator.ValidatePayload(payload, FlatVariant.GhcVariant, totalPaid: 0m);
+
+        Assert.Contains(mismatchErrors, error => error.Contains("order_product_total_value", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void UniCommercePreservesFourDecimalVatForFractionalItemPrice()
+    {
+        var invoice = new UniCommerceInvoice
+        {
+            ReferenceNumber = "UNI-FRACTIONAL-1",
+            CustomerName = "AMAZON",
+            RowItems = new List<RowItem>
+            {
+                new() { MaterialNumber = "FRACTIONAL-1", Quantity = 1m, ItemPrice = 34.25m, VatPercentage = 15m }
+            }
+        };
+
+        var payload = _uniBuilder.BuildInvoicePayload(invoice);
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(payload["RowItems"]);
+
+        Assert.Equal(5.1375m, rows[0]["ItemVat"]);
+        Assert.Equal(5.1375m, rows[0]["RowTotalVat"]);
+        Assert.Equal(39.3875m, rows[0]["NetAmount"]);
+        Assert.Equal(5.1375m, payload["TotalVat"]);
+        Assert.Equal(39.3875m, payload["NetAmount"]);
+        Assert.Empty(_uniValidator.ValidatePayload(payload));
+    }
+
+    private static OrderDraft GhcValidationDraft(bool isDelivery) => new()
+    {
+        OrderData = new Dictionary<string, object?>
+        {
+            ["branch_code"] = "101",
+            ["order_code"] = "GHC-VALIDATION-1",
+            ["client_first_name"] = "Test",
+            ["client_last_name"] = "Operator",
+            ["client_phone"] = "0500000000",
+            ["order_address"] = "Test address",
+            ["is_delivery"] = isDelivery
+        },
+        Products = new List<Product>
+        {
+            new() { ItemCode = "100001", ItemName = "Test product", Quantity = 1m, UnitPrice = 34.25m, VatPercentage = 15m }
+        },
+        Payments = new List<Payment>()
+    };
 }

@@ -42,6 +42,7 @@ public static class ConfiguredEnvironmentCatalog
                     Available = structurallyAvailable,
                     ApiUrl = apiUrl,
                     CancelUrl = cancelUrl,
+                    ApiKeyConfigurationKey = registration?.ApiKeyConfigurationKey,
                     ConnectionStringName = registration?.ConnectionStringName,
                     DatabaseOverride = registration?.DatabaseOverride,
                     HealthProbeEnabled = structurallyAvailable && options.HealthProbe.Enabled && !string.IsNullOrWhiteSpace(apiUrl),

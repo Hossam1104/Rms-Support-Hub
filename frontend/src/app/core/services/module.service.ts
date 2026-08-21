@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
+import { ProductionUnlockService } from './production-unlock.service';
 import {
   ModuleDto,
   EnvironmentDto,
@@ -49,6 +50,7 @@ export function orderModulesForDisplay(modules: ModuleDto[]): ModuleDto[] {
 })
 export class ModuleService {
   private api = inject(ApiService);
+  private readonly productionUnlock = inject(ProductionUnlockService);
 
   modules = signal<ModuleDto[]>([]);
   activeModule = signal<ModuleDto | null>(null);
@@ -93,6 +95,9 @@ export class ModuleService {
   }
 
   loadModuleDetails(key: string): Observable<ModuleDetailResponse> {
+    if (this.activeModule()?.key && this.activeModule()?.key !== key) {
+      this.productionUnlock.clear();
+    }
     const foundLocal = this.modules().find(m => m.key === key);
     if (foundLocal) {
       this.activeModule.set(foundLocal);
@@ -113,6 +118,12 @@ export class ModuleService {
    * one module never leaks into another module's default. */
   selectEnvironment(env: EnvironmentDto, ownerModule?: ModuleDto) {
     if (!env.available) return;
+    const previousModuleKey = this.activeModule()?.key;
+    const previousEnvironmentKey = this.activeEnvironment()?.key;
+    const nextModuleKey = ownerModule?.key ?? previousModuleKey;
+    if (previousModuleKey !== nextModuleKey || previousEnvironmentKey !== env.key) {
+      this.productionUnlock.clear();
+    }
     // Landing-page selection happens before the module shell is active. Keep
     // that outside-module choice on the same active-module/persistence path as
     // the navbar switcher so loading the module cannot silently restore its
@@ -129,6 +140,18 @@ export class ModuleService {
     }
   }
 
+  /** Resolves the environment selected for a module without requiring the
+   * shell component to have finished its async detail request. This keeps the
+   * direct builder route guard fail-closed on Production. */
+  selectedEnvironment(moduleKey: string): EnvironmentDto | null {
+    if (this.activeModule()?.key === moduleKey && this.activeEnvironment()) {
+      return this.activeEnvironment();
+    }
+
+    const module = this.modules().find(candidate => candidate.key === moduleKey);
+    return module ? this.resolveEnvironment(module) : null;
+  }
+
   /** The default lane is the module's flagged IsDefault environment --
    * never environments[0], which used to resolve to Production purely
    * because of dictionary insertion order (D4). The operator's own choice,
@@ -136,6 +159,10 @@ export class ModuleService {
    * real environment on this module -- otherwise it's discarded rather than
    * silently applied to the wrong module. */
   private restoreEnvironment(module: ModuleDto) {
+    this.activeEnvironment.set(this.resolveEnvironment(module));
+  }
+
+  private resolveEnvironment(module: ModuleDto): EnvironmentDto | null {
     let storedKey: string | null = null;
     try {
       storedKey = localStorage.getItem(ENV_STORAGE_PREFIX + module.key);
@@ -147,6 +174,6 @@ export class ModuleService {
       : undefined;
     const fallbackDefault = module.environments.find(e => e.isDefault && e.available);
     const fallbackAvailable = module.environments.find(e => e.available);
-    this.activeEnvironment.set(stored ?? fallbackDefault ?? fallbackAvailable ?? null);
+    return stored ?? fallbackDefault ?? fallbackAvailable ?? null;
   }
 }

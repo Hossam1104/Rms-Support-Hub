@@ -103,3 +103,31 @@ public sealed class DownstreamTimeoutException : ApiException
         : base(StatusCodes.Status504GatewayTimeout, "downstream_timeout",
             "The configured downstream environment did not respond in time.") { }
 }
+
+public sealed class ProductionUnlockUnavailableException : ApiException
+{
+    public ProductionUnlockUnavailableException()
+        : base(StatusCodes.Status503ServiceUnavailable, "production_unlock_unavailable",
+            "Production mutations are unavailable because the owner-configured unlock secret is not provisioned.") { }
+}
+
+public sealed class ProductionUnlockFailedException : ApiException
+{
+    public ProductionUnlockFailedException()
+        : base(StatusCodes.Status401Unauthorized, "production_unlock_failed",
+            "Production unlock failed.") { }
+}
+
+public sealed class ProductionMutationLockedException : ApiException
+{
+    public ProductionMutationLockedException()
+        : base(StatusCodes.Status423Locked, "production_mutation_locked",
+            "Production mutations are locked. Unlock this module before retrying.") { }
+}
+
+public sealed class ProductionUnlockExpiredException : ApiException
+{
+    public ProductionUnlockExpiredException()
+        : base(StatusCodes.Status401Unauthorized, "production_unlock_expired",
+            "The Production unlock has expired. Unlock this module again before retrying.") { }
+}
