@@ -8,6 +8,23 @@
 
 ---
 
+## P0-F implementation status
+
+The P0-F implementation applies the GHC delivery validation and dynamic
+new-draft defaults, preserves the accepted phone normalization, and carries
+the Uni-Commerce four-decimal VAT and bounded server-owned `X-Api-Key`
+transport into the Support Hub code. Review of the production builder confirms
+that it already compiles `order_product_total_value` from the same
+`Product.EstimatedTotal` values emitted as each row's `row_net_total`; the
+remediation therefore adds/retains the validation guard and regression evidence
+without claiming a second arithmetic formula or a builder arithmetic defect.
+The configured Uni-Commerce Testing gateway remains an external
+`HTTP :90 -> 502 Bad Gateway` blocker; it was not rerouted to the separately
+observed HTTPS route, and no Production invoice or order call was made during
+implementation.
+
+---
+
 ## 1. Executive Summary
 
 This diagnostic investigation isolated and reproduced the downstream rejections observed during synthetic Testing order/invoice submissions for **GHC E-Commerce** and **GHC Uni-Commerce**.
@@ -17,7 +34,7 @@ This diagnostic investigation isolated and reproduced the downstream rejections 
    - **Primary Classification:** `EXTERNAL_CONTRACT_MISMATCH` (with Support Hub default/validation remediation).
    - **Finding:** The downstream GHC Main Server Order API (`/api/Order/CreateAndAssignOrder`) enforces two strict validation rules not guarded in Support Hub:
      1. Delivery fields (`delivery_date`, `delivery_from_time`, `delivery_to_time`) are **mandatory** when `is_delivery = 1`. Support Hub's `DefaultState` initialized these to empty strings, and `FlatOrderValidator` did not validate their presence for GHC.
-     2. `order_product_total_value` must equal `sum(row_net_total)` (which is VAT-inclusive: `Gross - Discount + TotalVat`).
+     2. `order_product_total_value` must equal `sum(row_net_total)` (which is VAT-inclusive: `Gross - Discount + TotalVat`). The current builder already aligns these values; the P0-F validator guard rejects a mismatch before outbound.
    - **Verification:** When supplied with valid delivery timestamps and aligned product totals, the downstream GHC Testing endpoint returned **`HTTP 200 OK`** (`Code: "Assigned"`, `IsReceived: true`), writing `IsSucceeded = 1` in `dbo.OrderRequests` (Id: 41950) and creating a valid order header in `dbo.RequestOrderHeaders` (Id: 968, `OrderStatus: 1`).
 
 2. **GHC Uni-Commerce Send Rejection:**

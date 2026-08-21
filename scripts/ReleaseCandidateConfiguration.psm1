@@ -32,6 +32,13 @@ function Assert-ReleaseSafeStringValues {
     return
   }
 
+  if ($Value -is [System.Collections.IEnumerable]) {
+    foreach ($item in $Value) {
+      Assert-ReleaseSafeStringValues $item "$Path[]"
+    }
+    return
+  }
+
   if ($Value.PSObject -and $Value.PSObject.Properties) {
     foreach ($property in @($Value.PSObject.Properties)) {
       Assert-ReleaseSafeStringValues $property.Value "$Path.$($property.Name)"

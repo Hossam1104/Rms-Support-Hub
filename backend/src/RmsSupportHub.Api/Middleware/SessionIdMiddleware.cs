@@ -1,3 +1,5 @@
+using RmsSupportHub.Core.Modules;
+
 namespace RmsSupportHub.Api.Middleware;
 
 /// <summary>Issues a per-browser session id on first contact (see
@@ -11,10 +13,12 @@ public class SessionIdMiddleware
     public const string CookieName = "oot_sid";
 
     private readonly RequestDelegate _next;
+    private readonly IEnvironmentPolicy _environmentPolicy;
 
-    public SessionIdMiddleware(RequestDelegate next)
+    public SessionIdMiddleware(RequestDelegate next, IEnvironmentPolicy environmentPolicy)
     {
         _next = next;
+        _environmentPolicy = environmentPolicy;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -28,7 +32,8 @@ public class SessionIdMiddleware
             {
                 HttpOnly = true,
                 SameSite = SameSiteMode.Lax,
-                Secure = context.Request.IsHttps,
+                Secure = _environmentPolicy.DeploymentTier == DeploymentTier.Production
+                    || context.Request.IsHttps,
                 Path = "/",
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
@@ -41,9 +46,9 @@ public class SessionIdMiddleware
 
 public static class HttpContextSessionExtensions
 {
-    /// <summary>Never throws in practice -- SessionIdMiddleware is
-    /// registered unconditionally in Program.cs ahead of MapControllers, so
-    /// every request that reaches a controller already has one.</summary>
+    /// <summary>Fails closed when the middleware was not registered ahead of
+    /// the controller pipeline; callers must never share a synthetic fallback
+    /// session id.</summary>
     public static string GetSessionId(this HttpContext context) =>
         context.Items[SessionIdMiddleware.CookieName] as string
             ?? throw new InvalidOperationException(

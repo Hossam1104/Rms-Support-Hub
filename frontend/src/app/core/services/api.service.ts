@@ -39,8 +39,11 @@ export class ApiService {
     return this.http.get<T>(`${this.baseUrl}/${path}`, { params: toHttpParams(params) });
   }
 
-  post<T>(path: string, body: unknown, params?: ApiParams): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}/${path}`, body, { params: toHttpParams(params) });
+  post<T>(path: string, body: unknown, params?: ApiParams, headers?: Record<string, string>): Observable<T> {
+    return this.http.post<T>(`${this.baseUrl}/${path}`, body, {
+      params: toHttpParams(params),
+      headers
+    });
   }
 
   put<T>(path: string, body: unknown): Observable<T> {

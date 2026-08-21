@@ -26,9 +26,13 @@ public class UniCommercePayloadBuilder : IUniCommercePayloadBuilder
 
             var grossAmount = Math.Round(item.Quantity * item.ItemPrice, 2);
             var rowTotalDiscount = Math.Round(item.ItemDiscount * item.Quantity, 2);
-            var itemVat = Math.Round((item.ItemPrice - item.ItemDiscount) * vatDecimal, 2);
-            var rowTotalVat = Math.Round(itemVat * item.Quantity, 2);
-            var netAmount = Math.Round(grossAmount - rowTotalDiscount + rowTotalVat, 2);
+            // The Online Invoice Creation contract requires four-decimal VAT
+            // precision. Keep the exact decimal product through row and
+            // aggregate VAT calculations; rounding to two decimals here was
+            // the P0-E downstream rejection cause.
+            var itemVat = Math.Round((item.ItemPrice - item.ItemDiscount) * vatDecimal, 4);
+            var rowTotalVat = Math.Round(itemVat * item.Quantity, 4);
+            var netAmount = Math.Round(grossAmount - rowTotalDiscount + rowTotalVat, 4);
 
             return new Dictionary<string, object?>
             {
@@ -53,13 +57,13 @@ public class UniCommercePayloadBuilder : IUniCommercePayloadBuilder
 
         var grossAmountTotal = Math.Round(invoice.RowItems.Sum(r => r.GrossAmount), 2);
         var totalDiscount = Math.Round(invoice.RowItems.Sum(r => r.RowTotalDiscount), 2);
-        var totalVat = Math.Round(invoice.RowItems.Sum(r => r.RowTotalVat), 2);
+        var totalVat = Math.Round(invoice.RowItems.Sum(r => r.RowTotalVat), 4);
         var deliveryFees = Math.Round(invoice.Delivery.DeliveryFees, 2);
-        var netAmountTotal = Math.Round(invoice.RowItems.Sum(r => r.NetAmount) + deliveryFees, 2);
+        var netAmountTotal = Math.Round(invoice.RowItems.Sum(r => r.NetAmount) + deliveryFees, 4);
 
         var paidOnline = Math.Round(invoice.PaidOnlineAmount, 2);
         var paidPoints = Math.Round(invoice.PaidWithPointsAmount, 2);
-        var customerCredit = Math.Round(netAmountTotal - paidOnline - paidPoints, 2);
+        var customerCredit = Math.Round(netAmountTotal - paidOnline - paidPoints, 4);
 
         var creationDate = string.IsNullOrEmpty(invoice.OrderCreationDate)
             ? DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff")

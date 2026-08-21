@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ModuleService } from '../../core/services/module.service';
+import { ProductionUnlockService } from '../../core/services/production-unlock.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ApiError, OrderDraft, RowItem, Consumer, SendOrderResult, LookupResult, ModuleEndpoint } from '../../core/models';
 import { InvoiceSummaryComponent } from './components/invoice-summary.component';
@@ -92,6 +93,7 @@ class DraftPersistenceError extends Error {
 export class UnicommerceComponent implements OnInit {
   private api = inject(ApiService);
   moduleService = inject(ModuleService);
+  private readonly productionUnlock = inject(ProductionUnlockService);
   private toast = inject(ToastService);
 
   moduleKey = signal<string>('ghc_unicommerce');
@@ -229,10 +231,18 @@ export class UnicommerceComponent implements OnInit {
     if (this.sending()) return;
 
     const key = this.moduleKey();
-    const envKey = this.moduleService.activeEnvironment()?.key;
+    const environment = this.moduleService.activeEnvironment();
+    const envKey = environment?.key;
+    if (environment?.environment === 'Production' && !this.productionUnlock.isUnlocked(key, environment.key)) {
+      this.productionUnlock.open({ moduleKey: key, environmentKey: environment.key, destination: 'unicommerce' });
+      return;
+    }
+    const headers = envKey ? this.productionUnlock.mutationHeaders(key, envKey) : undefined;
     this.sending.set(true);
     this.flushLatestPersistence()
-      .then(() => firstValueFrom(this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })))
+      .then(() => firstValueFrom(headers
+        ? this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey }, undefined, headers)
+        : this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })))
       .then(res => {
         this.apiResponse.set(res);
         if (res.success) {

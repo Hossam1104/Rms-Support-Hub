@@ -34,6 +34,16 @@ public record ModuleEnvironment
     /// </summary>
     public bool RequiresApiEndpoint { get; init; }
 
+    /// <summary>Whether the downstream send contract requires a fixed
+    /// server-owned API key. The value itself is resolved by the API
+    /// composition root and never lives on this browser-projectable model.</summary>
+    public bool RequiresApiKey { get; init; }
+
+    /// <summary>The server-owned configuration key under ModuleApiKeys for a
+    /// required downstream credential. This is a reference only, never the
+    /// credential value.</summary>
+    public string? ApiKeyConfigurationKey { get; init; }
+
     /// <summary>Whether an enabled environment must have a configured cancel
     /// endpoint for the module's cancel capability.</summary>
     public bool RequiresCancelEndpoint { get; init; }

@@ -75,6 +75,10 @@ public record SendOrderRequest(string? EnvironmentKey);
 
 public record CancelOrderRequest(string OrderNumber, string CancelReason, string? EnvironmentKey);
 
+public record ProductionUnlockRequest(string Password);
+
+public record ProductionUnlockResponse(string Token, DateTimeOffset ExpiresAt);
+
 public record LookupResultDto(
     bool Success,
     string? Message,

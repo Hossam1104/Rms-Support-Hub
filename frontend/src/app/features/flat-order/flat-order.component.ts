@@ -6,6 +6,7 @@ import { Subscription, finalize } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { BranchOptionsService } from '../../core/services/branch-options.service';
 import { ModuleService } from '../../core/services/module.service';
+import { ProductionUnlockService } from '../../core/services/production-unlock.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FocusService } from '../../core/services/focus.service';
 import { normalizeLocalPhone } from '../../core/utils/phone.util';
@@ -396,6 +397,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   private api = inject(ApiService);
   private branchOptions = inject(BranchOptionsService);
   moduleService = inject(ModuleService);
+  private readonly productionUnlock = inject(ProductionUnlockService);
   private toast = inject(ToastService);
   private route = inject(ActivatedRoute);
   private focus = inject(FocusService);
@@ -941,7 +943,13 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onSendOrder() {
-    if (this.moduleService.activeEnvironment()?.environment === 'Production') {
+    const key = this.moduleKey();
+    const environment = this.moduleService.activeEnvironment();
+    if (environment?.environment === 'Production' && !this.productionUnlock.isUnlocked(key, environment.key)) {
+      this.productionUnlock.open({ moduleKey: key, environmentKey: environment.key, destination: 'order' });
+      return;
+    }
+    if (environment?.environment === 'Production') {
       this.pendingSendConfirmation = true;
       this.showProdSendConfirm.set(true);
       return;
@@ -963,6 +971,7 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const key = this.moduleKey();
     const envKey = this.moduleService.activeEnvironment()?.key;
+    const headers = envKey ? this.productionUnlock.mutationHeaders(key, envKey) : undefined;
     this.landedRequestId.set(null);
     this.validation.set(null);
     // Any edit still sitting in the debounce window must reach the server
@@ -970,7 +979,11 @@ export class FlatOrderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.draftStore.flushNow();
     this.sending.set(true);
 
-    this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey })
+    const request$ = headers
+      ? this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey }, undefined, headers)
+      : this.api.post<SendOrderResult>(`modules/${key}/send-request`, { environmentKey: envKey });
+
+    request$
       .pipe(finalize(() => this.sending.set(false)))
       .subscribe({
         next: res => {

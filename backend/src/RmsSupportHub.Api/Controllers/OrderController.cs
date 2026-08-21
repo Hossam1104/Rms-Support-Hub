@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using RmsSupportHub.Api.Configuration;
 using RmsSupportHub.Api.Exceptions;
 using RmsSupportHub.Api.Middleware;
+using RmsSupportHub.Api.Security;
 using RmsSupportHub.Core.DTOs;
 using RmsSupportHub.Core.Models;
 using RmsSupportHub.Core.Modules;
@@ -19,6 +22,8 @@ public class OrderController : ControllerBase
     private readonly ISqlServerConnectionFactory _connectionFactory;
     private readonly IConnectionStringResolver _connectionStrings;
     private readonly IEnvironmentPolicy _environmentPolicy;
+    private readonly IProductionMutationGate _productionGate;
+    private readonly IOutboundApiKeyResolver _apiKeys;
 
     public OrderController(
         IModuleRegistry moduleRegistry,
@@ -26,7 +31,9 @@ public class OrderController : ControllerBase
         IApiClient apiClient,
         ISqlServerConnectionFactory connectionFactory,
         IConnectionStringResolver connectionStrings,
-        IEnvironmentPolicy environmentPolicy)
+        IEnvironmentPolicy environmentPolicy,
+        IProductionMutationGate? productionGate = null,
+        IOutboundApiKeyResolver? apiKeys = null)
     {
         _moduleRegistry = moduleRegistry;
         _draftManager = draftManager;
@@ -34,6 +41,9 @@ public class OrderController : ControllerBase
         _connectionFactory = connectionFactory;
         _connectionStrings = connectionStrings;
         _environmentPolicy = environmentPolicy;
+        _productionGate = productionGate
+            ?? new ProductionMutationGate(null, NullLogger<ProductionMutationGate>.Instance);
+        _apiKeys = apiKeys ?? new EmptyOutboundApiKeyResolver();
     }
 
     [HttpGet("state")]
@@ -148,10 +158,17 @@ public class OrderController : ControllerBase
     [HttpPost("send-request")]
     public async Task<ActionResult> SendRequest(string key, [FromBody] SendOrderRequest request)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
         var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, request.EnvironmentKey);
+        _productionGate.RequireUnlocked(
+            module,
+            env,
+            ProductionToken(),
+            SessionIdForGate(),
+            "send");
         var targetUrl = env.ApiUrl;
 
         if (string.IsNullOrWhiteSpace(targetUrl))
@@ -166,7 +183,7 @@ public class OrderController : ControllerBase
         }
 
         var payload = module.BuildPayload(draft);
-        var apiResult = await _apiClient.SendOrderAsync(targetUrl, payload);
+        var apiResult = await SendDownstreamAsync(env, payload);
 
         // The sent request/response is not saved locally -- it is already
         // recorded server-side in the OrderRequests table (see R4's
@@ -184,6 +201,7 @@ public class OrderController : ControllerBase
     [HttpPost("cancel-order")]
     public async Task<ActionResult> CancelOrder(string key, [FromBody] CancelOrderRequest request)
     {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
         var module = _moduleRegistry.GetModule(key);
         if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
 
@@ -191,6 +209,12 @@ public class OrderController : ControllerBase
         if (capabilityGuard != null) return capabilityGuard;
 
         var env = CapabilityGuard.RequireEnvironment(_environmentPolicy, module, request.EnvironmentKey);
+        _productionGate.RequireUnlocked(
+            module,
+            env,
+            ProductionToken(),
+            SessionIdForGate(),
+            "cancel");
         if (string.IsNullOrWhiteSpace(env.CancelUrl))
             throw new EnvironmentUnconfiguredException();
 
@@ -200,7 +224,7 @@ public class OrderController : ControllerBase
             cancel_reason = request.CancelReason
         };
 
-        var apiResult = await _apiClient.SendOrderAsync(env.CancelUrl, cancelPayload);
+        var apiResult = await SendDownstreamAsync(env, cancelPayload, env.CancelUrl);
 
         return Ok(new
         {
@@ -257,4 +281,50 @@ public class OrderController : ControllerBase
             return Ok(new { status = "Offline", error = "Database connectivity could not be verified." });
         }
     }
+
+    [HttpPost("production-unlock")]
+    public ActionResult<ProductionUnlockResponse> ProductionUnlock(string key, [FromBody] ProductionUnlockRequest request)
+    {
+        ProductionTransportGuard.RequireHttps(_environmentPolicy, HttpContext);
+        var module = _moduleRegistry.GetModule(key);
+        if (module == null) return NotFound(new { error = $"Unknown module '{key}'" });
+
+        var production = module.Environments.Values.FirstOrDefault(environment =>
+            string.Equals(environment.Environment, "Production", StringComparison.OrdinalIgnoreCase));
+        if (production is null)
+            throw new ProductionUnlockUnavailableException();
+
+        if (!_environmentPolicy.IsAllowed(production))
+            throw new EnvironmentNotAllowedException();
+
+        var result = _productionGate.Unlock(
+            module.Key,
+            SessionIdForGate(),
+            request.Password,
+            HttpContext.Connection.RemoteIpAddress?.ToString());
+        return Ok(new ProductionUnlockResponse(result.Token, result.ExpiresAt));
+    }
+
+    private async Task<ApiResponseResult> SendDownstreamAsync(
+        ModuleEnvironment environment,
+        object payload,
+        string? urlOverride = null)
+    {
+        var url = urlOverride ?? environment.ApiUrl;
+        if (string.IsNullOrWhiteSpace(url))
+            throw new EnvironmentUnconfiguredException();
+
+        var apiKey = _apiKeys.Resolve(environment);
+        if (environment.RequiresApiKey && string.IsNullOrWhiteSpace(apiKey))
+            throw new EnvironmentUnconfiguredException();
+
+        return string.IsNullOrWhiteSpace(apiKey)
+            ? await _apiClient.SendOrderAsync(url, payload)
+            : await _apiClient.SendOrderWithApiKeyAsync(url, payload, apiKey);
+    }
+
+    private string SessionIdForGate() => HttpContext.GetSessionId();
+
+    private string? ProductionToken() =>
+        ControllerContext?.HttpContext?.Request.Headers[ProductionMutationGate.UnlockHeaderName].FirstOrDefault();
 }

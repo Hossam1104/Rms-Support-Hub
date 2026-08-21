@@ -96,6 +96,7 @@ public class ModuleRegistryTests
         Assert.True(environment.RequiresApiEndpoint);
         Assert.True(environment.RequiresDatabase);
         Assert.False(environment.RequiresCancelEndpoint);
+        Assert.True(environment.RequiresApiKey);
     }
 
     [Fact]

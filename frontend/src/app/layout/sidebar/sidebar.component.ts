@@ -2,6 +2,8 @@ import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SidebarStateService } from '../../core/services/sidebar-state.service';
+import { ModuleService } from '../../core/services/module.service';
+import { ProductionUnlockService } from '../../core/services/production-unlock.service';
 import { BrandMarkComponent, UiButtonComponent } from '../../shared/ui';
 import { APP_ASSETS } from '../../core/config/app-assets';
 
@@ -28,14 +30,16 @@ import { APP_ASSETS } from '../../core/config/app-assets';
       </div>
 
       <nav class="sidebar-nav" aria-label="Online Order module navigation">
-        <a *ngIf="moduleKey !== 'ghc_unicommerce'" routerLink="order" routerLinkActive="active" class="nav-item" aria-label="Order Builder" title="Order Builder">
+        <a *ngIf="!usesUniCommerceBuilder()" [routerLink]="builderLocked() ? null : 'order'" routerLinkActive="active" class="nav-item" [class.nav-item--locked]="builderLocked()" aria-label="Order Builder" [attr.aria-disabled]="builderLocked() ? 'true' : null" [title]="builderLocked() ? 'Unlock Production to open Order Builder' : 'Order Builder'" (click)="onBuilderClick($event, 'order')">
           <i class="bi bi-speedometer2"></i>
           <span class="nav-label" *ngIf="!collapsed()">Order Builder</span>
+          <i *ngIf="builderLocked() && !collapsed()" class="bi bi-lock-fill nav-lock" aria-hidden="true"></i>
         </a>
 
-        <a *ngIf="moduleKey === 'ghc_unicommerce'" routerLink="unicommerce" routerLinkActive="active" class="nav-item" aria-label="Invoice Builder" title="Invoice Builder">
+        <a *ngIf="usesUniCommerceBuilder()" [routerLink]="builderLocked() ? null : 'unicommerce'" routerLinkActive="active" class="nav-item" [class.nav-item--locked]="builderLocked()" aria-label="Invoice Builder" [attr.aria-disabled]="builderLocked() ? 'true' : null" [title]="builderLocked() ? 'Unlock Production to open Invoice Builder' : 'Invoice Builder'" (click)="onBuilderClick($event, 'unicommerce')">
           <i class="bi bi-file-earmark-spreadsheet"></i>
           <span class="nav-label" *ngIf="!collapsed()">Invoice Builder</span>
+          <i *ngIf="builderLocked() && !collapsed()" class="bi bi-lock-fill nav-lock" aria-hidden="true"></i>
         </a>
 
         <a routerLink="order-requests" routerLinkActive="active" class="nav-item" aria-label="Order Requests" title="Order Requests">
@@ -77,6 +81,9 @@ import { APP_ASSETS } from '../../core/config/app-assets';
     .nav-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
     .nav-item.active { background: var(--surface-selected); color: var(--text-accent); font-weight: 700; transform: translateX(0); }
     .nav-item.active::before { background: var(--accent); }
+    .nav-item--locked { color: var(--text-muted); }
+    .nav-item--locked:hover { color: var(--text-primary); }
+    .nav-lock { margin-left: auto; color: var(--state-danger-fg); font-size: .8rem; }
     .sidebar-footer { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-top: 1px solid var(--divider); }
     .back-link { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .85rem; font-weight: 500; text-decoration: none; }
     .back-link:hover { color: var(--text-accent); }
@@ -98,6 +105,8 @@ export class SidebarComponent {
   @Input() clientName = '';
 
   private readonly sidebarState = inject(SidebarStateService);
+  private readonly moduleService = inject(ModuleService);
+  private readonly productionUnlock = inject(ProductionUnlockService);
   readonly collapsed = this.sidebarState.collapsed;
 
   getLogoUrl(key: string): string {
@@ -109,4 +118,28 @@ export class SidebarComponent {
   }
 
   toggleCollapse() { this.sidebarState.toggle(); }
+
+  builderLocked(): boolean {
+    const module = this.moduleService.activeModule();
+    const environment = this.moduleService.activeEnvironment();
+    return !!module && !!environment && environment.environment === 'Production'
+      && !this.productionUnlock.isUnlocked(module.key, environment.key);
+  }
+
+  usesUniCommerceBuilder(): boolean {
+    return this.moduleService.activeModule()?.capabilities?.draftKind === 'unicommerce';
+  }
+
+  onBuilderClick(event: MouseEvent, destination: 'order' | 'unicommerce'): void {
+    if (!this.builderLocked()) return;
+    event.preventDefault();
+    const module = this.moduleService.activeModule();
+    const environment = this.moduleService.activeEnvironment();
+    if (!module || !environment) return;
+    this.productionUnlock.open({
+      moduleKey: module.key,
+      environmentKey: environment.key,
+      destination
+    });
+  }
 }

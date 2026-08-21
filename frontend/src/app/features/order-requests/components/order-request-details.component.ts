@@ -7,6 +7,7 @@ import { OrderRequestDetail, OrderRequestCancelResponse, SendOrderResult, ApiErr
 import { ToastService } from '../../../core/services/toast.service';
 import { ApiService } from '../../../core/services/api.service';
 import { ModuleService } from '../../../core/services/module.service';
+import { ProductionUnlockService } from '../../../core/services/production-unlock.service';
 import { APP_ASSETS, AssetPath, paymentAssetForMethod } from '../../../core/config/app-assets';
 import {
   StatusPillComponent, JsonTreeComponent, RiyalComponent, UiSectionComponent,
@@ -80,21 +81,25 @@ function materialNumberViews(materialNumber: string | null): { full: string; sho
               <app-riyal [size]="0.9"></app-riyal>{{ detail.request.netTotal | number:'1.2-2' }}
             </span>
             <button
+              *ngIf="supportsResend(detail.request)"
               type="button"
               class="action-btn brand"
               [disabled]="!canResend(detail.request) || resendSubmitting()"
-              [title]="resendActionTitle(detail.request)"
+              [class.action-btn--locked]="productionLocked() && canResend(detail.request)"
+              [title]="productionLocked() && canResend(detail.request) ? 'Unlock Production to resend this request' : resendActionTitle(detail.request)"
               (click)="openResend(detail.request)">
-              <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+              <i class="bi" [class.bi-lock-fill]="productionLocked() && canResend(detail.request)" [class.bi-arrow-repeat]="!productionLocked() || !canResend(detail.request)" aria-hidden="true"></i>
               {{ resendSubmitting() ? 'Resending...' : 'Resend' }}
             </button>
             <button
+              *ngIf="supportsCancel(detail.request)"
               type="button"
               class="action-btn danger"
-              [disabled]="!detail.request.header?.canCancel || cancelSubmitting()"
-              [title]="detail.request.header?.canCancel ? '' : 'Blocked: order status ' + (detail.request.header?.orderStatusLabel || 'unknown')"
-              (click)="showCancel.set(true)">
-              <i class="bi bi-x-circle" aria-hidden="true"></i> Cancel order
+              [disabled]="!canCancel(detail.request) || cancelSubmitting()"
+              [class.action-btn--locked]="productionLocked() && canCancel(detail.request)"
+              [title]="productionLocked() && canCancel(detail.request) ? 'Unlock Production to cancel this order' : canCancel(detail.request) ? '' : 'Blocked: order status ' + (detail.request.header?.orderStatusLabel || 'unknown')"
+              (click)="openCancel()">
+              <i class="bi" [class.bi-lock-fill]="productionLocked() && canCancel(detail.request)" [class.bi-x-circle]="!productionLocked() || !canCancel(detail.request)" aria-hidden="true"></i> Cancel order
             </button>
           </div>
         </header>
@@ -454,6 +459,7 @@ export class OrderRequestDetailsComponent implements OnDestroy {
   readonly assets = APP_ASSETS;
   store = inject(OrderRequestsStore);
   moduleService = inject(ModuleService);
+  private readonly productionUnlock = inject(ProductionUnlockService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private toast = inject(ToastService);
@@ -517,7 +523,29 @@ export class OrderRequestDetailsComponent implements OnDestroy {
 
   canResend(detail: OrderRequestDetail | null | undefined): boolean {
     const header = detail?.header;
-    return !!header && canResendStatus(header.orderStatus ?? header.orderStatusLabel);
+    const capability = this.moduleService.activeModule()?.capabilities?.resend;
+    return capability !== false && !!header && canResendStatus(header.orderStatus ?? header.orderStatusLabel);
+  }
+
+  supportsResend(detail: OrderRequestDetail | null | undefined): boolean {
+    return this.moduleService.activeModule()?.capabilities?.resend !== false
+      && !!detail?.header;
+  }
+
+  canCancel(detail: OrderRequestDetail | null | undefined): boolean {
+    const capability = this.moduleService.activeModule()?.capabilities?.cancel;
+    return capability !== false && !!detail?.header?.canCancel;
+  }
+
+  supportsCancel(detail: OrderRequestDetail | null | undefined): boolean {
+    return this.moduleService.activeModule()?.capabilities?.cancel !== false
+      && !!detail?.header;
+  }
+
+  productionLocked(): boolean {
+    const environment = this.moduleService.activeEnvironment();
+    return environment?.environment === 'Production'
+      && !this.productionUnlock.isUnlocked(this.store.moduleKey(), environment.key);
   }
 
   resendActionTitle(detail: OrderRequestDetail | null | undefined): string {
@@ -530,8 +558,30 @@ export class OrderRequestDetailsComponent implements OnDestroy {
 
   openResend(detail: OrderRequestDetail) {
     if (!this.canResend(detail) || this.resendSubmitting()) return;
+    if (this.productionLocked()) {
+      this.productionUnlock.open({
+        moduleKey: this.store.moduleKey(),
+        environmentKey: this.moduleService.activeEnvironment()?.key || this.store.envKey() || '',
+        destination: 'order-requests'
+      });
+      return;
+    }
     this.resendError.set(null);
     this.showResend.set(true);
+  }
+
+  openCancel(): void {
+    const detail = this.store.selected()?.request;
+    if (!this.canCancel(detail) || this.cancelSubmitting()) return;
+    if (this.productionLocked()) {
+      this.productionUnlock.open({
+        moduleKey: this.store.moduleKey(),
+        environmentKey: this.moduleService.activeEnvironment()?.key || this.store.envKey() || '',
+        destination: 'order-requests'
+      });
+      return;
+    }
+    this.showCancel.set(true);
   }
 
   totalsConsistent(detail: { request: OrderRequestDetail }): boolean {
@@ -569,6 +619,14 @@ export class OrderRequestDetailsComponent implements OnDestroy {
   }
 
   onCancelConfirm(result: CancelDialogResult) {
+    if (this.productionLocked()) {
+      this.productionUnlock.open({
+        moduleKey: this.store.moduleKey(),
+        environmentKey: this.moduleService.activeEnvironment()?.key || this.store.envKey() || '',
+        destination: 'order-requests'
+      });
+      return;
+    }
     if (this.moduleService.activeEnvironment()?.environment === 'Production') {
       this.pendingCancelResult = result;
       this.showProdCancelConfirm.set(true);
@@ -589,14 +647,23 @@ export class OrderRequestDetailsComponent implements OnDestroy {
     const detail = this.store.selected();
     if (!detail || this.cancelSubmitting()) return;
     const key = this.store.moduleKey();
+    const envKey = this.store.envKey() || '';
+    const headers = this.productionUnlock.mutationHeaders(key, envKey);
     this.cancelSubmitting.set(true);
     this.cancelError.set(null);
 
-    this.api.post<OrderRequestCancelResponse>(
-      `modules/${key}/order-requests/${detail.request.id}/cancel`,
-      { reason: result.reason },
-      { envKey: this.store.envKey() || undefined }
-    ).subscribe({
+    const request$ = headers
+      ? this.api.post<OrderRequestCancelResponse>(
+        `modules/${key}/order-requests/${detail.request.id}/cancel`,
+        { reason: result.reason },
+        { envKey: envKey || undefined },
+        headers)
+      : this.api.post<OrderRequestCancelResponse>(
+        `modules/${key}/order-requests/${detail.request.id}/cancel`,
+        { reason: result.reason },
+        { envKey: envKey || undefined });
+
+    request$.subscribe({
       next: response => {
         this.cancelSubmitting.set(false);
         if (response.success) {
@@ -623,6 +690,14 @@ export class OrderRequestDetailsComponent implements OnDestroy {
       return;
     }
 
+    if (this.productionLocked()) {
+      this.productionUnlock.open({
+        moduleKey: this.store.moduleKey(),
+        environmentKey: this.moduleService.activeEnvironment()?.key || this.store.envKey() || '',
+        destination: 'order-requests'
+      });
+      return;
+    }
     if (this.moduleService.activeEnvironment()?.environment === 'Production') {
       this.pendingResendBranch = branchCode;
       this.showProdResendConfirm.set(true);
@@ -649,11 +724,20 @@ export class OrderRequestDetailsComponent implements OnDestroy {
     this.resendSubmitting.set(true);
     this.resendError.set(null);
     const key = this.store.moduleKey();
-    this.api.post<SendOrderResult>(
-      `modules/${key}/order-requests/${detail.id}/resend`,
-      { branchCode: targetBranch },
-      { envKey: this.store.envKey() || undefined }
-    ).subscribe({
+    const envKey = this.store.envKey() || '';
+    const headers = this.productionUnlock.mutationHeaders(key, envKey);
+    const request$ = headers
+      ? this.api.post<SendOrderResult>(
+        `modules/${key}/order-requests/${detail.id}/resend`,
+        { branchCode: targetBranch },
+        { envKey: envKey || undefined },
+        headers)
+      : this.api.post<SendOrderResult>(
+        `modules/${key}/order-requests/${detail.id}/resend`,
+        { branchCode: targetBranch },
+        { envKey: envKey || undefined });
+
+    request$.subscribe({
       next: response => {
         this.resendSubmitting.set(false);
         if (response.success) {

@@ -8,11 +8,13 @@ import { NavbarComponent } from '../../layout/navbar/navbar.component';
 import { SidebarComponent } from '../../layout/sidebar/sidebar.component';
 import { BreadcrumbComponent } from '../../layout/breadcrumb/breadcrumb.component';
 import { SidebarStateService } from '../../core/services/sidebar-state.service';
+import { ProductionUnlockDialogComponent } from '../production-unlock/production-unlock-dialog.component';
+import { ProductionUnlockService } from '../../core/services/production-unlock.service';
 
 @Component({
   selector: 'app-module-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavbarComponent, SidebarComponent, BreadcrumbComponent],
+  imports: [CommonModule, RouterOutlet, NavbarComponent, SidebarComponent, BreadcrumbComponent, ProductionUnlockDialogComponent],
   template: `
     <app-navbar></app-navbar>
 
@@ -32,6 +34,8 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
         <router-outlet></router-outlet>
       </main>
     </div>
+
+    <app-production-unlock-dialog *ngIf="productionUnlock.dialog()"></app-production-unlock-dialog>
   `,
   styles: [`
     .shell-layout { display: flex; width: 100%; min-width: 0; }
@@ -61,6 +65,7 @@ import { SidebarStateService } from '../../core/services/sidebar-state.service';
 export class ModuleShellComponent implements OnInit {
   moduleService = inject(ModuleService);
   readonly sidebarState = inject(SidebarStateService);
+  readonly productionUnlock = inject(ProductionUnlockService);
   private route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);

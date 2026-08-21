@@ -40,8 +40,8 @@ public class UniCommerceValidator : IUniCommerceValidator
         var paidPoints = GetDecimal(payload, "PaidWithPointsAmount");
         var customerCredit = GetDecimal(payload, "CustomerCreditAmount");
 
-        var totalSettled = Math.Round(paidOnline + paidPoints + customerCredit, 2);
-        if (Math.Abs(totalSettled - netAmount) > 0.01m)
+        var totalSettled = Math.Round(paidOnline + paidPoints + customerCredit, 4);
+        if (Math.Abs(totalSettled - netAmount) > 0.0001m)
         {
             errors.Add($"PaidOnlineAmount ({paidOnline}) + PaidWithPointsAmount ({paidPoints}) + CustomerCreditAmount ({customerCredit}) must equal NetAmount ({netAmount}). Current total: {totalSettled}");
         }

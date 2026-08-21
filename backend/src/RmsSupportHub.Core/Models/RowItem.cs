@@ -16,7 +16,10 @@ public class RowItem
 
     public decimal GrossAmount => Math.Round(Quantity * ItemPrice, 2);
     public decimal RowTotalDiscount => Math.Round(ItemDiscount * Quantity, 2);
-    public decimal ItemVat => Math.Round((ItemPrice - ItemDiscount) * (VatPercentage / 100m), 2);
-    public decimal RowTotalVat => Math.Round(ItemVat * Quantity, 2);
-    public decimal NetAmount => Math.Round(GrossAmount - RowTotalDiscount + RowTotalVat, 2);
+    /// <summary>Uni-Commerce's contract preserves VAT at four decimal
+    /// places. Do not round ItemVat to currency precision before multiplying
+    /// by quantity.</summary>
+    public decimal ItemVat => Math.Round((ItemPrice - ItemDiscount) * (VatPercentage / 100m), 4);
+    public decimal RowTotalVat => Math.Round(ItemVat * Quantity, 4);
+    public decimal NetAmount => Math.Round(GrossAmount - RowTotalDiscount + RowTotalVat, 4);
 }

@@ -1,5 +1,6 @@
 import { Route, Routes } from '@angular/router';
 import { capabilityGuard } from './core/guards/capability.guard';
+import { productionBuilderGuard } from './core/guards/production-builder.guard';
 import { securePosOriginGuard } from './core/guards/secure-pos-origin.guard';
 import { TOOL_ROUTE_DATA, ToolRouteData } from './core/models';
 import { environment } from '../environments/environment';
@@ -26,11 +27,13 @@ const onlineOrdersWorkspaceRoute = (): Route => ({
     {
       path: 'order',
       data: { breadcrumb: 'Order Builder' },
+      canActivate: [productionBuilderGuard],
       loadComponent: () => import('./features/flat-order/flat-order.component').then(m => m.FlatOrderComponent)
     },
     {
       path: 'unicommerce',
       data: { breadcrumb: 'Invoice Builder' },
+      canActivate: [productionBuilderGuard],
       loadComponent: () => import('./features/unicommerce/unicommerce.component').then(m => m.UnicommerceComponent)
     },
     {
