@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-08-21
 - **Repository:** feature branch `feat/p0-d-ghc-unicommerce-local-pos`, based on `origin/main@87d4673edbb95b5400d9a632e3795bde12df4960`.
-- **Status:** P0-D bounded GHC E-Commerce and GHC Uni-Commerce Testing implementation is complete locally; Draft PR #26 is open against `main` and CI is pending for the pushed head.
+- **Status:** P0-D bounded GHC E-Commerce and GHC Uni-Commerce Testing implementation is complete locally; Draft PR #26 is open against `main`, with hosted CI required for each pushed head.
 
 ## Testing configuration and schema evidence
 
