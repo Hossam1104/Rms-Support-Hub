@@ -1,8 +1,8 @@
 # Current Project State
 
 - **Updated:** 2026-08-21
-- **Repository:** `feat/p0-d-ghc-unicommerce-local-pos` at `c6d0f4a97b6a75cffd8cb304638ab0c84ef2eb63`, based on the normal merge of `origin/main@b04c8e4`; PR #26 remains open and Draft.
-- **Status:** PR #26 acceptance corrections are pushed and exact-head Support Hub CI run `32448189308` passed. The branch has not been merged. The correction closes the Uni-Commerce complete-draft write race, adds deterministic browser persistence/send ordering regressions, corrects Uni environment metadata, normalizes GHC `order_phone`, and makes Uni history response/exception semantics match the verified `ExternalInvoiceRequests` schema.
+- **Repository:** `feat/p0-d-ghc-unicommerce-local-pos` at `307e5eac15eff0e1690ddd2d15f96c548ae96bf2`, based on the normal merge of `origin/main@b04c8e4`; PR #26 remains open and Draft.
+- **Status:** PR #26 acceptance corrections are pushed and exact-head Support Hub CI run `32448440015` passed. The branch has not been merged. The correction closes the Uni-Commerce complete-draft write race, adds deterministic browser persistence/send ordering regressions, corrects Uni environment metadata, normalizes GHC `order_phone`, and makes Uni history response/exception semantics match the verified `ExternalInvoiceRequests` schema.
 
 ## Validation evidence
 
