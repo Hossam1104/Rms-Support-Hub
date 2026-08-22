@@ -1,7 +1,8 @@
 # ADR-0015: Separate Windows POS Agent and direct browser trust boundary
 
-- Status: Accepted; INT-00R transport hardening complete; deployment evidence remains open
+- Status: Accepted (Historical delivered baseline; superseded by ADR-0029 as future target architecture only)
 - Affected area: POS process isolation, privileged operations, Support Hub API boundary
+- Note: Superseded by ADR-0029 as the future target architecture. This document remains the authoritative historical record of the delivered browser-to-loopback implementation (E07-E09).
 
 ## Context
 

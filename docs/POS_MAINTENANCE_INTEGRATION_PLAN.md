@@ -1,5 +1,14 @@
 # POS Maintenance Cross-Project Integration Plan
 
+> [!IMPORTANT]
+> **Architecture Target Rebaseline (CR-001 / ADR-0029):**
+> Historical browser-to-loopback architecture (`https://rms-pos-agent.localhost:5001`) remains delivered, verified historical evidence (E07–E09) but is **not** the future target after the approval of **CR-001** and **ADR-0029**.
+> The approved future target architecture transitions to a **Dual Control-Surface Model**:
+> 1. Standalone native **WPF Desktop Application** (`RmsSupportAgent.Desktop.Wpf`) communicating via **Windows Named Pipes** to `RmsSupportAgent.Service` for 100% autonomous local operations.
+> 2. Centralized **Angular Administrator Dashboard** in Support Hub providing fleet supervision, WPF telemetry monitoring, and allowlisted typed remote commands via persistent outbound **SignalR over HTTPS**.
+> 3. Single **Shared Capability Seam** in the Agent application layer—zero duplication of privileged logic.
+> Historical implementation evidence in this document is preserved intact.
+
 ## Slice C implementation rebaseline — 2026-08-16
 
 The destination implementation now includes the permanent `RmsSupportAgent`

@@ -1,318 +1,315 @@
 # RMS+ Support Hub — Business Requirements Document (BRD)
 
-**Version:** 1.0  
-**Status:** Baseline for delivery planning  
-**Product:** RMS+ Support Hub  
-**Repository:** `Hossam1104/Rms-Support-Hub`  
-**Prepared:** 2026-08-21
+**Version:** 1.1
+**Status:** Baselined with Approved WPF Agent & Fleet Supervision Re-Architecture (CR-001)
+**Product:** RMS+ Support Hub
+**Repository:** `Hossam1104/Rms-Support-Hub`
+**Prepared:** 2026-08-22
+**Acceptance Authority:** GPT-5.6 Sol
+
+---
 
 ## 1. Executive Summary
 
-RMS+ Support Hub is an internal engineering and support platform that unifies three operational areas:
+RMS+ Support Hub is an internal engineering and operational support platform that unifies three operational areas:
 
-1. **QA Productivity Tooling**
-2. **Online Order Integration Operations**
-3. **Secure POS Diagnostics and Maintenance**
+1. **QA Productivity Tooling:** Governed Prompt Studio authoring for bug reports, user stories, and test cases with multi-format export.
+2. **Online Order Integration Operations:** Multi-tenant integration workspace for UPC E-Commerce, GHC E-Commerce, and GHC Uni-Commerce order flows, draft management, server-side validation, exact JSON previews, and server-gated Production mutations.
+3. **POS Diagnostics, Maintenance & Fleet Supervision:** Dual control-surface architecture comprising:
+   - An always-running **Windows Agent Service** (`RmsSupportAgent.Service`) on target machines owning privileged machine execution and device identity.
+   - A standalone native **WPF Desktop Application** (`RmsSupportAgent.Desktop.Wpf`) providing local users with autonomous maintenance capabilities even when disconnected.
+   - A centralized **Angular Administrator Dashboard** providing real-time fleet supervision, machine health telemetry, WPF issue monitoring, and typed remote support commands.
 
-The product replaces fragmented scripts, manual SQL, direct API calls and standalone support utilities with governed, environment-aware workflows. It uses a shared Angular/.NET application for central capabilities and a machine-local Windows Agent for privileged POS operations.
+The platform eliminates fragmented scripts, manual SQL queries, direct API calls, and unmanaged utilities while guaranteeing that privileged logic is never duplicated across local desktop and central web surfaces.
+
+---
 
 ## 2. Business Problem
 
-Before RMS+ Support Hub, QA and support activities were distributed across multiple tools and operator-specific processes. This created inconsistent workflows, environment-selection risk, manual payload construction, fragmented troubleshooting, limited auditability and duplicated maintenance utilities.
+Before RMS+ Support Hub, QA and support activities were distributed across disparate scripts, manual Postman collections, and operator-specific utilities:
+- Inconsistent payload construction and high environment-selection risk.
+- Lack of auditability and authorization for privileged machine-level operations.
+- Operational dependency on central network connectivity for store-level POS troubleshooting.
+- Browser friction in retail environments (CORS, Local Network Access permissions, and local certificate installation).
+- Lack of centralized fleet-wide visibility into POS machine health, software versions, and application crashes.
 
-The Support Hub provides one governed workspace with controlled integration routing, shared UX, centralized business rules and a secure local-agent boundary for machine-level operations.
+RMS+ Support Hub resolves these challenges by providing one governed workspace with server-owned configuration, strict safety gates, autonomous store-level desktop tooling, and centralized administrator supervision.
+
+---
 
 ## 3. Business Objectives
 
-- **BO-01:** Unify QA, Online Order and POS support tooling.
-- **BO-02:** Reduce operational and Production-environment risk.
-- **BO-03:** Standardize QA bug/story/test-case authoring.
-- **BO-04:** Improve Online Order build, validation, submission and troubleshooting.
-- **BO-05:** Improve POS diagnostics and controlled maintenance.
-- **BO-06:** Improve auditability of privileged operations.
-- **BO-07:** Improve release confidence through deterministic builds and CI.
-- **BO-08:** Support additional integration modules without redesigning the platform.
-- **BO-09:** Establish end-to-end traceability from requirements to implementation and validation.
+- **BO-01:** Unify QA tooling, Online Order integrations, and POS support capabilities into one cohesive ecosystem.
+- **BO-02:** Eliminate unauthorized or accidental Production mutations through fail-closed server-enforced security gates.
+- **BO-03:** Standardize QA artifact authoring with deterministic prompt engineering and export utilities.
+- **BO-04:** Provide accurate, client-specific payload authoring, validation, submission, and troubleshooting for Online Orders.
+- **BO-05:** Guarantee 100% autonomous local POS diagnostics, database recovery, and service maintenance when stores are offline.
+- **BO-06:** Provide centralized administrator fleet supervision, health telemetry, and issue monitoring across all store endpoints.
+- **BO-07:** Enforce strict auditability and correlation for all privileged local and remote operations without duplicating business logic.
+- **BO-08:** Ensure deterministic release candidates, package signature verification, and health-committed rollback lifecycles.
+- **BO-09:** Maintain end-to-end traceability from business requirements to Azure DevOps work items, GitHub PRs, automated tests, and deployment evidence.
+
+---
 
 ## 4. Stakeholders
 
-| Role | Primary Need |
-|---|---|
-| QA Engineer | Build test payloads, inspect responses, refine bugs/stories, generate test cases |
-| QA Lead | Standardize quality and validate delivery against requirements |
-| Support Engineer | Diagnose order, database, service and POS incidents |
-| RMS Operator | Perform bounded operational actions |
-| Development Team | Reproduce issues and inspect controlled evidence |
-| Architect / Technical Lead | Protect architecture, security and environment boundaries |
-| Management | Track scope, readiness, progress and roadmap |
-| System Administrator | Deploy and operate Support Hub and POS Agent infrastructure |
+| Role | Primary Responsibility & Need | Primary Surface |
+|---|---|---|
+| **QA Engineer** | Author test payloads, validate schemas, refine bugs/stories, generate test cases | QA Prompt Studio & Online Orders (Hub) |
+| **QA Lead** | Govern quality criteria, verify regression suites, maintain requirement traceability | Support Hub & Azure DevOps |
+| **Support Engineer** | Diagnose order failures, inspect logs, fetch Support Bundles, monitor fleet health | Angular Admin Fleet Dashboard |
+| **Fleet Administrator** | Supervise estate health, monitor WPF crashes, trigger approved remote maintenance | Angular Admin Fleet Dashboard |
+| **POS Technician / Operator** | Perform local diagnostics, database backup/restore, service restart, and branch reset on-site | WPF Desktop Application |
+| **Architect / Technical Lead** | Protect system trust boundaries, security architecture, and communication contracts | Governance & Architecture (ADRs) |
+| **Management** | Track delivery progress, system reliability, and roadmap execution | Azure DevOps & Executive Metrics |
+
+---
 
 ## 5. Product Scope
 
 ### 5.1 QA Prompt Studio
-- Bug refinement
-- User-story refinement
-- Test-case generation
-- Generic Markdown, Jira and Azure DevOps output
-- Deterministic quality feedback
-- Bounded browser-local history
-- Client-side privacy boundary
+- Bug refinement and structured defect authoring.
+- User story refinement with acceptance criteria generation.
+- Test case authoring with step-by-step verification.
+- Deterministic export formats: Generic Markdown, Jira, and Azure DevOps.
+- Deterministic quality guidance and prompt scoring.
+- Client-side privacy boundary with bounded browser-local history.
 
 ### 5.2 Online Order Operations
-Supported/registered integration families:
-- UPC E-Commerce
-- GHC E-Commerce
-- GHC Uni-Commerce
-- OMS placeholder
-- Call Center placeholder
+Supported integration modules:
+- **UPC E-Commerce:** Flat-order payload, branch/item/consumer lookup, submission, OrderRequests history, cancellation, same-number resend.
+- **GHC E-Commerce:** GHC flat-order payload, contact/delivery fields, card/credit payment metadata, Testing submission, request history.
+- **GHC Uni-Commerce:** Specialized multi-row invoice payload, invoice/return metadata, draft persistence, consumer lookup, Testing submission, request history adapter.
+- **Future Modules:** OMS and Call Center (architecture-ready).
 
 Common capabilities:
-- server-owned environment configuration;
-- draft management;
-- branch/item/consumer lookup where supported;
-- server-side totals;
-- payload validation;
-- exact JSON preview;
-- request submission;
-- Production order/invoice mutations require an owner-configured unlock
-  secret and remain server-gated; Production Order Requests reads stay
-  available without unlocking, while Testing remains immediately usable;
-- request-history inspection where supported;
-- cancellation/resend where supported by the downstream contract.
+- Server-owned environment and connection resolution.
+- Server-side totals, VAT calculations, and business rule validation.
+- Exact compiled JSON payload preview.
+- Server-enforced Production mutation unlock gate over effective HTTPS.
+- Capability-aware action buttons with fail-closed status reasons.
 
-### 5.3 POS Maintenance
-- machine and RMS health;
-- RMS service visibility;
-- database diagnostics;
-- backup and guarded restore;
-- backup downloader;
-- cleanup and branch reset;
-- incident timeline;
-- Support Bundle;
-- Safety Snapshots;
-- constrained diagnostics;
-- package lifecycle;
-- rollback/recovery;
-- machine-owned trust;
-- direct HTTPS browser-to-Agent communication.
+### 5.3 POS Maintenance & Fleet Supervision
 
-### 5.4 Platform and Release Management
-- Testing-first environment policy;
-- Production policy gates;
-- deterministic release candidates;
-- build identity;
-- external server-owned configuration;
-- IIS deployment;
-- CI validation;
-- OpenAPI contracts;
-- backend/frontend/POS regression suites.
+#### A. Delivered Historical Baseline (E07–E09)
+*Direct Browser-to-Loopback Architecture (`https://rms-pos-agent.localhost:5001`):*
+- Machine and RMS installation discovery.
+- Supported RMS service health and one-use token service restart.
+- Database health diagnostics, backup, and guarded restore.
+- Cleanup previews and guarded branch reset protecting native RMS services.
+- Safety Snapshots, incident timeline, and sanitized Support Bundle generation.
+- Machine-pinned package trust, signature verification, SCM lifecycle, and rollback recovery.
+- Windows Negotiate authentication, exact-origin CORS, and LNA browser policies.
+
+#### B. Approved Future Target Architecture (CR-001, ADR-0029)
+*Dual Control-Surface Architecture (WPF Standalone + Angular Admin Fleet Supervision):*
+- **WPF Standalone Desktop:** Native Windows UI providing local autonomous access to all retained maintenance features over authenticated Windows Named Pipes, operating completely offline.
+- **Always-Running Agent Service:** Privileged machine execution boundary, owning device identity, Named Pipe IPC listener, outbound SignalR client, WPF supervision, and offline event queue.
+- **Angular Admin Fleet Supervision:** Central dashboard aggregating registered machines, Agent heartbeats, WPF application crashes/heartbeats/versions, central issues board, machine operational timelines, and allowlisted typed remote commands.
+- **Shared Capability Seam:** Single transport-agnostic command/query application layer shared by local IPC and remote Hub channels—zero duplicated privileged logic.
+
+### 5.4 Platform & Release Governance
+- Testing-first default operational tier; Production policy disabled in Testing.
+- Server-owned external JSON configuration outside application packages.
+- Deterministic release-candidate packaging with build identity and integrity manifests.
+- Multi-lane CI workflows (Support Hub CI and POS CI).
+- Machine trust configuration, signer pin validation, and rollback checkpoints.
+
+---
 
 ## 6. Business Requirements
 
-- **BR-001 Unified Workspace:** One application shall expose all supported tools through a consistent shell.
-- **BR-002 Operational Safety:** The platform shall not expose arbitrary SQL, command execution, filesystem access, service targeting or browser-selected infrastructure targets.
-- **BR-003 Environment Separation:** Testing and Production shall be separate authorities; Testing shall not silently contact Production.
-- **BR-004 Server-owned Configuration:** Endpoints, database connections and sensitive routing shall be resolved server-side.
-- **BR-005 Deterministic QA Authoring:** QA Prompt Studio shall produce consistent structured outputs for bugs, stories and test cases.
-- **BR-006 Client-specific Contracts:** Online Order modules shall preserve their real downstream payload and behavior differences.
-- **BR-007 Payload Preview:** Users shall be able to inspect exact server-generated JSON before dispatch.
-- **BR-008 Server-side Calculations:** Totals, VAT, delivery and payment reconciliation shall be authoritative on the backend where applicable.
-- **BR-009 Controlled Lookup:** Supported modules shall provide bounded item, consumer and branch lookups using server-owned configuration.
-- **BR-010 Request Visibility:** Supported integrations shall expose bounded request-history lists and detailed request/response evidence.
-- **BR-011 Safe Cancellation:** Cancellation shall be available only for supported and eligible orders.
-- **BR-012 Safe Resend:** Resend shall preserve authoritative stored request identity/data according to the client contract.
-- **BR-013 POS Local Boundary:** Privileged POS operations shall execute through the local RMS Support Agent, not through the central API as a privileged relay.
-- **BR-014 Windows Authorization:** POS privileged endpoints shall require Windows authentication and local-administrator authorization.
-- **BR-015 Secure Transport:** POS Agent traffic shall use HTTPS loopback with exact-origin browser policy.
-- **BR-016 Native Service Protection:** Native RMS services shall not be arbitrarily deleted or controlled outside approved workflows.
-- **BR-017 Sanitized Diagnostics:** Diagnostic evidence shall be bounded and shall not expose credentials, private keys or unrestricted sensitive content.
-- **BR-018 Safe Database Recovery:** Backup/restore shall use typed, validated, concurrency-safe workflows.
-- **BR-019 Package Trust:** Agent lifecycle shall enforce machine-owned trust, signer validation, integrity and rollback-aware behavior.
-- **BR-020 Auditability:** Security-sensitive POS operations shall emit durable sanitized audit evidence.
-- **BR-021 Deterministic Release:** Releases shall carry source/build identity and integrity evidence.
-- **BR-022 External Deployment Configuration:** Deployment secrets shall remain outside application packages.
-- **BR-023 Fail Closed:** Missing or untrusted configuration shall block capability rather than fall back to guessed/browser-provided values.
-- **BR-024 Extensible Modules:** New integrations shall be introduced through module contracts and capability metadata.
-- **BR-025 Traceability:** Business requirements shall map to Azure DevOps work items, GitHub PRs, tests and release evidence.
-- **BR-026 Production Mutation Safety:** UPC E-Commerce, GHC E-Commerce and GHC Uni-Commerce Production send/cancel/resend mutations shall remain locked until an owner-configured Production unlock secret is verified server-side over effective HTTPS. The Production unlock and mutation routes shall fail closed over effective HTTP; the Production session cookie shall be Secure; HSTS shall be active where applicable; and TLS-terminating proxies shall be trusted only through an explicit server-owned proxy/network allowlist. Read-only Production Order Requests shall remain available without unlock, and Testing shall not require this ceremony.
+### Core Platform & Governance (BR-001 – BR-026)
+- **BR-001 Unified Workspace:** One application shell shall expose all supported central tools through a consistent navigation experience.
+- **BR-002 Operational Safety:** The platform shall strictly prohibit arbitrary SQL execution, generic command shells, arbitrary filesystem browsing, and unconstrained process launching.
+- **BR-003 Environment Separation:** Testing and Production shall remain completely isolated; Testing workflows shall never contact Production infrastructure.
+- **BR-004 Server-owned Configuration:** Endpoints, database connections, and credentials shall be resolved exclusively server-side.
+- **BR-005 Deterministic QA Authoring:** QA Prompt Studio shall produce structured, reproducible bug reports, user stories, and test cases.
+- **BR-006 Client-specific Contracts:** Online Order integrations shall faithfully implement verified downstream client contracts without invented fields.
+- **BR-007 Payload Preview:** Users shall be able to inspect exact server-compiled JSON payloads before submission.
+- **BR-008 Server-side Calculations:** Order totals, VAT, delivery charges, and payment reconciliations shall be computed authoritatively on the backend.
+- **BR-009 Controlled Lookup:** Supported modules shall provide bounded item, consumer, and branch lookups using server-owned endpoints.
+- **BR-010 Request Visibility:** The platform shall provide searchable request history and detailed payload/response inspection.
+- **BR-011 Safe Cancellation:** Order cancellation shall be permitted only for supported integrations and eligible order statuses.
+- **BR-012 Safe Resend:** Resend shall re-dispatch authoritative stored payloads using original request identifiers per client contract.
+- **BR-013 POS Local Boundary:** Privileged machine operations shall execute through the local Agent Service, not via central API relay.
+- **BR-014 Windows Authorization:** POS privileged endpoints shall require Windows authentication and Administrator authorization.
+- **BR-015 Secure Transport:** POS communication channels shall be strictly encrypted and authenticated.
+- **BR-016 Native Service Protection:** Native RMS services and databases shall be strictly protected from accidental deletion or disruption during maintenance.
+- **BR-017 Sanitized Diagnostics:** Diagnostic outputs and Support Bundles shall redact passwords, API keys, private keys, and connection strings.
+- **BR-018 Safe Database Recovery:** Database backup and restore shall enforce concurrency leases, pre-flight safety checks, and rollback snapshots.
+- **BR-019 Package Trust:** Agent and client packages shall enforce cryptographic signature verification, machine-pinned trust, and rollback checkpoints.
+- **BR-020 Auditability:** All privileged operations shall produce durable, sanitized audit records.
+- **BR-021 Deterministic Release:** Releases shall carry immutable source commit, build identity, and cryptographic integrity hashes.
+- **BR-022 External Deployment Configuration:** Deployment secrets and environment configurations shall remain outside application binaries.
+- **BR-023 Fail Closed:** Missing configuration, untrusted certificates, or authorization failures shall block execution rather than fall back to insecure defaults.
+- **BR-024 Extensible Modules:** New integration modules shall be introduced through strongly-typed capability interfaces without platform redesign.
+- **BR-025 Traceability:** Business requirements shall map bidirectionally to Azure DevOps work items, GitHub PRs, automated tests, and deployment evidence.
+- **BR-026 Production Mutation Safety:** Production order mutations (send, cancel, resend) shall remain locked until unlocked via server-verified secret over effective HTTPS, enforcing Secure session cookies, HSTS, and allowlisted proxy trust.
+
+### WPF Standalone & Admin Fleet Supervision (BR-027 – BR-040)
+- **BR-027 Dual Control Surfaces:** The platform shall provide dual control surfaces for machine-local POS maintenance: a local native WPF desktop application and a central Angular administrator dashboard, both operating through one shared Agent capability layer.
+- **BR-028 Standalone Local Operation:** The WPF desktop application and local Agent Service shall function autonomously for all supported maintenance workflows when disconnected from the central Support Hub or external network.
+- **BR-029 Central Fleet Supervision:** The central Angular dashboard shall provide administrators with unified visibility over registered POS machines, Agent heartbeats, WPF application states, RMS health, and aggregated operational issues.
+- **BR-030 Shared Capability Authority:** All privileged maintenance logic, validation rules, mutation leases, and diagnostic operations shall be implemented in a single transport-agnostic Agent application layer invoked identically by local IPC and remote Hub requests.
+- **BR-031 WPF Health Telemetry:** The Agent Service shall monitor the local WPF process state, heartbeat, version, and unhandled crashes, publishing health telemetry to the central Hub independently of the desktop UI process.
+- **BR-032 Secure Outbound Agent Communication:** Agent-to-Hub communication shall be initiated by the Agent as an outbound, authenticated, encrypted SignalR connection over HTTPS, requiring no inbound listening ports on target machines.
+- **BR-033 Device Identity:** Each remotely manageable POS machine shall have a unique, server-recognized device identity backed by cryptographic credentials managed outside application packages.
+- **BR-034 Secure Local IPC:** WPF-to-Agent communication uses authenticated Windows Named Pipes restricted to explicitly approved local identities/groups; the Agent performs per-command authorization, requiring administrator/elevated authority for high-risk operations.
+- **BR-035 Typed Remote Commands:** Remote operations issued from the central Hub shall be restricted to an allowlisted catalogue of strongly-typed commands; generic shell, arbitrary PowerShell, generic SQL, and arbitrary process execution are strictly prohibited.
+- **BR-036 Offline Resilience:** Local workflows and durable audit logging shall operate during network outages; pending telemetry and audit records shall be buffered locally and synchronized upon reconnection.
+- **BR-037 Unified Audit:** Local and remote operations shall generate durable, sanitized audit records sharing a common correlation model, identifying the originating caller, machine identity, operation parameters, and execution outcome.
+- **BR-038 WPF/Agent Version Management:** The platform shall enforce protocol version compatibility between the WPF client and Agent Service, surface version drift centrally, and govern package updates through signed, rollback-capable lifecycles.
+- **BR-039 Migration Safety:** The legacy browser-direct loopback POS maintenance path shall remain operational side-by-side during parity migration and shall only be deprecated after full functional and security acceptance on representative machines.
+- **BR-040 Admin-only Fleet Control:** Central fleet supervision and remote command execution shall be strictly restricted to authenticated administrators holding verified administrative roles.
+
+---
 
 ## 7. Functional Requirements
 
 ### QA Prompt Studio
-- Create structured bug refinement.
-- Create structured story refinement.
-- Create structured test cases.
-- Export Generic Markdown, Jira and Azure DevOps formats.
-- Provide deterministic quality guidance.
-- Keep bounded browser-side history.
-- Avoid external AI-provider transmission for Prompt Studio generation.
+- Structured bug, user story, and test case authoring.
+- Multi-format exports (Markdown, Jira, Azure DevOps).
+- Deterministic quality score and refinement tips.
+- Browser-local storage isolation.
 
-### Online Order Core
-- Discover registered modules and capabilities.
-- Select only server-approved environments.
-- Load/save operator drafts.
-- Calculate authoritative totals.
-- Build and validate exact module payloads.
-- Preview compiled JSON.
-- Submit through server-resolved endpoints.
-- Return sanitized downstream results.
-- Provide bounded endpoint/database diagnostics.
+### Online Order Operations
+- Module discovery, server-owned environment resolution, and draft persistence.
+- Authoritative server-side totals, VAT calculations, and schema validation.
+- JSON preview and sanitized submission dispatch.
+- Server-enforced Production unlock ceremony over effective HTTPS.
+- Canonical Order Requests history, filtering, detail inspection, and resend.
 
-### UPC E-Commerce
-- Branch, item and consumer lookup.
-- UPC-specific flat-order payload.
-- Order submission.
-- OrderRequests list/detail.
-- Safe cancellation.
-- Same-number resend.
-- Testing/Production policy separation.
+### POS Standalone WPF Desktop
+- Native desktop shell with design tokens and machine status dashboard.
+- RMS and Agent service health inspection and approved service restart.
+- Database health checks, storage diagnostics, backup creation, and guarded restore.
+- Diagnostic log inspection and redacted Support Bundle generation.
+- Safety Snapshot management and incident timeline visualization.
+- File/data cleanup preview and guarded branch reset protecting RMS services.
+- Package installation, upgrade, repair, uninstall, and rollback execution.
+- Searchable local audit activity history.
+- Authorized Local Operator support workflows with local Windows Administrator elevation verification and confirmation modals for high-risk mutating actions.
+- Full autonomous functionality in offline mode.
 
-### GHC E-Commerce
-- Verified GHC item and consumer lookup.
-- GHC-specific contact and delivery fields.
-- GHC-specific card/bank and credit-customer payment fields.
-- GHC-specific flat-order payload.
-- Testing submission through server-owned routing.
-- Request history where verified data exists.
-- Cancellation only where supported.
+### POS Admin Fleet Supervision (Angular Hub)
+- Registered machine inventory table with real-time online/offline status.
+- Central health dashboard aggregating Agent heartbeats and fleet KPIs.
+- WPF desktop health monitoring (running state, PID, heartbeat, crash alerts, version mismatch).
+- Central issues board categorizing fleet alerts by severity.
+- Machine detail view with hardware metrics, RMS configuration, and correlated timeline.
+- Allowlisted remote typed commands (diagnostics, log fetch, Support Bundle, backup, service restart, package lifecycle).
+- Server-enforced administrator RBAC and remote command policies.
+- Real-time command progress streaming, cancellation, and idempotency protection.
+- Fleet version distribution matrix and update campaign tracking.
+- Centralized cross-machine audit trail search.
 
-### GHC Uni-Commerce
-- Specialized invoice payload.
-- Invoice/return metadata and multi-row items.
-- Complete draft persistence.
-- Consumer lookup where verified.
-- Item lookup only when an authoritative compatible source exists.
-- Testing invoice submission.
-- History only when an authoritative source exists.
-- No invented cancel/resend behavior.
-
-### POS Maintenance
-- RMS installation discovery.
-- Supported service health.
-- Database health.
-- Approved backup and guarded restore.
-- Approved branch backup download.
-- Cleanup and branch reset.
-- Operational health.
-- Incident timeline.
-- Safe Support Bundle.
-- Safety Snapshots.
-- Manifest-defined diagnostics.
-- Trusted package lifecycle.
-- Exact HTTPS/authentication boundaries.
+---
 
 ## 8. Non-Functional Requirements
 
-- **Security:** fail closed on invalid trust/configuration/authorization.
-- **Reliability:** deterministic state for long-running and privileged operations.
-- **Performance:** list/search operations shall avoid loading unnecessary large payloads.
-- **Maintainability:** reuse common abstractions where contracts permit.
-- **Testability:** backend, frontend and POS capabilities shall retain automated coverage.
-- **Auditability:** privileged operations shall provide bounded durable evidence.
-- **Deployment Safety:** release packages shall not embed secrets.
-- **Compatibility:** local POS components shall support the approved Windows estate.
-- **Observability:** health should distinguish unavailable, unconfigured and policy-disabled states where practical.
+- **Security & Authorization:** Fail-closed design; bounded Named Pipe ACLs (SYSTEM, Administrators, dedicated RMS Support Operators group) and per-command Agent authorization for local IPC; outbound SignalR for remote control; server-enforced RBAC for admins.
+- **Offline Resilience:** Store-level maintenance must operate with 100% capability during network outages.
+- **Process Isolation:** WPF desktop crashes must never stop or disrupt the background Agent Service.
+- **Zero Privilege Duplication:** Shared application layer ensures 100% identical business rules for local and remote actions.
+- **Auditability:** Bounded, durable audit records capturing caller, timestamp, machine, action, and outcome.
+- **Performance:** Low CPU/memory footprint for background Agent Service; responsive native WPF UI.
+- **Deterministic Deployment:** Release packages carry build identity, SHA-256 manifests, and cryptographic signatures.
 
-## 9. Security and Governance
+---
 
-1. No committed credentials/private keys.
-2. No browser-supplied connection strings.
-3. No browser-supplied arbitrary downstream endpoints.
-4. No wildcard POS Agent CORS.
-5. No anonymous privileged POS operations.
-6. No generic remote command or SQL execution.
-7. Production disabled in Testing deployments.
-8. Package trust controlled by machine-owned configuration.
-9. Release evidence tied to exact source identity.
-10. Native RMS services protected from unrelated cleanup.
-11. Security-sensitive changes receive appropriate independent review.
+## 9. Security and Governance Principles
 
-## 10. Environment Strategy
+1. No credentials or private keys tracked in Git repository.
+2. No browser-selected database connection strings or arbitrary API URLs.
+3. No generic shell, arbitrary PowerShell, generic SQL, or arbitrary process execution.
+4. Production resources strictly disabled in Testing deployments.
+5. Local IPC restricted to `SYSTEM`, `Administrators`, and dedicated `RMS Support Operators` group via Windows Security Descriptors, with per-command Agent authorization for elevated actions.
+6. Outbound-only SignalR over HTTPS—no open listening ports on store machines.
+7. Unique per-machine cryptographic device identity.
+8. Remote mutating commands require verified administrator RBAC permissions.
+9. Package trust enforced via canonical machine trust configuration and signer pins.
+10. Native RMS services protected from accidental deletion or disruption.
+
+---
+
+## 10. Environment & Rollout Strategy
 
 ### Development
-Source development and automated validation.
+Local development and unit/integration test execution.
 
 ### Testing
-Default operational tier. Production resources remain policy-disabled. Testing configuration is server-owned and mutation tests use dedicated synthetic data.
+Default operational environment. Side-by-side validation of legacy browser-direct transport, WPF desktop app, and Admin supervision on representative POS machines.
 
 ### Production
-Separate authorized tier requiring authoritative configuration, release/package trust, PKI/certificates, deployment/rollback evidence and final acceptance.
+Separate authorized environment requiring:
+- Authoritative external configuration and secrets.
+- Real release PKI and production package signers.
+- Representative-machine rehearsals for Agent Service + WPF Desktop + Admin Hub.
+- Phased fleet rollout with automated rollback procedures.
+- Formal go-live acceptance by Owner and Architecture Authority.
 
-## 11. Current Delivery Status — 2026-08-21
+---
 
-### Delivered on `main`
-- Unified Support Hub shell
-- QA Prompt Studio
-- Online Order shared architecture
-- UPC E-Commerce major workflow
-- Environment safety and Production policy gating
-- Server-owned external configuration
-- Deterministic release-candidate pipeline
-- IIS Testing deployment capability
-- POS Agent foundation
-- POS diagnostics, recovery and maintenance slices
-- POS package-trust/lifecycle architecture and security hardening
+## 11. Current Delivery Status — 2026-08-22
 
-### In Review — Draft PR #26
-- Verified GHC Testing-schema integration
-- GHC request-history work
-- Additional GHC-specific payload/UI fields
-- GHC Uni-Commerce Testing configuration
-- Uni-Commerce consumer/history work where supported
-- Local Testing POS trust/runtime provisioning
-- Associated backend/frontend/POS regression coverage
+### Delivered on `main` (Merge `9272041`)
+- Unified Support Hub shell and QA Prompt Studio.
+- Online Order shared architecture (UPC, GHC, GHC Uni-Commerce).
+- Server-enforced Production mutation unlock gate (P0-F, PR #30).
+- External server configuration loader and deterministic release-candidate pipeline.
+- Local IIS Testing deployment and read-only acceptance.
+- POS Agent foundation, diagnostics, database recovery, and maintenance slices (E07–E09).
+- POS package trust, signer verification, SCM lifecycle, and rollback architecture.
 
-### Planned / Remaining
-- Independent review, CI acceptance and merge of PR #26
-- Diagnose downstream rejection causes observed during synthetic GHC/Uni Testing sends
-- Uni-Commerce item lookup if an authoritative compatible source becomes available
-- Uni-Commerce cancel/resend if upstream contracts are provided
-- Production configuration and acceptance
-- Real release PKI and Production signer establishment
-- Representative/fleet rollout validation
-- Managed browser/certificate rollout where required
-- OMS integration
-- Call Center integration
-- Remaining low-priority configuration/observability hardening
-- Azure DevOps requirements/delivery traceability
+### Baselined Target Architecture (CR-001, ADR-0029)
+- Approved transition from browser-direct loopback to **WPF Standalone + Admin Fleet Supervision**.
+- Azure DevOps Epics E16, E17, E18, E19 created and mapped.
+- E11 reconciled as superseded roadmap; E12 updated to target architecture.
+- Conversion roadmap (Phases 0–9) and first slice (`WPF-01`) defined.
+
+### Planned Implementation (Phases 1–9)
+- `WPF-01`: Extract shared Agent application layer + secure Named Pipe IPC foundation.
+- `WPF-02`: WPF native desktop application shell and local capability parity.
+- `WPF-03`: Agent-initiated SignalR connection, device identity, and fleet supervision in Angular Hub.
+- `WPF-04`: Allowlisted typed remote commands, backup streaming, and admin RBAC.
+- `WPF-05`: Side-by-side parity validation on representative machines and cutover.
+
+---
 
 ## 12. Out of Scope Unless Separately Approved
 
-- arbitrary Production access from Testing;
-- arbitrary SQL or PowerShell console;
-- unrestricted filesystem browser;
-- unrestricted Windows service manager;
-- central API as privileged POS relay;
-- invented behavior for integrations without authoritative contracts;
-- migration of user-bound encrypted legacy credentials into machine service context.
+- Rebuilding Online Orders or QA Prompt Studio in WPF (they remain central web applications).
+- Arbitrary remote desktop / screen sharing tools.
+- Generic PowerShell, CMD, or SQL interactive consoles.
+- Direct live mutations or un-gated fleet deployments to Production.
+- Replacing working internal Agent algorithms where reuse is proven and safe.
 
-## 13. Business Acceptance
+---
 
-A supported module/environment is acceptable when:
-1. registration and capability metadata are correct;
-2. required server configuration exists;
-3. environment policy permits the target;
-4. required database/endpoint diagnostics pass;
-5. exact business payload can be reviewed;
-6. malformed requests are blocked;
-7. supported lookup/history workflows return expected data;
-8. mutations obey business rules;
-9. no sensitive infrastructure data is exposed to the browser;
-10. automated tests and CI gates pass;
-11. deployment evidence identifies exact tested source;
-12. Production is not claimed ready until its separate gates are satisfied.
+## 13. Business Acceptance Criteria
 
-## 14. Success Measures
+A capability is acceptable when:
+1. Registration and capability metadata are verified.
+2. Required server and machine configurations exist and fail closed if missing.
+3. Environment safety policies permit the target operation.
+4. Pre-flight diagnostics and mutation leases pass.
+5. All operations obey business rules, redaction policies, and audit logging.
+6. Automated unit, integration, and security regression tests pass.
+7. WPF desktop application proves full parity and offline autonomy.
+8. Representative-machine Testing passes with live RMS instances.
+9. Formal sign-off is recorded by Architecture Authority (GPT-5.6 Sol) and Owner.
 
-- Reduced manual Postman/SQL/script use for covered workflows.
-- Reduced environment-selection errors.
-- Faster diagnosis of Online Order and POS incidents.
-- High automated regression pass rate.
-- Lower escaped-defect rate for covered workflows.
-- High percentage of Azure DevOps stories linked to PR and validation evidence.
+---
 
-## 15. Traceability Model
+## 14. Traceability Hierarchy
 
-`Business Requirement -> Epic -> User Story -> Acceptance Criteria -> GitHub PR -> Automated Tests -> Deployment Evidence`
-
-Azure DevOps should own delivery hierarchy. GitHub remains the source of truth for code, PRs and CI evidence. This BRD remains the business-level scope baseline.
+```text
+Business Requirements (BR-001..BR-040)
+  └── Azure DevOps Epics (E01..E19)
+        └── User Stories (US-*)
+              ├── Acceptance Criteria
+              ├── GitHub Pull Requests
+              ├── Automated Tests (Backend, Frontend, POS, Pester)
+              └── Deployment Evidence
+```
