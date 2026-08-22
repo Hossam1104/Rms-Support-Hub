@@ -27,7 +27,8 @@ LocalSystem/Administrators FullControl, explicit duplex-client rights for
 server token as LocalSystem before writing and matches request/correlation IDs.
 Group resolution is local-machine-only; source/authority combinations,
 diagnostic context propagation, and durable audit semantics are fail-closed.
-Stable `System.IO.Pipes.AccessControl` 5.0.0 is final; no preview remains.
+The stable `System.IO.Pipes.AccessControl` 5.0.0 attempt was removed because .NET 10 already
+provides the API and CI treats NU1510 as an error; no preview remains.
 
 ## WPF-01 acceptance evidence
 

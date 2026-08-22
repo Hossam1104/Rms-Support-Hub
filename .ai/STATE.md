@@ -48,10 +48,10 @@
 - Durable audit writes return a persistence result. Installation discovery
   returns `audit_unavailable` when its mandatory audit record is not durable;
   `agent.health` remains non-audited to avoid high-frequency audit spam.
-- `System.IO.Pipes.AccessControl` final version is stable `5.0.0`. The
-  mandated restore/build attempt succeeded; the package emitted only NU1510
-  because the API is also available from the .NET 10 BCL. The old preview is
-  no longer referenced.
+- The mandated stable `System.IO.Pipes.AccessControl` 5.0.0 attempt exposed
+  NU1510 because the API is already provided by the .NET 10 BCL; the explicit
+  reference is removed so strict CI (`--warnaserror`) stays clean. No preview
+  remains.
 
 ## Validation evidence
 
