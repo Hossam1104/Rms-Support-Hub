@@ -28,7 +28,7 @@ public sealed class LocalIpcFoundationTests
     };
 
     [Fact]
-    public void SecurityDescriptorContainsOnlyTheThreeAllowlistedPrincipals()
+    public void SecurityDescriptorContainsOnlyTheThreeAllowlistedPrincipalsAndExplicitNetworkDeny()
     {
         var operatorSid = new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2001");
         var security = LocalIpcSecurityDescriptor.Create(operatorSid);
@@ -38,8 +38,16 @@ public sealed class LocalIpcFoundationTests
             .ToArray();
         var sids = rules.Select(rule => ((SecurityIdentifier)rule.IdentityReference).Value).ToHashSet();
 
-        Assert.Equal(3, rules.Length);
-        Assert.All(rules, rule => Assert.Equal(System.Security.AccessControl.AccessControlType.Allow, rule.AccessControlType));
+        Assert.Equal(4, rules.Length);
+        Assert.Equal(3, rules.Count(rule => rule.AccessControlType == AccessControlType.Allow));
+        var networkRule = Assert.Single(rules, rule =>
+            ((SecurityIdentifier)rule.IdentityReference).Value ==
+            new SecurityIdentifier(WellKnownSidType.NetworkSid, null).Value);
+        Assert.Equal(AccessControlType.Deny, networkRule.AccessControlType);
+        Assert.Equal(PipeAccessRights.FullControl, networkRule.PipeAccessRights);
+        Assert.DoesNotContain(rules, rule =>
+            ((SecurityIdentifier)rule.IdentityReference).Value ==
+            new SecurityIdentifier(WellKnownSidType.WorldSid, null).Value);
         Assert.Equal(
             new HashSet<string>
             {
@@ -47,10 +55,84 @@ public sealed class LocalIpcFoundationTests
                 new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null).Value,
                 operatorSid.Value
             },
-            sids);
-        Assert.DoesNotContain(new SecurityIdentifier(WellKnownSidType.WorldSid, null).Value, sids);
+            rules.Where(rule => rule.AccessControlType == AccessControlType.Allow)
+                .Select(rule => ((SecurityIdentifier)rule.IdentityReference).Value)
+                .ToHashSet());
         Assert.DoesNotContain(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null).Value, sids);
         Assert.DoesNotContain(new SecurityIdentifier(WellKnownSidType.BuiltinGuestsSid, null).Value, sids);
+
+        var systemRule = Assert.Single(rules, rule =>
+            ((SecurityIdentifier)rule.IdentityReference).Value ==
+            new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null).Value);
+        Assert.Equal(AccessControlType.Allow, systemRule.AccessControlType);
+        var administratorRule = Assert.Single(rules, rule =>
+            ((SecurityIdentifier)rule.IdentityReference).Value ==
+            new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null).Value);
+        Assert.Equal(AccessControlType.Allow, administratorRule.AccessControlType);
+    }
+
+    [Fact]
+    public void OperatorAceUsesOnlyDuplexClientRightsAndCannotChangePipeSecurity()
+    {
+        var operatorSid = new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2001");
+        var security = LocalIpcSecurityDescriptor.Create(operatorSid);
+        var rule = Assert.Single(
+            security
+                .GetAccessRules(includeExplicit: true, includeInherited: true, targetType: typeof(SecurityIdentifier))
+                .Cast<PipeAccessRule>(),
+            candidate => ((SecurityIdentifier)candidate.IdentityReference).Equals(operatorSid));
+
+        var expected = PipeAccessRights.ReadData
+            | PipeAccessRights.WriteData
+            | PipeAccessRights.ReadExtendedAttributes
+            | PipeAccessRights.WriteExtendedAttributes
+            | PipeAccessRights.ReadAttributes
+            | PipeAccessRights.WriteAttributes
+            | PipeAccessRights.ReadPermissions
+            | PipeAccessRights.Synchronize;
+        Assert.Equal(AccessControlType.Allow, rule.AccessControlType);
+        Assert.Equal(expected, rule.PipeAccessRights);
+        var forbidden = new[]
+        {
+            PipeAccessRights.ChangePermissions,
+            PipeAccessRights.TakeOwnership,
+            PipeAccessRights.AccessSystemSecurity,
+            PipeAccessRights.CreateNewInstance,
+            PipeAccessRights.Delete
+        };
+        Assert.All(forbidden, rights => Assert.False(rule.PipeAccessRights.HasFlag(rights)));
+    }
+
+    [Fact]
+    public void GroupResolverAlwaysQualifiesUnqualifiedNamesToTheCurrentMachine()
+    {
+        var localSid = new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2101");
+        var bareCollisionSid = new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2102");
+        var resolver = new WindowsLocalIpcOperatorGroupResolver(new RecordingAccountSidResolver(
+            new Dictionary<string, SecurityIdentifier>(StringComparer.OrdinalIgnoreCase)
+            {
+                [$"{Environment.MachineName}\\RMS Support Operators"] = localSid,
+                ["DOMAIN\\RMS Support Operators"] = bareCollisionSid
+            }));
+
+        Assert.True(resolver.TryResolve("RMS Support Operators", out var resolved));
+        Assert.Equal(localSid, resolved);
+    }
+
+    [Fact]
+    public void GroupResolverAcceptsOnlyExplicitCurrentMachineQualification()
+    {
+        var localSid = new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2103");
+        var resolver = new WindowsLocalIpcOperatorGroupResolver(new RecordingAccountSidResolver(
+            new Dictionary<string, SecurityIdentifier>(StringComparer.OrdinalIgnoreCase)
+            {
+                [$"{Environment.MachineName}\\RMS Support Operators"] = localSid
+            }));
+
+        Assert.True(resolver.TryResolve($"{Environment.MachineName}\\RMS Support Operators", out var resolved));
+        Assert.Equal(localSid, resolved);
+        Assert.False(resolver.TryResolve("DOMAIN\\RMS Support Operators", out _));
+        Assert.False(resolver.TryResolve("FOREIGN-MACHINE\\RMS Support Operators", out _));
     }
 
     [Fact]
@@ -120,7 +202,8 @@ public sealed class LocalIpcFoundationTests
             TimeProvider.System);
         var server = new LocalIpcServer(
             options,
-            new FixedOperatorGroupResolver(currentSid),
+            new FixedOperatorGroupResolver(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null)),
+            new TestSecurityDescriptorFactory(),
             new TestInvocationContextFactory(),
             handler,
             status,
@@ -130,7 +213,7 @@ public sealed class LocalIpcFoundationTests
         try
         {
             Assert.NotEqual("unavailable", status.GetHealth().IpcStatus);
-            var client = new LocalIpcClient(options);
+            var client = new LocalIpcClient(options, new WindowsLocalIpcServerIdentityVerifier(currentSid));
             var health = await client.GetHealthAsync("health-correlation");
             var installation = await client.GetInstallationDiscoveryAsync("diagnostic-correlation");
 
@@ -205,7 +288,7 @@ public sealed class LocalIpcFoundationTests
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 SendRawTextAsync(options, "{\"padding\":\"" + new string('x', 2048) + "\"}"));
 
-            var client = new LocalIpcClient(options);
+            var client = new LocalIpcClient(options, new WindowsLocalIpcServerIdentityVerifier(currentSid));
             var health = await client.GetHealthAsync("after-invalid-request");
             Assert.True(health.Succeeded);
         }
@@ -233,7 +316,8 @@ public sealed class LocalIpcFoundationTests
         await server.StartAsync(CancellationToken.None);
         try
         {
-            var ipcResult = await new LocalIpcClient(options).GetInstallationDiscoveryAsync("parity-correlation");
+            var ipcResult = await new LocalIpcClient(options, new WindowsLocalIpcServerIdentityVerifier(currentSid))
+                .GetInstallationDiscoveryAsync("parity-correlation");
             Assert.True(ipcResult.Succeeded);
             Assert.Equal(
                 JsonSerializer.Serialize(httpResult, JsonOptions),
@@ -253,6 +337,7 @@ public sealed class LocalIpcFoundationTests
         var server = new LocalIpcServer(
             options,
             new MissingOperatorGroupResolver(),
+            new TestSecurityDescriptorFactory(),
             new TestInvocationContextFactory(),
             new RmsInstallationDiscoveryQueryHandler(
                 new InMemoryRmsInstallationDiscovery(),
@@ -276,7 +361,8 @@ public sealed class LocalIpcFoundationTests
     private static LocalIpcServer CreateServer(LocalIpcOptions options, SecurityIdentifier currentSid) =>
         new(
             options,
-            new FixedOperatorGroupResolver(currentSid),
+            new FixedOperatorGroupResolver(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null)),
+            new TestSecurityDescriptorFactory(),
             new TestInvocationContextFactory(),
             new RmsInstallationDiscoveryQueryHandler(
                 new InMemoryRmsInstallationDiscovery(),
@@ -327,6 +413,29 @@ public sealed class LocalIpcFoundationTests
         }
     }
 
+    private sealed class RecordingAccountSidResolver(
+        IReadOnlyDictionary<string, SecurityIdentifier> accounts) : ILocalIpcAccountSidResolver
+    {
+        public bool TryResolve(string accountName, out SecurityIdentifier sid) =>
+            accounts.TryGetValue(accountName, out sid!);
+    }
+
+    private sealed class TestSecurityDescriptorFactory : ILocalIpcSecurityDescriptorFactory
+    {
+        public PipeSecurity Create(SecurityIdentifier operatorGroupSid)
+        {
+            var currentSid = WindowsIdentity.GetCurrent().User
+                ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+            var security = new PipeSecurity();
+            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            security.AddAccessRule(new PipeAccessRule(
+                currentSid,
+                PipeAccessRights.FullControl,
+                AccessControlType.Allow));
+            return security;
+        }
+    }
+
     private sealed class MissingOperatorGroupResolver : ILocalIpcOperatorGroupResolver
     {
         public bool TryResolve(string configuredGroupName, out SecurityIdentifier operatorGroupSid)
@@ -352,8 +461,9 @@ public sealed class LocalIpcFoundationTests
 
     private sealed class RecordingAuditSink : IAgentAuditSink
     {
-        public void Record(AgentAuditEvent auditEvent)
+        public bool Record(AgentAuditEvent auditEvent)
         {
+            return true;
         }
     }
 }

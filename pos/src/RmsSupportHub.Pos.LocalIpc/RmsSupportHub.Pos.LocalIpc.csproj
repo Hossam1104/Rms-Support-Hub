@@ -10,9 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The package's available Windows ACL asset is the final 6.0 preview; the .NET 10 BCL
-         does not expose NamedPipeServerStreamAcl.Create without this transport-only asset. -->
-    <PackageReference Include="System.IO.Pipes.AccessControl" Version="6.0.0-preview.5.21301.5" />
+    <PackageReference Include="System.IO.Pipes.AccessControl" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,6 +3,7 @@ using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Snapshots;
+using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Snapshots;
 
@@ -14,8 +15,14 @@ public static class SafetySnapshotEndpoints
     {
         app.MapGet(
                 "/api/v1/safety-snapshots/preview",
-                async (SafetySnapshotService service, CancellationToken cancellationToken) =>
-                    Results.Ok(await service.PreviewAsync(cancellationToken).ConfigureAwait(false)))
+                async (
+                    HttpContext context,
+                    IAgentInvocationContextFactory contextFactory,
+                    SafetySnapshotService service,
+                    CancellationToken cancellationToken) =>
+                    Results.Ok(await service
+                        .PreviewAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                        .ConfigureAwait(false)))
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewSafetySnapshot")
             .WithTags("Safety Snapshot")
@@ -34,9 +41,10 @@ public static class SafetySnapshotEndpoints
                 async (
                     HttpContext context,
                     SafetySnapshotCaptureRequestDto request,
-                    SafetySnapshotService service,
-                    IMutationTokenStore tokens,
-                    IAgentPrincipalSidResolver principalSidResolver,
+                     SafetySnapshotService service,
+                     IMutationTokenStore tokens,
+                     IAgentPrincipalSidResolver principalSidResolver,
+                     IAgentInvocationContextFactory contextFactory,
                     AgentSecurityOptions securityOptions,
                     CancellationToken cancellationToken) =>
                 {
@@ -56,6 +64,7 @@ public static class SafetySnapshotEndpoints
                     try
                     {
                         var response = await service.CaptureAsync(
+                            contextFactory.CreateLegacyLoopback(context),
                             authorization.PrincipalSid!,
                             request.TypedConfirmation,
                             CorrelationIdContext.TryGet(context) ?? "unavailable",

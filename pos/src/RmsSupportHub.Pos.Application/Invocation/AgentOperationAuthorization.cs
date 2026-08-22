@@ -44,22 +44,40 @@ public static class AgentOperationAuthorization
                 "The authenticated invocation context is invalid.");
         }
 
-        if (risk == AgentOperationRisk.AdministratorOnlyMutation)
+        if (risk is not AgentOperationRisk.ReadOnlyDiagnostic
+            and not AgentOperationRisk.AdministratorOnlyMutation)
         {
-            return context.AuthorizationLevel is
-                InvocationAuthorizationLevel.LocalAdministrator or
-                InvocationAuthorizationLevel.RemoteAdministrator
-                ? AgentAuthorizationDecision.Allow()
-                : AgentAuthorizationDecision.Deny(
-                    "administrator_authorization_required",
-                    "Administrator authority is required for this operation.");
+            return AgentAuthorizationDecision.Deny(
+                "operation_risk_unknown",
+                "The requested operation risk is not supported.");
         }
 
-        return context.AuthorizationLevel switch
+        if (risk == AgentOperationRisk.AdministratorOnlyMutation)
         {
-            InvocationAuthorizationLevel.LocalOperator
-                or InvocationAuthorizationLevel.LocalAdministrator
-                or InvocationAuthorizationLevel.RemoteAdministrator => AgentAuthorizationDecision.Allow(),
+            return context.Source switch
+            {
+                InvocationSource.LegacyLoopbackHttp
+                    when context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator =>
+                    AgentAuthorizationDecision.Allow(),
+                InvocationSource.LocalWpf
+                    when context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator =>
+                    AgentAuthorizationDecision.Allow(),
+                _ => AgentAuthorizationDecision.Deny(
+                    "administrator_authorization_required",
+                    "Administrator authority is required for this operation.")
+            };
+        }
+
+        return context.Source switch
+        {
+            InvocationSource.LegacyLoopbackHttp
+                when context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator =>
+                AgentAuthorizationDecision.Allow(),
+            InvocationSource.LocalWpf
+                when context.AuthorizationLevel is
+                    InvocationAuthorizationLevel.LocalOperator or
+                    InvocationAuthorizationLevel.LocalAdministrator =>
+                AgentAuthorizationDecision.Allow(),
             _ => AgentAuthorizationDecision.Deny(
                 "diagnostic_authorization_required",
                 "An authenticated authorized caller is required for this diagnostic operation.")

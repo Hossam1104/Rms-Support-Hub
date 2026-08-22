@@ -24,35 +24,44 @@ public sealed class RmsInstallationDiscoveryQueryHandler(
 
         if (!decision.Allowed)
         {
-            RecordAudit(context, "denied", decision.Code);
-            return ApplicationResult<RmsInstallationSnapshot>.Failure(decision.Code, decision.Message);
+            return RecordAudit(context, "denied", decision.Code)
+                ? ApplicationResult<RmsInstallationSnapshot>.Failure(decision.Code, decision.Message)
+                : ApplicationResult<RmsInstallationSnapshot>.Failure(
+                    "audit_unavailable",
+                    "The diagnostic query could not be completed because its audit record was unavailable.");
         }
 
         try
         {
             var result = await discovery.DiscoverAsync(cancellationToken).ConfigureAwait(false);
-            RecordAudit(context, "completed", null);
-            return ApplicationResult<RmsInstallationSnapshot>.Success(result);
+            return RecordAudit(context, "completed", null)
+                ? ApplicationResult<RmsInstallationSnapshot>.Success(result)
+                : ApplicationResult<RmsInstallationSnapshot>.Failure(
+                    "audit_unavailable",
+                    "The diagnostic query could not be completed because its audit record was unavailable.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            RecordAudit(context, "cancelled", "operation_cancelled");
+            _ = RecordAudit(context, "cancelled", "operation_cancelled");
             throw;
         }
         catch
         {
-            RecordAudit(context, "failed", "diagnostic_unavailable");
-            return ApplicationResult<RmsInstallationSnapshot>.Failure(
-                "diagnostic_unavailable",
-                "The RMS installation discovery query could not be completed.");
+            return RecordAudit(context, "failed", "diagnostic_unavailable")
+                ? ApplicationResult<RmsInstallationSnapshot>.Failure(
+                    "diagnostic_unavailable",
+                    "The RMS installation discovery query could not be completed.")
+                : ApplicationResult<RmsInstallationSnapshot>.Failure(
+                    "audit_unavailable",
+                    "The diagnostic query could not be completed because its audit record was unavailable.");
         }
     }
 
-    private void RecordAudit(InvocationContext? context, string outcome, string? failureCode)
+    private bool RecordAudit(InvocationContext? context, string outcome, string? failureCode)
     {
         try
         {
-            audit.Record(new AgentAuditEvent(
+            return audit.Record(new AgentAuditEvent(
                 timeProvider.GetUtcNow(),
                 context?.AuthenticatedCaller ?? "unavailable",
                 Operation,
@@ -68,7 +77,7 @@ public sealed class RmsInstallationDiscoveryQueryHandler(
         }
         catch
         {
-            // Audit failure must not turn a read-only query into an unsafe retry signal.
+            return false;
         }
     }
 }

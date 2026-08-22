@@ -8,7 +8,8 @@ public enum InvocationSource
 {
     LegacyLoopbackHttp,
     LocalWpf,
-    RemoteHub
+    RemoteHub,
+    AgentInternal
 }
 
 /// <summary>Authorization facts derived by the Agent from the authenticated caller.</summary>

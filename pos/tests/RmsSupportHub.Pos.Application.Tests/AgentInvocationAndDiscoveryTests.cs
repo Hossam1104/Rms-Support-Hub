@@ -83,6 +83,99 @@ public sealed class AgentInvocationAndDiscoveryTests
     }
 
     [Fact]
+    public void SourceAndAuthorizationCombinationsFailClosedOutsideWpfAndLegacyHttp()
+    {
+        Assert.True(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.LocalWpf,
+                "S-1-5-21-operator",
+                InvocationAuthorizationLevel.LocalOperator,
+                "corr"),
+            AgentOperationRisk.ReadOnlyDiagnostic).Allowed);
+        Assert.True(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.LocalWpf,
+                "S-1-5-21-admin",
+                InvocationAuthorizationLevel.LocalAdministrator,
+                "corr"),
+            AgentOperationRisk.ReadOnlyDiagnostic).Allowed);
+        Assert.True(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.LegacyLoopbackHttp,
+                "S-1-5-21-admin",
+                InvocationAuthorizationLevel.LocalAdministrator,
+                "corr"),
+            AgentOperationRisk.AdministratorOnlyMutation).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.LocalWpf,
+                "S-1-5-21-remote-admin",
+                InvocationAuthorizationLevel.RemoteAdministrator,
+                "corr"),
+            AgentOperationRisk.ReadOnlyDiagnostic).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.LegacyLoopbackHttp,
+                "S-1-5-21-operator",
+                InvocationAuthorizationLevel.LocalOperator,
+                "corr"),
+            AgentOperationRisk.ReadOnlyDiagnostic).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.RemoteHub,
+                "S-1-5-21-remote-admin",
+                InvocationAuthorizationLevel.RemoteAdministrator,
+                "corr"),
+            AgentOperationRisk.ReadOnlyDiagnostic).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.RemoteHub,
+                "S-1-5-21-remote-admin",
+                InvocationAuthorizationLevel.RemoteAdministrator,
+                "corr"),
+            AgentOperationRisk.AdministratorOnlyMutation).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.AgentInternal,
+                "agent-internal",
+                InvocationAuthorizationLevel.LocalAdministrator,
+                "corr"),
+            AgentOperationRisk.AdministratorOnlyMutation).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                (InvocationSource)999,
+                "S-1-5-21-unknown",
+                InvocationAuthorizationLevel.LocalAdministrator,
+                "corr"),
+            AgentOperationRisk.ReadOnlyDiagnostic).Allowed);
+        Assert.False(AgentOperationAuthorization.Authorize(
+            new InvocationContext(
+                InvocationSource.LocalWpf,
+                "S-1-5-21-unknown",
+                InvocationAuthorizationLevel.LocalAdministrator,
+                "corr"),
+            (AgentOperationRisk)999).Allowed);
+    }
+
+    [Fact]
+    public async Task DiscoveryFailsClosedWhenDurableAuditIsUnavailable()
+    {
+        var handler = new RmsInstallationDiscoveryQueryHandler(
+            new FakeDiscovery(CreateSnapshot()),
+            new FailingAuditSink(),
+            TimeProvider.System);
+
+        var result = await handler.HandleAsync(new InvocationContext(
+            InvocationSource.LocalWpf,
+            "S-1-5-21-operator",
+            InvocationAuthorizationLevel.LocalOperator,
+            "corr-audit"));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("audit_unavailable", result.Error?.Code);
+    }
+
+    [Fact]
     public void UnsafeCorrelationContextFailsClosed()
     {
         var decision = AgentOperationAuthorization.Authorize(
@@ -153,6 +246,15 @@ public sealed class AgentInvocationAndDiscoveryTests
     {
         public List<AgentAuditEvent> Events { get; } = [];
 
-        public void Record(AgentAuditEvent auditEvent) => Events.Add(auditEvent);
+        public bool Record(AgentAuditEvent auditEvent)
+        {
+            Events.Add(auditEvent);
+            return true;
+        }
+    }
+
+    private sealed class FailingAuditSink : IAgentAuditSink
+    {
+        public bool Record(AgentAuditEvent auditEvent) => false;
     }
 }

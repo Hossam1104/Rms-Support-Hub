@@ -7,44 +7,43 @@ REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
 BRANCH: `feat/wpf-01-shared-agent-local-ipc`
 EPIC: E16 - Agent Platform Re-Architecture (#13017)
 PRIMARY STORIES: US-E16-02 (#13022), US-E16-04 (#13024)
-STATUS: Implemented; awaiting GPT-5.6 Sol review and acceptance
+STATUS: Implemented; Sol security remediation complete locally; awaiting GPT-5.6 Sol review and acceptance
 
 ## Completed WPF-01 implementation
 
-WPF-01 established the first transport-agnostic Agent application seam without
-renaming or replacing the existing `RmsSupportHub.Pos.*` projects or the legacy
-`PosAdminTool.WinUI` project.
+WPF-01 added the shared `InvocationContext`/authorization seam, shared RMS
+installation discovery, the typed HTTPS adapter, and the bounded v1
+`RmsSupportHub.Pos.LocalIpc` client/server with health and discovery operations.
+It preserves legacy HTTPS, Negotiate, CORS, mutation-token/package-trust flows,
+the old WinUI project, and all native RMS/customer boundaries. IPC is disabled
+by default and focused authorization, audit, ACL, protocol, bound, and parity
+tests are included.
 
-- Added `InvocationContext` and shared fail-closed operation authorization in
-  `RmsSupportHub.Pos.Application`.
-- Extracted RMS installation discovery into the shared
-  `RmsInstallationDiscoveryQueryHandler`.
-- Preserved the existing `/api/v1/rms/diagnostics` HTTPS behavior and added the
-  typed `/api/v1/rms/installation` adapter through the same application handler.
-- Added `RmsSupportHub.Pos.LocalIpc` with bounded version-1 JSON contracts and a
-  typed client for Agent health and installation discovery.
-- Added an Agent-hosted Windows Named Pipe listener, using an explicit ACL for
-  LocalSystem, Built-in Administrators, and the configured `RMS Support
-  Operators` group. Missing operator-group resolution fails closed.
-- Added focused authorization, audit, ACL, unauthorized-connection, protocol,
-  malformed/oversized-request, HTTP/IPC parity, and activation tests.
-- Local IPC remains disabled by default. No WPF UI, SignalR client, Production
-  configuration, native RMS service, or customer database was changed.
+## WPF-01 bounded Sol security remediation
+
+Draft PR #32 findings S01-S09 were corrected on this branch. Production ACL:
+LocalSystem/Administrators FullControl, explicit duplex-client rights for
+`RMS Support Operators`, and NETWORK deny. The client verifies the connected
+server token as LocalSystem before writing and matches request/correlation IDs.
+Group resolution is local-machine-only; source/authority combinations,
+diagnostic context propagation, and durable audit semantics are fail-closed.
+Stable `System.IO.Pipes.AccessControl` 5.0.0 is final; no preview remains.
 
 ## WPF-01 acceptance evidence
 
-The implementation was started from the clean main baseline
-`bd83e3b2c223e807f40e684fe61a5281c915674b` on the branch named above. The
-repository-supported Release build and POS test projects pass after setting
-the required Testing-only `PosAgentSecurity__SupportHubOrigin` environment
-variable. The standalone Agent runtime was not provisioned because that path
-requires the machine-owned Testing certificate; in-process Agent integration
-tests exercised the actual TestServer HTTPS adapter and Windows Named Pipe
-transport without changing machine or RMS state.
+The implementation started from clean main `bd83e3b2c223e807f40e684fe61a5281c915674b`.
+Release build and POS tests pass with the Testing-only origin environment
+variable. Standalone Agent startup was not provisioned because it requires the
+machine-owned Testing certificate; in-process HTTPS/Named Pipe checks changed
+no machine or RMS state.
 
 Final delivery is in Draft PR #32. POS CI and Support Hub CI passed for the
 final validation run; the PR remains unmerged and must remain Draft for Sol
 review.
+
+Local validation: Domain 12/12, Application 89/89, Infrastructure 155/155,
+Agent Integration 187/187; focused remediation 25/25; PowerShell parse gate
+37/37; Pester 3.4.0 172/172.
 
 ## WPF-02 - WPF Shell + Local Agent Health Experience
 

@@ -21,6 +21,7 @@ using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.Infrastructure.Configuration;
+using RmsSupportHub.Pos.Infrastructure.Audit;
 using RmsSupportHub.Pos.Infrastructure.Packages;
 using RmsSupportHub.Pos.Infrastructure.Snapshots;
 using RmsSupportHub.Pos.Infrastructure.Installation;
@@ -117,6 +118,12 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IAdministratorGroupChecker>();
             services.AddSingleton<IAdministratorGroupChecker, ClaimBasedAdministratorGroupChecker>();
+
+            services.RemoveAll<AgentAuditOptions>();
+            services.AddSingleton(new AgentAuditOptions
+            {
+                RootPath = Path.Combine(_databaseStorageRoot, "audit")
+            });
 
             services.RemoveAll<IAgentConfigurationStore>();
             services.AddSingleton<IAgentConfigurationStore>(_configurationStore);

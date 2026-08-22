@@ -6,8 +6,9 @@
 - **Working branch:** `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32.
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
-- **Status:** WPF-01 implementation and validation are complete; Draft PR #32
-  is awaiting Sol review. WPF-02 must not start until that acceptance.
+- **Status:** WPF-01 implementation and the bounded Sol security remediation
+  are complete locally; Draft PR #32 remains awaiting Sol review. WPF-02 must
+  not start until that acceptance.
 
 ## WPF-01 durable facts
 
@@ -22,26 +23,45 @@
   request/correlation matching, bounded request/response sizes, timeouts, and
   client concurrency.
 - The Agent Named Pipe listener is disabled by default. When enabled it uses an
-  explicit ACL for LocalSystem, Built-in Administrators, and the configured
-  `RMS Support Operators` group. Missing group resolution produces an
-  unavailable/no-listener state; no broad-principal fallback exists.
+  explicit ACL for LocalSystem and Built-in Administrators FullControl, and
+  explicit duplex-client rights (`ReadData`, `WriteData`, attributes,
+  `ReadPermissions`, and `Synchronize`) for the configured `RMS Support
+  Operators` group. An explicit NETWORK deny establishes the local-only pipe
+  boundary; no broad-principal allow or operator security/ownership/server-
+  instance rights exist. Missing group resolution produces an unavailable/no-
+  listener state; no broad-principal fallback exists.
 - The only initial IPC operations are `agent.health` and
   `rms.installation.discovery`. Client payloads do not provide identity or
   privilege authority. No WPF UI, SignalR, Production configuration, native
   RMS service, or customer database was changed.
-- The transport-only ACL package is pinned to the available
-  `System.IO.Pipes.AccessControl` `6.0.0-preview.5.21301.5` asset because the
-  current feed did not provide a compatible stable/.NET 10 asset. This remains
-  a dependency-review item before production packaging.
+- `LocalIpcClient` verifies the connected Named Pipe server PID token before it
+  writes a request. The default expected identity is LocalSystem, and the
+  verifier is injected behind a small interface for test seams and a future
+  service-account migration. Local group resolution machine-qualifies
+  unqualified names and rejects domain/foreign authorities.
+- Shared authorization now binds source to authority: LegacyLoopbackHttp is
+  local-admin only, LocalWpf supports local operator/admin according to risk,
+  RemoteHub and AgentInternal fail closed in WPF-01, and unknown combinations
+  are denied. Diagnostics, Support Bundle evidence, and Safety Snapshot
+  evidence receive the real invocation context; no synthetic admin overload
+  remains.
+- Durable audit writes return a persistence result. Installation discovery
+  returns `audit_unavailable` when its mandatory audit record is not durable;
+  `agent.health` remains non-audited to avoid high-frequency audit spam.
+- `System.IO.Pipes.AccessControl` final version is stable `5.0.0`. The
+  mandated restore/build attempt succeeded; the package emitted only NU1510
+  because the API is also available from the .NET 10 BCL. The old preview is
+  no longer referenced.
 
 ## Validation evidence
 
 - Release solution build: 0 warnings, 0 errors, with the required Testing-only
   `PosAgentSecurity__SupportHubOrigin` environment variable.
-- POS Release tests: Domain 12/12, Application 87/87, Infrastructure 155/155,
-  Agent Integration 179/179.
-- Focused IPC foundation tests: 8/8. Focused application seam tests are
-  included in the Application total; the WPF-01 additions contribute 5 tests.
+- POS Release tests: Domain 12/12, Application 89/89, Infrastructure 155/155,
+  Agent Integration 187/187.
+- Focused remediation tests: 25/25 for ACL, NETWORK deny, local group
+  resolution, server identity, correlation, bounded protocol, source policy,
+  audit failure, HTTPS/IPC parity, and context-overload coverage.
 - PowerShell quality: 37 tracked files parse cleanly; PSScriptAnalyzer was not
   installed. Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending.
 - TestServer HTTPS and in-process Windows Named Pipe integration exercised the

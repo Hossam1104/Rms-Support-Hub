@@ -23,15 +23,6 @@ public sealed class RmsDiagnosticsService(
     ReadOnlyServiceStatusService services,
     RmsDatabaseHealthService databaseHealth)
 {
-    private static readonly InvocationContext InternalContext = new(
-        InvocationSource.LegacyLoopbackHttp,
-        "agent-service",
-        InvocationAuthorizationLevel.LocalAdministrator,
-        "agent-internal");
-
-    public Task<RmsDiagnosticsDto> GetAsync(CancellationToken cancellationToken = default) =>
-        GetAsync(InternalContext, cancellationToken);
-
     public async Task<RmsDiagnosticsDto> GetAsync(
         InvocationContext context,
         CancellationToken cancellationToken = default)

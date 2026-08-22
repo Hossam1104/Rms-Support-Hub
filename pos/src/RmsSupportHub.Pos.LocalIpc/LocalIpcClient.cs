@@ -29,11 +29,15 @@ public sealed class LocalIpcClient
     };
 
     private readonly LocalIpcOptions options;
+    private readonly ILocalIpcServerIdentityVerifier serverIdentityVerifier;
 
-    public LocalIpcClient(LocalIpcOptions? options = null)
+    public LocalIpcClient(
+        LocalIpcOptions? options = null,
+        ILocalIpcServerIdentityVerifier? serverIdentityVerifier = null)
     {
         this.options = options ?? new LocalIpcOptions();
         this.options.Validate();
+        this.serverIdentityVerifier = serverIdentityVerifier ?? new WindowsLocalIpcServerIdentityVerifier();
     }
 
     public Task<LocalIpcCallResult<LocalIpcHealthDto>> GetHealthAsync(
@@ -77,6 +81,11 @@ public sealed class LocalIpcClient
             PipeOptions.Asynchronous);
         await pipe.ConnectAsync(timeout.Token).ConfigureAwait(false);
 
+        if (!serverIdentityVerifier.IsExpectedServer(pipe))
+        {
+            throw new LocalIpcProtocolException("The IPC server identity could not be verified.");
+        }
+
         timeout.CancelAfter(options.ReadTimeout);
         await pipe.WriteAsync(requestBytes, timeout.Token).ConfigureAwait(false);
         await pipe.WriteAsync("\n"u8.ToArray(), timeout.Token).ConfigureAwait(false);
@@ -97,6 +106,7 @@ public sealed class LocalIpcClient
 
         if (response.ProtocolVersion != LocalIpcProtocol.CurrentVersion
             || !string.Equals(response.RequestId, requestId, StringComparison.Ordinal)
+            || !string.Equals(response.CorrelationId, effectiveCorrelationId, StringComparison.Ordinal)
             || !IsSafeToken(response.CorrelationId))
         {
             throw new LocalIpcProtocolException("The IPC response envelope did not match the request.");

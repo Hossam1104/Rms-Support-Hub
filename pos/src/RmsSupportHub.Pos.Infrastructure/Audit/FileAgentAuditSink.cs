@@ -24,13 +24,14 @@ public sealed class FileAgentAuditSink(
     private readonly object gate = new();
     private readonly List<AgentAuditEvent> fallback = [];
 
-    public void Record(AgentAuditEvent auditEvent)
+    public bool Record(AgentAuditEvent auditEvent)
     {
         ArgumentNullException.ThrowIfNull(auditEvent);
         options.Validate();
         var safe = Sanitize(auditEvent);
         lock (gate)
         {
+            var persisted = false;
             try
             {
                 ServiceOwnedDirectoryProvisioner.EnsureProvisioned(options.RootPath);
@@ -40,6 +41,7 @@ public sealed class FileAgentAuditSink(
                 if (Encoding.UTF8.GetByteCount(line) <= options.MaximumBytes)
                 {
                     File.AppendAllText(path, line, Encoding.UTF8);
+                    persisted = true;
                 }
             }
             catch
@@ -51,6 +53,7 @@ public sealed class FileAgentAuditSink(
 
             fallback.Add(safe);
             while (fallback.Count > options.MaximumEntries) fallback.RemoveAt(0);
+            return persisted;
         }
     }
 

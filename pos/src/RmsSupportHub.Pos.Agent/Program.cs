@@ -75,7 +75,9 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 builder.Services.AddSingleton(securityOptions);
 builder.Services.AddSingleton(localIpcOptions);
 builder.Services.AddSingleton<LocalIpcRuntimeStatus>();
+builder.Services.AddSingleton<ILocalIpcAccountSidResolver, WindowsLocalIpcAccountSidResolver>();
 builder.Services.AddSingleton<ILocalIpcOperatorGroupResolver, WindowsLocalIpcOperatorGroupResolver>();
+builder.Services.AddSingleton<ILocalIpcSecurityDescriptorFactory, WindowsLocalIpcSecurityDescriptorFactory>();
 builder.Services.AddSingleton<LocalIpcServer>();
 builder.Services.AddHostedService(services => services.GetRequiredService<LocalIpcServer>());
 builder.Services.AddSingleton(TimeProvider.System);
@@ -289,7 +291,7 @@ builder.Services.AddSingleton(new SafetySnapshotOptions
     ProfileId = builder.Configuration["PosAgent:ProfileId"]
 });
 builder.Services.AddSingleton<ISafetySnapshotStore, FileSafetySnapshotStore>();
-builder.Services.AddSingleton<ISafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
+builder.Services.AddSingleton<IAuthorizedSafetySnapshotEvidenceSource, RmsSafetySnapshotEvidenceSource>();
 builder.Services.AddSingleton<SafetySnapshotService>();
 
 if (!isMetadataOnlyOpenApi)

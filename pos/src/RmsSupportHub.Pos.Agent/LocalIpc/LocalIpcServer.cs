@@ -21,6 +21,7 @@ namespace RmsSupportHub.Pos.Agent.LocalIpc;
 public sealed class LocalIpcServer(
     LocalIpcOptions options,
     ILocalIpcOperatorGroupResolver operatorGroupResolver,
+    ILocalIpcSecurityDescriptorFactory securityDescriptorFactory,
     IAgentInvocationContextFactory contextFactory,
     RmsInstallationDiscoveryQueryHandler installationDiscovery,
     LocalIpcRuntimeStatus status,
@@ -103,7 +104,7 @@ public sealed class LocalIpcServer(
                         PipeOptions.Asynchronous,
                         inBufferSize: 0,
                         outBufferSize: 0,
-                        LocalIpcSecurityDescriptor.Create(operatorGroupSid!));
+                        securityDescriptorFactory.Create(operatorGroupSid!));
                     await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
                     status.SetListening();
 
