@@ -7,7 +7,7 @@ REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
 BRANCH: `feat/wpf-02-wpf-shell-local-health`
 EPIC: E17 - WPF Standalone Local Operations (#13018)
 PRIMARY STORY: US-E17-01 - WPF shell and local machine dashboard (#13031)
-STATUS: Implemented; runtime verified; awaiting GPT-5.6 Sol review/acceptance
+STATUS: Implemented; final process runtime verified with visual evidence limited; awaiting GPT-5.6 Sol review/acceptance
 ## WPF-02 completed implementation
 
 WPF-02 added the native `RmsSupportHub.Pos.Desktop.Wpf` application beside the
@@ -44,19 +44,20 @@ Refresh/Retry action. Only Agent health is functional in this slice.
 - Full POS Release solution build with the Testing-only
   `PosAgentSecurity__SupportHubOrigin=https://localhost:4443` environment:
   0 warnings, 0 errors.
-- WPF focused tests: 11/11 passed.
+- WPF focused tests: 13/13 passed.
 - Full POS tests: Domain 12/12, Application 89/89, Infrastructure 155/155,
-  Agent Integration 234/234, WPF 11/11; 501/501 total.
+  Agent Integration 234/234, WPF 13/13; 503/503 total.
 - PowerShell quality gate: 37/37 tracked files parse cleanly; PSScriptAnalyzer
   was not installed.
 - Pester 3.4.0: 172/172 passed, 0 failed, 0 skipped, 0 pending.
 - `python .ai/scripts/check_memory.py`: passed.
 - `git diff --check`: passed.
-- Actual Release executable was launched and visually inspected in the current
-  Windows session. The window title was `RMS Support Hub`; normal and maximized
-  layouts rendered without observed clipping or overlap; Dashboard navigation,
-  health cards, safe timeout/unavailable state, and Refresh loading behavior
-  were verified.
+- The final Release WPF executable was launched in the interactive Windows
+  session. The process remained alive and responsive and exposed the expected
+  `RMS Support Hub` window title.
+- Runtime state remained truthfully Agent unavailable/timed-out because Agent prerequisites were not provisioned.
+- Computer Use was unavailable on the final pass because its native pipe was unavailable, so screenshot-based visual inspection and an actual Refresh-button click were not independently completed; visual clipping/overlap assertions and maximized/minimized inspection are also unverified.
+- This is an evidence limitation, not an implementation/CI blocker.
 - The current machine has no visible `RmsSupportAgent` service and no local
   `RMS Support Operators` group. IPC was not enabled or weakened; the truthful
   runtime result was Agent/IPC unavailable with a bounded timeout and Retry.
