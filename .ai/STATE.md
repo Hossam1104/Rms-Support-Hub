@@ -103,12 +103,13 @@
   unchanged. PowerShell parsing is 37/37; PSScriptAnalyzer is not installed.
 - Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending; memory/context and
   `git diff --check` passed.
-- POS code-head CI `32601674329` is green. Support Hub rerun
-  `32598052655` and the final pushed branch-head POS and Support Hub CI runs
-  are green. A transient Windows Infrastructure ACL environment failure and
-  an earlier external-config fixture race were both resolved by rerunning;
-  no unrelated infrastructure/backend code was changed. Local focused test
-  3/3 passed.
+- POS code-head CI `32601674329` and the latest pushed branch-head POS CI are
+  green, including the Infrastructure job. Support Hub rerun `32598052655`
+  is green, but the latest Support Hub workflow and its targeted rerun each
+  fail only the known external-configuration fixture race (341/342 backend
+  tests pass; invalid temporary JSON is loaded by one production transport
+  test). No unrelated infrastructure/backend code was changed. Local focused
+  test 3/3 passed.
 - Final Release WPF process was verified alive/responsive with title `RMS Support
   Hub`; Computer Use screenshot helper was unavailable, so no visual claim is made.
 
@@ -119,7 +120,7 @@
   Online Order items #12844/#12900/#12901/#12902 to OO-07, and retained all
   Production work deferred. Created adaptive-card story #13072 under E14 with
   child Tasks #13073-#13076 and related links to #12841-#12844.
-- `.ai/HANDOFF.md` is `Empty`; implementation and final CI are complete and
-  the next action is Sol review. The unavailable Computer Use screenshot/
-  Refresh verification remains explicitly recorded as an evidence limitation;
-  no WPF-03 or merge/ready action is authorized.
+- `.ai/HANDOFF.md` records the remaining Support Hub fixture-race blocker;
+  WPF implementation and POS CI are complete. The unavailable Computer Use
+  screenshot/Refresh verification remains explicitly recorded as an evidence
+  limitation; no WPF-03 or merge/ready action is authorized.
