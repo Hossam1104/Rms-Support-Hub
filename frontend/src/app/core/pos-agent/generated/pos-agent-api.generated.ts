@@ -3508,6 +3508,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };
+            /** @description The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
         };
     };
     GetRmsInstallationDiscovery: {
@@ -3924,6 +3933,15 @@ export interface operations {
             };
             /** @description The Agent could not generate the bundle and returned a safe generic error. */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5009,6 +5027,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
                 };
             };
+            /** @description The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
         };
     };
     CaptureSafetySnapshot: {
@@ -5063,6 +5090,15 @@ export interface operations {
             };
             /** @description The Agent returned a safe generic server-error response without exception, credential, path, or SQL details. */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
