@@ -7,5 +7,4 @@
     <AssemblyName>RmsSupportHub.Pos.Domain</AssemblyName>
     <RootNamespace>RmsSupportHub.Pos.Domain</RootNamespace>
   </PropertyGroup>
-
 </Project>

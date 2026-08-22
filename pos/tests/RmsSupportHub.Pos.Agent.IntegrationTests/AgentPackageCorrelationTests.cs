@@ -152,9 +152,10 @@ public sealed class AgentPackageCorrelationTests
             }
         }
 
-        public void Record(AgentAuditEvent auditEvent)
+        public bool Record(AgentAuditEvent auditEvent)
         {
             lock (gate) events.Add(auditEvent);
+            return true;
         }
     }
 }

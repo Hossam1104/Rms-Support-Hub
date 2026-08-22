@@ -1,45 +1,101 @@
 # Current Project State
 
 - **Updated:** 2026-08-22
-- **Repository:** `docs/wpf-agent-architecture-rebaseline`; PR #30 was merged to `main` at `9272041638e2da97ac6ff5e4e251c2d370acc47e`.
-- **Status:** WPF Architecture Decision Point and Backlog Rebaseline completed. CR-001 created and refined; ADR-0029 created and refined; two-layer local authorization model established; Online Orders E05/E06 Azure state truthfully reconciled; Azure DevOps iterations POS-07..POS-10 created; Epics E16..E19 created and child stories populated; E11 reconciled and closed; E12 updated. NO WPF implementation has begun. Production readiness remains NO.
+- **Repository baseline:** `main` was verified clean at
+  `bd83e3b2c223e807f40e684fe61a5281c915674b` before implementation.
+- **Working branch:** `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32.
+- **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
+  architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
+- **Status:** WPF-01 implementation and the final bounded OPUS remediation are
+  complete; exact-head CI is green on `701869b`; Draft PR #32 awaits Sol
+  review. WPF-02 must not start until that acceptance.
 
-## Current facts
+## WPF-01 durable facts
 
-- PR #30 was accepted by GPT-5.6 Sol and merged to `main` at `9272041638e2da97ac6ff5e4e251c2d370acc47e`, protecting Production order mutations across UPC, GHC E-Commerce, and GHC Uni-Commerce.
-- Online Orders Azure state reconciled:
-  - Epic E05 (#12843) transitioned to Closed following PR #30 closure of diagnosis story #12892 (all 9 child stories #12884–#12892 are Closed).
-  - Epic E06 (#12844) remains Active following PR #30 closure of diagnosis story #12899 (#12893–#12899 Closed; #12900–#12902 remain New/Conditional).
-- The owner and architecture authority approved the WPF dual control-surface architecture for POS maintenance:
-  - Central Support Hub: ASP.NET Core backend + Angular administrator dashboard.
-  - Local Machine: always-running `RmsSupportAgent.Service` + standalone native `RmsSupportAgent.Desktop.Wpf`.
-  - Control Model: WPF -> Windows Named Pipes -> Agent shared command/query layer; Angular Admin -> Hub -> persistent outbound SignalR -> Agent shared command/query layer.
-  - Two-Layer Local Authorization:
-    - Layer A (IPC Connection): Windows Named Pipe ACLs restricted to `SYSTEM`, `Local Administrators`, and dedicated local `RMS Support Operators` group (failing closed for unauthorized identities).
-    - Layer B (Per-Command Authorization): Agent application layer validates authenticated Windows principal and role per typed command (low/medium-risk non-destructive operations permitted for operators; high-risk mutating actions requiring administrator elevation and explicit confirmation).
-- CR-001 (`docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md`) and ADR-0029 (`.ai/decisions/ADR-0029-wpf-agent-dual-control-and-admin-supervision.md`) are established and accepted for architecture.
-- BRD.md is updated to Version 1.1 with requirements BR-027 through BR-040 (BR-034 updated to two-layer local authorization; BR-040 preserved as admin-only central fleet control).
-- Azure DevOps hierarchy is updated and reconciled:
-  - New Iterations: `POS-07 - WPF Agent Architecture`, `POS-08 - WPF Local Experience`, `POS-09 - Admin Fleet Supervision`, `POS-10 - WPF Migration and Rollout`.
-  - Epics E16 (#13017), E17 (#13018), E18 (#13019), E19 (#13020) created with 51 new User Stories (#13021–#13071).
-  - Stories #13023 (US-E16-03), #13024 (US-E16-04), and #13041 (US-E17-11) updated in Azure DevOps with two-layer authorization and operator group acceptance criteria while remaining New.
-  - Epic E11 (#12849) reconciled and closed as superseded roadmap; child stories #12943 and #12947 superseded by replacement E19 stories #13060 and #13066.
-  - Epic E12 (#12850) updated to reflect the WPF/Agent supervised target architecture.
-- Conversion plan (`docs/WPF_AGENT_CONVERSION_PLAN.md`) defines Phases 0 through 9; first implementation slice is `WPF-01 — Shared Agent Application + Local IPC Foundation`.
-- NO WPF implementation has begun; product code, certificates, PKI, and native RMS services are untouched.
-- Uni Testing HTTP:90 `502 Bad Gateway` remains an external Online Order blocker but does NOT block WPF Phase 1 architecture work.
+- The existing `RmsSupportHub.Pos.Application` project now owns a transport-
+  agnostic `InvocationContext`, fail-closed operation authorization, and the
+  shared `RmsInstallationDiscoveryQueryHandler`.
+- The legacy `/api/v1/rms/diagnostics` path still composes the same dashboard,
+  while `/api/v1/rms/installation` is a typed HTTPS adapter over the shared
+  discovery handler.
+- `RmsSupportHub.Pos.LocalIpc` provides protocol version 1, newline-delimited
+  JSON envelopes, typed health and installation-discovery calls, strict
+  request/correlation matching, bounded request/response sizes, timeouts, and
+  client concurrency.
+- The Agent Named Pipe listener is disabled by default. When enabled it uses an
+  explicit ACL for LocalSystem and Built-in Administrators FullControl, and
+  explicit duplex-client rights (`ReadData`, `WriteData`, attributes,
+  `ReadPermissions`, and `Synchronize`) for the configured `RMS Support
+  Operators` group. An explicit NETWORK deny establishes the local-only pipe
+  boundary; no broad-principal allow or operator security/ownership/server-
+  instance rights exist. Missing group resolution produces an unavailable/no-
+  listener state; no broad-principal fallback exists.
+- The only initial IPC operations are `agent.health` and
+  `rms.installation.discovery`. Client payloads do not provide identity or
+  privilege authority. No WPF UI, SignalR, Production configuration, native
+  RMS service, or customer database was changed.
+- `LocalIpcClient` verifies the connected Named Pipe server by matching
+  `GetNamedPipeServerProcessId` to the currently running PID returned by
+  read-only SCM `QueryServiceStatusEx` for the immutable
+  `AgentServiceIdentity.PermanentServiceName` (`RmsSupportAgent`) before it
+  writes a request. The SCM resolver requests only `SC_MANAGER_CONNECT` and
+  `SERVICE_QUERY_STATUS`; no process-token, `OpenProcessToken`, or
+  `SeDebugPrivilege` path remains. Pipe PID and service PID resolution are
+  injected behind small bounded interfaces for deterministic tests and future
+  service-account migration. Local group resolution machine-qualifies
+  unqualified names and rejects domain/foreign authorities.
+- Shared authorization now binds source to authority: LegacyLoopbackHttp is
+  local-admin only, LocalWpf supports local operator/admin according to risk,
+  RemoteHub and AgentInternal fail closed in WPF-01, and unknown combinations
+  are denied. Diagnostics, Support Bundle evidence, and Safety Snapshot
+  evidence receive the real invocation context; no synthetic admin overload
+  remains.
+- Durable audit writes return a persistence result. Installation discovery
+  returns `audit_unavailable` when its mandatory audit record is not durable;
+  `agent.health` remains non-audited to avoid high-frequency audit spam.
+- The final bounded remediation closes OPUS-01 through OPUS-13 and OPUS-15:
+  exact `OpenSCManagerW`/`OpenServiceW` imports and real SCM identity tests;
+  capped cancellation-aware listener recovery; server-owned semaphore and pipe
+  instance lifetime with safe shutdown; effective correlation fallback; a real
+  Local WPF authority classifier with fail-closed identity/role errors;
+  production ACL/PID verification without process-token APIs; local group
+  account-type and broad-SID rejection; Domain/Contracts decoupling; typed
+  `audit_unavailable` 503 responses for audited diagnostics, bundles, and
+  snapshots; first-instance namespace ownership; Identification impersonation;
+  orphan interface removal; and exact max/max+1 newline bounds.
+- OPUS-14 rate limiting and OPUS-16 representative-machine/operator-group E2E
+  are explicitly deferred. WPF-02 remains blocked on Sol acceptance.
+- The mandated stable `System.IO.Pipes.AccessControl` 5.0.0 attempt exposed
+  NU1510 because the API is already provided by the .NET 10 BCL; the explicit
+  reference is removed so strict CI (`--warnaserror`) stays clean. No preview
+  remains.
 
 ## Validation evidence
 
-- Azure DevOps CLI execution: work items updated (#12892 Closed, #12899 Closed, E05 #12843 Closed, E06 #12844 verified Active, #13023, #13024, #13041 updated in New state).
-- Traceability matrices (`AZURE_DEVOPS_BACKLOG.md` and `AZURE_DEVOPS_TRACEABILITY.md`) synchronized with actual Azure IDs and states.
-- `python .ai/scripts/check_memory.py` and `python .ai/scripts/context.py`: verified.
-- `git diff --check`: clean.
+- Release solution build: 0 warnings, 0 errors, with the required Testing-only
+  `PosAgentSecurity__SupportHubOrigin` environment variable.
+- POS Release tests: Domain 12/12, Application 89/89, Infrastructure 155/155,
+  Agent Integration 234/234 (490/490 total).
+- Focused bounded remediation tests remain green: lifecycle 6/6,
+  audit/authority/architecture 25/25, and exact protocol bounds 2/2.
+- PowerShell quality: 37 tracked files parse cleanly; PSScriptAnalyzer was not
+  installed. Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending.
+- TestServer HTTPS and in-process Windows Named Pipe integration exercised the
+  selected diagnostic, health, invalid-operation, malformed/oversized-request,
+  unauthorized-connection, missing-group, and HTTP/IPC parity paths.
+- The checked-in POS OpenAPI document and generated Angular client were
+  regenerated; the full Agent OpenAPI metadata suite passed. Exact-head POS CI
+  and Support Hub CI passed on `701869b` (PR #32 remains Draft).
+- Standalone Agent startup was not attempted because the real Kestrel listener
+  requires the machine-owned Testing certificate. No runtime URL is claimed
+  from configuration alone.
 
-## Safety and remaining work
+## Safety and next work
 
-- No product runtime code was modified.
-- No WPF desktop application code was implemented.
-- No Production contact, secret provisioning, POS machines, certificates, PKI, or native RMS services were touched.
-- Production readiness remains **NO** until full controlled acceptance gates, external secrets/API-keys, and release PKI are complete.
-- Next review action: Submit Draft PR for GPT-5.6 Sol rebaseline review. DO NOT execute WPF-01 until accepted.
+- Production readiness remains **NO**. No Production contact or native RMS
+  mutation was authorized or performed.
+- Azure mapping remains E16 #13017, US-E16-02 #13022, US-E16-04 #13024, with
+  related authorization story US-E16-03 #13023. No broad Azure administration
+  was performed during WPF-01.
+- `.ai/HANDOFF.md` is `Empty` because the implementation is complete and the
+  next action is review, not unfinished coding.

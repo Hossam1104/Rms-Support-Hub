@@ -86,11 +86,6 @@ public interface ISafetySnapshotStore
     Task<int> PruneAsync(DateTimeOffset now, CancellationToken cancellationToken = default);
 }
 
-public interface ISafetySnapshotEvidenceSource
-{
-    Task<SafetySnapshotEvidence> CaptureAsync(CancellationToken cancellationToken = default);
-}
-
 public sealed record SafetySnapshotEvidence(
     string? BranchCode,
     string? PosNumber,

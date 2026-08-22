@@ -3,6 +3,8 @@ using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Snapshots;
+using RmsSupportHub.Pos.Agent.Invocation;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Snapshots;
 
@@ -14,8 +16,27 @@ public static class SafetySnapshotEndpoints
     {
         app.MapGet(
                 "/api/v1/safety-snapshots/preview",
-                async (SafetySnapshotService service, CancellationToken cancellationToken) =>
-                    Results.Ok(await service.PreviewAsync(cancellationToken).ConfigureAwait(false)))
+                async (
+                    HttpContext context,
+                    IAgentInvocationContextFactory contextFactory,
+                    SafetySnapshotService service,
+                    CancellationToken cancellationToken) =>
+                    {
+                        try
+                        {
+                            return Results.Ok(await service
+                                .PreviewAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                                .ConfigureAwait(false));
+                        }
+                        catch (RmsInstallationDiscoveryAuditUnavailableException)
+                        {
+                            return AgentProblemDetails.CreateResult(
+                                context,
+                                StatusCodes.Status503ServiceUnavailable,
+                                "The safety snapshot is temporarily unavailable.",
+                                RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
+                        }
+                    })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewSafetySnapshot")
             .WithTags("Safety Snapshot")
@@ -27,16 +48,18 @@ public static class SafetySnapshotEndpoints
             .Produces<SafetySnapshotPreviewDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
-            .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json");
 
         app.MapPost(
                 SafetySnapshotOperation.CaptureHttpPath,
                 async (
                     HttpContext context,
                     SafetySnapshotCaptureRequestDto request,
-                    SafetySnapshotService service,
-                    IMutationTokenStore tokens,
-                    IAgentPrincipalSidResolver principalSidResolver,
+                     SafetySnapshotService service,
+                     IMutationTokenStore tokens,
+                     IAgentPrincipalSidResolver principalSidResolver,
+                     IAgentInvocationContextFactory contextFactory,
                     AgentSecurityOptions securityOptions,
                     CancellationToken cancellationToken) =>
                 {
@@ -56,6 +79,7 @@ public static class SafetySnapshotEndpoints
                     try
                     {
                         var response = await service.CaptureAsync(
+                            contextFactory.CreateLegacyLoopback(context),
                             authorization.PrincipalSid!,
                             request.TypedConfirmation,
                             CorrelationIdContext.TryGet(context) ?? "unavailable",
@@ -66,6 +90,14 @@ public static class SafetySnapshotEndpoints
                     catch (SafetySnapshotRejectedException exception)
                     {
                         return AgentProblemDetails.CreateResult(context, StatusCodes.Status400BadRequest, "The safety snapshot request was rejected by the Agent.", exception.Message);
+                    }
+                    catch (RmsInstallationDiscoveryAuditUnavailableException)
+                    {
+                        return AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            "The safety snapshot is temporarily unavailable.",
+                            RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
                     }
                     catch
                     {
@@ -85,6 +117,7 @@ public static class SafetySnapshotEndpoints
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
         app.MapGet(

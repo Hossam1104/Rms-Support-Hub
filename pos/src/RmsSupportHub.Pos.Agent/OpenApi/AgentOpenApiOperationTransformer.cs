@@ -54,6 +54,9 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             case ("GET", "/api/v1/rms/diagnostics"):
                 DocumentRmsDiagnostics(operation);
                 break;
+            case ("GET", "/api/v1/rms/installation"):
+                DocumentRmsInstallationDiscovery(operation);
+                break;
             case ("GET", "/api/v1/rms/operational-health"):
                 DocumentRmsOperationalHealth(operation);
                 break;
@@ -661,6 +664,57 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             });
     }
 
+    private static void DocumentRmsInstallationDiscovery(OpenApiOperation operation)
+    {
+        DocumentProtectedRead(
+            operation,
+            "Discover the installed RMS suite",
+            "Runs the shared, read-only RMS installation discovery query. The result is a sanitized " +
+            "typed projection of server-owned installation metadata and contains no connection " +
+            "strings, credentials, raw filesystem paths, arbitrary queries, or client-selected " +
+            "execution parameters.",
+            "The Agent returned the sanitized RmsInstallationDto discovery projection.",
+            new JsonObject
+            {
+                ["installed"] = true,
+                ["branchInstalled"] = true,
+                ["cashierInstalled"] = true,
+                ["branchCode"] = "BR-001",
+                ["posNumber"] = "POS-01",
+                ["installationGuid"] = "installation-guid-placeholder",
+                ["mainServerBranchId"] = "1",
+                ["mainServerPosId"] = "1",
+                ["mainServerUrl"] = "main-server.example:8080",
+                ["branchServerAddress"] = "localhost:5100",
+                ["installationMode"] = "Branch + Cashier",
+                ["clientName"] = "UPC",
+                ["productRelease"] = "2026.08",
+                ["versions"] = new JsonObject
+                {
+                    ["branchServerBuildNumber"] = "5.7.4",
+                    ["cashierServerBuildNumber"] = "5.7.4",
+                    ["cashierUiBuildNumber"] = "5.7.4"
+                },
+                ["consistency"] = new JsonObject
+                {
+                    ["branchCode"] = "consistent",
+                    ["posIdentity"] = "consistent",
+                    ["mainServerBranchId"] = "consistent",
+                    ["mainServerPosId"] = "consistent",
+                    ["version"] = "consistent",
+                    ["warnings"] = new JsonArray()
+                },
+                ["componentDrift"] = new JsonArray()
+            });
+
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete the server-owned discovery query and returned safe " +
+            "application/problem+json with diagnostic_unavailable. No raw exception, connection " +
+            "string, credential, or filesystem detail crosses the response boundary.");
+    }
+
     private static void DocumentServiceAction(OpenApiOperation operation)
     {
         SetOperation(
@@ -920,6 +974,12 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(operation, "400", "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.");
         SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.");
         SetResponseDescription(operation, "403", "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.");
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete mandatory audited evidence collection and returned safe " +
+            "application/problem+json with audit_unavailable. No raw exception, credential, path, " +
+            "or audit-store detail crosses the response boundary.");
         SetResponseDescription(operation, "500", "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.");
         DocumentNegotiateChallenge(operation);
     }
@@ -1065,6 +1125,12 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(operation, "400", "The Agent rejected the canonical transport boundary or request with safe problem details.");
         SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge.");
         SetResponseDescription(operation, "403", "Authorization, exact-origin, SID, or the one-use mutation-token boundary rejected the request.");
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete mandatory audited evidence collection and returned safe " +
+            "application/problem+json with audit_unavailable. No raw exception, credential, path, " +
+            "or audit-store detail crosses the response boundary.");
         SetResponseDescription(operation, "500", "The Agent could not generate the bundle and returned a safe generic error.");
         DocumentNegotiateChallenge(operation);
         SetResponseExample(operation, "200", "application/json", new JsonObject
@@ -1114,6 +1180,12 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "500",
             "The Agent failed while reading a server-owned dependency and returned a safe generic " +
             "server-error response without exception details.");
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete mandatory audited evidence collection and returned safe " +
+            "application/problem+json with audit_unavailable. No raw exception, credential, path, " +
+            "or audit-store detail crosses the response boundary.");
         DocumentNegotiateChallenge(operation);
         SetResponseExample(operation, "200", "application/json", example);
         SetResponseExample(operation, "400", "application/problem+json", CreateProblemExample(

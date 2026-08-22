@@ -2,6 +2,8 @@ using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
+using RmsSupportHub.Pos.Agent.Invocation;
+using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
@@ -36,6 +38,7 @@ public sealed class SupportBundleRuntime(
     IncidentTimelineService timeline,
     IMutationTokenStore mutationTokens,
     IAgentPrincipalSidResolver principalSidResolver,
+    IAgentInvocationContextFactory contextFactory,
     AgentSecurityOptions securityOptions,
     IAgentAuditSink audit)
 {
@@ -77,7 +80,10 @@ public sealed class SupportBundleRuntime(
         }
 
         var correlationId = CorrelationIdContext.TryGet(context) ?? "unavailable";
-        var response = await bundles.GenerateAsync(principalSid, correlationId, cancellationToken).ConfigureAwait(false);
+        var invocation = contextFactory.CreateLegacyLoopback(context);
+        var response = await bundles
+            .GenerateAsync(invocation, principalSid, correlationId, cancellationToken)
+            .ConfigureAwait(false);
         timeline.Record(
             principalSid,
             "SupportBundle",

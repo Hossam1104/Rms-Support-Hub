@@ -67,6 +67,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
                 "/api/v1/rms/databases/{targetId}/operations/{operationId}/events",
                 "/api/v1/rms/databases/{targetId}/restore",
                 "/api/v1/rms/diagnostics",
+                "/api/v1/rms/installation",
                 "/api/v1/rms/operational-health",
                 "/api/v1/safety-snapshots/capture",
                 "/api/v1/safety-snapshots/preview",
@@ -101,6 +102,7 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
         Assert.Equal("GetServices", Operation(document, "/api/v1/services", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("ControlService", Operation(document, "/api/v1/services/{serviceId}/actions", "post")["operationId"]!.GetValue<string>());
         Assert.Equal("GetRmsDiagnostics", Operation(document, "/api/v1/rms/diagnostics", "get")["operationId"]!.GetValue<string>());
+        Assert.Equal("GetRmsInstallationDiscovery", Operation(document, "/api/v1/rms/installation", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetServiceFailureAnalysis", Operation(document, "/api/v1/diagnostics/services/{serviceId}/failure", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GetIncidentTimeline", Operation(document, "/api/v1/diagnostics/timeline", "get")["operationId"]!.GetValue<string>());
         Assert.Equal("GenerateSupportBundle", Operation(document, "/api/v1/support-bundles", "post")["operationId"]!.GetValue<string>());
@@ -323,6 +325,16 @@ public sealed class OpenApiContractTests : IClassFixture<AgentWebApplicationFact
             "RmsBranchSrv",
             ResponseExample(rmsDiagnostics, "200", "application/json")["branchDatabase"]!["expectedDatabase"]!.GetValue<string>());
         AssertProtectedReadResponses(rmsDiagnostics);
+
+        var rmsInstallation = Operation(document, "/api/v1/rms/installation", "get");
+        AssertResponseSchema(rmsInstallation, "200", "application/json", "RmsInstallationDto");
+        Assert.Equal(
+            "BR-001",
+            ResponseExample(rmsInstallation, "200", "application/json")["branchCode"]!.GetValue<string>());
+        AssertBodylessFrameworkResponse(rmsInstallation, "401");
+        AssertNegotiateChallenge(rmsInstallation, "401");
+        AssertResponseSchema(rmsInstallation, "400", "application/problem+json", "AgentProblemDetailsDto");
+        AssertResponseSchema(rmsInstallation, "503", "application/problem+json", "AgentProblemDetailsDto");
 
         var serviceAction = Operation(document, "/api/v1/services/{serviceId}/actions", "post");
         AssertResponseSchema(serviceAction, "200", "application/json", "ServiceActionResponseDto");

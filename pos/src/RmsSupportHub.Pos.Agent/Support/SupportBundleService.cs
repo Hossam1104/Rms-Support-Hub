@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Rms;
+using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Support;
@@ -38,13 +39,14 @@ public sealed class SupportBundleService(
     ["manifest", "health", "installation", "connectivity", "database", "services", "failure-analysis", "incident-timeline", "rms-storage", "updates", "insurance-attachment-aggregate", "audit-summary"];
 
     public async Task<SupportBundleDto> GenerateAsync(
+        InvocationContext context,
         string principalSid,
         string correlationId,
         CancellationToken cancellationToken = default)
     {
         options.Validate();
         var createdAtUtc = timeProvider.GetUtcNow();
-        var diagnostic = await diagnostics.GetAsync(cancellationToken).ConfigureAwait(false);
+        var diagnostic = await diagnostics.GetAsync(context, cancellationToken).ConfigureAwait(false);
         var operational = await operationalHealth.GetAsync(cancellationToken).ConfigureAwait(false);
         var healthReport = await health.GetAsync(cancellationToken).ConfigureAwait(false);
         var audit = (await auditReader.ReadRecentAsync(64, cancellationToken).ConfigureAwait(false))

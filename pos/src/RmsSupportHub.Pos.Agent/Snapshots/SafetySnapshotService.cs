@@ -3,6 +3,7 @@ using System.Text;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Runtime;
+using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Snapshots;
 using RmsSupportHub.Pos.Contracts.V1.Services;
@@ -19,8 +20,15 @@ public static class SafetySnapshotOperation
         new(CaptureOperationId, "POST", CaptureHttpPath, MutationTokens.MutationTargetKind.None);
 }
 
+public interface IAuthorizedSafetySnapshotEvidenceSource
+{
+    Task<SafetySnapshotEvidence> CaptureAsync(
+        InvocationContext context,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class SafetySnapshotService(
-    ISafetySnapshotEvidenceSource evidenceSource,
+    IAuthorizedSafetySnapshotEvidenceSource evidenceSource,
     ISafetySnapshotStore store,
     AgentScopedIdempotencyStore idempotency,
     TimeProvider clock,
@@ -32,9 +40,11 @@ public sealed class SafetySnapshotService(
     private readonly object gate = new();
     private readonly Dictionary<string, SafetySnapshotDto> completedCaptures = new(StringComparer.Ordinal);
 
-    public async Task<SafetySnapshotPreviewDto> PreviewAsync(CancellationToken cancellationToken = default)
+    public async Task<SafetySnapshotPreviewDto> PreviewAsync(
+        InvocationContext context,
+        CancellationToken cancellationToken = default)
     {
-        var evidence = await evidenceSource.CaptureAsync(cancellationToken).ConfigureAwait(false);
+        var evidence = await evidenceSource.CaptureAsync(context, cancellationToken).ConfigureAwait(false);
         var blockers = evidence.State == SafetySnapshotEvidenceState.ActionRequired
             ? ["health_evidence_requires_attention"]
             : evidence.State == SafetySnapshotEvidenceState.Unknown
@@ -52,6 +62,7 @@ public sealed class SafetySnapshotService(
     }
 
     public async Task<SafetySnapshotDto> CaptureAsync(
+        InvocationContext context,
         string principalSid,
         string typedConfirmation,
         string correlationId,
@@ -83,7 +94,7 @@ public sealed class SafetySnapshotService(
 
         try
         {
-            var evidence = await evidenceSource.CaptureAsync(cancellationToken).ConfigureAwait(false);
+            var evidence = await evidenceSource.CaptureAsync(context, cancellationToken).ConfigureAwait(false);
             var now = clock.GetUtcNow();
             var snapshot = new SafetySnapshotDocument(
                 Guid.NewGuid().ToString("N"),
@@ -204,11 +215,13 @@ public sealed class SafetySnapshotService(
 public sealed class SafetySnapshotRejectedException(string code) : InvalidOperationException(code);
 
 /// <summary>Maps the existing Slice A typed diagnostics into the stricter snapshot evidence model.</summary>
-public sealed class RmsSafetySnapshotEvidenceSource(Rms.RmsDiagnosticsService diagnostics) : ISafetySnapshotEvidenceSource
+public sealed class RmsSafetySnapshotEvidenceSource(Rms.RmsDiagnosticsService diagnostics) : IAuthorizedSafetySnapshotEvidenceSource
 {
-    public async Task<SafetySnapshotEvidence> CaptureAsync(CancellationToken cancellationToken = default)
+    public async Task<SafetySnapshotEvidence> CaptureAsync(
+        InvocationContext context,
+        CancellationToken cancellationToken = default)
     {
-        var rms = await diagnostics.GetAsync(cancellationToken).ConfigureAwait(false);
+        var rms = await diagnostics.GetAsync(context, cancellationToken).ConfigureAwait(false);
         var identity = rms.Installation;
         var services = rms.Services.Select(service => new SafetySnapshotServiceEvidence(
             service.ServiceId,
