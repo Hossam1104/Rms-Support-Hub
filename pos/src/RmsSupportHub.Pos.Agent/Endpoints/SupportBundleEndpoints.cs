@@ -1,6 +1,7 @@
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Support;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Support;
 
@@ -37,6 +38,14 @@ public static class SupportBundleEndpoints
                                 "support_bundle_failed")
                         };
                     }
+                    catch (RmsInstallationDiscoveryAuditUnavailableException)
+                    {
+                        return AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            "The Support Bundle is temporarily unavailable.",
+                            RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
+                    }
                     catch
                     {
                         return AgentProblemDetails.CreateResult(
@@ -61,6 +70,7 @@ public static class SupportBundleEndpoints
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
     }
 }

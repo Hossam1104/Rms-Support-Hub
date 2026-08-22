@@ -107,6 +107,12 @@ application layer records the authenticated principal, source, and correlation i
 model and returns `audit_unavailable` rather than claiming a successful diagnostic when durable audit
 storage is unavailable. Health probes remain non-audited to avoid unbounded durable audit traffic.
 
+**Audit availability policy:** the health heartbeat does not require durable audit persistence;
+actual RMS installation discovery does. Diagnostics, Support Bundle generation, and Safety Snapshot
+evidence/capture/preview that depend on audited discovery fail closed when the audit sink is
+unavailable, and expose the safe typed `audit_unavailable` service-unavailable result rather than a
+generic internal error. No audit filesystem detail or exception text is returned.
+
 ---
 
 ### Phase 2 — Local WPF-Agent IPC Foundation
@@ -115,7 +121,7 @@ storage is unavailable. Health probes remain non-audited to avoid unbounded dura
   - Implement Named Pipe server in `RmsSupportAgent.Service` (`\\.\pipe\RmsSupportAgent.Ipc`).
   - Enforce Windows Security Descriptors / ACLs restricting pipe connection to `LocalSystem`, `NT AUTHORITY\Administrators`, and the dedicated local Windows group `RMS Support Operators` (Layer A). The operator ACE is limited to explicit duplex client rights; an explicit NETWORK deny establishes the local-only boundary.
   - Strictly reject unauthorized callers (`Everyone`, `Guests`, anonymous, unrestricted `Authenticated Users`) fail closed.
-  - Validate and authenticate caller Windows identity on connection and per-message; the typed client also verifies the connected server PID token is LocalSystem before sending application data.
+  - Validate and authenticate caller Windows identity on connection and per-message; the typed client also verifies the connected server PID matches the running `RmsSupportAgent` SCM service before sending application data.
   - Implement per-command Agent application layer authorization verifying required privilege (operator vs administrator) for each typed operation (Layer B).
   - Implement lightweight .NET IPC client library (`RmsSupportAgent.LocalIpc`).
   - Implement protocol handshake, version negotiation, and serialization.
@@ -129,6 +135,14 @@ response defaults, ten-second connection/read bounds, and four-client concurrenc
 listener is disabled by default and becomes unavailable without a resolvable `RMS Support
 Operators` group; no fallback to a broad principal is permitted. Initial capabilities are
 `agent.health` and `rms.installation.discovery`.
+
+The bounded remediation also gives the listener a server-owned semaphore and pipe-instance
+lifecycle, cancellation-aware transient recovery with capped backoff, first-instance namespace
+ownership only while no Agent-owned pipe instance exists, explicit Identification impersonation,
+and exact newline bounds. Mandatory audited RMS evidence fails closed with the typed
+`audit_unavailable` 503 result; the health heartbeat remains non-audited. Rate limiting and
+representative-machine/operator-group E2E are intentionally deferred to the separately tracked
+OPUS-14 and OPUS-16 follow-up work.
 
 ---
 

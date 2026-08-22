@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO.Pipes;
+using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -25,20 +26,39 @@ public sealed class LocalIpcServer(
     IAgentInvocationContextFactory contextFactory,
     RmsInstallationDiscoveryQueryHandler installationDiscovery,
     LocalIpcRuntimeStatus status,
-    ILogger<LocalIpcServer> logger) : IHostedService
+    ILogger<LocalIpcServer> logger,
+    ILocalIpcServerPipeFactory? serverPipeFactory = null) : IHostedService
 {
+    private static readonly TimeSpan InitialRetryBackoff = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan MaximumRetryBackoff = TimeSpan.FromSeconds(5);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
     private readonly ConcurrentDictionary<Task, byte> activeClients = new();
+    private readonly ILocalIpcServerPipeFactory pipeFactory =
+        serverPipeFactory ?? new WindowsLocalIpcServerPipeFactory();
+    private readonly object pipeOwnershipGate = new();
     private CancellationTokenSource? lifetime;
     private Task? acceptTask;
+    private SemaphoreSlim? concurrency;
+    private PipeSecurity? pipeSecurity;
     private SecurityIdentifier? operatorGroupSid;
+    private int ownedPipeInstances;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        options.Validate();
+        try
+        {
+            options.Validate();
+        }
+        catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+        {
+            status.SetUnavailable("invalid_options");
+            logger.LogError(exception, "Local IPC options are invalid; the listener will not start.");
+            return Task.CompletedTask;
+        }
+
         if (!options.Enabled)
         {
             status.SetDisabled();
@@ -51,113 +71,194 @@ public sealed class LocalIpcServer(
             return Task.CompletedTask;
         }
 
-        if (!operatorGroupResolver.TryResolve(options.OperatorGroupName, out operatorGroupSid))
+        try
+        {
+            if (!operatorGroupResolver.TryResolve(options.OperatorGroupName, out operatorGroupSid))
+            {
+                status.SetUnavailable("operator_group_unavailable");
+                logger.LogError(
+                    "Local IPC is enabled but the configured operator group could not be resolved. The IPC feature remains disabled.");
+                return Task.CompletedTask;
+            }
+        }
+        catch (Exception exception)
         {
             status.SetUnavailable("operator_group_unavailable");
-            logger.LogError(
-                "Local IPC is enabled but the configured operator group could not be resolved. The IPC feature remains disabled.");
+            logger.LogError(exception, "The configured local operator group could not be resolved; the listener will not start.");
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            pipeSecurity = securityDescriptorFactory.Create(operatorGroupSid);
+        }
+        catch (Exception exception)
+        {
+            status.SetUnavailable("security_descriptor_unavailable");
+            logger.LogError(exception, "The local IPC security descriptor could not be constructed; the listener will not start.");
             return Task.CompletedTask;
         }
 
         status.SetStarting();
         lifetime = new CancellationTokenSource();
+        concurrency = new SemaphoreSlim(options.MaxConcurrentClients);
         acceptTask = AcceptLoopAsync(lifetime.Token);
         return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        lifetime?.Cancel();
-        if (acceptTask is not null)
+        var currentLifetime = lifetime;
+        var currentAcceptTask = acceptTask;
+        var currentConcurrency = concurrency;
+        if (currentLifetime is null || currentConcurrency is null)
         {
-            await AwaitWithoutThrowingAsync(acceptTask, cancellationToken).ConfigureAwait(false);
+            status.SetDisabled();
+            return;
         }
 
-        var clients = activeClients.Keys.ToArray();
-        if (clients.Length > 0)
+        currentLifetime.Cancel();
+        if (currentAcceptTask is not null)
         {
-            await AwaitWithoutThrowingAsync(Task.WhenAll(clients), cancellationToken).ConfigureAwait(false);
+            await AwaitWithoutThrowingAsync(currentAcceptTask, CancellationToken.None).ConfigureAwait(false);
         }
 
-        lifetime?.Dispose();
-        lifetime = null;
-        acceptTask = null;
+        var clientsTask = Task.WhenAll(activeClients.Keys.ToArray());
+        try
+        {
+            await clientsTask.WaitAsync(options.ReadTimeout + TimeSpan.FromSeconds(1), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            // Active handlers are still allowed to release the server-owned semaphore. The
+            // continuation below owns its disposal if the bounded shutdown wait expires.
+        }
+
         status.SetDisabled();
+        if (clientsTask.IsCompleted)
+        {
+            CompleteShutdown(currentLifetime, currentConcurrency);
+        }
+        else
+        {
+            _ = CompleteShutdownWhenClientsFinishAsync(clientsTask, currentLifetime, currentConcurrency);
+        }
     }
 
     private async Task AcceptLoopAsync(CancellationToken cancellationToken)
     {
-        using var concurrency = new SemaphoreSlim(options.MaxConcurrentClients);
+        var serverConcurrency = concurrency
+            ?? throw new InvalidOperationException("The local IPC semaphore was not initialized.");
+        var backoff = InitialRetryBackoff;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await concurrency.WaitAsync(cancellationToken).ConfigureAwait(false);
-                NamedPipeServerStream? pipe = null;
+                var permitAcquired = false;
+                OwnedPipeInstance? pipe = null;
                 try
                 {
-                    pipe = NamedPipeServerStreamAcl.Create(
-                        options.PipeName,
-                        PipeDirection.InOut,
-                        options.MaxConcurrentClients,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous,
-                        inBufferSize: 0,
-                        outBufferSize: 0,
-                        securityDescriptorFactory.Create(operatorGroupSid!));
-                    await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
+                    await serverConcurrency.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    permitAcquired = true;
+                    pipe = CreatePipe();
+                    await pipe.Stream.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
+                    backoff = InitialRetryBackoff;
                     status.SetListening();
 
-                    var clientTask = HandleClientAsync(pipe, concurrency, cancellationToken);
+                    var clientTask = HandleClientAsync(pipe, serverConcurrency, cancellationToken);
                     pipe = null;
+                    permitAcquired = false;
                     activeClients.TryAdd(clientTask, 0);
                     _ = ObserveClientAsync(clientTask);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    concurrency.Release();
-                    pipe?.Dispose();
+                    if (pipe is not null)
+                    {
+                        await pipe.DisposeAsync().ConfigureAwait(false);
+                    }
+
+                    if (permitAcquired)
+                    {
+                        serverConcurrency.Release();
+                    }
+
                     break;
                 }
                 catch (Exception exception)
                 {
-                    concurrency.Release();
-                    pipe?.Dispose();
-                    status.SetUnavailable("listener_initialization_failed");
-                    logger.LogError(exception, "The local IPC listener failed closed.");
-                    break;
+                    if (pipe is not null)
+                    {
+                        await pipe.DisposeAsync().ConfigureAwait(false);
+                    }
+
+                    if (permitAcquired)
+                    {
+                        serverConcurrency.Release();
+                    }
+
+                    status.SetUnavailable("listener_degraded");
+                    logger.LogWarning(
+                        exception,
+                        "The local IPC listener encountered a transient transport failure and will retry in {Backoff}.",
+                        backoff);
+                    await Task.Delay(backoff, cancellationToken).ConfigureAwait(false);
+                    backoff = NextBackoff(backoff);
                 }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // Normal shutdown.
+            // Normal shutdown, including cancellation during bounded recovery backoff.
         }
     }
 
-    private async Task ObserveClientAsync(Task clientTask)
+    private OwnedPipeInstance CreatePipe()
+    {
+        lock (pipeOwnershipGate)
+        {
+            var firstPipeInstance = ownedPipeInstances == 0;
+            var pipeOptions = PipeOptions.Asynchronous
+                | (firstPipeInstance ? PipeOptions.FirstPipeInstance : 0);
+            var stream = pipeFactory.Create(
+                options.PipeName,
+                PipeDirection.InOut,
+                NamedPipeServerStream.MaxAllowedServerInstances,
+                PipeTransmissionMode.Byte,
+                pipeOptions,
+                inBufferSize: 0,
+                outBufferSize: 0,
+                pipeSecurity ?? throw new InvalidOperationException("The local IPC security descriptor was not initialized."));
+            ownedPipeInstances++;
+            return new OwnedPipeInstance(this, stream);
+        }
+    }
+
+    private void ReleasePipeInstance()
+    {
+        lock (pipeOwnershipGate)
+        {
+            if (ownedPipeInstances > 0)
+            {
+                ownedPipeInstances--;
+            }
+        }
+    }
+
+    private static TimeSpan NextBackoff(TimeSpan current) =>
+        TimeSpan.FromMilliseconds(Math.Min(MaximumRetryBackoff.TotalMilliseconds, current.TotalMilliseconds * 2));
+
+    private async Task HandleClientAsync(
+        OwnedPipeInstance pipeInstance,
+        SemaphoreSlim serverConcurrency,
+        CancellationToken serverCancellationToken)
     {
         try
         {
-            await clientTask.ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            logger.LogDebug(exception, "A local IPC client connection ended with a transport error.");
-        }
-        finally
-        {
-            activeClients.TryRemove(clientTask, out _);
-        }
-    }
-
-    private async Task HandleClientAsync(
-        NamedPipeServerStream pipe,
-        SemaphoreSlim concurrency,
-        CancellationToken serverCancellationToken)
-    {
-        await using (pipe.ConfigureAwait(false))
-        {
+            await using (pipeInstance.ConfigureAwait(false))
+            {
+                var pipe = pipeInstance.Stream;
             try
             {
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(serverCancellationToken);
@@ -221,7 +322,7 @@ public sealed class LocalIpcServer(
                 }
 
                 var context = contextFactory.CreateLocalWpf(identity, operatorGroupSid, correlationId);
-                await DispatchAsync(pipe, request, context, timeout.Token).ConfigureAwait(false);
+                await DispatchAsync(pipe, request, context, correlationId, timeout.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (serverCancellationToken.IsCancellationRequested)
             {
@@ -254,10 +355,28 @@ public sealed class LocalIpcServer(
             {
                 logger.LogDebug(exception, "A local IPC request failed closed.");
             }
-            finally
-            {
-                concurrency.Release();
             }
+        }
+        finally
+        {
+            // OwnedPipeInstance.DisposeAsync has completed before the application slot is returned.
+            serverConcurrency.Release();
+        }
+    }
+
+    private async Task ObserveClientAsync(Task clientTask)
+    {
+        try
+        {
+            await clientTask.ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            logger.LogDebug(exception, "A local IPC client connection ended with a transport error.");
+        }
+        finally
+        {
+            activeClients.TryRemove(clientTask, out _);
         }
     }
 
@@ -265,12 +384,13 @@ public sealed class LocalIpcServer(
         NamedPipeServerStream pipe,
         LocalIpcRequestEnvelope request,
         InvocationContext context,
+        string effectiveCorrelationId,
         CancellationToken cancellationToken)
     {
         switch (request.Operation)
         {
             case LocalIpcProtocol.HealthOperation:
-                await DispatchHealthAsync(pipe, request, context, cancellationToken).ConfigureAwait(false);
+                await DispatchHealthAsync(pipe, request, context, effectiveCorrelationId, cancellationToken).ConfigureAwait(false);
                 return;
 
             case LocalIpcProtocol.InstallationDiscoveryOperation:
@@ -282,7 +402,7 @@ public sealed class LocalIpcServer(
                     await WriteErrorAsync(
                         pipe,
                         request.RequestId,
-                        request.CorrelationId!,
+                        effectiveCorrelationId,
                         result.Error?.Code ?? "diagnostic_unavailable",
                         result.Error?.Message ?? "The diagnostic query failed.",
                         cancellationToken).ConfigureAwait(false);
@@ -292,7 +412,7 @@ public sealed class LocalIpcServer(
                 await WriteSuccessAsync(
                     pipe,
                     request.RequestId,
-                    request.CorrelationId!,
+                    effectiveCorrelationId,
                     RmsInstallationContractMapper.Map(result.Value),
                     cancellationToken).ConfigureAwait(false);
                 return;
@@ -301,7 +421,7 @@ public sealed class LocalIpcServer(
                 await WriteErrorAsync(
                     pipe,
                     request.RequestId,
-                    request.CorrelationId!,
+                    effectiveCorrelationId,
                     "unknown_operation",
                     "The requested IPC operation is not supported.",
                     cancellationToken).ConfigureAwait(false);
@@ -313,6 +433,7 @@ public sealed class LocalIpcServer(
         NamedPipeServerStream pipe,
         LocalIpcRequestEnvelope request,
         InvocationContext context,
+        string effectiveCorrelationId,
         CancellationToken cancellationToken)
     {
         var decision = AgentOperationAuthorization.Authorize(
@@ -323,7 +444,7 @@ public sealed class LocalIpcServer(
             await WriteErrorAsync(
                 pipe,
                 request.RequestId,
-                request.CorrelationId!,
+                effectiveCorrelationId,
                 decision.Code,
                 decision.Message,
                 cancellationToken).ConfigureAwait(false);
@@ -333,7 +454,7 @@ public sealed class LocalIpcServer(
         await WriteSuccessAsync(
             pipe,
             request.RequestId,
-            request.CorrelationId!,
+            effectiveCorrelationId,
             status.GetHealth(),
             cancellationToken).ConfigureAwait(false);
     }
@@ -426,7 +547,7 @@ public sealed class LocalIpcServer(
     {
         using var result = new MemoryStream();
         var buffer = new byte[1];
-        while (result.Length <= maximumBytes)
+        while (true)
         {
             var read = await stream.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (read == 0)
@@ -441,11 +562,14 @@ public sealed class LocalIpcServer(
 
             if (buffer[0] != (byte)'\r')
             {
+                if (result.Length >= maximumBytes)
+                {
+                    throw new LocalIpcProtocolException("The IPC request exceeded the configured size limit.");
+                }
+
                 result.WriteByte(buffer[0]);
             }
         }
-
-        throw new LocalIpcProtocolException("The IPC request exceeded the configured size limit.");
     }
 
     private static bool IsSafeToken(string? value) =>
@@ -466,6 +590,65 @@ public sealed class LocalIpcServer(
         }
         catch
         {
+        }
+    }
+
+    private void CompleteShutdown(
+        CancellationTokenSource currentLifetime,
+        SemaphoreSlim currentConcurrency)
+    {
+        currentConcurrency.Dispose();
+        currentLifetime.Dispose();
+        if (ReferenceEquals(lifetime, currentLifetime))
+        {
+            lifetime = null;
+            acceptTask = null;
+            concurrency = null;
+            pipeSecurity = null;
+            operatorGroupSid = null;
+        }
+    }
+
+    private async Task CompleteShutdownWhenClientsFinishAsync(
+        Task clientsTask,
+        CancellationTokenSource currentLifetime,
+        SemaphoreSlim currentConcurrency)
+    {
+        try
+        {
+            await clientsTask.ConfigureAwait(false);
+        }
+        catch
+        {
+            // Client failures are already logged by ObserveClientAsync.
+        }
+        finally
+        {
+            CompleteShutdown(currentLifetime, currentConcurrency);
+        }
+    }
+
+    private sealed class OwnedPipeInstance(LocalIpcServer owner, NamedPipeServerStream stream) : IAsyncDisposable
+    {
+        private int disposed;
+
+        public NamedPipeServerStream Stream { get; } = stream;
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref disposed, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                await Stream.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                owner.ReleasePipeInstance();
+            }
         }
     }
 }

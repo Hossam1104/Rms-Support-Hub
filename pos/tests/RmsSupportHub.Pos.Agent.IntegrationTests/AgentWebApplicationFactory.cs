@@ -34,6 +34,7 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
 
     private readonly string _environment;
     private readonly bool _useTestTrust;
+    private bool _failDurableAudit;
     private readonly string _databaseStorageRoot = Path.Combine(
         Path.GetTempPath(),
         "RmsSupportHub-Agent-Integration",
@@ -85,6 +86,8 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
     // the canonical loader.
     internal void UseTestTrustConfiguration(string path) => _trustConfigurationPath = path;
 
+    internal void FailDurableAudit() => _failDurableAudit = true;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(_environment);
@@ -124,6 +127,11 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
             {
                 RootPath = Path.Combine(_databaseStorageRoot, "audit")
             });
+            if (_failDurableAudit)
+            {
+                services.RemoveAll<IAgentAuditSink>();
+                services.AddSingleton<IAgentAuditSink, FailingAuditSink>();
+            }
 
             services.RemoveAll<IAgentConfigurationStore>();
             services.AddSingleton<IAgentConfigurationStore>(_configurationStore);
@@ -272,5 +280,10 @@ public sealed class AgentWebApplicationFactory : WebApplicationFactory<Program>
         client.DefaultRequestHeaders.Add(FakeAuthenticationHandler.PrincipalSidHeader, sid);
         client.DefaultRequestHeaders.Add(FakeAuthenticationHandler.IsAdministratorHeader, isAdministrator ? "true" : "false");
         client.DefaultRequestHeaders.Add("Origin", SupportHubOrigin);
+    }
+
+    private sealed class FailingAuditSink : IAgentAuditSink
+    {
+        public bool Record(AgentAuditEvent auditEvent) => false;
     }
 }

@@ -7,9 +7,4 @@
     <AssemblyName>RmsSupportHub.Pos.Domain</AssemblyName>
     <RootNamespace>RmsSupportHub.Pos.Domain</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\RmsSupportHub.Pos.Contracts\RmsSupportHub.Pos.Contracts.csproj" />
-  </ItemGroup>
-
 </Project>

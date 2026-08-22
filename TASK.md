@@ -7,7 +7,7 @@ REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
 BRANCH: `feat/wpf-01-shared-agent-local-ipc`
 EPIC: E16 - Agent Platform Re-Architecture (#13017)
 PRIMARY STORIES: US-E16-02 (#13022), US-E16-04 (#13024)
-STATUS: Implemented; Sol security remediation complete locally; awaiting GPT-5.6 Sol review and acceptance
+STATUS: Implemented; bounded OPUS remediation complete locally; awaiting exact-head CI and GPT-5.6 Sol review/acceptance
 
 ## Completed WPF-01 implementation
 
@@ -39,14 +39,28 @@ variable. Standalone Agent startup was not provisioned because it requires the
 machine-owned Testing certificate; in-process HTTPS/Named Pipe checks changed
 no machine or RMS state.
 
-Final delivery is in Draft PR #32. POS CI and Support Hub CI passed for the
-final validation run; the PR remains unmerged and must remain Draft for Sol
-review.
+Draft PR #32 remains unmerged and must remain Draft for Sol review. The
+pre-remediation baseline CI was green; the final bounded OPUS remediation still
+requires exact-head CI after delivery.
 
-Local validation: Domain 12/12, Application 89/89, Infrastructure 155/155,
-Agent Integration 195/195; prior focused remediation 25/25 plus S03 identity
-tests 12/12; PowerShell parse gate
-37/37; Pester 3.4.0 172/172.
+Local validation after the bounded remediation: Domain 12/12, Application
+89/89, Infrastructure 155/155, Agent Integration 234/234 (490/490 POS tests
+total); lifecycle remediation 6/6; audit/authority/architecture remediation
+25/25; exact protocol bounds 2/2; PowerShell parse gate 37/37; Pester 3.4.0
+172/172. Release build passed with 0 warnings and 0 errors, and the checked-in
+OpenAPI document was regenerated and verified fresh.
+
+## WPF-01 final bounded OPUS remediation
+
+OPUS-01 through OPUS-13 and OPUS-15 are closed with production-path code and
+regression coverage for SCM identity/imports, listener recovery, pipe/semaphore
+lifetime, correlation, Local WPF authority, ACL/PID trust, local group typing,
+Domain/Contracts parity, typed audit-unavailable 503s, namespace ownership,
+Identification impersonation, orphan cleanup, and exact protocol bounds.
+
+OPUS-14 rate limiting and OPUS-16 representative-machine/operator-group E2E
+remain explicitly deferred. No WPF-02 work, Production contact, provisioning,
+native RMS mutation, customer database access, or runtime deployment occurred.
 
 ## WPF-02 - WPF Shell + Local Agent Health Experience
 
@@ -55,18 +69,14 @@ Do not infer authorization to start it from this prompt.
 
 > HARD STOP - DO NOT EXECUTE WPF-02 until GPT-5.6 Sol reviews and accepts WPF-01.
 
-MODEL: Implementation and validation executor
-AUTHORITY: GPT-5.6 Sol is Planner, Architect, and Acceptance Authority
 BRANCH: Create `feat/wpf-02-wpf-shell-local-health` from the accepted WPF-01
 head. Do not work on `main`, merge, or mark a PR ready.
 
 ### WPF-02 objective
 
-Create the first native WPF desktop shell beside the Agent, using the existing
-`RmsSupportHub.Pos.LocalIpc` client as the only local business-operation entry
-point. Prove that the desktop process can connect to the local Agent, show a
-bounded health state, and recover from Agent unavailability without duplicating
-Agent business logic.
+Create a native WPF shell beside the Agent using `RmsSupportHub.Pos.LocalIpc`
+as the only local business-operation entry point. Prove bounded health display
+and Agent-unavailability recovery without duplicating Agent business logic.
 
 ### WPF-02 in scope
 
@@ -82,9 +92,7 @@ Agent business logic.
    correlation ID, last successful check time, and safe error code/detail only.
 5. Add cancellation and bounded retry behavior that cannot create an unbounded
    timer, request, or log loop.
-6. Add unit tests for view-model/state transitions and integration coverage for
-   healthy, unavailable, malformed-response, timeout, and protocol-mismatch
-   client outcomes using test seams rather than machine mutation.
+6. Add unit/integration coverage for view-model transitions and healthy, unavailable, malformed-response, timeout, and protocol-mismatch outcomes using test seams.
 7. Keep the shell design-token based and avoid raw component color literals.
 
 ### WPF-02 out of scope
@@ -99,13 +107,10 @@ Agent business logic.
 
 ### WPF-02 validation and delivery
 
-- Read `TASK.md`, `.ai/STATE.md`, run `python .ai/scripts/context.py`, and read
-  only task-relevant sources before editing.
+- Read `TASK.md`, `.ai/STATE.md`, run `python .ai/scripts/context.py`, and read only task-relevant sources before editing.
 - Run focused WPF tests first, then the full affected POS Release build/tests,
   PowerShell gates, memory checks, and `git diff --check`.
-- Run only local Testing runtime checks if the existing machine-owned Testing
-  certificate and authorization prerequisites are already available. Do not
-  provision or mutate Production/native RMS state.
+- Run only local Testing runtime checks when the machine-owned certificate and authorization prerequisites are available; never provision or mutate Production/native RMS state.
 - Update `.ai/STATE.md`, `.ai/HISTORY.md`, and this task prompt with factual
   evidence. Set `.ai/HANDOFF.md` to `Empty` only after completion.
 - Commit and push the feature branch, create a Draft PR with the relevant Azure

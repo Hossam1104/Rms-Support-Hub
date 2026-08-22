@@ -22,14 +22,9 @@ public interface IAgentInvocationContextFactory
 /// </summary>
 public sealed class AgentInvocationContextFactory(
     IAdministratorGroupChecker administratorGroupChecker,
-    IAgentPrincipalSidResolver principalSidResolver) : IAgentInvocationContextFactory
+    IAgentPrincipalSidResolver principalSidResolver,
+    ILocalWindowsAuthorityClassifier localWindowsAuthorityClassifier) : IAgentInvocationContextFactory
 {
-    private static readonly SecurityIdentifier LocalSystemSid =
-        new(WellKnownSidType.LocalSystemSid, domainSid: null);
-
-    private static readonly SecurityIdentifier BuiltinAdministratorsSid =
-        new(WellKnownSidType.BuiltinAdministratorsSid, domainSid: null);
-
     public InvocationContext CreateLegacyLoopback(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -57,24 +52,23 @@ public sealed class AgentInvocationContextFactory(
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(operatorGroupSid);
 
-        var callerSid = identity.User;
+        SecurityIdentifier? callerSid = null;
         var level = InvocationAuthorizationLevel.Unauthenticated;
-        if (callerSid is not null)
+        try
         {
-            try
-            {
-                var principal = new WindowsPrincipal(identity);
-                level = callerSid.Equals(LocalSystemSid)
-                    || principal.IsInRole(BuiltinAdministratorsSid)
-                    ? InvocationAuthorizationLevel.LocalAdministrator
-                    : principal.IsInRole(operatorGroupSid)
-                        ? InvocationAuthorizationLevel.LocalOperator
-                        : InvocationAuthorizationLevel.Unauthenticated;
-            }
-            catch (Exception)
+            if (!localWindowsAuthorityClassifier.TryClassify(
+                    identity,
+                    operatorGroupSid,
+                    out callerSid,
+                    out level))
             {
                 level = InvocationAuthorizationLevel.Unauthenticated;
             }
+        }
+        catch (Exception)
+        {
+            callerSid = null;
+            level = InvocationAuthorizationLevel.Unauthenticated;
         }
 
         return new(

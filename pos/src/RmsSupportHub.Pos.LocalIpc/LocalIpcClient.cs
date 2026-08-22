@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.IO.Pipes;
 using System.Text.Json.Serialization;
+using System.Security.Principal;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
 
@@ -23,6 +24,8 @@ public sealed class LocalIpcProtocolException(string message) : Exception(messag
 /// </summary>
 public sealed class LocalIpcClient
 {
+    public const TokenImpersonationLevel RequestedImpersonationLevel = TokenImpersonationLevel.Identification;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
@@ -78,7 +81,9 @@ public sealed class LocalIpcClient
             ".",
             options.PipeName,
             PipeDirection.InOut,
-            PipeOptions.Asynchronous);
+            PipeOptions.Asynchronous,
+            RequestedImpersonationLevel,
+            HandleInheritability.None);
         await pipe.ConnectAsync(timeout.Token).ConfigureAwait(false);
 
         if (!serverIdentityVerifier.IsExpectedServer(pipe))
@@ -151,12 +156,12 @@ public sealed class LocalIpcClient
     {
         using var result = new MemoryStream();
         var buffer = new byte[1];
-        while (result.Length <= maximumBytes)
+        while (true)
         {
             var read = await stream.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (read == 0)
             {
-                break;
+                throw new LocalIpcProtocolException("The IPC response was incomplete.");
             }
 
             if (buffer[0] == (byte)'\n')
@@ -166,11 +171,14 @@ public sealed class LocalIpcClient
 
             if (buffer[0] != (byte)'\r')
             {
+                if (result.Length >= maximumBytes)
+                {
+                    throw new LocalIpcProtocolException("The IPC response exceeded the configured size limit.");
+                }
+
                 result.WriteByte(buffer[0]);
             }
         }
-
-        throw new LocalIpcProtocolException("The IPC response exceeded the configured size limit.");
     }
 
     private static bool IsSafeToken(string? value) =>

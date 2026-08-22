@@ -38,9 +38,22 @@ public static class RmsEndpoints
                     IAgentInvocationContextFactory contextFactory,
                     HttpContext context,
                     CancellationToken cancellationToken) =>
-                    Results.Ok(await diagnostics
-                        .GetAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
-                        .ConfigureAwait(false)))
+                {
+                    try
+                    {
+                        return Results.Ok(await diagnostics
+                            .GetAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                            .ConfigureAwait(false));
+                    }
+                    catch (RmsInstallationDiscoveryAuditUnavailableException)
+                    {
+                        return AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            "The RMS diagnostics are temporarily unavailable.",
+                            RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
+                    }
+                })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("GetRmsDiagnostics")
             .WithTags("RMS Diagnostics")
@@ -57,6 +70,7 @@ public static class RmsEndpoints
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
         app.MapGet(

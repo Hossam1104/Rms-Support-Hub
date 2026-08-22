@@ -113,6 +113,7 @@ builder.Services.AddSingleton<IWindowsLocalGroupMembershipResolver, WindowsLocal
 builder.Services.AddSingleton<IWindowsLocalGroupMembershipLookup, WindowsLocalGroupMembershipLookup>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAgentPrincipalSidResolver, AgentPrincipalSidResolver>();
+builder.Services.AddSingleton<ILocalWindowsAuthorityClassifier, WindowsLocalAuthorityClassifier>();
 builder.Services.AddSingleton<IAgentInvocationContextFactory, AgentInvocationContextFactory>();
 
 builder.Services.AddCors(options => options.AddPolicy(AgentCors.PolicyName, policy =>

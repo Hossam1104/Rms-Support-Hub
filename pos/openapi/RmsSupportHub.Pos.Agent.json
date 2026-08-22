@@ -793,6 +793,16 @@
           "403": {
             "description": "AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected."
           },
+          "503": {
+            "description": "The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
           "500": {
             "description": "The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details.",
             "content": {
@@ -1234,6 +1244,16 @@
           },
           "403": {
             "description": "Authorization, exact-origin, SID, or the one-use mutation-token boundary rejected the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2624,6 +2644,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
           }
         }
       }
@@ -2682,6 +2712,16 @@
           },
           "403": {
             "description": "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Agent could not complete mandatory audited evidence collection and returned safe application/problem+json with audit_unavailable. No raw exception, credential, path, or audit-store detail crosses the response boundary.",
             "content": {
               "application/problem+json": {
                 "schema": {

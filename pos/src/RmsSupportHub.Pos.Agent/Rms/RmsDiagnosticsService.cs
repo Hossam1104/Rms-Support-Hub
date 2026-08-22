@@ -32,6 +32,14 @@ public sealed class RmsDiagnosticsService(
             .ConfigureAwait(false);
         if (!installationResult.Succeeded || installationResult.Value is null)
         {
+            if (string.Equals(
+                    installationResult.Error?.Code,
+                    RmsInstallationDiscoveryFailureCodes.AuditUnavailable,
+                    StringComparison.Ordinal))
+            {
+                throw new RmsInstallationDiscoveryAuditUnavailableException();
+            }
+
             throw new InvalidOperationException(
                 installationResult.Error?.Message ?? "The RMS installation discovery query failed.");
         }

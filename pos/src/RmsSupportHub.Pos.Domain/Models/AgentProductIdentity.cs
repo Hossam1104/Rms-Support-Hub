@@ -1,5 +1,3 @@
-using RmsSupportHub.Pos.Contracts;
-
 namespace RmsSupportHub.Pos.Domain.Models;
 
 /// <summary>
@@ -10,7 +8,7 @@ public static class AgentProductIdentity
 {
     public const string ProductId = "RmsSupportAgent";
 
-    public const string PermanentServiceName = AgentServiceIdentity.PermanentServiceName;
+    public const string PermanentServiceName = "RmsSupportAgent";
 
     public const string ServiceDisplayName = "RMS Support Agent";
 

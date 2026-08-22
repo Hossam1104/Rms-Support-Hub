@@ -101,18 +101,80 @@ public sealed class LocalIpcTrustBoundaryTests
     }
 
     [Fact]
-    public void WindowsServerIdentityVerifierHasNoProcessTokenOrDebugPrivilegeNativeDependency()
+    public void WindowsServiceResolverResolvesTheRealEventLogService()
     {
-        var importedEntryPoints = typeof(WindowsLocalIpcServerIdentityVerifier)
-            .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        var resolver = new WindowsLocalServiceProcessResolver();
+
+        Assert.True(resolver.TryGetRunningServiceProcessId("EventLog", out var processId));
+        Assert.NotEqual(0u, processId);
+    }
+
+    [Fact]
+    public void WindowsServiceResolverRejectsAUniqueNonexistentService()
+    {
+        var resolver = new WindowsLocalServiceProcessResolver();
+        var serviceName = "RmsSupportHub.DoesNotExist." + Guid.NewGuid().ToString("N");
+
+        Assert.False(resolver.TryGetRunningServiceProcessId(serviceName, out var processId));
+        Assert.Equal(0u, processId);
+    }
+
+    [Fact]
+    public void NativeImportsAreOwnedByTheActualResolverClassesAndRemainQueryOnly()
+    {
+        var importedEntryPoints = new[]
+            {
+                typeof(WindowsLocalServiceProcessResolver),
+                typeof(WindowsLocalIpcPipeServerProcessIdResolver)
+            }
+            .SelectMany(type => type
+            .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
             .Select(method => method.GetCustomAttribute<DllImportAttribute>()?.EntryPoint)
             .Where(entryPoint => entryPoint is not null)
             .Cast<string>()
             .ToArray();
 
+        Assert.NotEmpty(importedEntryPoints);
+        Assert.Contains("OpenSCManagerW", importedEntryPoints, StringComparer.Ordinal);
+        Assert.Contains("OpenServiceW", importedEntryPoints, StringComparer.Ordinal);
+        Assert.Contains("GetNamedPipeServerProcessId", importedEntryPoints, StringComparer.Ordinal);
         Assert.DoesNotContain("OpenProcess", importedEntryPoints, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("OpenProcessToken", importedEntryPoints, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("SeDebugPrivilege", importedEntryPoints, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ProductionOperatorAclSupportsRealPipePidVerification()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var options = CreateOptions();
+        var security = LocalIpcSecurityDescriptor.Create(currentSid);
+        using var server = NamedPipeServerStreamAcl.Create(
+            options.PipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous,
+            0,
+            0,
+            security);
+        var waitForConnection = server.WaitForConnectionAsync();
+        using var client = new NamedPipeClientStream(".", options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        await client.ConnectAsync(timeout.Token);
+        await waitForConnection;
+
+        var resolver = new WindowsLocalIpcPipeServerProcessIdResolver();
+        Assert.True(resolver.TryGetServerProcessId(client, out var serverProcessId));
+        Assert.NotEqual(0u, serverProcessId);
+    }
+
+    [Fact]
+    public void LocalIpcClientRequestsIdentificationImpersonationOnly()
+    {
+        Assert.Equal(TokenImpersonationLevel.Identification, LocalIpcClient.RequestedImpersonationLevel);
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Snapshots;
 using RmsSupportHub.Pos.Agent.Invocation;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Snapshots;
 
@@ -20,9 +21,22 @@ public static class SafetySnapshotEndpoints
                     IAgentInvocationContextFactory contextFactory,
                     SafetySnapshotService service,
                     CancellationToken cancellationToken) =>
-                    Results.Ok(await service
-                        .PreviewAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
-                        .ConfigureAwait(false)))
+                    {
+                        try
+                        {
+                            return Results.Ok(await service
+                                .PreviewAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                                .ConfigureAwait(false));
+                        }
+                        catch (RmsInstallationDiscoveryAuditUnavailableException)
+                        {
+                            return AgentProblemDetails.CreateResult(
+                                context,
+                                StatusCodes.Status503ServiceUnavailable,
+                                "The safety snapshot is temporarily unavailable.",
+                                RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
+                        }
+                    })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("PreviewSafetySnapshot")
             .WithTags("Safety Snapshot")
@@ -34,7 +48,8 @@ public static class SafetySnapshotEndpoints
             .Produces<SafetySnapshotPreviewDto>(StatusCodes.Status200OK)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
-            .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json");
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json");
 
         app.MapPost(
                 SafetySnapshotOperation.CaptureHttpPath,
@@ -76,6 +91,14 @@ public static class SafetySnapshotEndpoints
                     {
                         return AgentProblemDetails.CreateResult(context, StatusCodes.Status400BadRequest, "The safety snapshot request was rejected by the Agent.", exception.Message);
                     }
+                    catch (RmsInstallationDiscoveryAuditUnavailableException)
+                    {
+                        return AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            "The safety snapshot is temporarily unavailable.",
+                            RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
+                    }
                     catch
                     {
                         return AgentProblemDetails.CreateResult(context, StatusCodes.Status500InternalServerError, "The safety snapshot could not be captured safely.", "safety_snapshot_failed");
@@ -94,6 +117,7 @@ public static class SafetySnapshotEndpoints
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status403Forbidden, "application/problem+json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json")
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
         app.MapGet(

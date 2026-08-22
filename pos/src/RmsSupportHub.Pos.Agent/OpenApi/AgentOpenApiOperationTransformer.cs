@@ -974,6 +974,12 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(operation, "400", "The Agent rejected the typed request, challenge, configuration, or bounded idempotency key with safe problem details or typed NotAttempted state.");
         SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge for this protected mutation.");
         SetResponseDescription(operation, "403", "Authorization, exact-origin transport, SID resolution, or the one-use mutation-token boundary rejected the mutation request.");
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete mandatory audited evidence collection and returned safe " +
+            "application/problem+json with audit_unavailable. No raw exception, credential, path, " +
+            "or audit-store detail crosses the response boundary.");
         SetResponseDescription(operation, "500", "The Agent returned a safe generic server-error response without exception, credential, path, or SQL details.");
         DocumentNegotiateChallenge(operation);
     }
@@ -1119,6 +1125,12 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
         SetResponseDescription(operation, "400", "The Agent rejected the canonical transport boundary or request with safe problem details.");
         SetResponseDescription(operation, "401", "The Windows authentication middleware issued a Negotiate challenge.");
         SetResponseDescription(operation, "403", "Authorization, exact-origin, SID, or the one-use mutation-token boundary rejected the request.");
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete mandatory audited evidence collection and returned safe " +
+            "application/problem+json with audit_unavailable. No raw exception, credential, path, " +
+            "or audit-store detail crosses the response boundary.");
         SetResponseDescription(operation, "500", "The Agent could not generate the bundle and returned a safe generic error.");
         DocumentNegotiateChallenge(operation);
         SetResponseExample(operation, "200", "application/json", new JsonObject
@@ -1168,6 +1180,12 @@ public sealed class AgentOpenApiOperationTransformer : IOpenApiOperationTransfor
             "500",
             "The Agent failed while reading a server-owned dependency and returned a safe generic " +
             "server-error response without exception details.");
+        SetResponseDescription(
+            operation,
+            "503",
+            "The Agent could not complete mandatory audited evidence collection and returned safe " +
+            "application/problem+json with audit_unavailable. No raw exception, credential, path, " +
+            "or audit-store detail crosses the response boundary.");
         DocumentNegotiateChallenge(operation);
         SetResponseExample(operation, "200", "application/json", example);
         SetResponseExample(operation, "400", "application/problem+json", CreateProblemExample(

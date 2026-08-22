@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using RmsSupportHub.Pos.Contracts;
 using RmsSupportHub.Pos.Agent.Packages;
 using RmsSupportHub.Pos.Agent.Repair;
 using RmsSupportHub.Pos.Domain.Models;
@@ -187,6 +188,28 @@ public sealed class ArchitectureBoundaryTests
 
         Assert.DoesNotContain("new AgentMachineTrustConfiguration", program, StringComparison.Ordinal);
         Assert.Contains("AddMetadataOnlyLifecycleGuards", program, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DomainAndContractsKeepThePermanentServiceIdentityInParity()
+    {
+        Assert.Equal(
+            AgentServiceIdentity.PermanentServiceName,
+            AgentProductIdentity.PermanentServiceName);
+    }
+
+    [Fact]
+    public void DomainProjectDoesNotDependOnContractsForTheServiceIdentity()
+    {
+        var root = FindRepoRoot();
+        var project = File.ReadAllText(Path.Combine(
+            root,
+            "pos",
+            "src",
+            "RmsSupportHub.Pos.Domain",
+            "RmsSupportHub.Pos.Domain.csproj"));
+
+        Assert.DoesNotContain("RmsSupportHub.Pos.Contracts", project, StringComparison.Ordinal);
     }
 
     private static string FindRepoRoot()
