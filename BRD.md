@@ -155,7 +155,7 @@ Common capabilities:
 - **BR-031 WPF Health Telemetry:** The Agent Service shall monitor the local WPF process state, heartbeat, version, and unhandled crashes, publishing health telemetry to the central Hub independently of the desktop UI process.
 - **BR-032 Secure Outbound Agent Communication:** Agent-to-Hub communication shall be initiated by the Agent as an outbound, authenticated, encrypted SignalR connection over HTTPS, requiring no inbound listening ports on target machines.
 - **BR-033 Device Identity:** Each remotely manageable POS machine shall have a unique, server-recognized device identity backed by cryptographic credentials managed outside application packages.
-- **BR-034 Secure Local IPC:** Communication between the WPF desktop application and the Agent Service shall use authenticated Windows Named Pipes with strict Windows Access Control Lists (ACLs) restricting access to local Administrators.
+- **BR-034 Secure Local IPC:** WPF-to-Agent communication uses authenticated Windows Named Pipes restricted to explicitly approved local identities/groups; the Agent performs per-command authorization, requiring administrator/elevated authority for high-risk operations.
 - **BR-035 Typed Remote Commands:** Remote operations issued from the central Hub shall be restricted to an allowlisted catalogue of strongly-typed commands; generic shell, arbitrary PowerShell, generic SQL, and arbitrary process execution are strictly prohibited.
 - **BR-036 Offline Resilience:** Local workflows and durable audit logging shall operate during network outages; pending telemetry and audit records shall be buffered locally and synchronized upon reconnection.
 - **BR-037 Unified Audit:** Local and remote operations shall generate durable, sanitized audit records sharing a common correlation model, identifying the originating caller, machine identity, operation parameters, and execution outcome.
@@ -189,7 +189,7 @@ Common capabilities:
 - File/data cleanup preview and guarded branch reset protecting RMS services.
 - Package installation, upgrade, repair, uninstall, and rollback execution.
 - Searchable local audit activity history.
-- Local Windows Administrator elevation verification and confirmation modals.
+- Authorized Local Operator support workflows with local Windows Administrator elevation verification and confirmation modals for high-risk mutating actions.
 - Full autonomous functionality in offline mode.
 
 ### POS Admin Fleet Supervision (Angular Hub)
@@ -208,7 +208,7 @@ Common capabilities:
 
 ## 8. Non-Functional Requirements
 
-- **Security & Authorization:** Fail-closed design; Named Pipe ACLs for local IPC; outbound SignalR for remote control; server-enforced RBAC for admins.
+- **Security & Authorization:** Fail-closed design; bounded Named Pipe ACLs (SYSTEM, Administrators, dedicated RMS Support Operators group) and per-command Agent authorization for local IPC; outbound SignalR for remote control; server-enforced RBAC for admins.
 - **Offline Resilience:** Store-level maintenance must operate with 100% capability during network outages.
 - **Process Isolation:** WPF desktop crashes must never stop or disrupt the background Agent Service.
 - **Zero Privilege Duplication:** Shared application layer ensures 100% identical business rules for local and remote actions.
@@ -224,7 +224,7 @@ Common capabilities:
 2. No browser-selected database connection strings or arbitrary API URLs.
 3. No generic shell, arbitrary PowerShell, generic SQL, or arbitrary process execution.
 4. Production resources strictly disabled in Testing deployments.
-5. Local IPC restricted to `LocalSystem` and `Administrators` via Windows Security Descriptors.
+5. Local IPC restricted to `SYSTEM`, `Administrators`, and dedicated `RMS Support Operators` group via Windows Security Descriptors, with per-command Agent authorization for elevated actions.
 6. Outbound-only SignalR over HTTPS—no open listening ports on store machines.
 7. Unique per-machine cryptographic device identity.
 8. Remote mutating commands require verified administrator RBAC permissions.

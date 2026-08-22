@@ -184,7 +184,7 @@ Azure DevOps items are classified by:
 ---
 
 # E06 — GHC Uni-Commerce (#12844)
-**Epic Status:** Done (Closed)
+**Epic Status:** Active (3 child stories Conditional/New)
 
 ### US-E06-01 — Specialized invoice payload builder (#12893)
 **Status:** Done (Closed)
@@ -520,18 +520,18 @@ Azure DevOps items are classified by:
 ### US-E16-03 — Define local/remote invocation context and authorization source (#13023)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-030, BR-034, BR-035, BR-040
 **Acceptance Criteria:**
-- Invocation context captures caller source (Local vs Remote), identity, and correlation ID.
-- Local calls enforce Windows identity and Administrators group membership.
-- Remote calls enforce device trust and administrator RBAC policy.
+- InvocationContext captures caller source (LocalWpf vs RemoteHub), identity, and correlation ID.
+- InvocationContext distinguishes authenticated local operator/admin authority and remote admin/device authority.
+- Per-command authorization evaluates required operation privilege against the authenticated caller context.
 - Authorization fails closed when context is missing, invalid, or insufficient.
 
 ### US-E16-04 — Secure WPF-to-Agent Windows Named Pipe transport (#13024)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-028, BR-034
 **Acceptance Criteria:**
-- Agent exposes secure Named Pipe with restricted ACLs (LocalSystem + Administrators).
-- WPF connects over IPC and validates server identity.
-- Windows client identity is authenticated and authorized per command.
-- Unauthorized/non-admin callers fail closed.
+- Agent exposes secure Windows Named Pipe listener with restricted ACLs permitting only SYSTEM, Local Administrators, and the dedicated RMS Support Operators group.
+- Unauthorized local identities (Everyone, Guests, anonymous, unrestricted Authenticated Users) are rejected fail-closed at IPC connection.
+- Caller Windows identity is authenticated; anonymous IPC is prohibited.
+- Per-command Agent application layer authorization remains mandatory for all typed operations.
 
 ### US-E16-05 — Agent-initiated SignalR Hub connection (#13025)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-032, BR-033
@@ -621,6 +621,11 @@ Azure DevOps items are classified by:
 
 ### US-E17-11 — Local Windows authorization and high-risk confirmation UX (#13041)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-028, BR-034
+**Acceptance Criteria:**
+- High-risk mutating operations (database restore, branch reset, cleanup execution, package install/upgrade/repair/uninstall, rollback/recovery, privileged service control) require local Administrator/elevated authorization and explicit confirmation.
+- Authorized Local Operators can execute non-destructive diagnostic, health, log, backup, and support bundle operations without elevation.
+- Non-admin users attempting elevated operations receive clear permission-denied feedback and elevation guidance.
+- All authorization decisions and high-risk operation confirmations are durably audited.
 
 ### US-E17-12 — Offline standalone operation (#13042)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-028, BR-036

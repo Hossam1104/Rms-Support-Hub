@@ -10,12 +10,12 @@
 
 ## Delivery Hierarchy Summary
 
-- **Total Epics:** 19 (9 Closed, 1 Active, 9 New/Planned)
-- **Total User Stories:** 175 (93 Closed, 1 Active, 81 New/Planned/Conditional)
+- **Total Epics:** 19 (10 Closed, 2 Active, 7 New/Planned)
+- **Total User Stories:** 175 (96 Closed, 1 Active, 78 New/Planned/Conditional)
 - **Total Work Items:** 194
-- **Closed (Done / Superseded):** 93 Stories / 9 Epics
-- **Active (Ongoing Governance):** 1 Story / 1 Epic (E15)
-- **New (Planned / Architecture Baseline):** 81 Stories / 9 Epics (E12, E13, E14, E16, E17, E18, E19)
+- **Closed (Done / Superseded):** 96 Stories / 10 Epics
+- **Active (Ongoing Governance & Active Integrations):** 1 Story / 2 Epics (E06, E15)
+- **New (Planned / Architecture Baseline):** 78 Stories / 7 Epics (E12, E13, E14, E16, E17, E18, E19)
 
 ## Azure Classification Structure
 
@@ -69,8 +69,8 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **E02** | 12840 | Epic | [E02] QA Prompt Studio | — | **Closed** | Rms_Support_Hub\QA | Rms_Support_Hub\QA-01 - Prompt Studio | BR-005, BR-025 | [Repository](https://github.com/Hossam1104/Rms-Support-Hub) |
 | **E03** | 12841 | Epic | [E03] Online Order Core Platform | — | **Closed** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-01 - Core Platform | BR-003, BR-004, BR-006, BR-007, BR-008, BR-009, BR-023, BR-024 | [PR #23](https://github.com/Hossam1104/Rms-Support-Hub/pull/23) |
 | **E04** | 12842 | Epic | [E04] UPC E-Commerce | — | **Closed** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-02 - UPC E-Commerce | BR-003, BR-004, BR-006, BR-007, BR-008, BR-009, BR-010, BR-011, BR-012 | [PR #23](https://github.com/Hossam1104/Rms-Support-Hub/pull/23) |
-| **E05** | 12843 | Epic | [E05] GHC E-Commerce | — | **Closed** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-003, BR-004, BR-006, BR-007, BR-008, BR-009, BR-010, BR-011 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
-| **E06** | 12844 | Epic | [E06] GHC Uni-Commerce | — | **Closed** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-003, BR-004, BR-006, BR-007, BR-008, BR-009, BR-010, BR-023 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) |
+| **E05** | 12843 | Epic | [E05] GHC E-Commerce | — | **Closed** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-03 - GHC E-Commerce | BR-003, BR-004, BR-006, BR-007, BR-008, BR-009, BR-010, BR-011 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) / [PR #30](https://github.com/Hossam1104/Rms-Support-Hub/pull/30) |
+| **E06** | 12844 | Epic | [E06] GHC Uni-Commerce | — | **Active** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-04 - GHC Uni-Commerce | BR-003, BR-004, BR-006, BR-007, BR-008, BR-009, BR-010, BR-023 | [PR #26](https://github.com/Hossam1104/Rms-Support-Hub/pull/26) / [PR #30](https://github.com/Hossam1104/Rms-Support-Hub/pull/30) (Active — 3 stories conditional) |
 | **E07** | 12845 | Epic | [E07] POS Maintenance — Secure Agent Foundation | — | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-01 - Secure Agent Foundation | BR-013, BR-014, BR-015, BR-016, BR-017, BR-020, BR-023 | [PR #7](https://github.com/Hossam1104/Rms-Support-Hub/pull/7) |
 | **E08** | 12846 | Epic | [E08] POS Maintenance — Diagnostics & Recovery | — | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-02 - Diagnostics and Recovery | BR-016, BR-017, BR-018, BR-020 | [PR #9](https://github.com/Hossam1104/Rms-Support-Hub/pull/9) |
 | **E09** | 12847 | Epic | [E09] POS Maintenance — Package Lifecycle & Security | — | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-03 - Package Lifecycle and Security | BR-015, BR-019, BR-020, BR-023 | [PR #21](https://github.com/Hossam1104/Rms-Support-Hub/pull/21) |

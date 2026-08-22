@@ -24,9 +24,9 @@ The objective of `WPF-01` is to establish the core decoupled application seam in
 
 This slice proves that:
 1. Privileged logic can be extracted into transport-agnostic command/query handlers.
-2. Local callers over Windows Named Pipes authenticate and execute under strict Windows ACLs.
+2. Local callers over Windows Named Pipes authenticate and execute under strict Windows ACLs (SYSTEM, Administrators, dedicated RMS Support Operators group) with per-command Agent authorization.
 3. Existing loopback HTTP/1.1 Kestrel endpoints continue to operate without behavioral drift.
-4. Unauthorized or un-elevated callers are rejected fail-closed.
+4. Unauthorized callers are rejected at IPC connection; un-elevated callers attempting privileged commands are rejected by per-command Agent authorization fail-closed.
 
 ---
 
@@ -37,21 +37,21 @@ This slice proves that:
    - Identify the reusable command/query boundary for diagnostics, service control, database recovery, and package trust.
 2. **Shared Application Layer:**
    - Extract transport-agnostic command/query handlers and validators into `RmsSupportAgent.Application`.
-   - Define `InvocationContext` capturing invocation source (`LocalWpf` vs `RemoteHub`), caller Windows principal, device identity, admin identity, and correlation ID.
+   - Define `InvocationContext` capturing invocation source (`LocalWpf` vs `RemoteHub`), caller Windows principal, local operator/admin role, device identity, admin identity, correlation ID, and authorization level.
    - Preserve mutation leases, idempotency guards, bounded redaction, and durable audit repository.
 3. **Transport Preservation:**
    - Keep existing Kestrel HTTPS loopback endpoints (`https://rms-pos-agent.localhost:5001`) active and delegating to the shared application layer.
    - Ensure all existing backend, POS, and Pester tests pass with zero regressions.
 4. **Local IPC Foundation:**
    - Implement an authenticated Windows Named Pipe listener in `RmsSupportAgent.Service` (`\\.\pipe\RmsSupportAgent.Ipc`).
-   - Configure Windows Security Descriptors restricting pipe access to `LocalSystem` and `NT AUTHORITY\Administrators`.
+   - Configure Windows Security Descriptors restricting pipe access to `LocalSystem`, `NT AUTHORITY\Administrators`, and the dedicated local `RMS Support Operators` group.
    - Implement caller Windows identity verification.
    - Create a lightweight client library in `RmsSupportAgent.LocalIpc`.
 5. **Initial Typed Handlers:**
    - Implement Agent health/readiness query over Named Pipes.
    - Implement ONE non-destructive typed diagnostic command (e.g., RMS installation discovery query).
 6. **Testing & Security Harness:**
-   - Write automated integration tests verifying Named Pipe client connection, Windows authentication, ACL rejection for non-admin accounts, and shared handler execution.
+   - Write automated integration tests verifying Named Pipe client connection, Windows authentication, ACL rejection for unauthorized accounts, per-command authorization enforcement, and shared handler execution.
 
 ---
 
@@ -67,7 +67,8 @@ This slice proves that:
 
 ## 4. Security and Governance Guardrails
 
-- Named Pipe ACLs must enforce `LocalSystem` and `Administrators` only.
+- Named Pipe ACLs must enforce `LocalSystem`, `Administrators`, and dedicated `RMS Support Operators` group only.
+- Per-command authorization in the Agent application layer enforces operator vs administrator privilege.
 - Local Windows callers must be authenticated; anonymous IPC is prohibited.
 - Generic command execution, arbitrary PowerShell, generic SQL, and arbitrary process launching remain strictly forbidden.
 - All operations must emit correlated, durable audit records.

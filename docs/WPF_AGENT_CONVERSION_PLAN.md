@@ -17,7 +17,7 @@ This document establishes the phased implementation roadmap for transitioning th
 2. **Local POS Machine:** Always-running Windows Agent Service (`RmsSupportAgent.Service`) + complete standalone WPF Desktop Application (`RmsSupportAgent.Desktop.Wpf`).
 3. **Shared Capability Seam:** Local WPF actions and remote Hub commands execute the **same** underlying command/query handlers in the Agent application layer. Privileged logic is never duplicated.
 4. **Autonomous Local Operation:** The WPF application and Agent Service operate with full capability even when the central Hub or store network is offline.
-5. **Secure Transports:** Windows Named Pipes with strict Administrator ACLs for local IPC; Agent-initiated persistent SignalR over HTTPS for Hub connectivity.
+5. **Secure Transports:** Windows Named Pipes with bounded local identity ACLs (SYSTEM, Administrators, dedicated RMS Support Operators group) and per-command Agent authorization for local IPC; Agent-initiated persistent SignalR over HTTPS for Hub connectivity.
 6. **Strictly Typed Remote Operations:** No generic shell, arbitrary PowerShell, generic SQL, or arbitrary process execution.
 
 ---
@@ -96,23 +96,25 @@ This document establishes the phased implementation roadmap for transitioning th
   - Extract reusable C# commands, queries, and validators into `RmsSupportAgent.Application`.
   - Decouple business handlers from Kestrel/HTTP infrastructure.
   - Preserve mutation leases, idempotency guards, bounded redaction, timeouts, and durable audit logs.
-  - Define `InvocationContext` capturing caller identity (`LocalWpf` vs `RemoteHub`), Windows principal, device identity, admin identity, correlation ID, and authorization level.
+  - Define `InvocationContext` capturing caller identity (`LocalWpf` vs `RemoteHub`), Windows principal, local operator/admin role, device identity, admin identity, correlation ID, and authorization level.
   - Define unified progress reporting and cooperative cancellation token contracts.
 - **Exit Gate:** Shared application layer passes unit and integration tests; existing HTTP endpoints delegate to shared handlers with zero regression.
 
 ---
 
 ### Phase 2 — Local WPF-Agent IPC Foundation
-- **Goal:** Authenticated, secure local IPC transport using Windows Named Pipes.
+- **Goal:** Authenticated, secure local IPC transport using Windows Named Pipes under a two-layer authorization model.
 - **Work:**
   - Implement Named Pipe server in `RmsSupportAgent.Service` (`\\.\pipe\RmsSupportAgent.Ipc`).
-  - Enforce Windows Security Descriptors / ACLs restricting pipe access to `LocalSystem` and `NT AUTHORITY\Administrators`.
-  - Validate caller Windows identity on connection and per-message.
+  - Enforce Windows Security Descriptors / ACLs restricting pipe connection to `LocalSystem`, `NT AUTHORITY\Administrators`, and the dedicated local Windows group `RMS Support Operators` (Layer A).
+  - Strictly reject unauthorized callers (`Everyone`, `Guests`, anonymous, unrestricted `Authenticated Users`) fail closed.
+  - Validate and authenticate caller Windows identity on connection and per-message.
+  - Implement per-command Agent application layer authorization verifying required privilege (operator vs administrator) for each typed operation (Layer B).
   - Implement lightweight .NET IPC client library (`RmsSupportAgent.LocalIpc`).
   - Implement protocol handshake, version negotiation, and serialization.
   - Implement local Agent health query and one non-destructive typed diagnostic command.
-  - Create integration test harness verifying unauthorized callers fail closed.
-- **Exit Gate:** Synthetic client / test harness can execute typed commands over Named Pipes with verified Windows authorization; non-admin callers rejected fail-closed.
+  - Create integration test harness verifying unauthorized callers fail closed and per-command authorization gates hold.
+- **Exit Gate:** Synthetic client / test harness can execute typed commands over Named Pipes with verified Windows authorization; unauthorized identities rejected at IPC connection; non-admin callers attempting elevated operations rejected by per-command authorization fail-closed.
 
 ---
 
@@ -244,8 +246,8 @@ pos/
    - Preserve all existing mutation leases, idempotency checks, and audit semantics.
 2. **Local IPC Infrastructure:**
    - Implement secure Windows Named Pipe listener in `RmsSupportAgent.Service`.
-   - Enforce Windows Security Descriptors (`LocalSystem` + `Administrators`).
-   - Authenticate caller Windows identity.
+   - Enforce Windows Security Descriptors (`LocalSystem` + `Administrators` + dedicated `RMS Support Operators` group).
+   - Authenticate caller Windows identity and enforce per-command authorization in Agent layer.
    - Implement lightweight client library in `RmsSupportAgent.LocalIpc`.
 3. **Foundation Handlers:**
    - Implement Agent health/readiness query over Named Pipes.
@@ -253,7 +255,7 @@ pos/
 4. **Transport Preservation:**
    - Maintain existing Kestrel loopback HTTPS endpoints so existing tests and browser workflows remain 100% green.
 5. **Validation:**
-   - Automated integration tests verifying Named Pipe authentication, ACL rejection, and shared handler execution.
+   - Automated integration tests verifying Named Pipe authentication, ACL rejection for unauthorized identities, per-command authorization checks, and shared handler execution.
    - Zero UI migration or SignalR remote mutations in this first slice.
 
 ---

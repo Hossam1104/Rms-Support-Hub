@@ -46,7 +46,7 @@ The central RMS+ Support Hub (.NET Core Backend + Angular Admin Dashboard) owns:
 The Windows Agent Service (`RmsSupportAgent.Service`) runs continuously under `LocalSystem` (or designated privileged service account) and owns:
 - **Privileged Execution Boundary:** Sole authority for machine-level operations: SQL recovery, Windows service control, filesystem maintenance, Support Bundle generation, and package updates.
 - **Device Identity & Registration:** Owning per-machine cryptographic identity and certificates used for authenticating to the central Hub.
-- **Secure Local IPC Endpoint:** Hosting an authenticated Windows Named Pipe listener restricted by Windows ACLs to local Administrators.
+- **Secure Local IPC Endpoint:** Hosting an authenticated Windows Named Pipe listener restricted by Windows ACLs to explicitly approved local identities (SYSTEM, Administrators, and dedicated RMS Support Operators group) with per-command Agent authorization.
 - **Outbound Persistent Hub Connection:** Establishing and maintaining an Agent-initiated SignalR connection over HTTPS to the Support Hub.
 - **WPF Process Supervision & Telemetry:** Monitoring local WPF process state, heartbeat, crashes, and protocol version compatibility, reporting telemetry to the Hub.
 - **Offline Event Queue:** Buffering health, audit, and diagnostic events during Hub disconnection and replaying them deterministically upon reconnection.
@@ -68,7 +68,7 @@ The WPF Desktop Application (`RmsSupportAgent.Desktop.Wpf`) is a rich native Win
   - File/cache cleanup previews and guarded branch reset preserving native RMS services.
   - Package installation, upgrade, repair, and rollback checkpoints.
   - Local activity and durable audit history.
-- **Local Windows Authorization UX:** Prompting for local Administrator confirmation and elevation before executing high-risk operations.
+- **Local Windows Authorization UX:** Providing distinct authorization flows for Authorized Local Operators (non-destructive operations) and prompting for Administrator/elevated confirmation before executing high-risk mutating operations.
 - **WPF Heartbeat & Telemetry:** Sending periodic heartbeats and unhandled exception reports over Named Pipes to the Agent Service.
 - **Zero Direct Privilege:** The WPF application never contains direct SQL connections, raw service manipulation code, or unconstrained filesystem access; all actions delegate to the Agent Service over IPC.
 
@@ -103,10 +103,23 @@ The WPF Desktop Application (`RmsSupportAgent.Desktop.Wpf`) is a rich native Win
 - Persistent duplex communication allows real-time telemetry streaming and typed remote command dispatch.
 - Reconnection with exponential backoff and message replay protection.
 
-### 7.2 WPF ↔ Agent: Authenticated Windows Named Pipes
-- The Agent Service exposes a secure Windows Named Pipe endpoint (e.g., `\\.\pipe\RmsSupportAgent.Ipc`).
-- Named Pipe security is enforced using Windows Security Descriptors / ACLs granting access exclusively to `LocalSystem` and `NT AUTHORITY\Administrators`.
-- Client Windows identity is verified on connect and per-message.
+### 7.2 WPF ↔ Agent: Two-Layer Local Authorization Model
+Communication between the WPF desktop application and the Agent Service uses an authenticated Windows Named Pipe endpoint (e.g., `\\.\pipe\RmsSupportAgent.Ipc`) under a strict two-layer security model:
+
+#### Layer A — IPC Connection Authorization
+- Named Pipe connection rights are restricted using Windows Security Descriptors / ACLs granting access exclusively to explicitly approved local identities:
+  - `LocalSystem`
+  - `NT AUTHORITY\Administrators` (Local Administrators)
+  - Dedicated local Windows group: `RMS Support Operators` (or repository-configured equivalent bounded operator group)
+- Access is strictly denied to `Everyone`, `Guests`, anonymous callers, and unrestricted `Authenticated Users`.
+- Installer/provisioning owns creation and configuration of the dedicated operator group.
+- Client Windows identity is authenticated upon connection.
+
+#### Layer B — Per-Command Authorization
+- Connecting to the Named Pipe does **not** grant blanket authorization (`PIPE CONNECTION AUTHORIZATION != COMMAND AUTHORIZATION`).
+- The Agent application layer evaluates each typed command/query against the caller's authenticated Windows identity and role:
+  - **Authorized Local Operator:** Permitted to execute non-destructive low/medium-risk maintenance (machine/RMS health, database health/read diagnostics, logs inspection, Support Bundle creation, local audit/activity, approved backup creation).
+  - **Local Administrator / Elevated Operator:** Required for high-risk mutating actions (privileged Windows service restarts/mutations, database restore, cleanup execution, branch reset, package install/upgrade/repair/uninstall, rollback/recovery).
 - Named Pipe transport eliminates browser CORS, loopback HTTPS certificate trust, and LNA policy friction.
 
 ### 7.3 Device Identity & Trust
@@ -115,9 +128,9 @@ The WPF Desktop Application (`RmsSupportAgent.Desktop.Wpf`) is a rich native Win
 - The central Hub validates device credentials during connection negotiation; revoked or unlisted devices fail closed.
 
 ### 7.4 Authorization Model
-- **Local Invocations (WPF):** Enforce local Windows Administrator group membership and interactive confirmation for high-risk actions.
+- **Local Invocations (WPF):** Authenticated Windows identity verified against Layer A (IPC connection ACLs) and Layer B (Per-command authorization), requiring Administrator elevation and confirmation modals for high-risk mutating actions.
 - **Remote Invocations (Hub):** Enforce central administrator authentication, RBAC role validation (`FleetAdmin`), target machine policy, and one-time command execution tokens.
-- **Shared Enforcement:** Both invocation channels pass into the shared application layer wrapped in an `InvocationContext` verifying caller identity and permission.
+- **Shared Enforcement:** Both invocation channels pass into the shared application layer wrapped in an `InvocationContext` verifying caller identity, authorization level, and command prerequisites.
 
 ### 7.5 Typed Remote Commands (Allowlisted Catalogue Only)
 Under **NO circumstances** shall arbitrary or generic command execution be introduced. The architecture strictly prohibits:
@@ -147,7 +160,7 @@ Every remote command must belong to the strictly typed, compiled, allowlisted ca
 - **BR-031 WPF Health Telemetry:** The Agent Service shall monitor the local WPF process state, heartbeat, version, and unhandled crashes, publishing health telemetry to the central Hub independently of the desktop UI process.
 - **BR-032 Secure Outbound Agent Communication:** Agent-to-Hub communication shall be initiated by the Agent as an outbound, authenticated, encrypted SignalR connection over HTTPS, requiring no inbound listening ports on target machines.
 - **BR-033 Device Identity:** Each remotely manageable POS machine shall have a unique, server-recognized device identity backed by cryptographic credentials managed outside application packages.
-- **BR-034 Secure Local IPC:** Communication between the WPF desktop application and the Agent Service shall use authenticated Windows Named Pipes with strict Windows Access Control Lists (ACLs) restricting access to local Administrators.
+- **BR-034 Secure Local IPC:** WPF-to-Agent communication uses authenticated Windows Named Pipes restricted to explicitly approved local identities/groups; the Agent performs per-command authorization, requiring administrator/elevated authority for high-risk operations.
 - **BR-035 Typed Remote Commands:** Remote operations issued from the central Hub shall be restricted to an allowlisted catalogue of strongly-typed commands; generic shell, arbitrary PowerShell, generic SQL, and arbitrary process execution are strictly prohibited.
 - **BR-036 Offline Resilience:** Local workflows and durable audit logging shall operate during network outages; pending telemetry and audit records shall be buffered locally and synchronized upon reconnection.
 - **BR-037 Unified Audit:** Local and remote operations shall generate durable, sanitized audit records sharing a common correlation model, identifying the originating caller, machine identity, operation parameters, and execution outcome.

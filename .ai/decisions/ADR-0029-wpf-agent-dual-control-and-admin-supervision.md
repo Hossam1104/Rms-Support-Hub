@@ -36,7 +36,9 @@ The future POS target architecture is re-baselined into a **Dual Control-Surface
 +-------------------------------------+      +--------------------------------+
                   |                                           |
                   | [Windows Named Pipes]                     | [HTTPS Web Request]
-                  | Local System / Admin ACL                  | Admin RBAC Gated
+                  | Authenticated Windows IPC (SYSTEM /       | Admin RBAC Gated
+                  | Administrators / RMS Support Operators)   |
+                  | Per-Command Authorization                 |
                   v                                           v
 +-------------------------------------+      +--------------------------------+
 |       RmsSupportAgent.Service       |      |     RMS Support Hub Backend    |
@@ -87,8 +89,23 @@ The central Angular Support Hub POS area transitions into an administrator-only 
 ### 2.4 Shared Capability Authority (Zero Privilege Duplication)
 Both local WPF calls and remote Hub commands converge on a single, transport-agnostic Agent command/query application layer. Handlers enforce machine-wide mutation leases, idempotency, bounded redaction, error handling, and durable audit logs identically regardless of invocation channel.
 
-### 2.5 Windows Named Pipes for Local IPC
-Communication between the WPF desktop application and the Agent Service uses Windows Named Pipes (`\\.\pipe\RmsSupportAgent.Ipc`). Security is enforced via Windows Security Descriptors and ACLs restricting connection rights to `LocalSystem` and `NT AUTHORITY\Administrators`. The Agent validates the caller's Windows identity on connect and per-message.
+### 2.5 Two-Layer Local WPF Authorization Model
+Communication between the WPF desktop application and the Agent Service uses a two-layer security model over Windows Named Pipes (`\\.\pipe\RmsSupportAgent.Ipc`):
+
+#### Layer A — IPC Connection Authorization
+Named Pipe connection rights are restricted via Windows Security Descriptors / ACLs to explicitly authorized local identities:
+- `LocalSystem`
+- `NT AUTHORITY\Administrators` (Local Administrators)
+- Dedicated local Windows group: `RMS Support Operators` (or repository-configured equivalent bounded operator group)
+
+Access is strictly prohibited for `Everyone`, `Guests`, anonymous identities, and unrestricted `Authenticated Users`. Installer/provisioning owns creation and configuration of the dedicated operator group. The caller's Windows identity is verified on connect and per-message.
+
+#### Layer B — Per-Command Authorization
+Connecting to the Named Pipe does **not** grant authorization for every operation (`PIPE CONNECTION AUTHORIZATION != COMMAND AUTHORIZATION`). The Agent application layer enforces per-command authorization against the caller's authenticated Windows identity:
+- **Authorized Local Operator:** May invoke low/medium-risk local maintenance operations including machine/Agent/RMS health inspection, database health and read-only diagnostics, log viewing, safe Support Bundle generation, local activity/history inspection, approved backup creation, and other explicitly classified non-destructive operations.
+- **Local Administrator / Elevated Operator:** Required for high-risk mutating operations including privileged Windows service restarts/mutations, database restore, cleanup execution, branch reset, package install/upgrade/repair/uninstall, rollback/recovery, and other destructive/high-risk commands.
+
+All operations remain strictly typed and allowlisted.
 
 ### 2.6 Agent-Initiated SignalR for Hub Connectivity
 Agent-to-Hub communication is strictly outbound, persistent SignalR over HTTPS initiated by the Agent. No inbound listening ports are opened on store firewalls or POS machines. Reconnection uses exponential backoff.
@@ -132,8 +149,8 @@ During migration, the Agent Service retains the legacy HTTPS loopback transport 
 
 ## 4. Acceptance and Traceability
 
-- **CR:** [`docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md`](../docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md)
+- **CR:** [`docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md`](../../docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md)
 - **Business Requirements:** BR-027 through BR-040
 - **Azure DevOps Epics:** E16 (Agent Re-Architecture), E17 (WPF Desktop), E18 (Admin Supervision), E19 (Migration & Rollout)
-- **Conversion Plan:** [`docs/WPF_AGENT_CONVERSION_PLAN.md`](../docs/WPF_AGENT_CONVERSION_PLAN.md)
+- **Conversion Plan:** [`docs/WPF_AGENT_CONVERSION_PLAN.md`](../../docs/WPF_AGENT_CONVERSION_PLAN.md)
 - **First Implementation Slice:** WPF-01 — Shared Agent Application + Local IPC Foundation
