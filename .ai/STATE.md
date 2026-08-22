@@ -6,7 +6,6 @@
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
 - **Status:** WPF-01 is accepted and merged at `c09e4ec`; WPF-02 final correction is pushed at `78dbe5b` with documentation synchronization at `f0acce1` and awaits Sol review/acceptance. WPF-03 must not start until that acceptance.
-
 ## WPF-02 durable facts
 - `RmsSupportHub.Pos.Desktop.Wpf` is a native WPF `WinExe` targeting
   `net10.0-windows10.0.19041.0` and references only `RmsSupportHub.Pos.LocalIpc`.
@@ -93,7 +92,6 @@
   NU1510 because the API is already provided by the .NET 10 BCL; the explicit
   reference is removed so strict CI (`--warnaserror`) stays clean. No preview
   remains.
-
 ## Validation evidence
 - Release solution build: 0 warnings, 0 errors, with Testing-only
   `PosAgentSecurity__SupportHubOrigin=https://localhost:4443`.
@@ -109,17 +107,10 @@
   exposed a reproducible external-configuration fixture race (341/342 backend
   tests passed); reruns resolved it without changing unrelated infrastructure/
   backend code. Local focused test 3/3 passed.
-- Final Release WPF process was verified alive/responsive with title `RMS Support
-  Hub`; Computer Use screenshot helper was unavailable, so no visual claim is made.
+- Final Release WPF process was verified alive/responsive with title `RMS Support Hub`; Computer Use screenshot helper was unavailable, so no visual claim is made.
 
 ## Safety and next work
 - Production readiness remains **NO**. No Production contact or native RMS
   mutation was authorized or performed.
-- Azure reconciliation set E16/E17 states and priorities, moved conditional
-  Online Order items #12844/#12900/#12901/#12902 to OO-07, and retained all
-  Production work deferred. Created adaptive-card story #13072 under E14 with
-  child Tasks #13073-#13076 and related links to #12841-#12844.
-- `.ai/HANDOFF.md` is `Empty`; WPF implementation and final POS/Support Hub CI
-  are complete and the next action is Sol review. The unavailable Computer Use
-  screenshot/Refresh verification remains explicitly recorded as an evidence
-  limitation; no WPF-03 or merge/ready action is authorized.
+- Azure reconciliation set E16/E17 states and priorities, moved conditional Online Order items #12844/#12900/#12901/#12902 to OO-07, retained Production work deferred, and created adaptive-card story #13072 under E14 with Tasks #13073-#13076 linked to #12841-#12844.
+- `.ai/HANDOFF.md` is `Empty`; WPF implementation and final POS/Support Hub CI are complete and Sol review is next. The unavailable Computer Use screenshot/Refresh verification remains an evidence limitation; no WPF-03 or merge/ready action is authorized.
