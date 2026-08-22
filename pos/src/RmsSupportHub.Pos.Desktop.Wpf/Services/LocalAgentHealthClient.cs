@@ -66,6 +66,14 @@ public sealed class LocalAgentHealthClient(LocalIpcClient localIpcClient) : ILoc
                 correlationId,
                 exception.ActualVersion);
         }
+        catch (LocalIpcServerIdentityException)
+        {
+            return AgentHealthResult.Failure(
+                HealthViewState.SecurityVerificationFailed,
+                "security_verification_failed",
+                "The local Agent connection could not be verified.",
+                correlationId);
+        }
         catch (LocalIpcProtocolException)
         {
             return AgentHealthResult.Failure(

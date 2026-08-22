@@ -26,6 +26,9 @@ public sealed class LocalIpcProtocolMismatchException(int expectedVersion, int a
     public int ActualVersion { get; } = actualVersion;
 }
 
+public sealed class LocalIpcServerIdentityException()
+    : LocalIpcProtocolException("The IPC server identity could not be verified.");
+
 /// <summary>
 /// Small typed client for the WPF-to-Agent local IPC contract. It exposes only the operations
 /// implemented by WPF-01; arbitrary operation names cannot be supplied by callers.
@@ -96,7 +99,7 @@ public sealed class LocalIpcClient
 
         if (!serverIdentityVerifier.IsExpectedServer(pipe))
         {
-            throw new LocalIpcProtocolException("The IPC server identity could not be verified.");
+            throw new LocalIpcServerIdentityException();
         }
 
         timeout.CancelAfter(options.ReadTimeout);

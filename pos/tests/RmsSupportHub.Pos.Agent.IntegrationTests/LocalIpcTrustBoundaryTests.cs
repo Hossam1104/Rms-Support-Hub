@@ -194,7 +194,7 @@ public sealed class LocalIpcTrustBoundaryTests
             CreateTestPipeSecurity(currentSid));
         var waitForConnection = server.WaitForConnectionAsync();
 
-        await Assert.ThrowsAsync<LocalIpcProtocolException>(() =>
+        await Assert.ThrowsAsync<LocalIpcServerIdentityException>(() =>
             new LocalIpcClient(options, new FixedIdentityVerifier(false))
                 .GetHealthAsync("trusted-correlation"));
 
