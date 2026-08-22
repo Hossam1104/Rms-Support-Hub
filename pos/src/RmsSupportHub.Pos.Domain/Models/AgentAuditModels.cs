@@ -15,6 +15,8 @@ public sealed record AgentAuditEvent(
     string ProductVersion,
     string? BuildId)
 {
+    public string? Source { get; init; }
+
     public string? PackageId { get; init; }
 
     public string? PackageVersion { get; init; }
@@ -26,7 +28,8 @@ public sealed record AgentAuditEvent(
 
 public interface IAgentAuditSink
 {
-    void Record(AgentAuditEvent auditEvent);
+    /// <summary>Returns true only when the event reached the durable audit store.</summary>
+    bool Record(AgentAuditEvent auditEvent);
 }
 
 public interface IAgentAuditReader

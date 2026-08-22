@@ -1,8 +1,8 @@
 # WPF / Windows Agent Conversion Plan
 
 **Product:** RMS+ Support Hub
-**Architecture Rebaseline:** Post PR #30
-**Status:** Approved for planning; implementation gated by architecture/backlog acceptance
+**Architecture Rebaseline:** Post PR #31
+**Status:** WPF-01 implemented on `feat/wpf-01-shared-agent-local-ipc`; awaiting Sol acceptance before WPF-02
 **Date:** 2026-08-22
 **Authority:** GPT-5.6 Sol
 
@@ -100,21 +100,35 @@ This document establishes the phased implementation roadmap for transitioning th
   - Define unified progress reporting and cooperative cancellation token contracts.
 - **Exit Gate:** Shared application layer passes unit and integration tests; existing HTTP endpoints delegate to shared handlers with zero regression.
 
+**WPF-01 evidence:** `RmsInstallationDiscoveryQueryHandler` is the first shared query seam. The
+legacy HTTPS diagnostics path and the new typed installation adapter both enter through the Agent
+invocation factory and shared handler; the local IPC server delegates to the same handler. The
+application layer records the authenticated principal, source, and correlation in the durable audit
+model and returns `audit_unavailable` rather than claiming a successful diagnostic when durable audit
+storage is unavailable. Health probes remain non-audited to avoid unbounded durable audit traffic.
+
 ---
 
 ### Phase 2 — Local WPF-Agent IPC Foundation
 - **Goal:** Authenticated, secure local IPC transport using Windows Named Pipes under a two-layer authorization model.
 - **Work:**
   - Implement Named Pipe server in `RmsSupportAgent.Service` (`\\.\pipe\RmsSupportAgent.Ipc`).
-  - Enforce Windows Security Descriptors / ACLs restricting pipe connection to `LocalSystem`, `NT AUTHORITY\Administrators`, and the dedicated local Windows group `RMS Support Operators` (Layer A).
+  - Enforce Windows Security Descriptors / ACLs restricting pipe connection to `LocalSystem`, `NT AUTHORITY\Administrators`, and the dedicated local Windows group `RMS Support Operators` (Layer A). The operator ACE is limited to explicit duplex client rights; an explicit NETWORK deny establishes the local-only boundary.
   - Strictly reject unauthorized callers (`Everyone`, `Guests`, anonymous, unrestricted `Authenticated Users`) fail closed.
-  - Validate and authenticate caller Windows identity on connection and per-message.
+  - Validate and authenticate caller Windows identity on connection and per-message; the typed client also verifies the connected server PID token is LocalSystem before sending application data.
   - Implement per-command Agent application layer authorization verifying required privilege (operator vs administrator) for each typed operation (Layer B).
   - Implement lightweight .NET IPC client library (`RmsSupportAgent.LocalIpc`).
   - Implement protocol handshake, version negotiation, and serialization.
   - Implement local Agent health query and one non-destructive typed diagnostic command.
-  - Create integration test harness verifying unauthorized callers fail closed and per-command authorization gates hold.
+  - Resolve the configured operator group as a local machine-qualified account only; create an integration test harness verifying unauthorized callers fail closed, server identity and per-command authorization gates hold, and audit failure is truthful.
 - **Exit Gate:** Synthetic client / test harness can execute typed commands over Named Pipes with verified Windows authorization; unauthorized identities rejected at IPC connection; non-admin callers attempting elevated operations rejected by per-command authorization fail-closed.
+
+**WPF-01 evidence:** The bounded `RmsSupportHub.Pos.LocalIpc` library uses protocol version 1,
+newline-delimited JSON envelopes, strict request/response correlation, 64 KiB request and 256 KiB
+response defaults, ten-second connection/read bounds, and four-client concurrency. The Agent
+listener is disabled by default and becomes unavailable without a resolvable `RMS Support
+Operators` group; no fallback to a broad principal is permitted. Initial capabilities are
+`agent.health` and `rms.installation.discovery`.
 
 ---
 
