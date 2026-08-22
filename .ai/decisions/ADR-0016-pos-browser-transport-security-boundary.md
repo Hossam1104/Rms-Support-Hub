@@ -1,7 +1,8 @@
 # ADR-0016: POS browser transport and cross-origin security boundary
 
-- Status: Accepted; INT-00R transport hardening and INT-04 Agent host composition complete; live browser and deployment evidence remains open
+- Status: Accepted (Historical delivered baseline; superseded by ADR-0029 as future target architecture only)
 - Affected area: LNA, Windows Negotiate, origin, CORS, antiforgery, CSP, HTTPS certificates
+- Note: Superseded by ADR-0029 as the future target architecture. This document remains the authoritative historical record of the delivered browser-to-loopback transport and cross-origin security model (E07-E09).
 
 ## Context
 

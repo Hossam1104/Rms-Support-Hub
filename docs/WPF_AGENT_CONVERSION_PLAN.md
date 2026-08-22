@@ -1,208 +1,278 @@
 # WPF / Windows Agent Conversion Plan
 
-**Product:** RMS+ Support Hub  
-**Architecture checkpoint:** Post PR #30  
-**Status:** Proposed implementation roadmap
+**Product:** RMS+ Support Hub
+**Architecture Rebaseline:** Post PR #30
+**Status:** Approved for planning; implementation gated by architecture/backlog acceptance
+**Date:** 2026-08-22
+**Authority:** GPT-5.6 Sol
 
-## Target
+---
 
-- Angular remains the central administrator dashboard.
-- WPF becomes the complete standalone local POS support application.
-- Windows Agent Service remains the machine privilege boundary.
-- WPF and Angular remote actions share the same Agent command/query handlers.
-- Agent initiates secure outbound Hub connectivity.
-- WPF uses secure local IPC to the Agent.
-- WPF issues are independently visible to administrators.
+## 1. Executive Summary
 
-## Phase 0 — Architecture Rebaseline
+This document establishes the phased implementation roadmap for transitioning the POS Maintenance capability from the historical browser-to-loopback architecture (E07–E09) to the owner-approved **Dual Control-Surface Architecture** (CR-001, ADR-0029).
 
-Deliverables:
-- CR-001.
-- ADR for WPF + Service + Angular Admin model.
-- BRD v1.1 requirements BR-027–BR-040.
-- Azure Epics E16–E19.
-- revised E11/E12 roadmap.
-- traceability matrix.
-- parity inventory of existing E07–E09 capabilities.
+### Core Architectural Principles
+1. **Central Support Hub:** ASP.NET Core backend + Angular administrator dashboard providing fleet supervision and controlled typed remote support.
+2. **Local POS Machine:** Always-running Windows Agent Service (`RmsSupportAgent.Service`) + complete standalone WPF Desktop Application (`RmsSupportAgent.Desktop.Wpf`).
+3. **Shared Capability Seam:** Local WPF actions and remote Hub commands execute the **same** underlying command/query handlers in the Agent application layer. Privileged logic is never duplicated.
+4. **Autonomous Local Operation:** The WPF application and Agent Service operate with full capability even when the central Hub or store network is offline.
+5. **Secure Transports:** Windows Named Pipes with strict Administrator ACLs for local IPC; Agent-initiated persistent SignalR over HTTPS for Hub connectivity.
+6. **Strictly Typed Remote Operations:** No generic shell, arbitrary PowerShell, generic SQL, or arbitrary process execution.
 
-Exit: architecture accepted, backlog synchronized, and no implementation ambiguity for Phase 1.
+---
 
-## Phase 1 — Shared Agent Capability Layer
+## 2. Phased Implementation Roadmap
 
-Goal: one privileged implementation invoked locally or remotely.
+```text
++-----------------------------------------------------------------------------------+
+| Phase 0: Architecture Rebaseline & Backlog Reconciliation (CR-001, ADR-0029, E16-E19)|
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 1: Shared Agent Capability Layer (Extract decoupled application seam)       |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 2: Local WPF-Agent IPC Foundation (Named Pipes, Windows Auth, Slice WPF-01)  |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 3: WPF Standalone App / Local Parity (Full native UI for retained features)  |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 4: Agent-Hub Connectivity & Device Identity (Outbound SignalR & Registration)|
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 5: Angular Admin Fleet Supervision (Central dashboard, alerts, WPF telemetry)|
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 6: Typed Remote Operations (Allowlisted remote diagnostics, restart, update) |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 7: Backup & Support Artifact Delivery (Secure streaming & Hub integration)   |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 8: Side-by-Side Migration & Parity Validation (Representative machine proof) |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| Phase 9: Cutover & Deprecation of Browser-Direct Path (Pilot -> Full Rollout)      |
++-----------------------------------------------------------------------------------+
+```
 
-Work:
-- inventory current Agent endpoints/handlers;
-- extract reusable typed commands/queries from HTTP-specific composition;
-- preserve authorization, mutation leases, idempotency, timeouts, audit and redaction;
-- define invocation context (`LocalWpf` / `RemoteHub`), principal/device/admin identity, correlation and policy;
-- define progress/cancellation contracts;
-- prove local/remote paths converge on the same behavior.
+---
 
-Exit: shared application layer validated; existing path still works; no duplicated privileged logic.
+### Phase 0 — Architecture Rebaseline
+- **Deliverables:**
+  - CR-001 specification (`docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md`).
+  - Architecture ADR-0029 (`.ai/decisions/ADR-0029-wpf-agent-dual-control-and-admin-supervision.md`).
+  - BRD v1.1 update incorporating BR-027 through BR-040.
+  - Azure DevOps Epics E16, E17, E18, E19 creation and child story mapping.
+  - Reconciliation of E11 (superseded) and E12 (updated target state).
+  - Backlog blueprint and traceability matrix synchronization.
+- **Exit Gate:** Architecture and backlog approved by GPT-5.6 Sol; zero implementation ambiguity.
 
-## Phase 2 — Local WPF ↔ Agent IPC
+---
 
-Preferred transport: Windows Named Pipes.
+### Phase 1 — Shared Agent Capability Layer
+- **Goal:** One unified, transport-agnostic application layer for all privileged logic.
+- **Work:**
+  - Inventory existing Agent endpoints and handlers in `RmsSupportHub.Pos.Agent`.
+  - Extract reusable C# commands, queries, and validators into `RmsSupportAgent.Application`.
+  - Decouple business handlers from Kestrel/HTTP infrastructure.
+  - Preserve mutation leases, idempotency guards, bounded redaction, timeouts, and durable audit logs.
+  - Define `InvocationContext` capturing caller identity (`LocalWpf` vs `RemoteHub`), Windows principal, device identity, admin identity, correlation ID, and authorization level.
+  - Define unified progress reporting and cooperative cancellation token contracts.
+- **Exit Gate:** Shared application layer passes unit and integration tests; existing HTTP endpoints delegate to shared handlers with zero regression.
 
-Work:
-- Agent-owned pipe;
-- strict ACL;
-- Windows client identity validation;
-- typed contracts;
-- correlation/audit;
-- progress/events;
-- reconnect behavior;
-- service-unavailable UX;
-- no arbitrary command surface.
+---
 
-Exit: synthetic WPF/test client can call health plus one non-destructive typed command and unauthorized callers fail closed.
+### Phase 2 — Local WPF-Agent IPC Foundation
+- **Goal:** Authenticated, secure local IPC transport using Windows Named Pipes.
+- **Work:**
+  - Implement Named Pipe server in `RmsSupportAgent.Service` (`\\.\pipe\RmsSupportAgent.Ipc`).
+  - Enforce Windows Security Descriptors / ACLs restricting pipe access to `LocalSystem` and `NT AUTHORITY\Administrators`.
+  - Validate caller Windows identity on connection and per-message.
+  - Implement lightweight .NET IPC client library (`RmsSupportAgent.LocalIpc`).
+  - Implement protocol handshake, version negotiation, and serialization.
+  - Implement local Agent health query and one non-destructive typed diagnostic command.
+  - Create integration test harness verifying unauthorized callers fail closed.
+- **Exit Gate:** Synthetic client / test harness can execute typed commands over Named Pipes with verified Windows authorization; non-admin callers rejected fail-closed.
 
-## Phase 3 — WPF Standalone App / Local Feature Parity
+---
 
-Recommended UI order:
-1. Shell + machine dashboard.
-2. Agent/RMS health.
-3. RMS services.
-4. DB diagnostics.
-5. Logs.
-6. Backup/download.
-7. Support Bundle.
-8. Safety Snapshots.
-9. Cleanup/branch reset.
-10. Package lifecycle.
-11. Restore/rollback.
-12. Local activity/history.
+### Phase 3 — WPF Standalone App / Local Feature Parity
+- **Goal:** Complete, native WPF desktop application covering all retained POS capabilities.
+- **UI Delivery Sequence:**
+  1. **Shell & Dashboard:** Modern desktop shell, navigation, design tokens, machine status summary, Agent connection indicator.
+  2. **Agent & RMS Health:** Real-time service status, component health, connection latency.
+  3. **RMS Service Control:** Approved service restart/control workflows with confirmation prompts.
+  4. **Database Diagnostics:** Connection test, storage usage, integrity checks without exposing connection strings.
+  5. **Database Backup & Download:** On-demand backup creation, artifact inspection, local download.
+  6. **Guarded Database Restore:** Pre-flight checks, mandatory safety snapshot, confirmation modal, mutation lease.
+  7. **Logs & Safe Support Bundle:** Bounded log viewer, severity filtering, credential-redacted Support Bundle ZIP generation.
+  8. **Safety Snapshots & Timeline:** Manual/scheduled snapshot creation, chronological system event timeline.
+  9. **Cleanup & Branch Reset:** Purge preview, pre-reset snapshot, guarded branch reset strictly preserving native RMS services.
+  10. **Package Lifecycle:** Installed version inspection, package signature verification, install, upgrade, repair, uninstall.
+  11. **Rollback & Recovery:** PreviousVersion checkpoint inspection, health-committed rollback execution.
+  12. **Local Activity & Audit:** Searchable chronological audit viewer for all machine maintenance actions.
+- **Exit Gate:** Functional parity matrix verifies 100% of retained E07–E09 capabilities in WPF; full offline functionality proved.
 
-Rules:
-- WPF does not reimplement privileged logic.
-- approved local workflows work when Hub is offline.
-- high-risk actions preserve preview/confirm/authorization.
-- local audit queues safely for later synchronization.
+---
 
-Exit: parity matrix accepted against retained E07–E09 capabilities.
+### Phase 4 — Agent-Hub Connectivity & Device Identity
+- **Goal:** Outbound, persistent SignalR connection from Agent to Support Hub with cryptographic device identity.
+- **Work:**
+  - Implement Agent-side SignalR client (`RmsSupportAgent.HubClient`) connecting over outbound HTTPS.
+  - Implement per-device registration and cryptographic identity verification.
+  - Implement periodic health heartbeats, status updates, and WPF process telemetry.
+  - Implement automatic reconnect with exponential backoff and connection state tracking.
+  - Implement bounded local event queue buffering telemetry/audit during Hub outages with FIFO replay on reconnect.
+  - Implement duplicate prevention and message idempotency.
+- **Exit Gate:** Registered Testing machines appear online in Support Hub; unauthenticated Agents fail closed; network drop and reconnect synchronize cleanly.
 
-## Phase 4 — Agent ↔ Hub Connectivity / Device Registration
+---
 
-Preferred transport: Agent-initiated SignalR over HTTPS.
+### Phase 5 — Angular Admin Fleet Supervision
+- **Goal:** Centralized administration views in Support Hub Angular SPA for fleet visibility.
+- **Admin Views:**
+  - **Machine Inventory:** Fleet table showing machine names, branch, IP, Agent version, WPF state, online/offline status.
+  - **Health Dashboard:** Real-time aggregated heartbeat status, fleet health KPI cards.
+  - **WPF Health & Crash Monitoring:** Tracks WPF running state, PID, heartbeats, crash summaries, and Agent/WPF version drift.
+  - **Central Issues Board:** Aggregated alerts feed (Agent offline, WPF crash, RMS service stopped, backup failed, low disk).
+  - **Machine Detail & Timeline:** Full hardware/OS metrics, RMS state, services, recent jobs, and correlated audit timeline.
+  - **Fleet Version Matrix:** Distribution of Agent and WPF versions across all stores, identifying update candidates.
+  - **Central Audit Search:** Cross-machine audit search by user, branch, operation, or correlation ID.
+- **Exit Gate:** Support engineers can diagnose store issues, monitor WPF health, and track fleet status centrally without remote desktop.
 
-Work:
-- machine registration;
-- per-machine device identity;
-- external certificate/credential provisioning;
-- heartbeat;
-- Agent version/status;
-- WPF version/status/heartbeat;
-- reconnect/backoff;
-- offline event queue;
-- server last-seen/current-state model;
-- replay/idempotency protection.
+---
 
-Exit: registered Testing machines appear online/offline correctly and untrusted Agents fail closed.
+### Phase 6 — Typed Remote Operations
+- **Goal:** Governed execution of allowlisted remote maintenance commands by authorized administrators.
+- **Staged Capability Delivery:**
+  1. *Low-Risk / Read-Only:* On-demand health refresh, diagnostics query, sanitized log collection.
+  2. *Support Artifacts:* Remote Support Bundle generation, remote database backup trigger.
+  3. *Mutating Operations:* Approved RMS service restart, package upgrade/repair, rollback execution.
+- **Enforcement Rules:**
+  - Server-enforced RBAC (`FleetAdmin` role required for mutations).
+  - Strictly typed command catalogue—zero generic shell, PowerShell, SQL, or arbitrary process execution.
+  - Real-time SignalR progress streaming, cancellation token propagation, and idempotency guarantees.
+  - Correlated audit logging on both Hub and Agent.
+- **Exit Gate:** Remote commands execute safely with real-time feedback; unauthorized remote attempts fail closed.
 
-## Phase 5 — Angular Admin Fleet Supervision
+---
 
-Admin pages:
-- Machines
-- Machine detail
-- Issues
-- Operations/jobs
-- Audit timeline
-- Versions/update status
-- Backup/support artifacts
+### Phase 7 — Backup & Support Artifact Delivery
+- **Goal:** Robust delivery and management of database backups and Support Bundles.
+- **Work:**
+  - Unified backup/bundle creation handlers in shared application layer.
+  - Secure chunked/streaming upload of artifacts from Agent to Support Hub.
+  - Local-only retention policy when Hub is unreachable.
+  - SHA-256 integrity verification and artifact expiration policies.
+- **Exit Gate:** Large backup files and Support Bundles upload reliably; local backups operate seamlessly offline.
 
-Monitor:
-- machine online/offline;
-- Agent health/version;
-- WPF running/stopped/crashed/heartbeat/version;
-- RMS service;
-- DB health;
-- disk;
-- backup;
-- package/update;
-- recent operation failures.
+---
 
-Exit: admins diagnose WPF/Agent problems centrally without opening the local app.
+### Phase 8 — Side-by-Side Migration & Parity Validation
+- **Goal:** Comprehensive comparative testing on representative Testing POS machines.
+- **Work:**
+  - Run Agent Service with dual transports (legacy loopback HTTPS + Named Pipes + SignalR).
+  - Execute identical test suites through browser-direct, WPF desktop, and Admin remote paths.
+  - Verify identical output data, error handling, mutation leasing, and audit records.
+  - Perform chaos/resilience testing: forceful WPF termination, network disruption, SQL server failure.
+  - Validate WPF crash recovery (Agent remains online and reporting).
+- **Exit Gate:** Signed functional and security parity matrix; zero open Critical/High defects; Sol acceptance.
 
-## Phase 6 — Typed Remote Operations
+---
 
-Start low-risk:
-- refresh health;
-- collect logs;
-- Support Bundle;
-- backup;
-- diagnostics.
+### Phase 9 — Cutover & Deprecation
+- **Goal:** Transition production support to WPF desktop and Admin supervision, retiring legacy loopback path.
+- **Work:**
+  - Build unified installer deploying Windows Service + WPF desktop app + desktop shortcuts.
+  - Execute in-place migration script for existing Agent installations.
+  - Update operational runbooks, user manuals, and training materials.
+  - Pilot rollout to initial store group with active telemetry monitoring.
+  - Disable and retire legacy Kestrel loopback listener and browser certificate generation in Agent.
+  - Complete fleet-wide phased deployment with automated health-gated rollback procedures.
+- **Exit Gate:** Full estate running WPF desktop + Agent Service; legacy browser-direct route removed; final migration sign-off.
 
-Then controlled higher-risk:
-- approved RMS service restart;
-- cleanup/branch reset where policy permits;
-- package install/repair/upgrade;
-- rollback.
+---
 
-Required:
-- admin RBAC;
-- machine policy;
-- typed allowlist;
-- idempotency;
-- progress/cancel;
-- audit;
-- command expiry;
-- explicit offline queue policy;
-- no arbitrary shell/SQL/filesystem/process execution.
-
-## Phase 7 — Backup / Artifact Delivery
-
-- provider abstraction;
-- Agent creates artifact locally;
-- resumable/retryable upload where practical;
-- Hub stores metadata/status/reference, not secrets;
-- local WPF and admin-triggered backup use the same handler;
-- local-only backup works when Hub is offline.
-
-## Phase 8 — Side-by-Side Migration
-
-Run existing browser-direct POS, WPF local path and Angular Admin supervision in parallel on representative Testing machines.
-
-Compare capability results, authorization, audit, errors, rollback, support evidence, performance and stability.
-
-Exit: signed parity matrix and no unresolved High/Medium security issue.
-
-## Phase 9 — Cutover
-
-- WPF becomes supported local POS maintenance UI.
-- Angular POS area becomes admin supervision/control.
-- browser-direct privileged POS route is disabled/removed only after acceptance.
-- installer/runbooks/support procedures updated.
-- pilot then phased rollout.
-
-## Recommended Project Shape
+## 3. Recommended Project Structure
 
 ```text
 pos/
-├── RmsSupportAgent.Domain
-├── RmsSupportAgent.Application
-├── RmsSupportAgent.Infrastructure
-├── RmsSupportAgent.Service
-├── RmsSupportAgent.Contracts
-├── RmsSupportAgent.HubClient
-├── RmsSupportAgent.LocalIpc
-└── RmsSupportAgent.Desktop.Wpf
+├── RmsSupportAgent.Domain/           # Entities, value objects, domain interfaces
+├── RmsSupportAgent.Application/      # Shared command/query handlers, validators, DTOs
+├── RmsSupportAgent.Infrastructure/   # SQL repos, service control, backup, package trust
+├── RmsSupportAgent.Contracts/        # Typed IPC and SignalR message contracts
+├── RmsSupportAgent.LocalIpc/         # Named Pipe client/server communication library
+├── RmsSupportAgent.HubClient/        # SignalR outbound client for Hub communication
+├── RmsSupportAgent.Service/          # Always-running Windows Service (Composition root)
+└── RmsSupportAgent.Desktop.Wpf/      # Standalone native WPF desktop application
 ```
 
-Adapt to current project names rather than renaming working projects without need.
+---
 
-## First Implementation Slice
+## 4. First Implementation Slice
 
-**WPF-01 — Shared Agent Application + Local IPC Foundation**
+### Slice: `WPF-01 — Shared Agent Application + Local IPC Foundation`
 
-- extract/reuse command/query seam;
-- invocation context;
-- Named Pipe endpoint;
-- authenticated local test client;
-- health query;
-- one non-destructive typed command;
-- audit/correlation;
-- automated tests;
-- preserve current browser path.
+> [!CAUTION]
+> **Implementation Hard Stop:** Do **NOT** start implementation of `WPF-01` until GPT-5.6 Sol reviews and formally accepts this Architecture Rebaseline PR.
 
-This proves the architecture before broad UI conversion.
+#### Scope of WPF-01:
+1. **Application Seam Extraction:**
+   - Inspect existing `RmsSupportHub.Pos.Agent` endpoints and handlers.
+   - Extract core query/command handlers into `RmsSupportAgent.Application`.
+   - Implement `InvocationContext` distinguishing local from remote callers.
+   - Preserve all existing mutation leases, idempotency checks, and audit semantics.
+2. **Local IPC Infrastructure:**
+   - Implement secure Windows Named Pipe listener in `RmsSupportAgent.Service`.
+   - Enforce Windows Security Descriptors (`LocalSystem` + `Administrators`).
+   - Authenticate caller Windows identity.
+   - Implement lightweight client library in `RmsSupportAgent.LocalIpc`.
+3. **Foundation Handlers:**
+   - Implement Agent health/readiness query over Named Pipes.
+   - Implement ONE non-destructive typed diagnostic command (e.g., RMS installation check).
+4. **Transport Preservation:**
+   - Maintain existing Kestrel loopback HTTPS endpoints so existing tests and browser workflows remain 100% green.
+5. **Validation:**
+   - Automated integration tests verifying Named Pipe authentication, ACL rejection, and shared handler execution.
+   - Zero UI migration or SignalR remote mutations in this first slice.
+
+---
+
+## 5. Traceability & Governance
+
+| Requirement | Description | Target Phase | Azure Epic / Story |
+|---|---|:---:|---|
+| **BR-027** | Dual Control Surfaces | Phase 1–3 | E16, E17, E18, E19 |
+| **BR-028** | Standalone Local Operation | Phase 2, 3 | E16, E17 |
+| **BR-029** | Central Fleet Supervision | Phase 4, 5 | E18 |
+| **BR-030** | Shared Capability Authority | Phase 1 | E16 (`US-E16-02`) |
+| **BR-031** | WPF Health Telemetry | Phase 4, 5 | E16, E18 (`US-E18-03`) |
+| **BR-032** | Secure Outbound Agent Comm | Phase 4 | E16 (`US-E16-05`) |
+| **BR-033** | Device Identity | Phase 4 | E16 (`US-E16-06`) |
+| **BR-034** | Secure Local IPC | Phase 2 | E16 (`US-E16-04`) |
+| **BR-035** | Typed Remote Commands | Phase 6 | E16, E18 |
+| **BR-036** | Offline Resilience | Phase 2, 3, 4 | E16, E17 |
+| **BR-037** | Unified Audit | Phase 1, 4, 5 | E16, E17, E18 |
+| **BR-038** | WPF/Agent Version Management | Phase 3, 5, 9 | E16, E17, E18, E19 |
+| **BR-039** | Migration Safety | Phase 8, 9 | E17, E19 |
+| **BR-040** | Admin-only Fleet Control | Phase 5, 6 | E18 (`US-E18-11`) |

@@ -1,122 +1,201 @@
 # CR-001 — WPF Standalone Agent and Admin Supervision Re-Architecture
 
-**Product:** RMS+ Support Hub  
-**Change Type:** Architecture / Major Capability Re-baseline  
-**Status:** Approved for planning; implementation gated by architecture/backlog acceptance  
+**Product:** RMS+ Support Hub
+**Change Type:** Architecture / Major Capability Re-baseline
+**Status:** Approved for planning; implementation gated by architecture/backlog acceptance
 **Date:** 2026-08-22
+**Acceptance Authority:** GPT-5.6 Sol
+
+---
 
 ## 1. Business Change
 
-The machine-local POS support capability shall be restructured into an always-running Windows Agent Service plus a standalone WPF desktop application. The WPF application shall provide local users with the same supported POS maintenance capabilities on the local machine, even when the central Support Hub is unavailable.
+The machine-local POS support capability shall be restructured from a browser-to-loopback architecture into a dual-surface architecture comprising:
+1. An always-running **Windows Agent Service** (`RmsSupportAgent.Service`) owning privileged machine execution and device identity.
+2. A complete standalone **WPF Desktop Application** (`RmsSupportAgent.Desktop.Wpf`) installed beside the Service, providing local users with full, autonomous access to all supported POS maintenance capabilities—even when the central Support Hub or WAN is offline.
+3. A centralized **Angular Administrator Dashboard** in RMS Support Hub providing central fleet supervision, machine health telemetry, WPF issue monitoring, and controlled typed remote support commands.
 
-The existing Angular Support Hub remains the central web product and becomes the administrator-only fleet supervision and remote-support surface for machine-local POS capabilities.
+The Angular dashboard and the WPF desktop application shall **never** contain separate implementations of privileged business logic. Both control surfaces shall invoke one shared Agent capability/application layer.
 
-The Angular dashboard and WPF application shall not contain separate implementations of privileged business logic. Both shall invoke one shared Agent application/capability layer.
+---
 
-## 2. Target Product Structure
+## 2. Business Rationale
 
-### Central RMS+ Support Hub
-- ASP.NET Core backend.
-- Angular administrator dashboard.
-- Online Orders and QA Prompt Studio remain web capabilities.
-- POS becomes an administrator fleet/supervision area.
-- Central dashboard can inspect machine, Agent and WPF state and invoke only approved typed remote commands.
+- **Store-Level Autonomy:** POS maintenance, diagnostics, database backup/restore, service recovery, and emergency resets must remain 100% operational when store network connectivity or central Support Hub servers are unavailable.
+- **Dedicated Desktop UX:** Local POS technicians and cashiers require a fast, native Windows desktop application with Windows-integrated authentication, eliminating browser-specific CORS, Local Network Access (LNA) policy variance, and certificate installation friction in retail browsers.
+- **Centralized Fleet Supervision:** Central engineering and support administrators need centralized visibility over thousands of store endpoints, monitoring Agent heartbeats, WPF application crashes, service failures, database health, and version drift without needing remote desktop sessions.
+- **Zero Duplication of Privilege:** Maintaining separate logic for local vs remote operations introduces security risks and contract drift. A single shared command/query layer guarantees identical business rules, validation, mutation leasing, and auditing across both channels.
+- **Safe Evolutionary Migration:** The transition preserves all delivered capabilities from E07–E09, runs side-by-side during validation, and deprecates the browser-direct loopback path only after proven representative-machine acceptance.
 
-### RMS Support Agent Service
-Always-running Windows Service installed on each supported target machine. It owns privileged execution, machine identity, Hub connectivity, WPF/Agent health, package/update/rollback, diagnostics, typed commands and bounded audit.
+---
 
-### RMS Support WPF Desktop
-Complete standalone local operational UI installed beside the Service. It remains usable without the Angular dashboard for supported local operations, reports its own health/version/heartbeat/crashes through the Agent, and never owns unrestricted service/SQL/filesystem privilege directly.
+## 3. Central Hub Responsibilities
 
-## 3. Control-Surface Principle
+The central RMS+ Support Hub (.NET Core Backend + Angular Admin Dashboard) owns:
+- **Central Fleet Supervision:** Aggregating registered POS machine inventory, online/offline status, Agent health, and WPF application status.
+- **WPF Health & Crash Monitoring:** Ingesting and alerting on WPF heartbeat loss, unhandled crashes, version mismatches, and execution errors reported by the local Agent.
+- **Issues Board:** Centralized categorization and escalation of fleet-wide issues (Agent offline, RMS service stopped, database degradation, backup failures, low disk).
+- **Admin Remote Support:** Initiating allowlisted, typed remote diagnostic queries, log collections, Support Bundle generation, and approved service restarts.
+- **Admin RBAC & Policy:** Enforcing server-side role-based access control, ensuring only authorized administrators can trigger remote actions.
+- **Central Audit Search:** Correlating remote command dispatches with machine-side audit execution records.
 
-| Capability | Local WPF | Angular Admin |
-|---|---:|---:|
-| Machine/RMS health | Yes | Yes |
-| Service status/control | Yes | Yes |
-| DB health | Yes | Yes |
-| Backup | Yes | Yes |
-| Guarded restore | Yes, policy-controlled | Admin/policy-controlled |
-| Logs | Yes | Yes |
-| Support Bundle | Yes | Yes |
-| Cleanup/branch reset | Yes | Yes where policy allows |
-| Package lifecycle | Yes, authorized | Yes, controlled |
-| Rollback/recovery | Yes, authorized | Yes, controlled |
-| Activity/audit | Local | Fleet-wide |
-| WPF health monitoring | Local | Fleet-wide |
-| Agent health monitoring | Local | Fleet-wide |
+---
 
-No arbitrary PowerShell, SQL, filesystem, process, service-name, URL or script execution is introduced.
+## 4. Agent Service Responsibilities
 
-## 4. Approved Architecture Direction
+The Windows Agent Service (`RmsSupportAgent.Service`) runs continuously under `LocalSystem` (or designated privileged service account) and owns:
+- **Privileged Execution Boundary:** Sole authority for machine-level operations: SQL recovery, Windows service control, filesystem maintenance, Support Bundle generation, and package updates.
+- **Device Identity & Registration:** Owning per-machine cryptographic identity and certificates used for authenticating to the central Hub.
+- **Secure Local IPC Endpoint:** Hosting an authenticated Windows Named Pipe listener restricted by Windows ACLs to local Administrators.
+- **Outbound Persistent Hub Connection:** Establishing and maintaining an Agent-initiated SignalR connection over HTTPS to the Support Hub.
+- **WPF Process Supervision & Telemetry:** Monitoring local WPF process state, heartbeat, crashes, and protocol version compatibility, reporting telemetry to the Hub.
+- **Offline Event Queue:** Buffering health, audit, and diagnostic events during Hub disconnection and replaying them deterministically upon reconnection.
+- **Shared Capability Seam:** Hosting transport-agnostic command and query handlers enforcing mutation leases, idempotency, bounded redaction, and durable audit logs.
 
-- **Hub ↔ Agent:** Agent-initiated persistent outbound SignalR over HTTPS.
-- **Machine identity:** per-machine registered device identity backed by certificate/cryptographic material stored outside application content.
-- **WPF ↔ Agent:** authenticated local Windows IPC, preferred Windows Named Pipes.
-- **Privilege boundary:** privileged execution remains in Agent Service.
-- **Service identity migration:** preserve the current proven service identity during parity migration; any least-privilege identity redesign is a separate hardening decision.
-- **Remote commands:** typed allowlisted command catalogue only.
-- **Offline behavior:** WPF/local Agent features continue locally; telemetry/events synchronize after reconnect.
-- **Admin authorization:** central administrator authorization plus server-owned policy.
-- **Local authorization:** Windows identity/role authorization appropriate to each operation.
-- **Audit:** local and remote paths share correlation and sanitized audit semantics.
+---
 
-## 5. WPF Health / Issue Monitoring
+## 5. WPF Standalone Responsibilities
 
-The Agent shall independently report WPF installed/running state, heartbeat, version, PID/start time where safe, last launch/close, crash summary, current operation, version mismatch and Agent↔WPF IPC health.
+The WPF Desktop Application (`RmsSupportAgent.Desktop.Wpf`) is a rich native Windows application that owns:
+- **Standalone Local Operations:** Providing immediate, responsive local access to all supported POS maintenance workflows without browser dependencies.
+- **Retained Capabilities Access:**
+  - Machine and RMS installation discovery and health overview.
+  - RMS service status and approved service restart/control.
+  - Database health checks, storage metrics, and integrity diagnostics.
+  - Database backup creation, download, and guarded pre-flight restore.
+  - Diagnostic logs viewer and safe Support Bundle creation.
+  - Safety Snapshots creation and incident timeline inspection.
+  - File/cache cleanup previews and guarded branch reset preserving native RMS services.
+  - Package installation, upgrade, repair, and rollback checkpoints.
+  - Local activity and durable audit history.
+- **Local Windows Authorization UX:** Prompting for local Administrator confirmation and elevation before executing high-risk operations.
+- **WPF Heartbeat & Telemetry:** Sending periodic heartbeats and unhandled exception reports over Named Pipes to the Agent Service.
+- **Zero Direct Privilege:** The WPF application never contains direct SQL connections, raw service manipulation code, or unconstrained filesystem access; all actions delegate to the Agent Service over IPC.
 
-Angular Admin shall aggregate WPF crash, heartbeat loss, Agent offline, version mismatch, RMS service stopped, DB unavailable, backup failure, package/update failure, low disk and failed remote operations.
+---
 
-WPF crash must not stop the Agent Service.
+## 6. Dual Control-Surface Capability Matrix
 
-## 6. New Business Requirements
+| Capability | Local WPF Desktop | Angular Admin Dashboard | Shared Authority Seam |
+|---|:---:|:---:|:---:|
+| Machine & RMS health | Full local view | Fleet-wide aggregation | Shared Query Handler |
+| Service status & control | Local view & restart | Fleet view & remote restart | Shared Service Control Handler |
+| Database health & diagnostics | Full local metrics | Remote diagnostics | Shared DB Diagnostics Handler |
+| Database backup | On-demand local backup | Remote backup request | Shared Backup Handler |
+| Guarded database restore | Local guarded restore | Policy-gated remote restore | Shared Restore Handler |
+| Diagnostic logs | Local viewer & filter | Remote log fetch | Shared Log Query Handler |
+| Support Bundle | Generate & save local | Generate & upload to Hub | Shared Support Bundle Handler |
+| Safety Snapshots & timeline | Full local management | Central timeline view | Shared Snapshot Handler |
+| Cleanup & branch reset | Local preview & execute | Restricted remote policy | Shared Cleanup Handler |
+| Package lifecycle | Install/upgrade/repair | Controlled remote upgrade | Shared Package Handler |
+| Rollback & recovery | Local rollback checkpoint | Controlled remote rollback | Shared Rollback Handler |
+| Activity & audit | Local machine audit log | Central fleet-wide search | Shared Audit Repository |
+| WPF health & telemetry | Heartbeat & self-report | Central monitoring & alerts | Shared Telemetry Model |
+| Agent health monitoring | Local connection status | Fleet heartbeat dashboard | Shared Health Model |
 
-- **BR-027 Dual Control Surfaces:** Local WPF and Angular Admin expose approved POS capabilities through one shared Agent capability layer.
-- **BR-028 Standalone Local Operation:** WPF remains usable for supported local workflows when Hub is unavailable.
-- **BR-029 Central Fleet Supervision:** Admins monitor registered machines, Agent/WPF/RMS health and operational issues centrally.
-- **BR-030 Shared Capability Authority:** Local and remote actions use the same typed command/query handlers.
-- **BR-031 WPF Health Telemetry:** Agent monitors WPF heartbeat, version and crash state independently.
-- **BR-032 Secure Outbound Agent Communication:** Agent-to-Hub control communication is Agent-initiated over authenticated HTTPS.
-- **BR-033 Device Identity:** Every remotely manageable Agent has a unique server-recognized identity and registration lifecycle.
-- **BR-034 Secure Local IPC:** WPF-to-Agent uses authenticated local IPC with Windows identity/ACL enforcement.
-- **BR-035 Typed Remote Commands:** No arbitrary remote shell/SQL/filesystem/process execution.
-- **BR-036 Offline Resilience:** Local workflows and bounded audit tolerate temporary Hub disconnection.
-- **BR-037 Unified Audit:** Local and remote operations share correlation, authorization and sanitized audit semantics.
-- **BR-038 WPF/Agent Version Management:** Admins see Agent/WPF versions and package lifecycle stays signed/rollback-aware/fail-closed.
-- **BR-039 Migration Safety:** Browser-direct POS maintenance is not removed until parity and representative-machine acceptance pass.
-- **BR-040 Admin-only Fleet Control:** Central supervision and remote privileged operations are restricted to authorized administrators.
+---
 
-## 7. Migration Principles
+## 7. Target Communication & Security Architecture
 
-1. Preserve E07–E09 as historical delivered evidence.
-2. Reuse existing typed Agent domain/application/infrastructure capabilities.
-3. Do not rewrite privileged logic into WPF.
-4. Build the shared application seam first.
-5. Add WPF as a local client.
-6. Add Hub remote control as another client of the same seam.
-7. Run browser-direct and WPF paths side-by-side during parity validation.
-8. Deprecate browser-direct privileged POS only after explicit acceptance.
-9. Preserve package trust, rollback, audit and native RMS protection rules unless a reviewed ADR supersedes them.
-10. No Production rollout is implied by this CR.
+### 7.1 Hub ↔ Agent: Agent-Initiated Persistent SignalR over HTTPS
+- The Agent initiates an outbound TLS connection to the central Support Hub SignalR endpoint (`/hubs/agent`).
+- No inbound listening ports are opened on store firewalls or POS machines.
+- Persistent duplex communication allows real-time telemetry streaming and typed remote command dispatch.
+- Reconnection with exponential backoff and message replay protection.
 
-## 8. Out of Scope for Initial Migration
+### 7.2 WPF ↔ Agent: Authenticated Windows Named Pipes
+- The Agent Service exposes a secure Windows Named Pipe endpoint (e.g., `\\.\pipe\RmsSupportAgent.Ipc`).
+- Named Pipe security is enforced using Windows Security Descriptors / ACLs granting access exclusively to `LocalSystem` and `NT AUTHORITY\Administrators`.
+- Client Windows identity is verified on connect and per-message.
+- Named Pipe transport eliminates browser CORS, loopback HTTPS certificate trust, and LNA policy friction.
 
-- Replacing Angular Online Orders or QA Prompt Studio with WPF.
-- Arbitrary remote desktop/control.
-- Generic PowerShell, command, SQL or filesystem consoles.
-- New Production rollout before controlled acceptance.
-- Replacing working Agent internals where reuse is safe.
+### 7.3 Device Identity & Trust
+- Every POS machine possesses a unique registered Device ID and cryptographic credential/certificate.
+- Credentials are provisioned during installation and stored securely outside tracked repository files.
+- The central Hub validates device credentials during connection negotiation; revoked or unlisted devices fail closed.
 
-## 9. Acceptance
+### 7.4 Authorization Model
+- **Local Invocations (WPF):** Enforce local Windows Administrator group membership and interactive confirmation for high-risk actions.
+- **Remote Invocations (Hub):** Enforce central administrator authentication, RBAC role validation (`FleetAdmin`), target machine policy, and one-time command execution tokens.
+- **Shared Enforcement:** Both invocation channels pass into the shared application layer wrapped in an `InvocationContext` verifying caller identity and permission.
 
-The architecture change is accepted for cutover when WPF has local parity, offline local use works, Agent survives WPF crash/close, Angular monitors Agent/WPF independently, local/remote actions share handlers, device identity and authorization fail closed, correlated audit is preserved, package trust/rollback remain intact, representative-machine Testing passes, and the browser-direct privileged path can be removed without capability loss.
+### 7.5 Typed Remote Commands (Allowlisted Catalogue Only)
+Under **NO circumstances** shall arbitrary or generic command execution be introduced. The architecture strictly prohibits:
+- Arbitrary PowerShell execution
+- Generic shell / CMD execution
+- Generic SQL query execution
+- Generic filesystem browsing or file upload
+- Arbitrary process launch
+- Arbitrary Windows service name manipulation
+- Arbitrary URLs, webhooks, or script downloads
 
-## 10. Implementation Gate
+Every remote command must belong to the strictly typed, compiled, allowlisted catalogue of handlers.
 
-Implementation may begin only after:
-- this CR and the new architecture ADR are merged to `main`;
-- Azure WPF epics/stories exist and traceability is synchronized;
-- the first implementation slice is explicitly defined;
-- Sol confirms no unresolved architecture decision blocks that slice.
+### 7.6 WPF Crash Resilience & Continuity
+- The Agent Service and WPF Desktop run in separate Windows processes.
+- An unhandled exception, freeze, or crash of the WPF application does **not** terminate or disrupt the Agent Service.
+- The Agent detects client disconnection, logs the crash event, reports crash telemetry to the Hub, and maintains continuous remote management.
 
-Recommended first slice: **shared Agent application contracts + secure local IPC foundation**, not broad WPF screens.
+---
+
+## 8. New Business Requirements (BR-027 through BR-040)
+
+- **BR-027 Dual Control Surfaces:** The platform shall provide dual control surfaces for machine-local POS maintenance: a local native WPF desktop application and a central Angular administrator dashboard, both operating through one shared Agent capability layer.
+- **BR-028 Standalone Local Operation:** The WPF desktop application and local Agent Service shall function autonomously for all supported maintenance workflows when disconnected from the central Support Hub or external network.
+- **BR-029 Central Fleet Supervision:** The central Angular dashboard shall provide administrators with unified visibility over registered POS machines, Agent heartbeats, WPF application states, RMS health, and aggregated operational issues.
+- **BR-030 Shared Capability Authority:** All privileged maintenance logic, validation rules, mutation leases, and diagnostic operations shall be implemented in a single transport-agnostic Agent application layer invoked identically by local IPC and remote Hub requests.
+- **BR-031 WPF Health Telemetry:** The Agent Service shall monitor the local WPF process state, heartbeat, version, and unhandled crashes, publishing health telemetry to the central Hub independently of the desktop UI process.
+- **BR-032 Secure Outbound Agent Communication:** Agent-to-Hub communication shall be initiated by the Agent as an outbound, authenticated, encrypted SignalR connection over HTTPS, requiring no inbound listening ports on target machines.
+- **BR-033 Device Identity:** Each remotely manageable POS machine shall have a unique, server-recognized device identity backed by cryptographic credentials managed outside application packages.
+- **BR-034 Secure Local IPC:** Communication between the WPF desktop application and the Agent Service shall use authenticated Windows Named Pipes with strict Windows Access Control Lists (ACLs) restricting access to local Administrators.
+- **BR-035 Typed Remote Commands:** Remote operations issued from the central Hub shall be restricted to an allowlisted catalogue of strongly-typed commands; generic shell, arbitrary PowerShell, generic SQL, and arbitrary process execution are strictly prohibited.
+- **BR-036 Offline Resilience:** Local workflows and durable audit logging shall operate during network outages; pending telemetry and audit records shall be buffered locally and synchronized upon reconnection.
+- **BR-037 Unified Audit:** Local and remote operations shall generate durable, sanitized audit records sharing a common correlation model, identifying the originating caller, machine identity, operation parameters, and execution outcome.
+- **BR-038 WPF/Agent Version Management:** The platform shall enforce protocol version compatibility between the WPF client and Agent Service, surface version drift centrally, and govern package updates through signed, rollback-capable lifecycles.
+- **BR-039 Migration Safety:** The legacy browser-direct loopback POS maintenance path shall remain operational side-by-side during parity migration and shall only be deprecated after full functional and security acceptance on representative machines.
+- **BR-040 Admin-only Fleet Control:** Central fleet supervision and remote command execution shall be strictly restricted to authenticated administrators holding verified administrative roles.
+
+---
+
+## 9. Migration Principles & Phased Roadmap
+
+1. **Preserve Historical Delivered Evidence:** Deliverables and tests under E07, E08, and E09 remain permanently closed as historical baseline evidence.
+2. **Reuse Proven Seams:** Existing domain models, SQL backup/restore logic, service controls, Support Bundle redaction, and package trust verification code are preserved and reused.
+3. **Application Seam First:** Implementation starts by extracting the transport-agnostic application layer before building new UI screens.
+4. **Side-by-Side Validation:** During the migration period, the Agent Service supports both the legacy HTTPS loopback transport and the new Named Pipe / SignalR transports.
+5. **Controlled Deprecation:** The browser-direct loopback transport is retired only after formal acceptance of the WPF desktop app and Angular admin supervision.
+6. **No Production Direct Contact:** Re-architecture and migration activities remain strictly within Development and Testing environments until formal go-live gates are satisfied.
+
+---
+
+## 10. Out of Scope for Initial Migration
+
+- Rebuilding Online Orders or QA Prompt Studio in WPF (they remain central web applications in Angular Support Hub).
+- Arbitrary remote desktop / screen sharing functionality.
+- Generic PowerShell, CMD, or SQL interactive consoles.
+- Automatic or un-gated fleet-wide production deployments before representative-machine acceptance.
+- Replacing working internal Agent algorithms where reuse is proven and safe.
+
+---
+
+## 11. Acceptance Criteria
+
+The architecture re-baseline and subsequent migration shall be accepted when:
+1. The WPF desktop application achieves 100% functional parity with retained E07–E09 capabilities.
+2. Local operations execute completely and deterministically while disconnected from the Hub.
+3. The Agent Service continues running and reporting to Hub when the WPF application is closed or crashes.
+4. Central Angular dashboard accurately tracks machine status, Agent heartbeats, and WPF health.
+5. Local and remote requests converge on the same typed handlers without code duplication.
+6. Named Pipe ACLs and SignalR device authentication fail closed against unauthorized callers.
+7. Correlated audit logs capture local and remote operations with full fidelity.
+8. Representative-machine Testing passes all automated and manual validation scenarios.
+9. Architecture Authority (GPT-5.6 Sol) formally reviews and approves the migration outcome.
+
+---
+
+## 12. Implementation Gate
+
+Implementation of Phase 1 (WPF-01) may begin only after:
+- CR-001 and ADR-0029 are committed and accepted by GPT-5.6 Sol.
+- Azure DevOps Epics E16–E19 and child user stories are established and synchronized in backlog traceability.
+- The first implementation slice (`WPF-01 — Shared Agent Application + Local IPC Foundation`) is explicitly accepted for development.
