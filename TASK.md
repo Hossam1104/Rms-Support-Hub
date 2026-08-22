@@ -7,7 +7,7 @@ REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
 BRANCH: `feat/wpf-01-shared-agent-local-ipc`
 EPIC: E16 - Agent Platform Re-Architecture (#13017)
 PRIMARY STORIES: US-E16-02 (#13022), US-E16-04 (#13024)
-STATUS: Implemented; bounded OPUS remediation complete locally; awaiting exact-head CI and GPT-5.6 Sol review/acceptance
+STATUS: Implemented; bounded OPUS remediation complete; exact-head CI green; awaiting GPT-5.6 Sol review/acceptance
 
 ## Completed WPF-01 implementation
 
@@ -39,16 +39,17 @@ variable. Standalone Agent startup was not provisioned because it requires the
 machine-owned Testing certificate; in-process HTTPS/Named Pipe checks changed
 no machine or RMS state.
 
-Draft PR #32 remains unmerged and must remain Draft for Sol review. The
-pre-remediation baseline CI was green; the final bounded OPUS remediation still
-requires exact-head CI after delivery.
+Draft PR #32 remains unmerged and must remain Draft for Sol review. Exact-head
+POS CI and Support Hub CI passed on commit `701869b` (PR #32); no merge or
+Production action is authorized.
 
 Local validation after the bounded remediation: Domain 12/12, Application
 89/89, Infrastructure 155/155, Agent Integration 234/234 (490/490 POS tests
 total); lifecycle remediation 6/6; audit/authority/architecture remediation
 25/25; exact protocol bounds 2/2; PowerShell parse gate 37/37; Pester 3.4.0
 172/172. Release build passed with 0 warnings and 0 errors, and the checked-in
-OpenAPI document was regenerated and verified fresh.
+OpenAPI and generated Angular client artifacts were regenerated and verified
+fresh; exact-head POS and Support Hub CI passed.
 
 ## WPF-01 final bounded OPUS remediation
 

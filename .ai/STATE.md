@@ -7,8 +7,8 @@
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
 - **Status:** WPF-01 implementation and the final bounded OPUS remediation are
-  complete locally; Draft PR #32 awaits exact-head CI and Sol review. WPF-02
-  must not start until that acceptance.
+  complete; exact-head CI is green on `701869b`; Draft PR #32 awaits Sol
+  review. WPF-02 must not start until that acceptance.
 
 ## WPF-01 durable facts
 
@@ -83,9 +83,9 @@
 - TestServer HTTPS and in-process Windows Named Pipe integration exercised the
   selected diagnostic, health, invalid-operation, malformed/oversized-request,
   unauthorized-connection, missing-group, and HTTP/IPC parity paths.
-- The checked-in POS OpenAPI document was regenerated and the full Agent
-  OpenAPI metadata suite passed. Exact-head remote CI remains pending delivery
-  of this remediation.
+- The checked-in POS OpenAPI document and generated Angular client were
+  regenerated; the full Agent OpenAPI metadata suite passed. Exact-head POS CI
+  and Support Hub CI passed on `701869b` (PR #32 remains Draft).
 - Standalone Agent startup was not attempted because the real Kestrel listener
   requires the machine-owned Testing certificate. No runtime URL is claimed
   from configuration alone.
