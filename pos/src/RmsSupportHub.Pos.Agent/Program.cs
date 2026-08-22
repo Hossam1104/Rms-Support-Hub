@@ -14,6 +14,8 @@ using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Endpoints;
 using RmsSupportHub.Pos.Agent.MainServer;
 using RmsSupportHub.Pos.Agent.MutationTokens;
+using RmsSupportHub.Pos.Agent.Invocation;
+using RmsSupportHub.Pos.Agent.LocalIpc;
 using RmsSupportHub.Pos.Agent.Packages;
 using RmsSupportHub.Pos.Agent.Repair;
 using RmsSupportHub.Pos.Agent.RmsDatabase;
@@ -25,6 +27,7 @@ using RmsSupportHub.Pos.Agent.Snapshots;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Application.UseCases;
 using RmsSupportHub.Pos.Application.Services;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Maintenance;
 using RmsSupportHub.Pos.Application.Packages;
 using RmsSupportHub.Pos.Application.Repair;
@@ -45,6 +48,7 @@ using RmsSupportHub.Pos.Infrastructure.Packages;
 using RmsSupportHub.Pos.Infrastructure.Snapshots;
 using RmsSupportHub.Pos.Infrastructure.Smb;
 using RmsSupportHub.Pos.Infrastructure.Windows;
+using RmsSupportHub.Pos.LocalIpc;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -58,12 +62,22 @@ var securityOptions = builder.Configuration
     .Get<AgentSecurityOptions>() ?? new AgentSecurityOptions();
 securityOptions.Validate();
 
+var localIpcOptions = builder.Configuration
+    .GetSection(LocalIpcOptions.SectionName)
+    .Get<LocalIpcOptions>() ?? new LocalIpcOptions();
+localIpcOptions.Validate();
+
 builder.Host.UseWindowsService(options => options.ServiceName = AgentProductIdentity.PermanentServiceName);
 
 builder.WebHost.ConfigureKestrel((context, options) =>
     LoopbackBinding.Configure(options, context.Configuration, context.HostingEnvironment));
 
 builder.Services.AddSingleton(securityOptions);
+builder.Services.AddSingleton(localIpcOptions);
+builder.Services.AddSingleton<LocalIpcRuntimeStatus>();
+builder.Services.AddSingleton<ILocalIpcOperatorGroupResolver, WindowsLocalIpcOperatorGroupResolver>();
+builder.Services.AddSingleton<LocalIpcServer>();
+builder.Services.AddHostedService(services => services.GetRequiredService<LocalIpcServer>());
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(RuntimeRetentionPolicy.Default);
 builder.Services.AddSingleton<AgentScopedIdempotencyStore>();
@@ -97,6 +111,7 @@ builder.Services.AddSingleton<IWindowsLocalGroupMembershipResolver, WindowsLocal
 builder.Services.AddSingleton<IWindowsLocalGroupMembershipLookup, WindowsLocalGroupMembershipLookup>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAgentPrincipalSidResolver, AgentPrincipalSidResolver>();
+builder.Services.AddSingleton<IAgentInvocationContextFactory, AgentInvocationContextFactory>();
 
 builder.Services.AddCors(options => options.AddPolicy(AgentCors.PolicyName, policy =>
 {
@@ -163,6 +178,7 @@ builder.Services.AddSingleton(new RmsInstallationOptions());
 builder.Services.AddSingleton<RmsInstallationDiscovery>();
 builder.Services.AddSingleton<IRmsInstallationDiscovery>(services =>
     services.GetRequiredService<RmsInstallationDiscovery>());
+builder.Services.AddSingleton<RmsInstallationDiscoveryQueryHandler>();
 builder.Services.AddSingleton<IRmsDatabaseConnectionStringSource>(services =>
     services.GetRequiredService<RmsInstallationDiscovery>());
 builder.Services.AddSingleton<IRmsSqlReadOnlyProbe, SqlClientReadOnlyProbe>();

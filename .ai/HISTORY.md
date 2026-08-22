@@ -53,3 +53,9 @@ the linked planning/evidence documents.
 INT-00 through INT-13, Slice B, Slice C, P0-A, P0-B, P0-C, P0-D, and P0-F are repository-validated, merged to `main`, and deployed/verified on local Testing where authorized. P0-E diagnosis is completed and documented. WPF Architecture Rebaseline (CR-001, ADR-0029, E16–E19) is established.
 
 Authorized HOSSAM local Testing deployment and activation occurred; no Production, customer, Main Server, RMS, database, native-service, PKI, or fleet mutation occurred, and no shared/customer Testing integration mutation occurred. Downstream GHC/Uni rejection diagnosis (#12892, #12899) completed; real POS release PKI and final integrated Online Order + POS smoke are re-baselined under E19; Production readiness remains NO.
+
+## WPF-01
+
+| Milestone | Evidence | Outcome |
+|---|---|---|
+| WPF-01 Shared Agent Application + Local IPC Foundation | Branch `feat/wpf-01-shared-agent-local-ipc`; validation evidence recorded in `.ai/STATE.md` | Added the shared invocation/application seam, typed RMS installation discovery adapter, bounded Windows Named Pipe client/server with explicit three-principal ACL, protocol/error bounds, and focused authorization/transport/parity tests. Awaiting GPT-5.6 Sol review; no WPF UI, SignalR, Production, native RMS, or customer database changes. |

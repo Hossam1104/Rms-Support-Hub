@@ -15,6 +15,8 @@ public sealed record AgentAuditEvent(
     string ProductVersion,
     string? BuildId)
 {
+    public string? Source { get; init; }
+
     public string? PackageId { get; init; }
 
     public string? PackageVersion { get; init; }

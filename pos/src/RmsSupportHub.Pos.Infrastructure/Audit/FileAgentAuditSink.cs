@@ -126,6 +126,7 @@ public sealed class FileAgentAuditSink(
         SafeToken(item.ProductVersion, "unavailable") ?? "unavailable",
         SafeToken(item.BuildId, null))
     {
+        Source = SafeToken(item.Source, null),
         PackageId = SafeToken(item.PackageId, null),
         PackageVersion = SafeToken(item.PackageVersion, null),
         TrustResult = SafeToken(item.TrustResult, null),

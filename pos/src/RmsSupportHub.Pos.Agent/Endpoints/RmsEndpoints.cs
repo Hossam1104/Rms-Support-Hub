@@ -1,5 +1,8 @@
 using RmsSupportHub.Pos.Agent.Authorization;
+using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Agent.Rms;
+using RmsSupportHub.Pos.Agent.Security;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
@@ -31,8 +34,13 @@ public static class RmsEndpoints
 
         app.MapGet(
                 "/api/v1/rms/diagnostics",
-                async (RmsDiagnosticsService diagnostics, CancellationToken cancellationToken) =>
-                    Results.Ok(await diagnostics.GetAsync(cancellationToken).ConfigureAwait(false)))
+                async (RmsDiagnosticsService diagnostics,
+                    IAgentInvocationContextFactory contextFactory,
+                    HttpContext context,
+                    CancellationToken cancellationToken) =>
+                    Results.Ok(await diagnostics
+                        .GetAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                        .ConfigureAwait(false)))
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("GetRmsDiagnostics")
             .WithTags("RMS Diagnostics")
@@ -50,6 +58,38 @@ public static class RmsEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces<AgentProblemDetailsDto>(StatusCodes.Status500InternalServerError, "application/problem+json");
+
+        app.MapGet(
+                "/api/v1/rms/installation",
+                async (RmsInstallationDiscoveryQueryHandler discovery,
+                    IAgentInvocationContextFactory contextFactory,
+                    HttpContext context,
+                    CancellationToken cancellationToken) =>
+                {
+                    var result = await discovery
+                        .HandleAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                        .ConfigureAwait(false);
+                    return result.Succeeded && result.Value is not null
+                        ? Results.Ok(RmsInstallationContractMapper.Map(result.Value))
+                        : AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            result.Error?.Message ?? "The RMS installation discovery query failed.",
+                            result.Error?.Code ?? "diagnostic_unavailable");
+                })
+            .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
+            .WithName("GetRmsInstallationDiscovery")
+            .WithTags("RMS Diagnostics")
+            .WithSummary("Discover the installed RMS suite")
+            .WithDescription(
+                "Runs the shared, read-only RMS installation discovery query. The response is a " +
+                "sanitized typed read model and contains no connection strings, credentials, raw " +
+                "filesystem paths, or client-controlled execution parameters.")
+            .Produces<RmsInstallationDto>(StatusCodes.Status200OK, "application/json")
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status400BadRequest, "application/problem+json")
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces<AgentProblemDetailsDto>(StatusCodes.Status503ServiceUnavailable, "application/problem+json");
 
         app.MapGet(
                 "/api/v1/rms/operational-health",

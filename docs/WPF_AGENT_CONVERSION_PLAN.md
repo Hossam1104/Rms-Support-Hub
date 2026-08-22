@@ -1,8 +1,8 @@
 # WPF / Windows Agent Conversion Plan
 
 **Product:** RMS+ Support Hub
-**Architecture Rebaseline:** Post PR #30
-**Status:** Approved for planning; implementation gated by architecture/backlog acceptance
+**Architecture Rebaseline:** Post PR #31
+**Status:** WPF-01 implemented on `feat/wpf-01-shared-agent-local-ipc`; awaiting Sol acceptance before WPF-02
 **Date:** 2026-08-22
 **Authority:** GPT-5.6 Sol
 
@@ -100,6 +100,11 @@ This document establishes the phased implementation roadmap for transitioning th
   - Define unified progress reporting and cooperative cancellation token contracts.
 - **Exit Gate:** Shared application layer passes unit and integration tests; existing HTTP endpoints delegate to shared handlers with zero regression.
 
+**WPF-01 evidence:** `RmsInstallationDiscoveryQueryHandler` is the first shared query seam. The
+legacy HTTPS diagnostics path and the new typed installation adapter both enter through the Agent
+invocation factory and shared handler; the local IPC server delegates to the same handler. The
+application layer records source and correlation in the existing durable audit model.
+
 ---
 
 ### Phase 2 — Local WPF-Agent IPC Foundation
@@ -115,6 +120,13 @@ This document establishes the phased implementation roadmap for transitioning th
   - Implement local Agent health query and one non-destructive typed diagnostic command.
   - Create integration test harness verifying unauthorized callers fail closed and per-command authorization gates hold.
 - **Exit Gate:** Synthetic client / test harness can execute typed commands over Named Pipes with verified Windows authorization; unauthorized identities rejected at IPC connection; non-admin callers attempting elevated operations rejected by per-command authorization fail-closed.
+
+**WPF-01 evidence:** The bounded `RmsSupportHub.Pos.LocalIpc` library uses protocol version 1,
+newline-delimited JSON envelopes, strict request/response correlation, 64 KiB request and 256 KiB
+response defaults, ten-second connection/read bounds, and four-client concurrency. The Agent
+listener is disabled by default and becomes unavailable without a resolvable `RMS Support
+Operators` group; no fallback to a broad principal is permitted. Initial capabilities are
+`agent.health` and `rms.installation.discovery`.
 
 ---
 

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>RmsSupportHub.Pos.LocalIpc</AssemblyName>
+    <RootNamespace>RmsSupportHub.Pos.LocalIpc</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The package's available Windows ACL asset is the final 6.0 preview; the .NET 10 BCL
+         does not expose NamedPipeServerStreamAcl.Create without this transport-only asset. -->
+    <PackageReference Include="System.IO.Pipes.AccessControl" Version="6.0.0-preview.5.21301.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RmsSupportHub.Pos.Contracts\RmsSupportHub.Pos.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
