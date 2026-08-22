@@ -58,4 +58,4 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 
 | Milestone | Evidence | Outcome |
 |---|---|---|
-| WPF-01 Shared Agent Application + Local IPC Foundation | Commits `0550df2`, `1c842d5`; Draft PR #32; exact-head POS/Support Hub CI green | Added the shared invocation/application seam, typed RMS installation discovery adapter, bounded Windows Named Pipe client/server with explicit three-principal ACL, protocol/error bounds, generated client contract, and focused authorization/transport/parity tests. Awaiting GPT-5.6 Sol review; no WPF UI, SignalR, Production, native RMS, or customer database changes. |
+| WPF-01 Shared Agent Application + Local IPC Foundation | Delivery commits on `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32; final POS/Support Hub CI green | Added the shared invocation/application seam, typed RMS installation discovery adapter, bounded Windows Named Pipe client/server with explicit three-principal ACL, protocol/error bounds, generated client contract, and focused authorization/transport/parity tests. Awaiting GPT-5.6 Sol review; no WPF UI, SignalR, Production, native RMS, or customer database changes. |

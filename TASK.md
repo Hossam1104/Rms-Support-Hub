@@ -42,9 +42,9 @@ requires the machine-owned Testing certificate; in-process Agent integration
 tests exercised the actual TestServer HTTPS adapter and Windows Named Pipe
 transport without changing machine or RMS state.
 
-Final delivery is commit `1c842d57805e4b06db31b20cca510b73143b1f81` in Draft
-PR #32. Exact-head POS CI and Support Hub CI passed; the PR remains unmerged
-and must remain Draft for Sol review.
+Final delivery is in Draft PR #32. POS CI and Support Hub CI passed for the
+final validation run; the PR remains unmerged and must remain Draft for Sol
+review.
 
 ## WPF-02 - WPF Shell + Local Agent Health Experience
 
