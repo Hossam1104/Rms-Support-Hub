@@ -1,9 +1,12 @@
 using System.IO.Pipes;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RmsSupportHub.Pos.Contracts;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.LocalIpc;
 
@@ -17,42 +20,99 @@ public sealed class LocalIpcTrustBoundaryTests
     };
 
     [Fact]
-    public async Task WindowsServerIdentityVerifierAcceptsTheConnectedServerAndRejectsWrongIdentity()
+    public async Task WindowsServerIdentityVerifierAcceptsWhenPipePidMatchesCanonicalServicePid()
     {
-        var currentSid = WindowsIdentity.GetCurrent().User
-            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
-        var options = CreateOptions();
-        using var server = NamedPipeServerStreamAcl.Create(
-            options.PipeName,
-            PipeDirection.InOut,
-            1,
-            PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous,
-            0,
-            0,
-            CreateTestPipeSecurity(currentSid));
-        var waitForConnection = server.WaitForConnectionAsync();
-        using var client = new NamedPipeClientStream(".", options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await client.ConnectAsync(timeout.Token);
-        await waitForConnection;
+        var (server, client) = await ConnectTestPipeAsync();
+        using (server)
+        using (client)
+        {
+            var pipeResolver = new WindowsLocalIpcPipeServerProcessIdResolver();
+            Assert.True(pipeResolver.TryGetServerProcessId(client, out var pipeServerProcessId));
+            var serviceResolver = new FixedServiceProcessResolver(ServiceOutcome.Running, pipeServerProcessId);
 
-        var trustedVerifier = new WindowsLocalIpcServerIdentityVerifier(currentSid);
-        var wrongVerifier = new WindowsLocalIpcServerIdentityVerifier(
-            new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2999"));
+            var verifier = new WindowsLocalIpcServerIdentityVerifier(
+                pipeResolver,
+                serviceResolver);
 
-        Assert.True(trustedVerifier.IsExpectedServer(client));
-        Assert.False(wrongVerifier.IsExpectedServer(client));
+            Assert.True(verifier.IsExpectedServer(client));
+            Assert.Equal(AgentServiceIdentity.PermanentServiceName, serviceResolver.RequestedServiceName);
+        }
     }
 
     [Fact]
-    public void DefaultVerifierRequiresTheCurrentLocalSystemAgentIdentity()
+    public async Task WindowsServerIdentityVerifierRejectsWhenPipePidDoesNotMatchCanonicalServicePid()
+    {
+        var (server, client) = await ConnectTestPipeAsync();
+        using (server)
+        using (client)
+        {
+            var pipeResolver = new WindowsLocalIpcPipeServerProcessIdResolver();
+            Assert.True(pipeResolver.TryGetServerProcessId(client, out var pipeServerProcessId));
+            var differentServiceProcessId = pipeServerProcessId == uint.MaxValue
+                ? 1u
+                : pipeServerProcessId + 1;
+
+            var verifier = new WindowsLocalIpcServerIdentityVerifier(
+                pipeResolver,
+                new FixedServiceProcessResolver(ServiceOutcome.Running, differentServiceProcessId));
+
+            Assert.False(verifier.IsExpectedServer(client));
+        }
+    }
+
+    [Fact]
+    public void DefaultVerifierUsesTheCanonicalServiceName()
     {
         var verifier = new WindowsLocalIpcServerIdentityVerifier();
 
-        Assert.Equal(
-            new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
-            verifier.ExpectedServerSid);
+        Assert.Equal(AgentServiceIdentity.PermanentServiceName, verifier.ExpectedServiceName);
+        Assert.Equal("RmsSupportAgent", verifier.ExpectedServiceName);
+    }
+
+    [Fact]
+    public Task WindowsServerIdentityVerifierRejectsWhenServiceIsNotFound() =>
+        AssertVerifierRejectsAsync(new FixedServiceProcessResolver(ServiceOutcome.NotFound, 0));
+
+    [Fact]
+    public Task WindowsServerIdentityVerifierRejectsWhenServiceIsStopped() =>
+        AssertVerifierRejectsAsync(new FixedServiceProcessResolver(ServiceOutcome.Stopped, 0));
+
+    [Fact]
+    public Task WindowsServerIdentityVerifierRejectsWhenServicePidIsUnavailable() =>
+        AssertVerifierRejectsAsync(new FixedServiceProcessResolver(ServiceOutcome.Running, 0));
+
+    [Fact]
+    public Task WindowsServerIdentityVerifierRejectsWhenScmQueryFails() =>
+        AssertVerifierRejectsAsync(new ThrowingServiceProcessResolver());
+
+    [Fact]
+    public Task WindowsServerIdentityVerifierRejectsWhenPipePidLookupFails() =>
+        AssertVerifierRejectsAsync(
+            new FixedServiceProcessResolver(ServiceOutcome.Running, 1234),
+            new FixedPipeServerProcessIdResolver(false, 0));
+
+    [Fact]
+    public void WindowsServiceResolverRequestsOnlyScmConnectAndServiceQueryStatus()
+    {
+        Assert.Equal(0x0001u, WindowsLocalServiceProcessResolver.RequestedServiceManagerAccess);
+        Assert.Equal(0x0004u, WindowsLocalServiceProcessResolver.RequestedServiceAccess);
+        Assert.Equal(0u, WindowsLocalServiceProcessResolver.RequestedServiceManagerAccess & ~0x0001u);
+        Assert.Equal(0u, WindowsLocalServiceProcessResolver.RequestedServiceAccess & ~0x0004u);
+    }
+
+    [Fact]
+    public void WindowsServerIdentityVerifierHasNoProcessTokenOrDebugPrivilegeNativeDependency()
+    {
+        var importedEntryPoints = typeof(WindowsLocalIpcServerIdentityVerifier)
+            .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+            .Select(method => method.GetCustomAttribute<DllImportAttribute>()?.EntryPoint)
+            .Where(entryPoint => entryPoint is not null)
+            .Cast<string>()
+            .ToArray();
+
+        Assert.DoesNotContain("OpenProcess", importedEntryPoints, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("OpenProcessToken", importedEntryPoints, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SeDebugPrivilege", importedEntryPoints, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -140,6 +200,62 @@ public sealed class LocalIpcTrustBoundaryTests
         MaxConcurrentClients = 1
     };
 
+    private static async Task<(NamedPipeServerStream Server, NamedPipeClientStream Client)> ConnectTestPipeAsync()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var options = CreateOptions();
+        var server = NamedPipeServerStreamAcl.Create(
+            options.PipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous,
+            0,
+            0,
+            CreateTestPipeSecurity(currentSid));
+        var waitForConnection = server.WaitForConnectionAsync();
+        var client = new NamedPipeClientStream(".", options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await client.ConnectAsync(timeout.Token);
+            await waitForConnection;
+            return (server, client);
+        }
+        catch
+        {
+            client.Dispose();
+            server.Dispose();
+            try
+            {
+                await waitForConnection;
+            }
+            catch
+            {
+                // Disposal bounds the server-side wait after setup failure.
+            }
+
+            throw;
+        }
+    }
+
+    private static async Task AssertVerifierRejectsAsync(
+        ILocalServiceProcessResolver serviceResolver,
+        ILocalIpcPipeServerProcessIdResolver? pipeResolver = null)
+    {
+        var (server, client) = await ConnectTestPipeAsync();
+        using (server)
+        using (client)
+        {
+            var verifier = new WindowsLocalIpcServerIdentityVerifier(
+                pipeResolver ?? new FixedPipeServerProcessIdResolver(true, 1234),
+                serviceResolver);
+
+            Assert.False(verifier.IsExpectedServer(client));
+        }
+    }
+
     private static PipeSecurity CreateTestPipeSecurity(SecurityIdentifier currentSid)
     {
         var security = new PipeSecurity();
@@ -151,5 +267,41 @@ public sealed class LocalIpcTrustBoundaryTests
     private sealed class FixedIdentityVerifier(bool result) : ILocalIpcServerIdentityVerifier
     {
         public bool IsExpectedServer(NamedPipeClientStream pipe) => result;
+    }
+
+    private sealed class FixedPipeServerProcessIdResolver(bool result, uint processId)
+        : ILocalIpcPipeServerProcessIdResolver
+    {
+        public bool TryGetServerProcessId(NamedPipeClientStream pipe, out uint resolvedProcessId)
+        {
+            resolvedProcessId = processId;
+            return result;
+        }
+    }
+
+    private sealed class FixedServiceProcessResolver(ServiceOutcome result, uint processId)
+        : ILocalServiceProcessResolver
+    {
+        public string? RequestedServiceName { get; private set; }
+
+        public bool TryGetRunningServiceProcessId(string serviceName, out uint resolvedProcessId)
+        {
+            RequestedServiceName = serviceName;
+            resolvedProcessId = processId;
+            return result == ServiceOutcome.Running;
+        }
+    }
+
+    private enum ServiceOutcome
+    {
+        NotFound,
+        Stopped,
+        Running
+    }
+
+    private sealed class ThrowingServiceProcessResolver : ILocalServiceProcessResolver
+    {
+        public bool TryGetRunningServiceProcessId(string serviceName, out uint processId) =>
+            throw new InvalidOperationException("simulated SCM/query access failure");
     }
 }

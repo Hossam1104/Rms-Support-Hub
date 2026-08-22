@@ -6,9 +6,9 @@
 - **Working branch:** `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32.
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
-- **Status:** WPF-01 implementation and the bounded Sol security remediation
-  are complete locally; Draft PR #32 remains awaiting Sol review. WPF-02 must
-  not start until that acceptance.
+- **Status:** WPF-01 implementation and the bounded Sol security remediation,
+  including S03 server identity verification, are complete locally; Draft PR
+  #32 remains awaiting Sol review. WPF-02 must not start until that acceptance.
 
 ## WPF-01 durable facts
 
@@ -34,9 +34,14 @@
   `rms.installation.discovery`. Client payloads do not provide identity or
   privilege authority. No WPF UI, SignalR, Production configuration, native
   RMS service, or customer database was changed.
-- `LocalIpcClient` verifies the connected Named Pipe server PID token before it
-  writes a request. The default expected identity is LocalSystem, and the
-  verifier is injected behind a small interface for test seams and a future
+- `LocalIpcClient` verifies the connected Named Pipe server by matching
+  `GetNamedPipeServerProcessId` to the currently running PID returned by
+  read-only SCM `QueryServiceStatusEx` for the immutable
+  `AgentServiceIdentity.PermanentServiceName` (`RmsSupportAgent`) before it
+  writes a request. The SCM resolver requests only `SC_MANAGER_CONNECT` and
+  `SERVICE_QUERY_STATUS`; no process-token, `OpenProcessToken`, or
+  `SeDebugPrivilege` path remains. Pipe PID and service PID resolution are
+  injected behind small bounded interfaces for deterministic tests and future
   service-account migration. Local group resolution machine-qualifies
   unqualified names and rejects domain/foreign authorities.
 - Shared authorization now binds source to authority: LegacyLoopbackHttp is
@@ -58,10 +63,12 @@
 - Release solution build: 0 warnings, 0 errors, with the required Testing-only
   `PosAgentSecurity__SupportHubOrigin` environment variable.
 - POS Release tests: Domain 12/12, Application 89/89, Infrastructure 155/155,
-  Agent Integration 187/187.
-- Focused remediation tests: 25/25 for ACL, NETWORK deny, local group
-  resolution, server identity, correlation, bounded protocol, source policy,
-  audit failure, HTTPS/IPC parity, and context-overload coverage.
+  Agent Integration 195/195.
+- Existing focused WPF-01 remediation tests remain green (25/25); current S03
+  identity-focused tests pass 12/12 and the Local IPC filtered suite passes
+  23/23 for ACL, NETWORK deny, group resolution, server identity, correlation,
+  bounded protocol, source policy, audit failure, HTTPS/IPC parity, and
+  context-overload coverage.
 - PowerShell quality: 37 tracked files parse cleanly; PSScriptAnalyzer was not
   installed. Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending.
 - TestServer HTTPS and in-process Windows Named Pipe integration exercised the
@@ -71,6 +78,7 @@
   build/infrastructure, Windows Agent security, POS OpenAPI/Angular
   generation, POS PowerShell, retained WinUI publish, and Support Hub
   backend/frontend/release candidate.
+- The S03 OpenAPI/generated-client check produced no contract artifact diff.
 - Standalone Agent startup was not attempted because the real Kestrel listener
   requires the machine-owned Testing certificate. No runtime URL is claimed
   from configuration alone.

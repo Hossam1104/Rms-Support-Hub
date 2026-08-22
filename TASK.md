@@ -24,7 +24,8 @@ tests are included.
 Draft PR #32 findings S01-S09 were corrected on this branch. Production ACL:
 LocalSystem/Administrators FullControl, explicit duplex-client rights for
 `RMS Support Operators`, and NETWORK deny. The client verifies the connected
-server token as LocalSystem before writing and matches request/correlation IDs.
+pipe server PID against the canonical running `RmsSupportAgent` SCM service PID
+through query-only SCM access before writing and matches request/correlation IDs.
 Group resolution is local-machine-only; source/authority combinations,
 diagnostic context propagation, and durable audit semantics are fail-closed.
 The stable `System.IO.Pipes.AccessControl` 5.0.0 attempt was removed because .NET 10 already
@@ -43,7 +44,8 @@ final validation run; the PR remains unmerged and must remain Draft for Sol
 review.
 
 Local validation: Domain 12/12, Application 89/89, Infrastructure 155/155,
-Agent Integration 187/187; focused remediation 25/25; PowerShell parse gate
+Agent Integration 195/195; prior focused remediation 25/25 plus S03 identity
+tests 12/12; PowerShell parse gate
 37/37; Pester 3.4.0 172/172.
 
 ## WPF-02 - WPF Shell + Local Agent Health Experience

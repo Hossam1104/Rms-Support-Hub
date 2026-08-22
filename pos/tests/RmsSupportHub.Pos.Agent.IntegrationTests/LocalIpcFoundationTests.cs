@@ -213,7 +213,7 @@ public sealed class LocalIpcFoundationTests
         try
         {
             Assert.NotEqual("unavailable", status.GetHealth().IpcStatus);
-            var client = new LocalIpcClient(options, new WindowsLocalIpcServerIdentityVerifier(currentSid));
+            var client = new LocalIpcClient(options, new FixedIdentityVerifier(true));
             var health = await client.GetHealthAsync("health-correlation");
             var installation = await client.GetInstallationDiscoveryAsync("diagnostic-correlation");
 
@@ -288,7 +288,7 @@ public sealed class LocalIpcFoundationTests
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 SendRawTextAsync(options, "{\"padding\":\"" + new string('x', 2048) + "\"}"));
 
-            var client = new LocalIpcClient(options, new WindowsLocalIpcServerIdentityVerifier(currentSid));
+            var client = new LocalIpcClient(options, new FixedIdentityVerifier(true));
             var health = await client.GetHealthAsync("after-invalid-request");
             Assert.True(health.Succeeded);
         }
@@ -316,7 +316,7 @@ public sealed class LocalIpcFoundationTests
         await server.StartAsync(CancellationToken.None);
         try
         {
-            var ipcResult = await new LocalIpcClient(options, new WindowsLocalIpcServerIdentityVerifier(currentSid))
+            var ipcResult = await new LocalIpcClient(options, new FixedIdentityVerifier(true))
                 .GetInstallationDiscoveryAsync("parity-correlation");
             Assert.True(ipcResult.Succeeded);
             Assert.Equal(
@@ -443,6 +443,11 @@ public sealed class LocalIpcFoundationTests
             operatorGroupSid = null!;
             return false;
         }
+    }
+
+    private sealed class FixedIdentityVerifier(bool result) : ILocalIpcServerIdentityVerifier
+    {
+        public bool IsExpectedServer(NamedPipeClientStream pipe) => result;
     }
 
     private sealed class TestInvocationContextFactory : IAgentInvocationContextFactory

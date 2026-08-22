@@ -1,6 +1,9 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+using RmsSupportHub.Pos.Contracts;
 
 namespace RmsSupportHub.Pos.LocalIpc;
 
@@ -143,23 +146,183 @@ public interface ILocalIpcServerIdentityVerifier
 }
 
 /// <summary>
-/// Verifies the connected pipe owner before the client sends a request. The expected SID is kept in
-/// this verifier so a future service-account migration does not change the typed IPC client.
+/// Resolves the process that owns a connected local Named Pipe. This is deliberately separate from
+/// service identity resolution so both native lookups can be deterministic in tests.
+/// </summary>
+public interface ILocalIpcPipeServerProcessIdResolver
+{
+    bool TryGetServerProcessId(NamedPipeClientStream pipe, out uint processId);
+}
+
+public sealed class WindowsLocalIpcPipeServerProcessIdResolver : ILocalIpcPipeServerProcessIdResolver
+{
+    public bool TryGetServerProcessId(NamedPipeClientStream pipe, out uint processId)
+    {
+        ArgumentNullException.ThrowIfNull(pipe);
+        processId = 0;
+        try
+        {
+            if (!pipe.IsConnected || pipe.SafePipeHandle.IsInvalid)
+            {
+                return false;
+            }
+
+            return GetNamedPipeServerProcessId(pipe.SafePipeHandle, out processId)
+                && processId > 0;
+        }
+        catch (Exception)
+        {
+            processId = 0;
+            return false;
+        }
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetNamedPipeServerProcessId(
+        SafePipeHandle pipeHandle,
+        out uint serverProcessId);
+}
+
+/// <summary>
+/// Resolves a canonical Windows Service's currently running process using read-only SCM access.
+/// A false result covers missing services, access failures, transitional states, and unavailable
+/// process IDs so callers can fail closed.
+/// </summary>
+public interface ILocalServiceProcessResolver
+{
+    bool TryGetRunningServiceProcessId(string serviceName, out uint processId);
+}
+
+public sealed class WindowsLocalServiceProcessResolver : ILocalServiceProcessResolver
+{
+    // SC_MANAGER_CONNECT and SERVICE_QUERY_STATUS are the only rights needed by this resolver.
+    public const uint RequestedServiceManagerAccess = 0x0001;
+    public const uint RequestedServiceAccess = 0x0004;
+
+    private const int ServiceStatusProcessInfo = 0;
+    private const uint ServiceRunning = 0x00000004;
+
+    public bool TryGetRunningServiceProcessId(string serviceName, out uint processId)
+    {
+        ArgumentNullException.ThrowIfNull(serviceName);
+        processId = 0;
+        if (string.IsNullOrWhiteSpace(serviceName))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var manager = OpenScManager(
+                null,
+                null,
+                RequestedServiceManagerAccess);
+            if (manager.IsInvalid)
+            {
+                return false;
+            }
+
+            using var service = OpenService(manager, serviceName, RequestedServiceAccess);
+            if (service.IsInvalid)
+            {
+                return false;
+            }
+
+            if (!QueryServiceStatusEx(
+                    service,
+                    ServiceStatusProcessInfo,
+                    out var status,
+                    (uint)Marshal.SizeOf<ServiceStatusProcess>(),
+                    out _)
+                || status.CurrentState != ServiceRunning
+                || status.ProcessId == 0)
+            {
+                return false;
+            }
+
+            processId = status.ProcessId;
+            return true;
+        }
+        catch (Exception)
+        {
+            processId = 0;
+            return false;
+        }
+    }
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeScmHandle OpenScManager(
+        string? machineName,
+        string? databaseName,
+        uint desiredAccess);
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeServiceHandle OpenService(
+        SafeScmHandle manager,
+        string serviceName,
+        uint desiredAccess);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool QueryServiceStatusEx(
+        SafeServiceHandle service,
+        int infoLevel,
+        out ServiceStatusProcess status,
+        uint bufferSize,
+        out uint bytesNeeded);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool CloseServiceHandle(IntPtr handle);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ServiceStatusProcess
+    {
+        public uint ServiceType;
+        public uint CurrentState;
+        public uint ControlsAccepted;
+        public uint Win32ExitCode;
+        public uint ServiceSpecificExitCode;
+        public uint CheckPoint;
+        public uint WaitHint;
+        public uint ProcessId;
+        public uint ServiceFlags;
+    }
+
+    private sealed class SafeScmHandle : SafeHandleZeroOrMinusOneIsInvalid
+    {
+        public SafeScmHandle() : base(ownsHandle: true) { }
+
+        protected override bool ReleaseHandle() => CloseServiceHandle(handle);
+    }
+
+    private sealed class SafeServiceHandle : SafeHandleZeroOrMinusOneIsInvalid
+    {
+        public SafeServiceHandle() : base(ownsHandle: true) { }
+
+        protected override bool ReleaseHandle() => CloseServiceHandle(handle);
+    }
+}
+
+/// <summary>
+/// Verifies the connected pipe before the client sends a request by matching its server PID to the
+/// currently running canonical RmsSupportAgent Windows Service PID. It does not inspect process
+/// tokens and does not require SeDebugPrivilege.
 /// </summary>
 public sealed class WindowsLocalIpcServerIdentityVerifier : ILocalIpcServerIdentityVerifier
 {
-    private const uint ProcessQueryLimitedInformation = 0x1000;
-    private const uint TokenQuery = 0x0008;
+    private readonly ILocalIpcPipeServerProcessIdResolver pipeProcessIdResolver;
+    private readonly ILocalServiceProcessResolver serviceProcessResolver;
 
-    private readonly SecurityIdentifier expectedServerSid;
-
-    public WindowsLocalIpcServerIdentityVerifier(SecurityIdentifier? expectedServerSid = null)
+    public WindowsLocalIpcServerIdentityVerifier(
+        ILocalIpcPipeServerProcessIdResolver? pipeProcessIdResolver = null,
+        ILocalServiceProcessResolver? serviceProcessResolver = null)
     {
-        this.expectedServerSid = expectedServerSid
-            ?? new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null);
+        this.pipeProcessIdResolver = pipeProcessIdResolver
+            ?? new WindowsLocalIpcPipeServerProcessIdResolver();
+        this.serviceProcessResolver = serviceProcessResolver
+            ?? new WindowsLocalServiceProcessResolver();
     }
 
-    public SecurityIdentifier ExpectedServerSid => expectedServerSid;
+    public string ExpectedServiceName => AgentServiceIdentity.PermanentServiceName;
 
     public bool IsExpectedServer(NamedPipeClientStream pipe)
     {
@@ -167,56 +330,21 @@ public sealed class WindowsLocalIpcServerIdentityVerifier : ILocalIpcServerIdent
         try
         {
             if (!pipe.IsConnected
-                || !GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out var processId)
-                || processId == 0)
+                || !pipeProcessIdResolver.TryGetServerProcessId(pipe, out var pipeServerProcessId)
+                || pipeServerProcessId == 0
+                || !serviceProcessResolver.TryGetRunningServiceProcessId(
+                    ExpectedServiceName,
+                    out var serviceProcessId)
+                || serviceProcessId == 0)
             {
                 return false;
             }
 
-            var processHandle = OpenProcess(ProcessQueryLimitedInformation, false, processId);
-            if (processHandle == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            try
-            {
-                if (!OpenProcessToken(processHandle, TokenQuery, out var tokenHandle)
-                    || tokenHandle.IsInvalid)
-                {
-                    return false;
-                }
-
-                using (tokenHandle)
-                {
-                    using var identity = new WindowsIdentity(tokenHandle.DangerousGetHandle());
-                    tokenHandle.SetHandleAsInvalid();
-                    return identity.User is { } actualSid && expectedServerSid.Equals(actualSid);
-                }
-            }
-            finally
-            {
-                _ = CloseHandle(processHandle);
-            }
+            return pipeServerProcessId == serviceProcessId;
         }
         catch (Exception)
         {
             return false;
         }
     }
-
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GetNamedPipeServerProcessId(IntPtr pipeHandle, out uint serverProcessId);
-
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, uint processId);
-
-    [System.Runtime.InteropServices.DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool OpenProcessToken(
-        IntPtr processHandle,
-        uint desiredAccess,
-        out Microsoft.Win32.SafeHandles.SafeAccessTokenHandle tokenHandle);
-
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool CloseHandle(IntPtr handle);
 }
