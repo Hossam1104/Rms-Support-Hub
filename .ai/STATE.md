@@ -5,7 +5,7 @@
 - **Working branch:** `feat/wpf-02-wpf-shell-local-health`; Draft PR pending delivery.
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
-- **Status:** WPF-01 is accepted and merged at `c09e4ec`; WPF-02 final correction is pushed at `78dbe5b` and awaits Sol review/acceptance. WPF-03 must not start until that acceptance.
+- **Status:** WPF-01 is accepted and merged at `c09e4ec`; WPF-02 final correction is pushed at `78dbe5b` with documentation synchronization at `f0acce1` and awaits Sol review/acceptance. WPF-03 must not start until that acceptance.
 
 ## WPF-02 durable facts
 - `RmsSupportHub.Pos.Desktop.Wpf` is a native WPF `WinExe` targeting
@@ -103,9 +103,14 @@
   unchanged. PowerShell parsing is 37/37; PSScriptAnalyzer is not installed.
 - Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending; memory/context and
   `git diff --check` passed.
-- Exact-head POS CI `32601674329` is green. Support Hub rerun
-  `32598052655` is green; exact-head Support Hub CI `32601674320` remains
-  blocked by the unrelated external-config fixture race (local focused test 3/3).
+- POS code-head CI `32601674329` is green. Support Hub rerun
+  `32598052655` and final documentation-head CI `32601892826` are green.
+  Final documentation-head POS CI `32601892742` reproduced an unrelated
+  Windows Infrastructure ACL environment failure on the targeted rerun
+  (42/155 ACL-dependent tests failed); no unrelated infrastructure code was
+  changed. The earlier code-head Support Hub run `32601674320` had the
+  unrelated external-config fixture race; the final documentation-head run is
+  green. Local focused test 3/3 passed.
 - Final Release WPF process was verified alive/responsive with title `RMS Support
   Hub`; Computer Use screenshot helper was unavailable, so no visual claim is made.
 
@@ -116,5 +121,6 @@
   Online Order items #12844/#12900/#12901/#12902 to OO-07, and retained all
   Production work deferred. Created adaptive-card story #13072 under E14 with
   child Tasks #13073-#13076 and related links to #12841-#12844.
-- `.ai/HANDOFF.md` is `Empty` because implementation and runtime verification
-  are complete and the next action is review, not unfinished coding.
+- `.ai/HANDOFF.md` records the remaining CI-environment blocker and the
+  unavailable Computer Use screenshot/Refresh verification; implementation is
+  complete and no WPF-03 or merge/ready action is authorized.
