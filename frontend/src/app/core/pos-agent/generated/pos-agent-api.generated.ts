@@ -184,6 +184,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rms/installation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discover the installed RMS suite
+         * @description Runs the shared, read-only RMS installation discovery query. The result is a sanitized typed projection of server-owned installation metadata and contains no connection strings, credentials, raw filesystem paths, arbitrary queries, or client-selected execution parameters.
+         */
+        get: operations["GetRmsInstallationDiscovery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rms/operational-health": {
         parameters: {
             query?: never;
@@ -3481,6 +3501,100 @@ export interface operations {
             };
             /** @description The Agent failed while reading a server-owned dependency and returned a safe generic server-error response without exception details. */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    GetRmsInstallationDiscovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Agent returned the sanitized RmsInstallationDto discovery projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "installed": true,
+                     *       "branchInstalled": true,
+                     *       "cashierInstalled": true,
+                     *       "branchCode": "BR-001",
+                     *       "posNumber": "POS-01",
+                     *       "installationGuid": "installation-guid-placeholder",
+                     *       "mainServerBranchId": "1",
+                     *       "mainServerPosId": "1",
+                     *       "mainServerUrl": "main-server.example:8080",
+                     *       "branchServerAddress": "localhost:5100",
+                     *       "installationMode": "Branch + Cashier",
+                     *       "clientName": "UPC",
+                     *       "productRelease": "2026.08",
+                     *       "versions": {
+                     *         "branchServerBuildNumber": "5.7.4",
+                     *         "cashierServerBuildNumber": "5.7.4",
+                     *         "cashierUiBuildNumber": "5.7.4"
+                     *       },
+                     *       "consistency": {
+                     *         "branchCode": "consistent",
+                     *         "posIdentity": "consistent",
+                     *         "mainServerBranchId": "consistent",
+                     *         "mainServerPosId": "consistent",
+                     *         "version": "consistent",
+                     *         "warnings": []
+                     *       },
+                     *       "componentDrift": []
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RmsInstallationDto"];
+                };
+            };
+            /** @description The Agent rejected a non-canonical host with host_rejected or a non-HTTPS request with https_required; the response uses the safe Agent problem-details contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "The request host is not accepted.",
+                     *       "status": 400,
+                     *       "code": "host_rejected",
+                     *       "correlationId": "example-correlation-id"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["AgentProblemDetailsDto"];
+                };
+            };
+            /** @description The Windows authentication middleware issued a Negotiate challenge. This framework response is bodyless and is not guaranteed to contain Agent problem details. */
+            401: {
+                headers: {
+                    /** @description Negotiate challenge emitted by the Windows authentication middleware. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AuthorizationMiddleware may reject a non-Administrator with a bodyless response. If the exact-origin transport gate rejects the browser origin, the safe problem code is origin_rejected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Agent could not complete the server-owned discovery query and returned safe application/problem+json with diagnostic_unavailable. No raw exception, connection string, credential, or filesystem detail crosses the response boundary. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

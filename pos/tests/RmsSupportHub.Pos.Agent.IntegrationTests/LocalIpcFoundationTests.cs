@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -65,12 +66,26 @@ public sealed class LocalIpcFoundationTests
     }
 
     [Fact]
-    public async Task UnauthorizedWindowsCallerCannotConnectToTheNamedPipe()
+    public async Task WindowsNamedPipeRejectsCallerOutsideTheSecurityDescriptor()
     {
         var unauthorizedOperatorSid = new SecurityIdentifier("S-1-5-21-1111111111-2222222222-3333333333-2002");
         var options = CreateOptions();
-        var server = CreateServer(options, unauthorizedOperatorSid);
-        await server.StartAsync(CancellationToken.None);
+        var security = new PipeSecurity();
+        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        security.AddAccessRule(new PipeAccessRule(
+            unauthorizedOperatorSid,
+            PipeAccessRights.FullControl,
+            AccessControlType.Allow));
+        using var server = NamedPipeServerStreamAcl.Create(
+            options.PipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous,
+            inBufferSize: 0,
+            outBufferSize: 0,
+            security);
+        var waitForConnection = server.WaitForConnectionAsync();
         try
         {
             using var client = new NamedPipeClientStream(".", options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
@@ -80,7 +95,15 @@ public sealed class LocalIpcFoundationTests
         }
         finally
         {
-            await server.StopAsync(CancellationToken.None);
+            server.Dispose();
+            try
+            {
+                await waitForConnection;
+            }
+            catch
+            {
+                // Disposal is the bounded end of the server-side wait after the denied connection.
+            }
         }
     }
 
