@@ -3,11 +3,12 @@
 - **Updated:** 2026-08-22
 - **Repository baseline:** `main` was verified clean at
   `bd83e3b2c223e807f40e684fe61a5281c915674b` before implementation.
-- **Working branch:** `feat/wpf-01-shared-agent-local-ipc`.
+- **Working branch:** `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32.
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
-- **Status:** WPF-01 implementation and validation are complete; the branch is
-  awaiting Sol review. WPF-02 must not start until that acceptance.
+- **Status:** WPF-01 implementation and validation are complete at final head
+  `1c842d57805e4b06db31b20cca510b73143b1f81`; Draft PR #32 is awaiting Sol
+  review. WPF-02 must not start until that acceptance.
 
 ## WPF-01 durable facts
 
@@ -47,6 +48,10 @@
 - TestServer HTTPS and in-process Windows Named Pipe integration exercised the
   selected diagnostic, health, invalid-operation, malformed/oversized-request,
   unauthorized-connection, missing-group, and HTTP/IPC parity paths.
+- Exact-head CI for `1c842d57805e4b06db31b20cca510b73143b1f81` passed: POS
+  portable, POS Windows build/infrastructure, Windows Agent security, POS
+  OpenAPI/Angular generation, POS PowerShell, retained WinUI publish, and
+  Support Hub backend/frontend/release candidate.
 - Standalone Agent startup was not attempted because the real Kestrel listener
   requires the machine-owned Testing certificate. No runtime URL is claimed
   from configuration alone.
