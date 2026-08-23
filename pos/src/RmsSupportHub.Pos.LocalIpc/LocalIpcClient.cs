@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Security.Principal;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
+using RmsSupportHub.Pos.Contracts.V1.Services;
 
 namespace RmsSupportHub.Pos.LocalIpc;
 
@@ -31,7 +32,7 @@ public sealed class LocalIpcServerIdentityException()
 
 /// <summary>
 /// Small typed client for the WPF-to-Agent local IPC contract. It exposes only the operations
-/// implemented by WPF-01; arbitrary operation names cannot be supplied by callers.
+/// implemented by the accepted WPF slices; arbitrary operation names cannot be supplied by callers.
 /// </summary>
 public sealed class LocalIpcClient
 {
@@ -64,6 +65,14 @@ public sealed class LocalIpcClient
         CancellationToken cancellationToken = default) =>
         SendAsync<RmsInstallationDto>(
             LocalIpcProtocol.InstallationDiscoveryOperation,
+            correlationId,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<ServiceHealthSnapshotDto>> GetServiceHealthAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<ServiceHealthSnapshotDto>(
+            LocalIpcProtocol.ServiceHealthOperation,
             correlationId,
             cancellationToken);
 

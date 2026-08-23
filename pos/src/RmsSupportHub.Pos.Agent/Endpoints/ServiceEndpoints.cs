@@ -1,8 +1,10 @@
 using RmsSupportHub.Pos.Agent.Authorization;
 using RmsSupportHub.Pos.Agent.Correlation;
 using RmsSupportHub.Pos.Agent.Diagnostics;
+using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Services;
 using RmsSupportHub.Pos.Domain.Interfaces;
@@ -16,8 +18,23 @@ public static class ServiceEndpoints
     {
         app.MapGet(
                 "/api/v1/services",
-                async (ReadOnlyServiceStatusService serviceStatus, CancellationToken cancellationToken) =>
-                    Results.Ok(await serviceStatus.GetAsync(cancellationToken).ConfigureAwait(false)))
+                async (
+                    HttpContext context,
+                    IAgentInvocationContextFactory contextFactory,
+                    ServiceHealthQueryHandler serviceHealth,
+                    CancellationToken cancellationToken) =>
+                {
+                    var result = await serviceHealth
+                        .HandleAsync(contextFactory.CreateLegacyLoopback(context), cancellationToken)
+                        .ConfigureAwait(false);
+                    return result.Succeeded && result.Value is not null
+                        ? Results.Ok(ServiceHealthContractMapper.MapLegacy(result.Value))
+                        : AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            result.Error?.Message ?? "The RMS service health query failed.",
+                            result.Error?.Code ?? "service_health_unavailable");
+                })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("GetServices")
             .WithTags("Windows Services")

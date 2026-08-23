@@ -11,14 +11,18 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     public static readonly TimeSpan DefaultRefreshInterval = TimeSpan.FromSeconds(30);
 
     private readonly ILocalAgentHealthClient healthClient;
+    private readonly ILocalServiceHealthClient serviceHealthClient;
     private readonly TimeSpan refreshInterval;
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource shutdown = new();
     private readonly AsyncCommand refreshCommand;
+    private readonly AsyncCommand showDashboardCommand;
+    private readonly AsyncCommand showServicesCommand;
     private Task? refreshLoop;
     private bool disposed;
     private bool initialized;
     private bool isRefreshing;
+    private bool servicesWorkspace;
     private HealthViewState state = HealthViewState.Loading;
     private string agentStatus = "Checking";
     private string ipcStatus = "Checking";
@@ -28,12 +32,26 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private DateTimeOffset? lastSuccessfulCheck;
     private string errorCode = string.Empty;
     private string errorDetail = string.Empty;
+    private ServiceHealthViewState serviceState = ServiceHealthViewState.Loading;
+    private IReadOnlyList<ServiceHealthRow> serviceItems = [];
+    private DateTimeOffset? lastServiceCheck;
+    private string serviceErrorCode = string.Empty;
+    private string serviceErrorDetail = string.Empty;
 
     public DashboardViewModel(
         ILocalAgentHealthClient healthClient,
         TimeSpan? refreshInterval = null)
+        : this(healthClient, new UnavailableServiceHealthClient(), refreshInterval)
+    {
+    }
+
+    public DashboardViewModel(
+        ILocalAgentHealthClient healthClient,
+        ILocalServiceHealthClient serviceHealthClient,
+        TimeSpan? refreshInterval = null)
     {
         this.healthClient = healthClient ?? throw new ArgumentNullException(nameof(healthClient));
+        this.serviceHealthClient = serviceHealthClient ?? throw new ArgumentNullException(nameof(serviceHealthClient));
         this.refreshInterval = refreshInterval ?? DefaultRefreshInterval;
         if (this.refreshInterval < TimeSpan.FromSeconds(5)
             || this.refreshInterval > TimeSpan.FromMinutes(2))
@@ -44,11 +62,21 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         refreshCommand = new AsyncCommand(
             () => RefreshAsync(),
             () => !IsRefreshing && !disposed);
+        showDashboardCommand = new AsyncCommand(
+            ShowDashboardAsync,
+            () => !disposed);
+        showServicesCommand = new AsyncCommand(
+            ShowServicesAsync,
+            () => !disposed);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ICommand RefreshCommand => refreshCommand;
+
+    public ICommand ShowDashboardCommand => showDashboardCommand;
+
+    public ICommand ShowServicesCommand => showServicesCommand;
 
     public HealthViewState State
     {
@@ -110,6 +138,42 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref errorDetail, value);
     }
 
+    public ServiceHealthViewState ServiceState
+    {
+        get => serviceState;
+        private set => SetProperty(ref serviceState, value);
+    }
+
+    public IReadOnlyList<ServiceHealthRow> ServiceItems
+    {
+        get => serviceItems;
+        private set => SetProperty(ref serviceItems, value);
+    }
+
+    public DateTimeOffset? LastServiceCheck
+    {
+        get => lastServiceCheck;
+        private set
+        {
+            if (SetProperty(ref lastServiceCheck, value))
+            {
+                OnPropertyChanged(nameof(LastServiceCheckDisplay));
+            }
+        }
+    }
+
+    public string ServiceErrorCode
+    {
+        get => serviceErrorCode;
+        private set => SetProperty(ref serviceErrorCode, value);
+    }
+
+    public string ServiceErrorDetail
+    {
+        get => serviceErrorDetail;
+        private set => SetProperty(ref serviceErrorDetail, value);
+    }
+
     public bool IsRefreshing
     {
         get => isRefreshing;
@@ -126,6 +190,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     public bool CanRefresh => !IsRefreshing && !disposed;
 
     public bool IsAutomaticRefreshRunning => refreshLoop is { IsCompleted: false };
+
+    public bool IsDashboardVisible => !servicesWorkspace;
+
+    public bool IsServicesVisible => servicesWorkspace;
 
     public TimeSpan RefreshInterval => refreshInterval;
 
@@ -157,6 +225,38 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         _ => "The Agent health check could not be completed."
     };
 
+    public string ServiceStateLabel => ServiceState switch
+    {
+        ServiceHealthViewState.Loading => "Loading",
+        ServiceHealthViewState.Healthy => "Healthy",
+        ServiceHealthViewState.Degraded => "Degraded",
+        ServiceHealthViewState.Unavailable => "Unavailable",
+        ServiceHealthViewState.TimedOut => "Timed out",
+        ServiceHealthViewState.ProtocolMismatch => "Version mismatch",
+        ServiceHealthViewState.InvalidResponse => "Invalid response",
+        ServiceHealthViewState.SecurityVerificationFailed => "Connection not verified",
+        ServiceHealthViewState.Unknown => "Unknown",
+        ServiceHealthViewState.UnknownError => "Unable to determine",
+        ServiceHealthViewState.Cancelled => "Cancelled",
+        _ => "Unavailable"
+    };
+
+    public string ServiceStatusSummary => ServiceState switch
+    {
+        ServiceHealthViewState.Loading => "Checking fixed RMS and Agent service identities.",
+        ServiceHealthViewState.Healthy => "All fixed RMS and Agent services are running.",
+        ServiceHealthViewState.Degraded => "One or more fixed services need attention.",
+        ServiceHealthViewState.Unavailable => "Service health unavailable.",
+        ServiceHealthViewState.TimedOut => "Service health check timed out.",
+        ServiceHealthViewState.ProtocolMismatch => "Desktop and Agent versions are not compatible.",
+        ServiceHealthViewState.InvalidResponse => "The Agent returned an invalid service health response.",
+        ServiceHealthViewState.SecurityVerificationFailed => "The local Agent connection could not be verified.",
+        ServiceHealthViewState.Unknown => "The Agent returned incomplete service status.",
+        ServiceHealthViewState.UnknownError => "Service health could not be determined.",
+        ServiceHealthViewState.Cancelled => "Service health check was cancelled.",
+        _ => "Service health could not be determined."
+    };
+
     public string ProtocolDisplay => ProtocolVersion is int version ? $"v{version}" : "—";
 
     public string HubRequiredDisplay => HubConnectivityRequired switch
@@ -169,6 +269,34 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     public string LastSuccessfulCheckDisplay => LastSuccessfulCheck is { } checkedAt
         ? checkedAt.ToLocalTime().ToString("HH:mm:ss")
         : "No successful check yet";
+
+    public string LastServiceCheckDisplay => LastServiceCheck is { } checkedAt
+        ? checkedAt.ToLocalTime().ToString("HH:mm:ss")
+        : "No successful check yet";
+
+    public int ServiceRunningCount => ServiceItems.Count(service => service.State == ServiceHealthRowState.Running);
+
+    public int ServiceStoppedCount => ServiceItems.Count(service => service.State == ServiceHealthRowState.Stopped);
+
+    public int ServiceUnknownCount => ServiceItems.Count(service => service.State is
+        ServiceHealthRowState.Unknown
+        or ServiceHealthRowState.Paused
+        or ServiceHealthRowState.Transitioning);
+
+    public string ServiceSummaryDisplay => ServiceState switch
+    {
+        ServiceHealthViewState.Healthy or ServiceHealthViewState.Degraded or ServiceHealthViewState.Unknown =>
+            $"{ServiceRunningCount} Running  |  {ServiceStoppedCount} Stopped  |  {ServiceUnknownCount} Unknown",
+        ServiceHealthViewState.Loading => "Checking",
+        _ => "Unavailable"
+    };
+
+    public string ServiceSummaryDetail => ServiceState is
+        ServiceHealthViewState.Healthy
+        or ServiceHealthViewState.Degraded
+        or ServiceHealthViewState.Unknown
+        ? $"{ServiceItems.Count} fixed service identities"
+        : ServiceStatusSummary;
 
     public async Task InitializeAsync()
     {
@@ -214,8 +342,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 
         IsRefreshing = true;
         State = HealthViewState.Loading;
-        OnPropertyChanged(nameof(StateLabel));
-        OnPropertyChanged(nameof(StatusSummary));
+        ServiceState = ServiceHealthViewState.Loading;
+        NotifyAgentStateChanged();
+        NotifyServiceStateChanged();
 
         var requestCorrelationId = Guid.NewGuid().ToString("N");
         CorrelationId = requestCorrelationId;
@@ -224,35 +353,91 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
             using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                 shutdown.Token,
                 cancellationToken);
-            var result = await healthClient
-                .GetHealthAsync(requestCorrelationId, linkedCancellation.Token)
-                .ConfigureAwait(true);
+            AgentHealthResult agentResult;
+            try
+            {
+                agentResult = await healthClient
+                    .GetHealthAsync(requestCorrelationId, linkedCancellation.Token)
+                    .ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
+            {
+                if (!shutdown.IsCancellationRequested && !disposed)
+                {
+                    ApplyResult(AgentHealthResult.Failure(
+                        HealthViewState.Cancelled,
+                        "cancelled",
+                        "The health check was cancelled.",
+                        requestCorrelationId));
+                    ApplyServiceResult(ServiceHealthResult.Failure(
+                        ServiceHealthViewState.Cancelled,
+                        "cancelled",
+                        "Service health check was cancelled.",
+                        requestCorrelationId));
+                }
+
+                return;
+            }
+            catch (Exception)
+            {
+                agentResult = AgentHealthResult.Failure(
+                    HealthViewState.UnknownError,
+                    "health_check_failed",
+                    "The Agent health check could not be completed.",
+                    requestCorrelationId);
+            }
 
             if (linkedCancellation.IsCancellationRequested || disposed)
             {
                 return;
             }
 
-            ApplyResult(result);
-        }
-        catch (OperationCanceledException) when (shutdown.IsCancellationRequested || cancellationToken.IsCancellationRequested)
-        {
-            if (!shutdown.IsCancellationRequested && !disposed)
+            ApplyResult(agentResult);
+            if (!agentResult.IsConnected)
             {
-                ApplyResult(AgentHealthResult.Failure(
-                    HealthViewState.Cancelled,
-                    "cancelled",
-                    "The health check was cancelled.",
+                ApplyServiceResult(ServiceHealthResult.Failure(
+                    ServiceHealthViewState.Unavailable,
+                    "agent_unavailable",
+                    "RMS Support Agent is not available on this machine.",
                     requestCorrelationId));
+                return;
             }
-        }
-        catch (Exception)
-        {
-            ApplyResult(AgentHealthResult.Failure(
-                HealthViewState.UnknownError,
-                "health_check_failed",
-                "The Agent health check could not be completed.",
-                requestCorrelationId));
+
+            ServiceHealthResult serviceResult;
+            try
+            {
+                serviceResult = await serviceHealthClient
+                    .GetHealthAsync(requestCorrelationId, linkedCancellation.Token)
+                    .ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
+            {
+                if (!shutdown.IsCancellationRequested && !disposed)
+                {
+                    ApplyServiceResult(ServiceHealthResult.Failure(
+                        ServiceHealthViewState.Cancelled,
+                        "cancelled",
+                        "Service health check was cancelled.",
+                        requestCorrelationId));
+                }
+
+                return;
+            }
+            catch (Exception)
+            {
+                serviceResult = ServiceHealthResult.Failure(
+                    ServiceHealthViewState.UnknownError,
+                    "service_health_failed",
+                    "Service health could not be determined.",
+                    requestCorrelationId);
+            }
+
+            if (linkedCancellation.IsCancellationRequested || disposed)
+            {
+                return;
+            }
+
+            ApplyServiceResult(serviceResult);
         }
         finally
         {
@@ -271,7 +456,35 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         disposed = true;
         shutdown.Cancel();
         refreshCommand.RaiseCanExecuteChanged();
+        showDashboardCommand.RaiseCanExecuteChanged();
+        showServicesCommand.RaiseCanExecuteChanged();
         shutdown.Dispose();
+    }
+
+    private Task ShowDashboardAsync()
+    {
+        if (disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        servicesWorkspace = false;
+        OnPropertyChanged(nameof(IsDashboardVisible));
+        OnPropertyChanged(nameof(IsServicesVisible));
+        return Task.CompletedTask;
+    }
+
+    private Task ShowServicesAsync()
+    {
+        if (disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        servicesWorkspace = true;
+        OnPropertyChanged(nameof(IsDashboardVisible));
+        OnPropertyChanged(nameof(IsServicesVisible));
+        return Task.CompletedTask;
     }
 
     private async Task RunAutomaticRefreshAsync(CancellationToken cancellationToken)
@@ -309,13 +522,46 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
             LastSuccessfulCheck = DateTimeOffset.Now;
         }
 
+        NotifyAgentStateChanged();
+    }
+
+    private void ApplyServiceResult(ServiceHealthResult result)
+    {
+        ServiceState = result.State;
+        ServiceItems = result.Services;
+        ServiceErrorCode = result.ErrorCode;
+        ServiceErrorDetail = result.ErrorDetail;
+        if (result.CheckedAtUtc is { } checkedAtUtc)
+        {
+            LastServiceCheck = checkedAtUtc;
+        }
+
+        NotifyServiceStateChanged();
+    }
+
+    private void NotifyAgentStateChanged()
+    {
         OnPropertyChanged(nameof(StateLabel));
         OnPropertyChanged(nameof(StatusSummary));
         OnPropertyChanged(nameof(ProtocolDisplay));
         OnPropertyChanged(nameof(HubRequiredDisplay));
     }
 
-    private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    private void NotifyServiceStateChanged()
+    {
+        OnPropertyChanged(nameof(ServiceStateLabel));
+        OnPropertyChanged(nameof(ServiceStatusSummary));
+        OnPropertyChanged(nameof(ServiceRunningCount));
+        OnPropertyChanged(nameof(ServiceStoppedCount));
+        OnPropertyChanged(nameof(ServiceUnknownCount));
+        OnPropertyChanged(nameof(ServiceSummaryDisplay));
+        OnPropertyChanged(nameof(ServiceSummaryDetail));
+    }
+
+    private bool SetProperty<T>(
+        ref T field,
+        T value,
+        [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
         {
@@ -329,4 +575,16 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private sealed class UnavailableServiceHealthClient : ILocalServiceHealthClient
+    {
+        public Task<ServiceHealthResult> GetHealthAsync(
+            string correlationId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ServiceHealthResult.Failure(
+                ServiceHealthViewState.Unavailable,
+                "agent_unavailable",
+                "RMS Support Agent is not available on this machine.",
+                correlationId));
+    }
 }

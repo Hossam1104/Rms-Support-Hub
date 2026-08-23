@@ -212,6 +212,32 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("RmsSupportHub.Pos.Contracts", project, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void WpfServiceHealthUsesLocalIpcAndContainsNoNativeServiceControlSurface()
+    {
+        var root = FindRepoRoot();
+        var wpfDirectory = Path.Combine(root, "pos", "src", "RmsSupportHub.Pos.Desktop.Wpf");
+        var contents = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(wpfDirectory, "*", SearchOption.AllDirectories)
+                .Where(path => !path.Contains("bin", StringComparison.OrdinalIgnoreCase)
+                    && !path.Contains("obj", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText));
+        var project = File.ReadAllText(Path.Combine(wpfDirectory, "RmsSupportHub.Pos.Desktop.Wpf.csproj"));
+
+        Assert.Contains("LocalAgentServiceHealthClient", contents, StringComparison.Ordinal);
+        Assert.Contains("RmsSupportHub.Pos.LocalIpc", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("RmsSupportHub.Pos.Agent", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("RmsSupportHub.Pos.Infrastructure", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpClient", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("ServiceController", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenSCManager", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("ControlService", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("Process.Start", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("sc.exe", contents, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("powershell", contents, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

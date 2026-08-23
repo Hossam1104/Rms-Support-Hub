@@ -11,6 +11,8 @@ public static class LocalIpcProtocol
     public const string HealthOperation = "agent.health";
 
     public const string InstallationDiscoveryOperation = "rms.installation.discovery";
+
+    public const string ServiceHealthOperation = "rms.services.health";
 }
 
 public sealed record LocalIpcRequestEnvelope(

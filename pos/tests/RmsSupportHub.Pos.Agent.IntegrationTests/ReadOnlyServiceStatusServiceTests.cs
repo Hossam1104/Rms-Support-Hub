@@ -18,9 +18,7 @@ public sealed class ReadOnlyServiceStatusServiceTests
             [RmsServiceCatalog.ServicesManagerServiceName] = ServiceStatus.Stopped
         });
         var service = new ReadOnlyServiceStatusService(
-            new ServiceAllowList(),
-            manager,
-            TimeProvider.System);
+            new RmsSupportHub.Pos.Application.Services.ServiceHealthReader(manager, TimeProvider.System));
 
         var rows = await service.GetAsync();
 

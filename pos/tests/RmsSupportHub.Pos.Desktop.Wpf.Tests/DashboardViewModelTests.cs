@@ -40,6 +40,192 @@ public sealed class DashboardViewModelTests
     }
 
     [Fact]
+    public async Task ConnectedAgentLoadsHealthyFixedServiceSnapshot()
+    {
+        var serviceClient = new StubServiceHealthClient(_ =>
+            Task.FromResult(ServiceHealthResult.Healthy(
+                ServiceHealthViewState.Healthy,
+                CreateRows(),
+                DateTimeOffset.UtcNow,
+                "service-correlation")));
+        using var viewModel = new DashboardViewModel(
+            new StubHealthClient(_ =>
+                Task.FromResult(AgentHealthResult.Connected("Ready", "Ready", 1, false, "agent-correlation"))),
+            serviceClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(HealthViewState.Connected, viewModel.State);
+        Assert.Equal(ServiceHealthViewState.Healthy, viewModel.ServiceState);
+        Assert.Equal(4, viewModel.ServiceItems.Count);
+        Assert.Equal(4, viewModel.ServiceRunningCount);
+        Assert.Equal(0, viewModel.ServiceStoppedCount);
+        Assert.Equal("4 Running  |  0 Stopped  |  0 Unknown", viewModel.ServiceSummaryDisplay);
+        Assert.Equal("agent-correlation", viewModel.CorrelationId);
+        Assert.Equal(1, serviceClient.CallCount);
+    }
+
+    [Fact]
+    public async Task StoppedRequiredServiceMovesWorkspaceToDegraded()
+    {
+        var serviceClient = new StubServiceHealthClient(_ =>
+            Task.FromResult(ServiceHealthResult.Healthy(
+                ServiceHealthViewState.Degraded,
+                CreateRows(includeStopped: true),
+                DateTimeOffset.UtcNow,
+                "service-degraded")));
+        using var viewModel = new DashboardViewModel(
+            ConnectedAgentClient(),
+            serviceClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(ServiceHealthViewState.Degraded, viewModel.ServiceState);
+        Assert.Equal(3, viewModel.ServiceRunningCount);
+        Assert.Equal(1, viewModel.ServiceStoppedCount);
+        Assert.Contains("need attention", viewModel.ServiceStatusSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AgentUnavailableDoesNotProbeServicesAndKeepsSafeServiceState()
+    {
+        var serviceClient = new StubServiceHealthClient(_ =>
+            throw new InvalidOperationException("The service client must not be called."));
+        using var viewModel = new DashboardViewModel(
+            new StubHealthClient(_ =>
+                Task.FromResult(AgentHealthResult.Failure(
+                    HealthViewState.Unavailable,
+                    "agent_unavailable",
+                    "RMS Support Agent is not available on this machine."))),
+            serviceClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(HealthViewState.Unavailable, viewModel.State);
+        Assert.Equal(ServiceHealthViewState.Unavailable, viewModel.ServiceState);
+        Assert.Equal(0, serviceClient.CallCount);
+        Assert.Empty(viewModel.ServiceItems);
+    }
+
+    [Fact]
+    public async Task ServiceHealthFailureUsesBoundedSafeCopy()
+    {
+        var serviceClient = new StubServiceHealthClient(_ =>
+            Task.FromResult(ServiceHealthResult.Failure(
+                ServiceHealthViewState.TimedOut,
+                "service_health_timeout",
+                "Service health check timed out.",
+                "service-timeout")));
+        using var viewModel = new DashboardViewModel(ConnectedAgentClient(), serviceClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(ServiceHealthViewState.TimedOut, viewModel.ServiceState);
+        Assert.Equal("Timed out", viewModel.ServiceStateLabel);
+        Assert.Equal("service_health_timeout", viewModel.ServiceErrorCode);
+        Assert.DoesNotContain("Exception", viewModel.ServiceErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SID", viewModel.ServiceErrorDetail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(ServiceHealthViewState.ProtocolMismatch, "protocol_mismatch")]
+    [InlineData(ServiceHealthViewState.SecurityVerificationFailed, "security_verification_failed")]
+    [InlineData(ServiceHealthViewState.InvalidResponse, "invalid_response")]
+    public async Task ServiceHealthFailureStatesRemainDistinctAndSafe(
+        ServiceHealthViewState expectedState,
+        string expectedCode)
+    {
+        var serviceClient = new StubServiceHealthClient(_ =>
+            Task.FromResult(ServiceHealthResult.Failure(
+                expectedState,
+                expectedCode,
+                "The bounded service-health failure is safe.")));
+        using var viewModel = new DashboardViewModel(ConnectedAgentClient(), serviceClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(expectedState, viewModel.ServiceState);
+        Assert.Equal(expectedCode, viewModel.ServiceErrorCode);
+        Assert.DoesNotContain("Exception", viewModel.ServiceErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SID", viewModel.ServiceErrorDetail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ServiceRetryMovesFromUnavailableToHealthy()
+    {
+        var attempt = 0;
+        var serviceClient = new StubServiceHealthClient(_ =>
+        {
+            attempt++;
+            return Task.FromResult(attempt == 1
+                ? ServiceHealthResult.Failure(
+                    ServiceHealthViewState.Unavailable,
+                    "agent_unavailable",
+                    "RMS Support Agent is not available on this machine.")
+                : ServiceHealthResult.Healthy(
+                    ServiceHealthViewState.Healthy,
+                    CreateRows(),
+                    DateTimeOffset.UtcNow,
+                    "service-retry"));
+        });
+        using var viewModel = new DashboardViewModel(ConnectedAgentClient(), serviceClient);
+
+        await viewModel.RefreshAsync();
+        Assert.Equal(ServiceHealthViewState.Unavailable, viewModel.ServiceState);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(ServiceHealthViewState.Healthy, viewModel.ServiceState);
+        Assert.Equal(2, serviceClient.CallCount);
+    }
+
+    [Fact]
+    public async Task ConcurrentRefreshesDoNotCreateParallelServiceHealthCalls()
+    {
+        var activeCalls = 0;
+        var maximumActiveCalls = 0;
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serviceClient = new StubServiceHealthClient(async cancellationToken =>
+        {
+            var active = Interlocked.Increment(ref activeCalls);
+            InterlockedExtensions.Max(ref maximumActiveCalls, active);
+            await release.Task.WaitAsync(cancellationToken);
+            Interlocked.Decrement(ref activeCalls);
+            return ServiceHealthResult.Healthy(
+                ServiceHealthViewState.Healthy,
+                CreateRows(),
+                DateTimeOffset.UtcNow,
+                "service-concurrent");
+        });
+        using var viewModel = new DashboardViewModel(ConnectedAgentClient(), serviceClient);
+
+        var first = viewModel.RefreshAsync();
+        await serviceClient.FirstCallStarted.Task;
+        var second = viewModel.RefreshAsync();
+        release.SetResult(true);
+        await Task.WhenAll(first, second);
+
+        Assert.Equal(1, maximumActiveCalls);
+        Assert.Equal(1, serviceClient.CallCount);
+    }
+
+    [Fact]
+    public void ServicesCommandSwitchesToTheReadOnlyWorkspace()
+    {
+        using var viewModel = new DashboardViewModel(new StubHealthClient());
+
+        viewModel.ShowServicesCommand.Execute(null);
+
+        Assert.False(viewModel.IsDashboardVisible);
+        Assert.True(viewModel.IsServicesVisible);
+
+        viewModel.ShowDashboardCommand.Execute(null);
+
+        Assert.True(viewModel.IsDashboardVisible);
+        Assert.False(viewModel.IsServicesVisible);
+    }
+
+    [Fact]
     public async Task UnavailableKeepsRetryAvailableAndDoesNotLeakDetails()
     {
         using var viewModel = new DashboardViewModel(new StubHealthClient(_ =>
@@ -239,6 +425,44 @@ public sealed class DashboardViewModelTests
             return await responder(cancellationToken);
         }
     }
+
+    private sealed class StubServiceHealthClient : ILocalServiceHealthClient
+    {
+        private readonly Func<CancellationToken, Task<ServiceHealthResult>> responder;
+
+        public StubServiceHealthClient(Func<CancellationToken, Task<ServiceHealthResult>> responder)
+        {
+            this.responder = responder;
+        }
+
+        public int CallCount { get; private set; }
+
+        public TaskCompletionSource<bool> FirstCallStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<ServiceHealthResult> GetHealthAsync(
+            string correlationId,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            FirstCallStarted.TrySetResult(true);
+            return await responder(cancellationToken);
+        }
+    }
+
+    private static ILocalAgentHealthClient ConnectedAgentClient() =>
+        new StubHealthClient(_ =>
+            Task.FromResult(AgentHealthResult.Connected("Ready", "Ready", 1, false, "agent-correlation")));
+
+    private static IReadOnlyList<ServiceHealthRow> CreateRows(bool includeStopped = false) =>
+    [
+        new("RMS Branch Service", true, true,
+            includeStopped ? ServiceHealthRowState.Stopped : ServiceHealthRowState.Running,
+            includeStopped ? "stopped" : "running"),
+        new("RMS Cashier Service", true, true, ServiceHealthRowState.Running, "running"),
+        new("RMS Services Manager", true, true, ServiceHealthRowState.Running, "running"),
+        new("RMS Support Agent", true, true, ServiceHealthRowState.Running, "running")
+    ];
 
     private static class InterlockedExtensions
     {

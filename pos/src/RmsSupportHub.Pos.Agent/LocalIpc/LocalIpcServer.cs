@@ -8,8 +8,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Agent.Rms;
+using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
+using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.LocalIpc;
 
@@ -25,6 +27,7 @@ public sealed class LocalIpcServer(
     ILocalIpcSecurityDescriptorFactory securityDescriptorFactory,
     IAgentInvocationContextFactory contextFactory,
     RmsInstallationDiscoveryQueryHandler installationDiscovery,
+    ServiceHealthQueryHandler serviceHealth,
     LocalIpcRuntimeStatus status,
     ILogger<LocalIpcServer> logger,
     ILocalIpcServerPipeFactory? serverPipeFactory = null) : IHostedService
@@ -414,6 +417,30 @@ public sealed class LocalIpcServer(
                     request.RequestId,
                     effectiveCorrelationId,
                     RmsInstallationContractMapper.Map(result.Value),
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.ServiceHealthOperation:
+                var serviceHealthResult = await serviceHealth
+                    .HandleAsync(context, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!serviceHealthResult.Succeeded || serviceHealthResult.Value is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        serviceHealthResult.Error?.Code ?? "service_health_unavailable",
+                        serviceHealthResult.Error?.Message ?? "The RMS service health query could not be completed.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    ServiceHealthContractMapper.Map(serviceHealthResult.Value),
                     cancellationToken).ConfigureAwait(false);
                 return;
 

@@ -14,9 +14,11 @@ using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
+using RmsSupportHub.Pos.Contracts.V1.Services;
 using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.LocalIpc;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
+using ContractServiceHealthOverallState = RmsSupportHub.Pos.Contracts.V1.Services.ServiceHealthOverallState;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
@@ -253,6 +255,7 @@ public sealed class LocalIpcFoundationTests
             new TestSecurityDescriptorFactory(),
             new TestInvocationContextFactory(),
             handler,
+            ServiceHealthTestSupport.CreateHandler(),
             status,
             NullLogger<LocalIpcServer>.Instance);
 
@@ -263,6 +266,7 @@ public sealed class LocalIpcFoundationTests
             var client = new LocalIpcClient(options, new FixedIdentityVerifier(true));
             var health = await client.GetHealthAsync("health-correlation");
             var installation = await client.GetInstallationDiscoveryAsync("diagnostic-correlation");
+            var serviceHealth = await client.GetServiceHealthAsync("service-health-correlation");
 
             Assert.True(health.Succeeded);
             Assert.Equal("ready", health.Result?.IpcStatus);
@@ -271,6 +275,18 @@ public sealed class LocalIpcFoundationTests
             Assert.True(installation.Succeeded);
             Assert.Equal("BR-INT", installation.Result?.BranchCode);
             Assert.Equal("diagnostic-correlation", installation.CorrelationId);
+            Assert.True(serviceHealth.Succeeded);
+            Assert.Equal("service-health-correlation", serviceHealth.CorrelationId);
+            Assert.Equal(
+                ContractServiceHealthOverallState.Healthy,
+                serviceHealth.Result?.OverallState);
+            Assert.Equal(ServiceHealthCatalog.Definitions.Count, serviceHealth.Result?.Services.Count);
+            Assert.All(serviceHealth.Result!.Services, service =>
+            {
+                Assert.StartsWith("svc-", service.ServiceId, StringComparison.Ordinal);
+                Assert.Equal(ServiceRuntimeState.Running, service.RuntimeState);
+                Assert.Equal("running", service.SafeStatusCode);
+            });
         }
         finally
         {
@@ -342,6 +358,21 @@ public sealed class LocalIpcFoundationTests
                 JsonSerializer.SerializeToElement(new { isAdmin = true, role = "Administrator" })));
             Assert.True(privilegePayload.RootElement.GetProperty("success").GetBoolean());
             Assert.Equal("correlation-payload", privilegePayload.RootElement.GetProperty("correlationId").GetString());
+
+            using var servicePayload = await SendRawAsync(options, new LocalIpcRequestEnvelope(
+                LocalIpcProtocol.CurrentVersion,
+                "request-service-payload",
+                "correlation-service-payload",
+                LocalIpcProtocol.ServiceHealthOperation,
+                JsonSerializer.SerializeToElement(new { serviceName = "arbitrary", isAdmin = true })));
+            Assert.True(servicePayload.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal(
+                ServiceHealthCatalog.Definitions.Count,
+                servicePayload.RootElement.GetProperty("result").GetProperty("services").GetArrayLength());
+            Assert.DoesNotContain(
+                "arbitrary",
+                servicePayload.RootElement.GetRawText(),
+                StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -514,6 +545,7 @@ public sealed class LocalIpcFoundationTests
                 new InMemoryRmsInstallationDiscovery(),
                 new RecordingAuditSink(),
                 TimeProvider.System),
+            ServiceHealthTestSupport.CreateHandler(),
             status,
             NullLogger<LocalIpcServer>.Instance);
 
@@ -542,6 +574,7 @@ public sealed class LocalIpcFoundationTests
                 new InMemoryRmsInstallationDiscovery(),
                 audit ?? new RecordingAuditSink(),
                 TimeProvider.System),
+            ServiceHealthTestSupport.CreateHandler(),
             new LocalIpcRuntimeStatus(),
             NullLogger<LocalIpcServer>.Instance);
 
