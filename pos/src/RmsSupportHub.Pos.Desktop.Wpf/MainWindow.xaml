@@ -1,0 +1,356 @@
+<Window
+    x:Class="RmsSupportHub.Pos.Desktop.Wpf.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="clr-namespace:RmsSupportHub.Pos.Desktop.Wpf.Models"
+    Title="RMS Support Hub"
+    Width="1180"
+    Height="760"
+    MinWidth="1020"
+    MinHeight="660"
+    Background="{DynamicResource CanvasBrush}"
+    FontFamily="Segoe UI"
+    SnapsToDevicePixels="True"
+    UseLayoutRounding="True"
+    WindowStartupLocation="CenterScreen"
+    Loaded="OnLoaded"
+    Closed="OnClosed">
+
+    <Window.Resources>
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="Margin" Value="0,2,0,2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="NavBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0"
+                            CornerRadius="{DynamicResource ControlCornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource SurfaceSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource CanvasBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+            <Setter Property="Height" Value="{DynamicResource ControlHeight}" />
+            <Setter Property="Padding" Value="20,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="PrimaryBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{DynamicResource ControlCornerRadius}">
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PrimaryBorder" Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PrimaryBorder" Property="Background" Value="{DynamicResource AccentPressedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="PrimaryBorder" Property="Background" Value="{DynamicResource SurfaceDisabledBrush}" />
+                                <Setter TargetName="PrimaryBorder" Property="BorderBrush" Value="{DynamicResource SurfaceDisabledBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="78" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border
+            Grid.Row="0"
+            Background="{DynamicResource ShellBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,0,0,1">
+            <Grid Margin="28,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{DynamicResource BrandMarkStyle}" Text="RMS" />
+                        <TextBlock Margin="12,0,0,0" Style="{DynamicResource BrandTitleStyle}" Text="Support Hub" />
+                    </StackPanel>
+                    <TextBlock Margin="1,4,0,0" Style="{DynamicResource EyebrowStyle}" Text="LOCAL OPERATIONS CONSOLE  /  DESKTOP 01" />
+                </StackPanel>
+
+                <Border
+                    Grid.Column="1"
+                    Padding="14,8"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource PillCornerRadius}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse
+                            Width="8"
+                            Height="8"
+                            Margin="0,0,9,0"
+                            VerticalAlignment="Center"
+                            Fill="{DynamicResource StatusNeutralBrush}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource StatusNeutralBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.Connected}">
+                                            <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.Loading}">
+                                            <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.ProtocolMismatch}">
+                                            <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.TimedOut}">
+                                            <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
+                            FontSize="{DynamicResource FontSizeCaption}"
+                            FontWeight="SemiBold"
+                            Text="{Binding StateLabel}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="248" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Grid.Column="0"
+                Background="{DynamicResource ShellBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,1,0">
+                <DockPanel Margin="18,28,18,20">
+                    <StackPanel DockPanel.Dock="Bottom" Margin="8,0">
+                        <Border
+                            Padding="14"
+                            Background="{DynamicResource SurfaceMutedBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource CardCornerRadius}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SCOPE" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="This slice exposes Agent health only. Later operations will appear here after review." TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-02  /  PROTOCOL v1" />
+                    </StackPanel>
+
+                    <StackPanel>
+                        <TextBlock Margin="8,0,0,12" Style="{DynamicResource EyebrowStyle}" Text="WORKSPACES" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsDefault="True">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" Text="Dashboard" />
+                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Agent health" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Margin="8,30,0,12" Style="{DynamicResource EyebrowStyle}" Text="COMING LATER" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="RMS" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Services" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Database" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Logs" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Backup" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Maintenance" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Packages" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Diagnostics" />
+                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Activity" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <ScrollViewer
+                Grid.Column="1"
+                Padding="34,30,34,40"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="920">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="MACHINE HEALTH  /  LIVE SNAPSHOT" />
+                            <TextBlock Margin="0,8,0,0" Style="{DynamicResource PageTitleStyle}" Text="Local machine" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="A bounded view of the Agent connection on this POS machine." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Margin="24,8,0,0"
+                            Command="{Binding RefreshCommand}"
+                            Content="Refresh"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    </Grid>
+
+                    <Border
+                        Margin="0,28,0,0"
+                        Padding="26"
+                        Background="{DynamicResource HeroBrush}"
+                        BorderBrush="{DynamicResource HeroBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource CardCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="12" Height="12" Margin="0,3,12,0" Fill="{DynamicResource StatusNeutralBrush}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{DynamicResource StatusNeutralBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.Connected}">
+                                                        <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.Loading}">
+                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.ProtocolMismatch}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding State}" Value="{x:Static models:HealthViewState.TimedOut}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Style="{DynamicResource HeroStateStyle}" Text="{Binding StateLabel}" />
+                                </StackPanel>
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource HeroMessageStyle}" Text="{Binding StatusSummary}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Health checks are read-only and do not require Hub connectivity." />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="154" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LAST SUCCESSFUL CHECK" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LastSuccessfulCheckDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Local time" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="AGENT STATUS" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding AgentStatus}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Local service authority" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LOCAL IPC" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding IpcStatus}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Authenticated named pipe" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Margin="7,0,0,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="PROTOCOL" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding ProtocolDisplay}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Compatibility contract" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="CONNECTION DETAILS" />
+                            <Grid Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,20,0">
+                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Hub connectivity required" />
+                                    <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding HubRequiredDisplay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="20,0,0,0">
+                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Correlation ID" />
+                                    <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding CorrelationId}" TextTrimming="CharacterEllipsis" ToolTip="The safe correlation identifier for the latest check." />
+                                </StackPanel>
+                            </Grid>
+                            <Border Margin="0,20,0,0" Padding="12,10" Background="{DynamicResource SurfaceMutedBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Result code" />
+                                    <TextBlock Margin="16,0,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ErrorCode}" />
+                                    <TextBlock Margin="16,0,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding ErrorDetail}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only the Dashboard is active in WPF-02. Unsupported workspaces remain visibly bounded until a later migration slice." TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

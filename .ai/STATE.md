@@ -1,17 +1,40 @@
 # Current Project State
 
-- **Updated:** 2026-08-22
-- **Repository baseline:** `main` was verified clean at
-  `bd83e3b2c223e807f40e684fe61a5281c915674b` before implementation.
-- **Working branch:** `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32.
+- **Updated:** 2026-08-23
+- **Repository baseline:** `main` was verified clean at `bd83e3b2c223e807f40e684fe61a5281c915674b` before implementation.
+- **Working branch:** `feat/wpf-02-wpf-shell-local-health`; Draft PR pending delivery.
 - **Architecture authority:** CR-001 and ADR-0029 were accepted and merged by
   architecture PR #31. GPT-5.6 Sol remains the acceptance authority.
-- **Status:** WPF-01 implementation and the final bounded OPUS remediation are
-  complete; exact-head CI is green on `701869b`; Draft PR #32 awaits Sol
-  review. WPF-02 must not start until that acceptance.
-
+- **Status:** WPF-01 is accepted and merged at `c09e4ec`; WPF-02 final correction is pushed at `78dbe5b` with documentation synchronization at `f0acce1` and awaits Sol review/acceptance. WPF-03 must not start until that acceptance.
+## WPF-02 durable facts
+- `RmsSupportHub.Pos.Desktop.Wpf` is a native WPF `WinExe` targeting
+  `net10.0-windows10.0.19041.0` and references only `RmsSupportHub.Pos.LocalIpc`.
+  It is included in `pos/RmsSupportHub.Pos.slnx` beside, and without changes
+  to, `PosAdminTool.WinUI`.
+- The shell opens before IPC work completes and provides token-owned dark
+  graphite surfaces, a cyan action accent, a header Agent indicator, Dashboard
+  navigation, bounded future-work placeholders, health cards, safe metadata,
+  and a keyboard-reachable Refresh action.
+- `LocalAgentHealthClient` wraps the existing typed
+  `LocalIpcClient.GetHealthAsync` call. It maps unavailable, timeout, malformed
+  response, protocol mismatch, security verification, and unknown failures to
+  safe fixed UI values. No WPF named-pipe, HTTPS, service, database, or RMS
+  implementation exists.
+- `DashboardViewModel` owns explicit health states, single-flight refresh,
+  cancellation, a single bounded 30-second `PeriodicTimer`, shutdown disposal,
+  last-success tracking, and transport-focused display properties.
+- `LocalIpcClient` exposes typed protocol-version mismatch and server-identity
+  verification exceptions; trust verification still precedes every request
+  write, and accepted ACL, PID, SCM, impersonation, bounds, correlation, and
+  authorization controls are unchanged.
+- `LocalAgentHealthClient` maps the typed identity failure to safe
+  `security_verification_failed` / `SecurityVerificationFailed`; WPF adapter
+  regression tests prove zero request bytes and keep malformed responses distinct.
+- The current machine has no visible `RmsSupportAgent` service or operator group;
+  IPC remained unavailable, no prerequisite was provisioned, and no security
+  mode was weakened. Release runtime required only process-local `WINDIR` set
+  from `SystemRoot` because the agent shell omits that standard environment variable.
 ## WPF-01 durable facts
-
 - The existing `RmsSupportHub.Pos.Application` project now owns a transport-
   agnostic `InvocationContext`, fail-closed operation authorization, and the
   shared `RmsInstallationDiscoveryQueryHandler`.
@@ -69,33 +92,25 @@
   NU1510 because the API is already provided by the .NET 10 BCL; the explicit
   reference is removed so strict CI (`--warnaserror`) stays clean. No preview
   remains.
-
 ## Validation evidence
-
-- Release solution build: 0 warnings, 0 errors, with the required Testing-only
-  `PosAgentSecurity__SupportHubOrigin` environment variable.
+- Release solution build: 0 warnings, 0 errors, with Testing-only
+  `PosAgentSecurity__SupportHubOrigin=https://localhost:4443`.
 - POS Release tests: Domain 12/12, Application 89/89, Infrastructure 155/155,
-  Agent Integration 234/234 (490/490 total).
-- Focused bounded remediation tests remain green: lifecycle 6/6,
-  audit/authority/architecture 25/25, and exact protocol bounds 2/2.
-- PowerShell quality: 37 tracked files parse cleanly; PSScriptAnalyzer was not
-  installed. Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending.
-- TestServer HTTPS and in-process Windows Named Pipe integration exercised the
-  selected diagnostic, health, invalid-operation, malformed/oversized-request,
-  unauthorized-connection, missing-group, and HTTP/IPC parity paths.
-- The checked-in POS OpenAPI document and generated Angular client were
-  regenerated; the full Agent OpenAPI metadata suite passed. Exact-head POS CI
-  and Support Hub CI passed on `701869b` (PR #32 remains Draft).
-- Standalone Agent startup was not attempted because the real Kestrel listener
-  requires the machine-owned Testing certificate. No runtime URL is claimed
-  from configuration alone.
+  Agent Integration 234/234, WPF 13/13 (503/503 total).
+- WPF adapter regression and trust-boundary tests are green; OpenAPI content is
+  unchanged. PowerShell parsing is 37/37; PSScriptAnalyzer is not installed.
+- Pester 3.4.0: 172 passed, 0 failed, 0 skipped, 0 pending; memory/context and
+  `git diff --check` passed.
+- POS code-head CI `32601674329` and the latest pushed branch-head POS CI are
+  green, including the Infrastructure job. Support Hub rerun `32598052655`
+  and the latest pushed branch-head Support Hub CI are green. Earlier runs
+  exposed a reproducible external-configuration fixture race (341/342 backend
+  tests passed); reruns resolved it without changing unrelated infrastructure/
+  backend code. Local focused test 3/3 passed.
+- Final Release WPF process was verified alive/responsive with title `RMS Support Hub`; Computer Use screenshot helper was unavailable, so no visual claim is made.
 
 ## Safety and next work
-
 - Production readiness remains **NO**. No Production contact or native RMS
   mutation was authorized or performed.
-- Azure mapping remains E16 #13017, US-E16-02 #13022, US-E16-04 #13024, with
-  related authorization story US-E16-03 #13023. No broad Azure administration
-  was performed during WPF-01.
-- `.ai/HANDOFF.md` is `Empty` because the implementation is complete and the
-  next action is review, not unfinished coding.
+- Azure reconciliation set E16/E17 states and priorities, moved conditional Online Order items #12844/#12900/#12901/#12902 to OO-07, retained Production work deferred, and created adaptive-card story #13072 under E14 with Tasks #13073-#13076 linked to #12841-#12844.
+- `.ai/HANDOFF.md` is `Empty`; WPF implementation and final POS/Support Hub CI are complete and Sol review is next. The unavailable Computer Use screenshot/Refresh verification remains an evidence limitation; no WPF-03 or merge/ready action is authorized.

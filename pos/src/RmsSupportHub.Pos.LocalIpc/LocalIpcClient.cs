@@ -16,7 +16,18 @@ public sealed record LocalIpcCallResult<T>(
     string? ErrorCode,
     string? ErrorMessage);
 
-public sealed class LocalIpcProtocolException(string message) : Exception(message);
+public class LocalIpcProtocolException(string message) : Exception(message);
+
+public sealed class LocalIpcProtocolMismatchException(int expectedVersion, int actualVersion)
+    : LocalIpcProtocolException("The IPC response used an incompatible protocol version.")
+{
+    public int ExpectedVersion { get; } = expectedVersion;
+
+    public int ActualVersion { get; } = actualVersion;
+}
+
+public sealed class LocalIpcServerIdentityException()
+    : LocalIpcProtocolException("The IPC server identity could not be verified.");
 
 /// <summary>
 /// Small typed client for the WPF-to-Agent local IPC contract. It exposes only the operations
@@ -88,7 +99,7 @@ public sealed class LocalIpcClient
 
         if (!serverIdentityVerifier.IsExpectedServer(pipe))
         {
-            throw new LocalIpcProtocolException("The IPC server identity could not be verified.");
+            throw new LocalIpcServerIdentityException();
         }
 
         timeout.CancelAfter(options.ReadTimeout);
@@ -109,8 +120,14 @@ public sealed class LocalIpcClient
             throw new LocalIpcProtocolException($"The IPC response was malformed: {exception.Message}");
         }
 
-        if (response.ProtocolVersion != LocalIpcProtocol.CurrentVersion
-            || !string.Equals(response.RequestId, requestId, StringComparison.Ordinal)
+        if (response.ProtocolVersion != LocalIpcProtocol.CurrentVersion)
+        {
+            throw new LocalIpcProtocolMismatchException(
+                LocalIpcProtocol.CurrentVersion,
+                response.ProtocolVersion);
+        }
+
+        if (!string.Equals(response.RequestId, requestId, StringComparison.Ordinal)
             || !string.Equals(response.CorrelationId, effectiveCorrelationId, StringComparison.Ordinal)
             || !IsSafeToken(response.CorrelationId))
         {
