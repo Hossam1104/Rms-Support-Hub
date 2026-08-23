@@ -73,16 +73,19 @@
 
 ## Runtime and environment boundary
 
-- Final runtime verification must launch the Release WPF executable from the
-  current committed head and leave that process running. Record its exact path,
-  PID, title, responding state, and start time here before completion.
-- Preserve healthy project-owned API/Angular processes. Probe only actual
-  responding endpoints; do not infer URLs from configuration alone.
+- Final WPF runtime verification is complete for PR #37 commit `a85c6f0` at
+  `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
+  PID 44220, title `RMS Support Hub`, `Responding=True`, exactly one process,
+  started `2026-08-24T01:15:35.9254800+03:00`, Session 2. It is left running.
+- `scripts/dev.ps1` runtime probes returned API live 200/healthy, API ready
+  200/ready with Testing tier, and Angular `http://localhost:4200/` 200 HTML.
+  Current project-owned API PID is 24472 and Angular PID is 33020; both remain
+  running. WPF required process-local `WINDIR=C:\WINDOWS` normalization.
 - The current machine has no authorized Agent service/operator-group/database
   mutation session. No live backup, restore, service mutation, Production
   contact, machine provisioning, fleet/remote work, or customer-data mutation
   is claimed.
-- Computer Use visual evidence is not claimed unless the native pipe is
-  available during final verification.
+- No screenshot/click evidence is claimed because Computer Use visual access
+  was unavailable; process/title/responding and endpoint evidence are factual.
 
 `.ai/HANDOFF.md` remains `Empty` while this execution completes.
