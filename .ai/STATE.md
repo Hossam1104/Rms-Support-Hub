@@ -92,6 +92,12 @@ Draft/open for Sol acceptance.
   environment normalization for WPF font initialization and is left running.
 - The computer-use native pipe was unavailable after two required attempts;
   no visible Logs/filter or Support Bundle screenshot/click evidence is claimed.
+- Final repository runtime probe ran `scripts/dev.ps1`: `GET
+  http://localhost:5200/api/health/live` returned 200/healthy,
+  `GET http://localhost:5200/api/health/ready` returned 200/ready with the
+  Testing tier, and `http://localhost:4200/` returned 200 HTML. The owner API
+  process (PID 34580) and Angular process (PID 13048) are left running with
+  the WPF process.
 - No Agent service, operator group, Production endpoint, Production database,
   native RMS state, machine provisioning, or service mutation is authorized or
   claimed.
