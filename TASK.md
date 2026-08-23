@@ -8,7 +8,7 @@ REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
 BRANCH: `feat/wpf-05-logs-support-bundle`
 EPIC: E17 - WPF Standalone Local Operations (#13018)
 PRIMARY STORY: US-E17-05 - Logs and safe Support Bundle (#13035)
-STATUS: Implemented and locally validated; Draft PR delivery and Sol acceptance remain pending
+STATUS: Implemented, pushed in Draft PR #36, and exact-head CI is green; Sol acceptance remains pending
 
 ## Baseline and implementation truth
 
@@ -31,11 +31,13 @@ WPF has no Agent or Infrastructure reference, filesystem reader, SQL connection,
 - PowerShell quality 37/37; Pester 172/172 passed, 0 failed, 0 skipped, 0 pending.
 - `git diff --check` passed. `python .ai/scripts/context.py` and
   `python .ai/scripts/check_memory.py` passed after the final task-state edits.
+- Commit `8e288a68956fc08c008988364f03e3fafce66fc5` is pushed as Draft PR #36;
+  all seven exact-head CI checks are green. Do not mark ready or merge.
 
 ## Live Azure truth - read 2026-08-23
 
 - E16 #13017 Active/P2: #13022/#13024 Closed/P1; #13023/#13029/#13030 Active/P2; #13021/#13025/#13026/#13028 New/P1; #13027 New/P2.
-- E17 #13018 Active/P1: #13031 Closed/P1; #13032/#13033/#13035 Active/P1; #13034 New/P2; #13036/#13037/#13038/#13040 New/P2; #13039/#13041/#13042/#13043 New/P1.
+- E17 #13018 Active/P1: #13031 Closed/P1; #13032/#13033/#13035 Active/P1; #13034 New/P2; #13036/#13037/#13038/#13040 New/P2; #13039/#13041/#13042/#13043 New/P1. #13035 now has Draft PR #36 evidence and stays open.
 - E18 #13019 remains New/P2 and E19 #13020 New/P1. Their future children retain live New states/priorities.
 - #13072/#13073/#13074/#13076 are New/P1, #13075 New/P2; #12900/#12901/#12902/#12949 remain New/P3. #13035 has an implementation-started branch/evidence comment and stays open until Sol acceptance and Draft PR merge.
 
@@ -47,7 +49,7 @@ No Production endpoint/database, raw log, secret, connection string, customer da
 
 ## Delivery guardrails
 
-Keep the PR Draft; do not run `gh pr ready`, merge, deploy, provision, or alter native RMS state. Push this branch, create a Draft PR linked to AB#13035, verify exact-head CI, and stop for Sol acceptance.
+Keep PR #36 Draft; exact-head CI is green. Do not run `gh pr ready`, merge, deploy, provision, or alter native RMS state. Stop for Sol acceptance.
 
 ## Full next prompt - WPF-06
 

@@ -5,8 +5,8 @@
   `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` (PR #35).
 - **Working branch:** `feat/wpf-05-logs-support-bundle`.
 - **Status:** WPF-05 Logs, safe diagnostic evidence, and Support Bundle
-  metadata is implemented and locally validated. Draft PR delivery and Sol
-  acceptance remain pending.
+  metadata is implemented, pushed in Draft PR #36, and exact-head CI is green.
+  Sol acceptance remains pending.
 - **Authority:** CR-001 and ADR-0029 remain accepted; GPT-5.6 Sol is the
   acceptance authority. WPF-06 must not start before Sol accepts WPF-05.
 
@@ -65,6 +65,9 @@ PowerShell quality 37/37; Pester 172 passed, 0 failed, 0 skipped, 0 pending;
 classification found only the intended typed Named Pipe boundary, Agent-side
 diagnostics/HTTP composition, and redaction keyword checks/tests; no prohibited
 WPF machine-access path was introduced.
+Commit `8e288a68956fc08c008988364f03e3fafce66fc5` is pushed in Draft PR #36;
+all seven exact-head CI checks passed (POS/Support Hub run 32655797353 and
+Support Hub release-candidate run 32655797333).
 
 ## Azure and backlog
 
@@ -77,8 +80,8 @@ WPF machine-access path was introduced.
 - #13072-#13076 remain New in the Online Order integrated-testing backlog;
   #12900-#12902 remain New/P3 conditional and #12949 remains New/P3 deferred
   Production acceptance.
-- Azure #13035 has an implementation-started comment for this branch and
-  must remain open until Sol acceptance and Draft PR merge.
+- Azure #13035 has implementation and Draft PR #36 evidence for this branch;
+  it remains Active/P1 until Sol acceptance and merge.
 
 ## Runtime and environment boundary
 
