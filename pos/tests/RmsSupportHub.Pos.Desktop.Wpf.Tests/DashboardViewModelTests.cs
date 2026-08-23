@@ -66,6 +66,134 @@ public sealed class DashboardViewModelTests
     }
 
     [Fact]
+    public async Task ConnectedAgentLoadsHealthyCanonicalDatabaseSnapshot()
+    {
+        var databaseClient = new StubDatabaseHealthClient(_ =>
+            Task.FromResult(DatabaseHealthResult.Success(
+                DatabaseHealthViewState.Healthy,
+                CreateDatabaseRows(),
+                DateTimeOffset.UtcNow,
+                "database-correlation")));
+        using var viewModel = new DashboardViewModel(
+            ConnectedAgentClient(),
+            HealthyServiceClient(),
+            databaseClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(HealthViewState.Connected, viewModel.State);
+        Assert.Equal(DatabaseHealthViewState.Healthy, viewModel.DatabaseState);
+        Assert.Equal(2, viewModel.DatabaseItems.Count);
+        Assert.Equal(2, viewModel.DatabaseConnectedCount);
+        Assert.Equal(0, viewModel.DatabaseAttentionCount);
+        Assert.Equal("2 Connected  |  0 Attention", viewModel.DatabaseSummaryDisplay);
+        Assert.Equal("Both canonical RMS databases answered the identity probe.", viewModel.DatabaseStatusSummary);
+        Assert.NotNull(viewModel.LastDatabaseCheck);
+        Assert.Equal(1, databaseClient.CallCount);
+    }
+
+    [Fact]
+    public async Task ConnectedAgentPreservesDegradedDatabaseStateSeparately()
+    {
+        var databaseClient = new StubDatabaseHealthClient(_ =>
+            Task.FromResult(DatabaseHealthResult.Success(
+                DatabaseHealthViewState.Degraded,
+                CreateDatabaseRows(includeAuthenticationFailure: true),
+                DateTimeOffset.UtcNow,
+                "database-degraded")));
+        using var viewModel = new DashboardViewModel(
+            ConnectedAgentClient(),
+            HealthyServiceClient(),
+            databaseClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(HealthViewState.Connected, viewModel.State);
+        Assert.Equal(DatabaseHealthViewState.Degraded, viewModel.DatabaseState);
+        Assert.Equal("Degraded", viewModel.DatabaseStateLabel);
+        Assert.Equal(1, viewModel.DatabaseConnectedCount);
+        Assert.Equal(1, viewModel.DatabaseAttentionCount);
+        Assert.Contains("need attention", viewModel.DatabaseStatusSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AgentUnavailableDoesNotProbeDatabases()
+    {
+        var databaseClient = new StubDatabaseHealthClient(_ =>
+            throw new InvalidOperationException("The database client must not be called."));
+        using var viewModel = new DashboardViewModel(
+            new StubHealthClient(_ =>
+                Task.FromResult(AgentHealthResult.Failure(
+                    HealthViewState.Unavailable,
+                    "agent_unavailable",
+                    "RMS Support Agent is not available on this machine."))),
+            new StubServiceHealthClient(_ =>
+                throw new InvalidOperationException("The service client must not be called.")),
+            databaseClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(HealthViewState.Unavailable, viewModel.State);
+        Assert.Equal(DatabaseHealthViewState.Unavailable, viewModel.DatabaseState);
+        Assert.Equal("agent_unavailable", viewModel.DatabaseErrorCode);
+        Assert.Equal(0, databaseClient.CallCount);
+    }
+
+    [Fact]
+    public async Task DatabaseFailureDoesNotMaskConnectedAgent()
+    {
+        var databaseClient = new StubDatabaseHealthClient(_ =>
+            Task.FromResult(DatabaseHealthResult.Failure(
+                DatabaseHealthViewState.Unavailable,
+                "database_health_unavailable",
+                "RMS database health is currently unavailable.",
+                "database-failure")));
+        using var viewModel = new DashboardViewModel(
+            ConnectedAgentClient(),
+            HealthyServiceClient(),
+            databaseClient);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(HealthViewState.Connected, viewModel.State);
+        Assert.Equal(DatabaseHealthViewState.Unavailable, viewModel.DatabaseState);
+        Assert.Equal("database_health_unavailable", viewModel.DatabaseErrorCode);
+        Assert.Equal("RMS database health is currently unavailable.", viewModel.DatabaseErrorDetail);
+    }
+
+    [Fact]
+    public async Task DatabaseRetryMovesFromUnavailableToHealthy()
+    {
+        var attempt = 0;
+        var databaseClient = new StubDatabaseHealthClient(_ =>
+        {
+            attempt++;
+            return Task.FromResult(attempt == 1
+                ? DatabaseHealthResult.Failure(
+                    DatabaseHealthViewState.Unavailable,
+                    "database_health_unavailable",
+                    "RMS database health is currently unavailable.")
+                : DatabaseHealthResult.Success(
+                    DatabaseHealthViewState.Healthy,
+                    CreateDatabaseRows(),
+                    DateTimeOffset.UtcNow,
+                    "database-retry"));
+        });
+        using var viewModel = new DashboardViewModel(
+            ConnectedAgentClient(),
+            HealthyServiceClient(),
+            databaseClient);
+
+        await viewModel.RefreshAsync();
+        Assert.Equal(DatabaseHealthViewState.Unavailable, viewModel.DatabaseState);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(DatabaseHealthViewState.Healthy, viewModel.DatabaseState);
+        Assert.Equal(2, databaseClient.CallCount);
+    }
+
+    [Fact]
     public async Task StoppedRequiredServiceMovesWorkspaceToDegraded()
     {
         var serviceClient = new StubServiceHealthClient(_ =>
@@ -210,6 +338,39 @@ public sealed class DashboardViewModelTests
     }
 
     [Fact]
+    public async Task ConcurrentRefreshesDoNotCreateParallelDatabaseHealthCalls()
+    {
+        var activeCalls = 0;
+        var maximumActiveCalls = 0;
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var databaseClient = new StubDatabaseHealthClient(async cancellationToken =>
+        {
+            var active = Interlocked.Increment(ref activeCalls);
+            InterlockedExtensions.Max(ref maximumActiveCalls, active);
+            await release.Task.WaitAsync(cancellationToken);
+            Interlocked.Decrement(ref activeCalls);
+            return DatabaseHealthResult.Success(
+                DatabaseHealthViewState.Healthy,
+                CreateDatabaseRows(),
+                DateTimeOffset.UtcNow,
+                "database-concurrent");
+        });
+        using var viewModel = new DashboardViewModel(
+            ConnectedAgentClient(),
+            HealthyServiceClient(),
+            databaseClient);
+
+        var first = viewModel.RefreshAsync();
+        await databaseClient.FirstCallStarted.Task;
+        var second = viewModel.RefreshAsync();
+        release.SetResult(true);
+        await Task.WhenAll(first, second);
+
+        Assert.Equal(1, maximumActiveCalls);
+        Assert.Equal(1, databaseClient.CallCount);
+    }
+
+    [Fact]
     public void ServicesCommandSwitchesToTheReadOnlyWorkspace()
     {
         using var viewModel = new DashboardViewModel(new StubHealthClient());
@@ -223,6 +384,25 @@ public sealed class DashboardViewModelTests
 
         Assert.True(viewModel.IsDashboardVisible);
         Assert.False(viewModel.IsServicesVisible);
+    }
+
+    [Fact]
+    public async Task DatabaseCommandSwitchesToTheDatabaseWorkspace()
+    {
+        using var viewModel = new DashboardViewModel(new StubHealthClient());
+
+        viewModel.ShowDatabaseCommand.Execute(null);
+        await Task.Delay(25);
+
+        Assert.False(viewModel.IsDashboardVisible);
+        Assert.False(viewModel.IsServicesVisible);
+        Assert.True(viewModel.IsDatabaseVisible);
+
+        viewModel.ShowDashboardCommand.Execute(null);
+        await Task.Delay(25);
+
+        Assert.True(viewModel.IsDashboardVisible);
+        Assert.False(viewModel.IsDatabaseVisible);
     }
 
     [Fact]
@@ -450,9 +630,41 @@ public sealed class DashboardViewModelTests
         }
     }
 
+    private sealed class StubDatabaseHealthClient : ILocalDatabaseHealthClient
+    {
+        private readonly Func<CancellationToken, Task<DatabaseHealthResult>> responder;
+
+        public StubDatabaseHealthClient(Func<CancellationToken, Task<DatabaseHealthResult>> responder)
+        {
+            this.responder = responder;
+        }
+
+        public int CallCount { get; private set; }
+
+        public TaskCompletionSource<bool> FirstCallStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<DatabaseHealthResult> GetHealthAsync(
+            string correlationId,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            FirstCallStarted.TrySetResult(true);
+            return await responder(cancellationToken);
+        }
+    }
+
     private static ILocalAgentHealthClient ConnectedAgentClient() =>
         new StubHealthClient(_ =>
             Task.FromResult(AgentHealthResult.Connected("Ready", "Ready", 1, false, "agent-correlation")));
+
+    private static ILocalServiceHealthClient HealthyServiceClient() =>
+        new StubServiceHealthClient(_ =>
+            Task.FromResult(ServiceHealthResult.Healthy(
+                ServiceHealthViewState.Healthy,
+                CreateRows(),
+                DateTimeOffset.UtcNow,
+                "service-correlation")));
 
     private static IReadOnlyList<ServiceHealthRow> CreateRows(bool includeStopped = false) =>
     [
@@ -462,6 +674,35 @@ public sealed class DashboardViewModelTests
         new("RMS Cashier Service", true, true, ServiceHealthRowState.Running, "running"),
         new("RMS Services Manager", true, true, ServiceHealthRowState.Running, "running"),
         new("RMS Support Agent", true, true, ServiceHealthRowState.Running, "running")
+    ];
+
+    private static IReadOnlyList<DatabaseHealthRow> CreateDatabaseRows(
+        bool includeAuthenticationFailure = false) =>
+    [
+        new(
+            RmsSupportHub.Pos.Contracts.V1.Rms.RmsDatabaseTarget.Branch,
+            "Branch Database",
+            "RmsBranchSrv",
+            "RmsBranchSrv",
+            "integration-sql:1433",
+            true,
+            true,
+            RmsSupportHub.Pos.Contracts.V1.Rms.RmsDatabaseDiagnosticStatus.Reachable,
+            "Connected",
+            DateTimeOffset.UtcNow),
+        new(
+            RmsSupportHub.Pos.Contracts.V1.Rms.RmsDatabaseTarget.Cashier,
+            "Cashier Database",
+            "RmsCashierSrv",
+            "RmsCashierSrv",
+            "integration-sql:1433",
+            true,
+            true,
+            includeAuthenticationFailure
+                ? RmsSupportHub.Pos.Contracts.V1.Rms.RmsDatabaseDiagnosticStatus.AuthenticationFailed
+                : RmsSupportHub.Pos.Contracts.V1.Rms.RmsDatabaseDiagnosticStatus.Reachable,
+            includeAuthenticationFailure ? "Authentication failed" : "Connected",
+            DateTimeOffset.UtcNow)
     ];
 
     private static class InterlockedExtensions

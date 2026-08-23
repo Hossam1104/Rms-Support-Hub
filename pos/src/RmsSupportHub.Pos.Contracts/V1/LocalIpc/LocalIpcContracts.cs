@@ -13,6 +13,8 @@ public static class LocalIpcProtocol
     public const string InstallationDiscoveryOperation = "rms.installation.discovery";
 
     public const string ServiceHealthOperation = "rms.services.health";
+
+    public const string DatabaseHealthOperation = "rms.databases.health";
 }
 
 public sealed record LocalIpcRequestEnvelope(

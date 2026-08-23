@@ -76,6 +76,14 @@ public sealed class LocalIpcClient
             correlationId,
             cancellationToken);
 
+    public Task<LocalIpcCallResult<RmsDatabaseHealthSnapshotDto>> GetDatabaseHealthAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseHealthSnapshotDto>(
+            LocalIpcProtocol.DatabaseHealthOperation,
+            correlationId,
+            cancellationToken);
+
     private async Task<LocalIpcCallResult<T>> SendAsync<T>(
         string operation,
         string? correlationId,

@@ -1,70 +1,74 @@
 # Current Project State
 
 - **Updated:** 2026-08-23
-- **Repository baseline:** `main` was verified clean at
-  `e2da601cfad42a324fa49aa68ad14c3008a42605` before WPF-03 work.
-- **Working branch:** `feat/wpf-03-local-rms-service-health`.
-- **Status:** WPF-03 read-only implementation and final bounded S01 correction
-  are committed at `e00447b` and `17b25ae`, delivered in Draft PR #34; GPT-5.6
-  Sol review remains pending.
+- **Repository baseline:** WPF-04 started from accepted WPF-03 main
+  `803dc85c60bc3662f78b041c8c99499195656e08`.
+- **Working branch:** `feat/wpf-04-database-health-diagnostics`.
+- **Implementation commit:** `fca899d` (`feat: add RMS database health to WPF`).
+- **Status:** WPF-04 is implemented and locally validated. The branch remains
+  Draft/pending Sol review and merge; WPF-05 has not started.
 - **Authority:** CR-001 and ADR-0029 remain accepted; GPT-5.6 Sol is the
-  acceptance authority. WPF-04 is explicitly blocked until that review.
+  acceptance authority.
 
-## WPF-03 durable facts
+## WPF-04 durable facts
 
-- `ServiceHealthCatalog` owns the fixed RMS identities from `RmsServiceCatalog`
-  plus the permanent `RmsSupportAgent` identity. No caller-provided service
-  string enters the query.
-- `ServiceHealthReader` is the bounded Application read seam. It maps Windows
-  service states to `Running`, `Stopped`, `Paused`, `Transitioning`,
-  `NotFound`, and `Unknown`, and maps overall health to `Healthy`, `Degraded`,
-  or `Unknown`. Lookup timeout is bounded to five seconds by default.
-- `ServiceHealthQueryHandler` reuses the accepted fail-closed
-  `AgentOperationAuthorization` matrix. LocalWpf operators/administrators
-  may query; missing, unauthenticated, invalid, RemoteHub, and AgentInternal
-  authorities remain denied. Polling is intentionally non-audited.
-- Legacy `/api/v1/services` and Local IPC `rms.services.health` use the same
-  typed Application handler/reader; the legacy adapter preserves its existing
-  three RMS-row contract. Local IPC returns a separate four-row typed health
-  projection including the Agent Windows service identity.
-- WPF owns no Windows service implementation. `LocalAgentServiceHealthClient`
-  calls `LocalIpcClient.GetServiceHealthAsync`; the Services workspace and
-  Dashboard summary share one coordinated `DashboardViewModel` refresh,
-  single-flight gate, cancellation source, and 30-second timer.
-- WPF remains a WinExe referencing only `RmsSupportHub.Pos.LocalIpc`. Structural
-  tests reject WPF ServiceController/SCM/PowerShell/process/HTTPS access.
-- `LocalAgentServiceHealthClient` preserves the distinction between Agent IPC
-  unavailability (`agent_unavailable`) and a connected Agent whose fixed
-  service lookup is unavailable (`service_health_unavailable`). The dashboard
-  summary remains neutral for both Unavailable service-health states while the
-  bounded `ServiceErrorDetail` carries the fixed safe copy. `ServiceHealthRow`
-  rejects the contradictory `NotFound` plus `Installed` DTO combination.
-- Service start/stop/restart and all other mutation controls were not added.
-  #13032 remains Active/P1 for this reason and its implementation is in Draft
-  PR #34; #13033 remains the next candidate after acceptance.
+- `DatabaseHealthQueryHandler` is the shared transport-independent read seam.
+  It authorizes LocalWpf LocalOperator/LocalAdministrator callers, invokes the
+  existing `IRmsDatabaseDiagnostics` for the fixed Branch/Cashier set in
+  parallel, bounds cancellation, validates the projection, and maps all
+  failures to fixed safe copies. Polling is non-audited.
+- The typed `rms.databases.health` Local IPC operation accepts no payload and
+  returns only the bounded snapshot DTO. The existing Local IPC framing,
+  request/correlation matching, protocol v1, size/time bounds, Windows caller
+  identity, server identity/PID verification, ACL, and impersonation boundary
+  are unchanged.
+- The legacy RMS diagnostics composition now consumes the same shared database
+  projection seam while preserving its existing HTTP contract and backup
+  metadata. No second SQL adapter, parser, config reader, or probe was added.
+- WPF owns only typed IPC models/adapters. The Database workspace and Dashboard
+  summary share the existing single-flight/cancel-aware refresh lifecycle and
+  30-second timer. Agent unavailability remains distinct from
+  `database_health_unavailable`, timeout, protocol, security, and invalid
+  response states.
+- Canonical statuses remain `NotConfigured`, `ConfigurationInvalid`,
+  `DatabaseNameMismatch`, `Reachable`, `AuthenticationFailed`,
+  `DatabaseUnavailable`, and `Unreachable`. The explicit aggregate rule is:
+  both reachable = Healthy; all three definitive unavailable statuses =
+  Unavailable; otherwise a complete two-row result = Degraded.
+- WPF has no `SqlConnection`, connection-string/config/registry access, HTTPS
+  path, Agent/Infrastructure reference, arbitrary SQL, backup/restore,
+  service mutation, or provisioning surface. Contradictory DTOs and unsafe
+  display/detail values fail closed.
 
 ## Validation evidence
 
-- Strict Release build after restore: 0 warnings, 0 errors, using only the
-  Testing origin environment variable `https://localhost:4443`.
-- POS Release tests: Domain 12/12, Application 98/98, Infrastructure 155/155,
-  Agent Integration 235/235, WPF 28/28; 528/528 total.
-- Focused WPF adapter tests: 28/28. PowerShell quality: 37/37 tracked files
-  parse cleanly. Pester 3.4.0: 172/172 passed, 0 failed, 0 skipped, 0 pending.
-- `.\scripts\dev.ps1` probes responded with frontend `/` 200, backend
-  `/health/live` 200, and backend `/health/ready` 200. Final Release WPF PID
-  12224 is alive and responsive with the expected `RMS Support Hub` title.
-- Current machine still has no visible `RmsSupportAgent` service or
-  `RMS Support Operators` local group. No prerequisite was provisioned and no
-  security mode was weakened. Computer Use is unavailable, so screenshot and
-  actual Refresh-click evidence are not claimed.
+- Strict Release solution build after restore: 0 warnings, 0 errors, using only
+  the Testing origin environment variable
+  `https://localhost:4443`.
+- Final POS Release tests: Domain 12/12, Application 110/110,
+  Infrastructure 155/155, Agent Integration 237/237, WPF 48/48;
+  562/562 total.
+- PowerShell quality: 37/37 tracked files parse cleanly. Pester: 172/172
+  passed, 0 failed, 0 skipped, 0 pending.
+- Final Release WPF process: PID 18836, exact Release executable, title
+  `RMS Support Hub`, alive and responsive after a second probe. The process
+  required only process-local `WINDIR=C:\WINDOWS` for font initialization.
+  Computer Use failed its native-pipe retry, so screenshot/navigation/Refresh
+  click evidence is intentionally not claimed.
+- Current machine has no visible `RmsSupportAgent` service and no `RMS
+  Support Operators` local group. No prerequisite or security mode was
+  provisioned.
 
 ## Azure and backlog
 
-- #13018 Active/P1; #13031 Closed/P1; #13032 Active/P1; #13033 New/P1.
-- #13072-#13076 remain preserved and unchanged. No Online Order work was
-  implemented or reprioritized.
+- Live read before reconciliation: #13018 Active/P1; #13031 Closed/P1;
+  #13032 Active/P1; #13033 New/P1; #13034 New/P2; #13035 New/P1.
+- #13033 is the active WPF-04 story and was reconciled to Active/P1 with
+  implementation evidence; it must not be closed before Sol acceptance and
+  Draft PR merge. #13032 remains Active/P1 because service mutation is
+  deferred. #13035 remains P1, #13034 remains P2, and #13072-#13076 remain
+  unchanged in the preserved Online Order backlog.
 - OPUS-14 and OPUS-16 remain deferred.
 
-`.ai/HANDOFF.md` is `Empty` until a genuinely incomplete or blocked session
-requires a delta handoff.
+`.ai/HANDOFF.md` remains `Empty`; no incomplete implementation handoff is
+needed.

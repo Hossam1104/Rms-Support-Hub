@@ -1,98 +1,112 @@
-# WPF-03 - Local RMS / Windows Service Health
+# WPF-04 - Database Health & Diagnostics
 
 MODEL: Implementation and validation executor
 AUTHORITY: GPT-5.6 Sol remains Planner, Architect, and Acceptance Authority
 PROGRAMME: POS Dual Control-Surface Architecture (CR-001 / ADR-0029)
 REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
-BRANCH: `feat/wpf-03-local-rms-service-health`
+BRANCH: `feat/wpf-04-database-health-diagnostics`
 EPIC: E17 - WPF Standalone Local Operations (#13018)
-PRIMARY STORY: US-E17-02 - Agent/RMS service health and approved service control (#13032)
-STATUS: Implemented read-only health slice; Draft PR #34 open; GPT-5.6 Sol review pending
+PRIMARY STORY: US-E17-03 - Database health and diagnostics (#13033)
+STATUS: Implemented locally in `fca899d`; Draft PR and Sol acceptance remain pending
 
-## WPF-03 completed implementation
+## WPF-03 acceptance baseline
 
-WPF-03 adds a server-owned fixed RMS/Agent service-health projection. The
-existing Windows service manager remains the only native inspection adapter;
-the shared Application reader/handler maps it to bounded states and safe
-codes. The legacy `/api/v1/services` response keeps its existing three RMS
-rows while using the same reader/handler path as Local IPC.
+WPF-03 was accepted, squash merged, and synced to `main` at
+`803dc85c60bc3662f78b041c8c99499195656e08` (merged PR #34). The former
+WPF-03 Draft/hard-stop wording is obsolete and is superseded by this WPF-04
+task.
 
-The typed Local IPC operation is `rms.services.health`. It accepts no service
-name or display-name input, preserves protocol v1 framing, request/correlation
-matching, message bounds, timeouts, server identity verification, caller
-Windows identity, and the existing LocalWpf operator/administrator authority
-matrix. Health polling is non-audited; service mutation remains future work.
+## WPF-04 implementation truth
 
-The WPF Services workspace is functional and uses only the typed Local IPC
-client. It shows fixed catalog rows, installation/runtime state, overall
-Healthy/Degraded/Unknown health, bounded transport failures, a coordinated
-single-flight Refresh, and the existing 30-second refresh lifecycle. The
-Dashboard also shows the same service snapshot summary. No WPF service,
-HTTPS, SCM, registry, filesystem, or process access was added.
+WPF-04 adds a read-only, Agent-owned health projection for the fixed Branch
+and Cashier RMS databases. The flow is:
 
-## WPF-03 validation evidence
+`WPF -> typed Local IPC -> shared Application handler -> existing IRmsDatabaseDiagnostics`
+
+The `rms.databases.health` operation accepts no payload. The Agent owns the
+fixed database set, canonical names, caller identity, authorization, timeout,
+safe status mapping, and response validation. WPF uses only the typed
+`LocalIpcClient.GetDatabaseHealthAsync` adapter; it does not read RMS files or
+registry, open SQL connections, parse connection strings, or call HTTPS.
+
+The workspace preserves `NotConfigured`, `ConfigurationInvalid`,
+`DatabaseNameMismatch`, `Reachable`, `AuthenticationFailed`,
+`DatabaseUnavailable`, and `Unreachable`. Overall state is deterministic:
+both reachable is `Healthy`, all definitively unavailable statuses is
+`Unavailable`, and all other complete two-database results are `Degraded`.
+Incomplete or contradictory transport data fails closed as a safe error.
+
+The Dashboard and Database workspace share one coordinated refresh snapshot.
+Agent availability is kept separate from database availability. There are no
+backup, restore, cleanup, reset, repair, schema, arbitrary SQL, service
+mutation, logs, Support Bundle, package, or provisioning controls.
+
+## Validation evidence
 
 - `dotnet restore pos/RmsSupportHub.Pos.slnx`: passed.
-- Strict Release solution build with Testing-only
+- Strict Release solution build with the Testing-only
   `PosAgentSecurity__SupportHubOrigin=https://localhost:4443`: 0 warnings,
   0 errors.
-- Full POS Release tests: Domain 12/12, Application 98/98, Infrastructure
-  155/155, Agent Integration 235/235, WPF 28/28; 528/528 total.
-- Focused WPF adapter suite: 28/28, including real Local IPC coverage for
-  `service_health_unavailable` and `agent_unavailable`.
-- PowerShell quality gate: 37/37 tracked PowerShell files parse cleanly.
-- Pester 3.4.0: 172/172 passed, 0 failed, 0 skipped, 0 pending.
-- `.\scripts\dev.ps1` runtime probes: frontend `/` 200, backend
-  `/health/live` 200, and backend `/health/ready` 200.
-- Final Release WPF executable was launched from the workspace as PID 12224
-  from the exact Release path, verified alive, responsive, and titled
-  `RMS Support Hub`; that one instance remains running. The host required the
-  process-local `WINDIR=C:\WINDOWS` environment value for WPF font
-  initialization.
-- Read-only machine check found no `RmsSupportAgent` service and no `RMS
-  Support Operators` local group; no prerequisite was provisioned. Computer
-  Use was unavailable, so screenshot and actual Refresh-click evidence are
-  not claimed.
-- `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and
-  `git diff --check`: passed after implementation and documentation updates.
+- Final POS Release tests: Domain 12/12, Application 110/110,
+  Infrastructure 155/155, Agent Integration 237/237, WPF 48/48;
+  562/562 total.
+- PowerShell quality: 37/37 tracked files parse cleanly.
+- Pester: 172/172 passed, 0 failed, 0 skipped, 0 pending.
+- `git diff --check`: passed. Memory/context checks are run after the final
+  documentation update.
+
+## Runtime evidence
+
+The final Release executable was launched from the exact workspace path:
+
+`pos\src\RmsSupportHub.Pos.Desktop.Wpf\bin\Release\net10.0-windows10.0.19041.0\RmsSupportHub.Pos.Desktop.Wpf.exe`
+
+PID 18836 remained alive and responsive with window title `RMS Support Hub`
+after a second probe. The executor required process-local `WINDIR=C:\WINDOWS`
+for WPF font initialization; this is not a product setting. Computer Use was
+unavailable after its required retry, so Database navigation visibility,
+Dashboard summary visibility, and an actual Refresh click are not claimed.
+The machine was not provisioned with an Agent service or operator group.
 
 ## Azure reconciliation
 
-- #13018 remains Active/P1.
-- #13031 remains Closed/P1 with WPF-02 merge evidence.
-- #13032 remains Active/P1; read-only WPF-03 health is delivered in Draft PR
-  #34 and start/stop/restart/service mutation is intentionally deferred.
-- #13033 remains New/P1.
-- #13072-#13076 remain unchanged in the preserved Online Order backlog.
+Live Azure read before reconciliation found #13018 Active/P1, #13031 Closed/P1,
+#13032 Active/P1, #13033 New/P1, #13034 New/P2, #13035 New/P1, and #13072-
+#13076 unchanged in New state. After implementation, #13033 was reconciled to
+Active/P1 with the WPF-04 evidence note and must not be closed before Sol
+acceptance and the Draft PR merge. Keep #13032 Active/P1, #13035 P1, #13034
+P2, and #13072-#13076 unchanged.
 
-## Delivery gate
+## Next bounded executable prompt: WPF-05 - Logs & Safe Support Bundle
 
-The implementation commit is `e00447b` (`feat: add local RMS service health
-to WPF`) and the final bounded S01 correction is `17b25ae` (`fix: distinguish
-service health lookup failures in WPF`). Draft PR #34 is open from the current
-branch. Keep the pull request Draft; do not merge or mark it ready. Do not
-contact Production, provision the operator group, install or mutate a Windows
-service, or mutate native RMS/database state.
+Primary Azure story: #13035 - Logs and safe Support Bundle.
 
-## Next bounded executable prompt: WPF-04 - Database Health & Diagnostics
+Objective: add a read-only, Agent-owned local support view and bounded safe
+support-bundle projection through shared Application logic, typed Local IPC,
+and WPF. Reuse existing redaction, fixed-root, opaque-artifact, authorization,
+audit, size, retention, and cancellation boundaries. Prove that raw logs,
+credentials, connection strings, arbitrary paths, stack traces, customer data,
+and caller-selected files never reach WPF or the bundle.
 
-Primary Azure story: #13033 - US-E17-03.
+Required follow-up coverage includes authorization, safe redaction, fixed
+roots, bounded size/time, malformed and unavailable Agent responses,
+correlation, retry, shutdown cancellation, and no direct filesystem/process/
+HTTPS access from WPF. Keep support-bundle generation read-only from the WPF
+perspective and separately gated from database/service mutation.
 
-Scope the next slice to a read-only, Agent-owned database-health projection
-through shared Application logic, typed Local IPC, and a WPF workspace. Reuse
-the repository SQL/database contracts; do not accept caller-selected server,
-database, connection string, credentials, table names, or arbitrary SQL.
-Preserve the WPF-03 single-flight/cancellation lifecycle, typed protocol
-bounds, server identity verification, LocalWpf authorization, safe error
-mapping, and the WPF token/theme system. Add only deterministic health probes
-and tests for healthy, degraded, unavailable, timeout, malformed, protocol,
-security, and shutdown outcomes.
+Out of scope: database backup/restore, arbitrary SQL, schema browsing, service
+control, cleanup/reset, branch reset, packages, repair, remote Hub, SignalR,
+fleet/device supervision, Production, native RMS mutation, provisioning,
+installer, auto-update, and Online Order work. OPUS-14 durable-audit rate
+limiting and OPUS-16 representative Testing-machine/operator-group E2E remain
+deferred.
 
-Out of scope: database backup/restore, cleanup/reset, arbitrary diagnostics,
-logs, Support Bundle, packages, repair, remote Hub, SignalR, fleet/device
-supervision, Production, native RMS mutation, service mutation, installer,
-operator-group provisioning, and Online Order work. OPUS-14 rate limiting and
-OPUS-16 representative-machine/operator-group E2E remain deferred.
+HARD STOP - DO NOT EXECUTE WPF-05 until GPT-5.6 Sol reviews and accepts WPF-04.
+Do not start WPF-05 during this delivery.
 
-HARD STOP - DO NOT EXECUTE WPF-04 until GPT-5.6 Sol reviews and accepts
-WPF-03. Do not start WPF-04 during this delivery.
+## Delivery guardrails
+
+Keep the PR Draft; do not merge or mark it ready. Do not contact Production,
+provision the operator group, install or mutate a Windows service, or mutate
+native RMS/database state. Preserve the WPF-01 through WPF-03 Named Pipe
+trust boundary and the Online Order backlog.
