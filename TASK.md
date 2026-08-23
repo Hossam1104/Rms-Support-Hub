@@ -61,7 +61,7 @@ The final Release executable was launched from the exact workspace path:
 
 `pos\src\RmsSupportHub.Pos.Desktop.Wpf\bin\Release\net10.0-windows10.0.19041.0\RmsSupportHub.Pos.Desktop.Wpf.exe`
 
-PID 26924 remained alive and responsive with window title `RMS Support Hub`
+PID 18836 remained alive and responsive with window title `RMS Support Hub`
 after a second probe. The executor required process-local `WINDIR=C:\WINDOWS`
 for WPF font initialization; this is not a product setting. Computer Use was
 unavailable after its required retry, so Database navigation visibility,

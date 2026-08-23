@@ -50,7 +50,7 @@
   562/562 total.
 - PowerShell quality: 37/37 tracked files parse cleanly. Pester: 172/172
   passed, 0 failed, 0 skipped, 0 pending.
-- Final Release WPF process: PID 26924, exact Release executable, title
+- Final Release WPF process: PID 18836, exact Release executable, title
   `RMS Support Hub`, alive and responsive after a second probe. The process
   required only process-local `WINDIR=C:\WINDOWS` for font initialization.
   Computer Use failed its native-pipe retry, so screenshot/navigation/Refresh
