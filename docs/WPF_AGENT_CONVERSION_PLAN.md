@@ -87,7 +87,13 @@ shared Agent/Application seam and typed Local IPC:
   #35, main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`).
 - **WPF-05 - Logs and Safe Support Bundle:** current branch and story
   #13035. Detailed logs are on-demand; Support Bundle UI exposes validated
-  metadata only and defers artifact export/download.
+  metadata only and defers artifact export/download. The diagnostic projection
+  is transport-neutral in Application and mapped to V1 only by the Agent; it
+  exposes bounded redacted stack-frame labels, not raw or unbounded stack
+  traces. Redaction tests cover secrets, credentials, connection-string secret
+  values, host paths, Windows identities, SIDs, and bounded stack-frame paths,
+  but WPF-05 does not claim universal customer-data/PII-free output. Task
+  #13116 defines the remaining privacy policy and deterministic validation.
 - **WPF-06 - Database Backup & Local Artifact Delivery:** next gated slice,
   story #13034. It must not start until Sol accepts WPF-05.
 

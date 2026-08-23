@@ -1,5 +1,3 @@
-using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
-
 namespace RmsSupportHub.Pos.Application.Diagnostics;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace RmsSupportHub.Pos.Application.Diagnostics;
 /// </summary>
 public interface IServiceFailureAnalyzer
 {
-    Task<ServiceFailureAnalysisDto?> AnalyzeAsync(
+    Task<ServiceFailureAnalysis?> AnalyzeAsync(
         string serviceId,
         CancellationToken cancellationToken = default);
 }

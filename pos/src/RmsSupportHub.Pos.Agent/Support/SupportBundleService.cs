@@ -4,12 +4,15 @@ using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Rms;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Support;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+
+using ContractFailureSeverity = RmsSupportHub.Pos.Contracts.V1.Diagnostics.FailureSeverity;
 
 namespace RmsSupportHub.Pos.Agent.Support;
 
@@ -59,7 +62,7 @@ public sealed class SupportBundleService(
             healthReport.Summary,
             operationId: "health.check",
             correlationId: correlationId);
-        var serviceAnalyses = new List<ServiceFailureAnalysisDto>();
+        var serviceAnalyses = new List<ServiceFailureAnalysis>();
         foreach (var service in diagnostic.Services.Take(3))
         {
             var analysis = await failureAnalyzer.AnalyzeAsync(service.ServiceId, cancellationToken).ConfigureAwait(false);
@@ -115,12 +118,12 @@ public sealed class SupportBundleService(
         }
     }
 
-    private static FailureSeverity ToTimelineSeverity(HealthState state) => state switch
+    private static ContractFailureSeverity ToTimelineSeverity(HealthState state) => state switch
     {
-        HealthState.Healthy => FailureSeverity.Informational,
-        HealthState.Warning => FailureSeverity.Warning,
-        HealthState.ActionRequired => FailureSeverity.ActionRequired,
-        _ => FailureSeverity.Unknown
+        HealthState.Healthy => ContractFailureSeverity.Informational,
+        HealthState.Warning => ContractFailureSeverity.Warning,
+        HealthState.ActionRequired => ContractFailureSeverity.ActionRequired,
+        _ => ContractFailureSeverity.Unknown
     };
 
     private sealed record SupportBundlePayload(
@@ -131,7 +134,7 @@ public sealed class SupportBundleService(
         object Health,
         object Diagnostics,
         object OperationalHealth,
-        IReadOnlyList<ServiceFailureAnalysisDto> FailureAnalysis,
+        IReadOnlyList<ServiceFailureAnalysis> FailureAnalysis,
         object IncidentTimeline,
         IReadOnlyList<SafeAuditRecord> Audit);
 

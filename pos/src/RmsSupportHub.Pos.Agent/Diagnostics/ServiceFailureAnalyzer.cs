@@ -1,6 +1,5 @@
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Application.Diagnostics;
-using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
@@ -19,7 +18,7 @@ public sealed class ServiceFailureAnalyzer(
     IRmsInstallationDiscovery discovery,
     TimeProvider timeProvider) : IServiceFailureAnalyzer
 {
-    public async Task<ServiceFailureAnalysisDto?> AnalyzeAsync(
+    public async Task<ServiceFailureAnalysis?> AnalyzeAsync(
         string? serviceId,
         CancellationToken cancellationToken = default)
     {
@@ -75,7 +74,7 @@ public sealed class ServiceFailureAnalyzer(
         }
 
         var drift = FindDrift(target.ServiceName, installation);
-        var records = evidence.Records.Take(12).Select(ToContract).ToArray();
+        var records = evidence.Records.Take(12).Select(ToApplication).ToArray();
         var classification = Classify(status, records, drift, unknownReasons.Count > 0);
         var recommendations = BuildRecommendations(classification.Category, status, drift, records);
         var summary = BuildSummary(classification.Category, classification.Severity, status, records, drift, unknownReasons.Count > 0);
@@ -95,7 +94,7 @@ public sealed class ServiceFailureAnalyzer(
 
     private static (FailureCategory Category, FailureSeverity Severity, FailureConfidence Confidence) Classify(
         ServiceStatus status,
-        IReadOnlyList<FailureEvidenceDto> records,
+        IReadOnlyList<FailureEvidence> records,
         RmsComponentDriftState? drift,
         bool evidenceIncomplete)
     {
@@ -136,13 +135,13 @@ public sealed class ServiceFailureAnalyzer(
         return (FailureCategory.Unknown, FailureSeverity.Unknown, FailureConfidence.Unknown);
     }
 
-    private static IReadOnlyList<FailureRecommendationDto> BuildRecommendations(
+    private static IReadOnlyList<FailureRecommendation> BuildRecommendations(
         FailureCategory category,
         ServiceStatus status,
         RmsComponentDriftState? drift,
-        IReadOnlyList<FailureEvidenceDto> records)
+        IReadOnlyList<FailureEvidence> records)
     {
-        var recommendations = new List<FailureRecommendationDto>();
+        var recommendations = new List<FailureRecommendation>();
         if (category == FailureCategory.ServiceStopped || status == ServiceStatus.Paused)
         {
             recommendations.Add(new("start-service", "Review Start", "The service is not running; confirm the local state before using the typed Start action."));
@@ -175,7 +174,7 @@ public sealed class ServiceFailureAnalyzer(
         FailureCategory category,
         FailureSeverity severity,
         ServiceStatus status,
-        IReadOnlyList<FailureEvidenceDto> records,
+        IReadOnlyList<FailureEvidence> records,
         RmsComponentDriftState? drift,
         bool incomplete) =>
         category switch
@@ -191,7 +190,7 @@ public sealed class ServiceFailureAnalyzer(
             _ => "The service failure state could not be established from bounded evidence."
         };
 
-    private static FailureEvidenceDto ToContract(RmsDiagnosticEvidenceRecord record) => new(
+    private static FailureEvidence ToApplication(RmsDiagnosticEvidenceRecord record) => new(
         record.Source,
         record.AtUtc,
         record.Summary,

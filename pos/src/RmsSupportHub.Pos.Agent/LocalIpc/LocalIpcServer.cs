@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Agent.Services;
@@ -528,7 +529,7 @@ public sealed class LocalIpcServer(
                     pipe,
                     request.RequestId,
                     effectiveCorrelationId,
-                    logEvidenceResult.Value,
+                    ServiceFailureContractMapper.Map(logEvidenceResult.Value),
                     cancellationToken).ConfigureAwait(false);
                 return;
 

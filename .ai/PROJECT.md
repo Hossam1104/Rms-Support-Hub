@@ -44,8 +44,8 @@ Do not copy facts that can be cheaply discovered from the repository.
   generated client artifacts, direct browser transport, and no Support Hub API
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
-  credentials and capabilities remain server-owned; WPF uses typed Local IPC for read-only RMS/Agent health; inspection remains Agent-owned.
-- WPF-04 merged; WPF-05 metadata-only IPC; WPF-06 owns export.
+  credentials and capabilities server-owned; WPF uses typed Local IPC for read-only RMS/Agent health; inspection remains Agent-owned. Application diagnostics are transport-neutral and mapped to V1 at the Agent boundary.
+- WPF-04 merged; WPF-05 metadata-only IPC; WPF-06 owns export. Bounded redacted frames are visible; universal PII/customer-data-free output is not claimed; #13116 tracks policy.
 - Slice C establishes the permanent product/service identity
   `RmsSupportAgent`, safe migration inputs for the two historical Testing
   service names, machine-pinned package trust with a deterministic canonical
@@ -77,9 +77,7 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Frontend production build/type check: `cd frontend; npm run build --
   --configuration production`. A `production-offline` configuration disables
   external font inlining for reproducible offline builds.
-- Riyal asset provenance check: `cd frontend; npm run test:riyal-asset` -
-  verifies the approved SAMA vector's canonical SHA-1, SVG structure, and
-  absence of textual or external references.
+- Riyal asset check: `cd frontend; npm run test:riyal-asset`.
 - AI context budget check: `python .ai/scripts/check_memory.py`.
 - Local run: `.\scripts\dev.ps1` - starts API on port 5200 and Angular on port
   4200. Agent-run live verification uses Testing only, never Production.
@@ -101,7 +99,6 @@ Do not copy facts that can be cheaply discovered from the repository.
 - INT-13C Testing provisioning: run `scripts/setup-pos-agent-testing.ps1 -IUnderstandTestingOnly -Confirm:$false` and `scripts/remove-pos-agent-testing.ps1 -IUnderstandTestingOnly -WhatIf -Confirm:$false` only on the authorized Testing machine. Exact browser/IWA policy logic is in `scripts/PosAgentWindowsProvisioning.psm1`; the task-scoped normal-user browser evidence launcher is `scripts/invoke-pos-browser-evidence.ps1` and uses `tools/pos-browser-evidence`.
 - INT-13D Testing runtime uses exact `https://support-hub.integration.test:4443` and `scripts/start-pos-agent-testing.ps1 -IUnderstandTestingOnly` (self-elevates through UAC unless `-NoSelfElevate`); it rebuilds and stages the current Angular/API runtime, binds owned PID, listener, content root, certificate, and build identity in state, refuses an unowned :4443 listener, and verifies the served build identity, index, and main bundle before reporting success. Runtime ownership and build-identity helpers are in `scripts/PosSupportHubRuntime.psm1`; the served identity document is produced by `frontend/scripts/build-identity.mjs`.
 - PowerShell quality gate: `.\scripts\test-powershell-quality.ps1` parses every tracked `.ps1`/`.psm1` and rejects an operator parsed as a command or a broken continuation; `Invoke-Pester -Path .\scripts\tests` runs the provisioning suites (Pester 3/4 syntax).
-- Lint/format/E2E: no configured command; current counts and bundle sizes live in `.ai/STATE.md`.
 - Manual IIS package: `.\scripts\publish-iis.ps1` creates `publish/RmsSupportHub-IIS/` and root-content ZIP without touching IIS or shipping secrets; see `docs/MANUAL_IIS_DEPLOYMENT.md`.
 ## Integrations
 

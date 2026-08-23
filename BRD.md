@@ -273,11 +273,11 @@ Separate authorized environment requiring:
 - `WPF-02`: WPF native desktop shell and local Agent health experience — merged.
 - `WPF-03`: Local RMS service health through the shared Agent/IPC seam — merged.
 - `WPF-04`: Read-only database health and diagnostics — Sol accepted and merged in PR #35.
-- `WPF-05`: Bounded redacted Logs/evidence and administrator-only Support Bundle metadata — current implementation slice on story #13035; Draft PR and Sol acceptance remain pending.
+- `WPF-05`: Bounded redacted Logs/evidence and administrator-only Support Bundle metadata — current implementation slice on story #13035; Draft PR and Sol acceptance remain pending. The UI intentionally exposes bounded redacted stack-frame labels, not raw or unbounded stack traces. Existing tests prove redaction of secrets, credentials, connection-string secret values, host paths, Windows identities, SIDs, and bounded stack-frame paths; a universal customer-data/PII-free guarantee is not claimed. Privacy-policy validation is tracked by Task #13116.
 
 ### Remaining planned implementation
 - `WPF-06`: Database backup creation, bounded artifact inventory, and local artifact delivery/export; primary story #13034. Database restore remains separately gated.
-- Later phases: safety snapshots, cleanup/reset, package lifecycle, rollback/recovery, local audit, SignalR/device identity, fleet supervision, remote operations, parity validation, and rollout.
+- Later phases: safety snapshots, cleanup/reset, package lifecycle, rollback/recovery, local audit, SignalR/device identity, fleet supervision, remote operations, parity validation, and rollout. Support Bundle artifact export/download is not implemented in WPF-05 and remains gated for WPF-06.
 
 ---
 

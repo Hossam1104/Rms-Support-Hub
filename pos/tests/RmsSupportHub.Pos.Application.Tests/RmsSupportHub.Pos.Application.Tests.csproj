@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RmsSupportHub.Pos.Application\RmsSupportHub.Pos.Application.csproj" />
-    <ProjectReference Include="..\..\src\RmsSupportHub.Pos.Contracts\RmsSupportHub.Pos.Contracts.csproj" />
     <ProjectReference Include="..\..\src\RmsSupportHub.Pos.Domain\RmsSupportHub.Pos.Domain.csproj" />
   </ItemGroup>
 

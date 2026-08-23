@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RmsSupportHub.Pos.Domain\RmsSupportHub.Pos.Domain.csproj" />
-    <ProjectReference Include="..\RmsSupportHub.Pos.Contracts\RmsSupportHub.Pos.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

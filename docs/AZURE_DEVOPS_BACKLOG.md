@@ -50,11 +50,11 @@ not the original architecture-baseline defaults.
 - E16 #13017 is Active/P2; #13022 and #13024 are Closed/P1; #13023,
   #13029, and #13030 are Active/P2; #13021, #13025, #13026, and #13028 are
   New/P1; #13027 is New/P2.
-- E17 #13018 is Active/P1; #13031 is Closed/P1; #13032 and #13033 are
+- E17 #13018 is Active/P1; #13031 and #13033 are Closed/P1; #13032 is
   Active/P1; #13034 is New/P2; #13035 is Active/P1; #13036, #13037,
   #13038, and #13040 are New/P2; #13039, #13041, #13042, and #13043 are
   New/P1.
-- E18 #13019 remains New/P2 and E19 #13020 remains New/P1. Their future
+- E18 #13019 remains New/P2 and E19 #13020 is New/P2. Their future
   children retain their live New states and priorities.
 - #13072 is New/P1; #13073 and #13074 are New/P1; #13075 is New/P2; and
   #13076 is New/P1 in `OO-05 - Integrated Testing`.
@@ -623,13 +623,16 @@ exact-head validation before closure.
 **Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028, BR-030 | **Evidence:** Read-only service health is delivered; Start/Stop/Restart mutation remains out of scope.
 
 ### US-E17-03 — Database health and diagnostics (#13033)
-**Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF-04 is Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; Azure remains open until governance closure.
+**Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF-04 was Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; live Azure was closed after reconciliation.
 
 ### US-E17-04 — Database backup/download and guarded restore (#13034)
 **Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
 
 ### US-E17-05 — Logs and safe Support Bundle (#13035)
-**Status:** Active | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-05 current branch adds bounded redacted evidence and administrator-only typed Support Bundle metadata; Draft PR and Sol acceptance pending.
+**Status:** Active | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-05 current branch adds bounded redacted evidence and administrator-only typed Support Bundle metadata; Draft PR and Sol acceptance pending. Bounded redacted stack-frame labels are intentionally exposed; no universal customer-data/PII-free guarantee is claimed. Privacy policy and deterministic validation are tracked by Task #13116 (New/P2).
+
+### Diagnostic evidence PII/redaction policy (#13116)
+**Status:** New | **Priority:** 2 | **Parent:** US-E17-05 (#13035) | **Traceability:** BR-030 | **Purpose:** Define permitted business/customer identifiers in diagnostic evidence and validate deterministic redaction/privacy rules before any remote or fleet log exposure.
 
 ### US-E17-06 — Safety Snapshots and incident timeline (#13036)
 **Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
@@ -650,7 +653,7 @@ exact-head validation before closure.
 **Status:** New | **Priority:** 1 | **Traceability:** BR-028, BR-034
 **Acceptance Criteria:**
 - High-risk mutating operations (database restore, branch reset, cleanup execution, package install/upgrade/repair/uninstall, rollback/recovery, privileged service control) require local Administrator/elevated authorization and explicit confirmation.
-- Authorized Local Operators can execute non-destructive diagnostic, health, log, backup, and support bundle operations without elevation.
+- Authorized Local Operators can execute read-only diagnostic, health, and bounded log operations without elevation; Support Bundle generation and future backup creation require Local Administrator authority.
 - Non-admin users attempting elevated operations receive clear permission-denied feedback and elevation guidance.
 - All authorization decisions and high-risk operation confirmations are durably audited.
 
@@ -716,7 +719,7 @@ exact-head validation before closure.
 **Epic Status:** New (Approved under CR-001 / ADR-0029)
 **Area:** `Rms_Support_Hub\POS`
 **Iteration:** `Rms_Support_Hub\POS-10 - WPF Migration and Rollout`
-**Priority:** 1
+**Priority:** 2
 
 ### US-E19-01 — Preserve/reuse existing E07-E09 capability contracts (#13058)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-027, BR-030

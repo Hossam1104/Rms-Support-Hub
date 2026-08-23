@@ -118,8 +118,8 @@ Communication between the WPF desktop application and the Agent Service uses an 
 #### Layer B — Per-Command Authorization
 - Connecting to the Named Pipe does **not** grant blanket authorization (`PIPE CONNECTION AUTHORIZATION != COMMAND AUTHORIZATION`).
 - The Agent application layer evaluates each typed command/query against the caller's authenticated Windows identity and role:
-  - **Authorized Local Operator:** Permitted to execute non-destructive low/medium-risk maintenance (machine/RMS health, database health/read diagnostics, logs inspection, Support Bundle creation, local audit/activity, approved backup creation).
-  - **Local Administrator / Elevated Operator:** Required for high-risk mutating actions (privileged Windows service restarts/mutations, database restore, cleanup execution, branch reset, package install/upgrade/repair/uninstall, rollback/recovery).
+  - **Authorized Local Operator:** Permitted to execute read-only diagnostics (machine/RMS health, database health/read diagnostics, and bounded logs inspection).
+  - **Local Administrator / Elevated Operator:** Required for Support Bundle generation and high-risk mutating actions (privileged Windows service restarts/mutations, database restore, cleanup execution, branch reset, package install/upgrade/repair/uninstall, rollback/recovery).
 - Named Pipe transport eliminates browser CORS, loopback HTTPS certificate trust, and LNA policy friction.
 
 ### 7.3 Device Identity & Trust
@@ -211,6 +211,12 @@ The architecture re-baseline and subsequent migration shall be accepted when:
 The original Phase 1/WPF-01 gate required CR-001 and ADR-0029 acceptance,
 Azure E16-E19 hierarchy synchronization, and explicit acceptance of the
 first implementation slice. That gate was satisfied before WPF-01 PR #32;
-WPF-01 through WPF-04 are now merged. Each later WPF slice remains separately
-bounded and requires GPT-5.6 Sol acceptance before merge; WPF-05 Logs and Safe
-Support Bundle is the current open slice.
+WPF-01 through WPF-04 are now merged, with WPF-04 PR #35 at main
+`0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`. Each later WPF slice remains
+separately bounded and requires GPT-5.6 Sol acceptance before merge; WPF-05
+Logs and Safe Support Bundle is the current Draft slice. WPF-05 has not
+implemented artifact export/download, backup/restore, service or database
+mutation, fleet/SignalR supervision, or Production migration. Its diagnostic
+privacy evidence is bounded and redacted, but it does not establish a
+universal customer-data/PII-free guarantee; Task #13116 tracks policy
+definition and deterministic validation.

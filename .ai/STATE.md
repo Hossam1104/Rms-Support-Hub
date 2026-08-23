@@ -13,6 +13,7 @@
 ## WPF-05 durable facts
 
 - `LogEvidenceQueryHandler` is the shared, transport-independent read seam.
+  Its Application models have no Contracts dependency; Agent maps them to V1.
   It authorizes LocalWpf LocalOperator/LocalAdministrator callers, uses the
   fixed three RMS service identities and existing analyzer/evidence reader,
   bounds each query to 15 seconds, caps records/unknown reasons/
@@ -26,7 +27,7 @@
   Support Bundle generation. It requires local administrator authority,
   verifies the principal/correlation boundary, invokes the existing fixed-root
   redacted/bounded generator, audits once, revokes an artifact if audit is
-  unavailable, and records the existing timeline only after successful audit.
+  unavailable, and records the successful SupportBundle timeline only after audit.
 - The typed `support.bundle.generate` Local IPC operation accepts a
   correlation ID only and returns validated artifact metadata, creation time,
   expiry, checksum, included sections, and correlation ID. WPF never receives
@@ -44,6 +45,10 @@
   Bundle metadata (artifact, size, checksum, created, expiry, sections,
   correlation, opaque artifact ID). Artifact export/download is explicitly
   deferred to WPF-06.
+- WPF-05 intentionally exposes bounded redacted stack-frame labels, not raw or
+  unbounded traces. Redaction covers secrets, credentials, secret connection
+  values, host paths, Windows identities, SIDs, and frame paths; no universal
+  customer-data/PII-free guarantee is claimed. Task #13116 tracks policy.
 
 ## Validation evidence
 
@@ -52,14 +57,16 @@ Targeted WPF-05 validation completed:
 - Application `LogEvidenceQueryTests`: 6/6.
 - WPF `LogsAndSupportBundleViewModelTests`: 5/5.
 - WPF `LocalAgentLogsAndSupportBundleClientTests`: 4/4.
-- Agent Integration optional-handler fail-closed test: 1/1.
-- Existing HTTP Support Bundle/audit-unavailable regression tests: 5/5.
+- Agent Integration optional-handler fail-closed test: 1/1; new Support Bundle
+  audit/revocation/principal/mapper/architecture coverage is included.
+- Existing HTTP Support Bundle/audit-unavailable regression tests plus new
+  boundary coverage passed.
 - WPF Debug build and relevant Release project builds: 0 warnings, 0 errors.
 - `git diff --check`: passed.
 
 Final validation on the task state passed: strict Release solution build with
 Testing-only origin was 0 warnings/0 errors; Domain 12/12, Application 116/116,
-Infrastructure 155/155, Agent Integration 238/238, and WPF 57/57 (578/578);
+Infrastructure 156/156, Agent Integration 242/242, and WPF 57/57 (583/583);
 PowerShell quality 37/37; Pester 172 passed, 0 failed, 0 skipped, 0 pending;
 `git diff --check` passed; and both context/memory checks passed. The security
 classification found only the intended typed Named Pipe boundary, Agent-side
@@ -72,11 +79,11 @@ Draft/open for Sol acceptance.
 ## Azure and backlog
 
 - Live 2026-08-23 reconciliation: E16 #13017 Active/P2; E17 #13018
-  Active/P1; E18 #13019 New/P2; E19 #13020 New/P1.
-- WPF children now match live states/priorities: #13022/#13024/#13031 are
-  Closed/P1; #13023/#13029/#13030 are Active/P2; #13032/#13033/#13035 are
-  Active/P1; #13034 is New/P2; remaining WPF local/future children retain
-  their live New priorities.
+  Active/P1; E18 #13019 New/P2; E19 #13020 New/P2.
+- WPF children now match live states/priorities: #13022/#13024/#13031/#13033
+  Closed/P1; #13023/#13029/#13030 Active/P2; #13032/#13035 Active/P1;
+  #13034/#13116 New/P2; remaining WPF local/future children retain live New
+  priorities.
 - #13072-#13076 remain New in the Online Order integrated-testing backlog;
   #12900-#12902 remain New/P3 conditional and #12949 remains New/P3 deferred
   Production acceptance.

@@ -24,21 +24,21 @@ This matrix was reconciled from a live Azure DevOps query on 2026-08-23.
 The WPF epics and child states below are current Azure truth; the evidence
 column distinguishes delivered local slices from future remote/fleet work.
 
-- E16 #13017 is Active/P2 and E17 #13018 is Active/P1. E18 #13019 remains
-  New/P2 and E19 #13020 remains New/P1.
-- WPF P1 items: #13018, #13020, #13021, #13022, #13024, #13025, #13026,
-  #13028, #13031, #13032, #13033, #13035, #13039, #13041, #13042, #13043,
+- E16 #13017 is Active/P2 and E17 #13018 is Active/P1. E18 #13019 and E19
+  #13020 are New/P2.
+- WPF P1 items: #13018, #13021, #13022, #13024, #13025, #13026, #13028,
+  #13031, #13032, #13035, #13039, #13041, #13042, #13043,
   #13046, #13054, #13055, #13058, #13059, #13060, #13063, #13064, #13065,
   #13066, #13069, #13071.
 - WPF P2 items: #13017, #13019, #13023, #13027, #13029, #13030, #13034,
   #13036, #13037, #13038, #13040, #13044, #13045, #13047, #13048, #13049,
   #13050, #13051, #13052, #13053, #13056, #13057, #13061, #13062, #13067,
-  #13068.
+  #13068, #13116.
 - WPF P3 item: #13070. Preserved Online Order items are #13072/#13073/
   #13074/#13076 at P1 and #13075 at P2. Conditional/deferred items #12900,
   #12901, #12902, and #12949 remain New/P3.
-- #13022, #13024, and #13031 are Closed/P1; #13023, #13029, and #13030 are
-  Active/P2; #13032, #13033, and #13035 are Active/P1. WPF-04 evidence is
+- #13022, #13024, #13031, and #13033 are Closed/P1; #13023, #13029, and #13030 are
+  Active/P2; #13032 and #13035 are Active/P1. WPF-04 evidence is
   PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; WPF-05 is the
   current Draft-PR implementation slice and must remain open for Sol review.
 
@@ -245,9 +245,10 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **US-E16-10** | 13030 | User Story | [US-E16-10] Architecture security and failure-mode test harness | E16 (#13017) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-030, BR-034, BR-035, BR-036 | P2; local IPC failure coverage delivered, SignalR/offline coverage remains future |
 | **US-E17-01** | 13031 | User Story | [US-E17-01] WPF shell and local machine dashboard | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; WPF shell/dashboard delivered through WPF-02 |
 | **US-E17-02** | 13032 | User Story | [US-E17-02] Agent/RMS service health and approved service control | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030 | P1; read-only service health delivered, mutation remains future |
-| **US-E17-03** | 13033 | User Story | [US-E17-03] Database health and diagnostics | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` |
+| **US-E17-03** | 13033 | User Story | [US-E17-03] Database health and diagnostics | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` |
 | **US-E17-04** | 13034 | User Story | [US-E17-04] Database backup/download and guarded restore | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
-| **US-E17-05** | 13035 | User Story | [US-E17-05] Logs and safe Support Bundle | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-05 bounded redacted evidence and administrator-only Support Bundle metadata, Draft PR pending |
+| **US-E17-05** | 13035 | User Story | [US-E17-05] Logs and safe Support Bundle | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-05 bounded redacted evidence and administrator-only Support Bundle metadata, Draft PR pending; privacy policy Task #13116 is New/P2 |
+| **T-E17-05-01** | 13116 | Task | Define and validate diagnostic evidence PII/redaction policy | US-E17-05 (#13035) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-030 | P2; define permitted customer/business identifiers and deterministic redaction/privacy tests |
 | **US-E17-06** | 13036 | User Story | [US-E17-06] Safety Snapshots and incident timeline | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
 | **US-E17-07** | 13037 | User Story | [US-E17-07] Cleanup and branch-reset workflows | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
 | **US-E17-08** | 13038 | User Story | [US-E17-08] Package install/upgrade/repair/uninstall | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-038 | Architecture baseline |

@@ -1,6 +1,5 @@
 using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
-using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Application.Tests;
@@ -11,13 +10,13 @@ public sealed class LogEvidenceQueryTests
     public async Task LocalOperatorReceivesOnlyTheFixedBoundedServiceProjection()
     {
         var analyzer = new FakeAnalyzer((serviceId, _) =>
-            Task.FromResult<ServiceFailureAnalysisDto?>(CreateAnalysis(serviceId, bounded: true)));
+            Task.FromResult<ServiceFailureAnalysis?>(CreateAnalysis(serviceId, bounded: true)));
         var handler = new LogEvidenceQueryHandler(analyzer, TimeProvider.System);
 
         var result = await handler.HandleAsync(LocalOperatorContext("logs-bounded"));
 
         Assert.True(result.Succeeded);
-        var snapshot = Assert.IsType<LogEvidenceSnapshotDto>(result.Value);
+        var snapshot = Assert.IsType<LogEvidenceSnapshot>(result.Value);
         Assert.Equal(LogEvidenceOverallState.Degraded, snapshot.OverallState);
         Assert.Equal(3, snapshot.Services.Count);
         Assert.Equal(
@@ -37,7 +36,7 @@ public sealed class LogEvidenceQueryTests
     {
         var handler = new LogEvidenceQueryHandler(
             new FakeAnalyzer((serviceId, _) =>
-                Task.FromResult<ServiceFailureAnalysisDto?>(CreateAnalysis(serviceId))),
+                Task.FromResult<ServiceFailureAnalysis?>(CreateAnalysis(serviceId))),
             TimeProvider.System);
 
         var result = await handler.HandleAsync(new InvocationContext(
@@ -53,7 +52,7 @@ public sealed class LogEvidenceQueryTests
     public async Task MissingUnauthenticatedAndRemoteContextsAreDeniedBeforeAnalyzerCalls()
     {
         var analyzer = new FakeAnalyzer((serviceId, _) =>
-            Task.FromResult<ServiceFailureAnalysisDto?>(CreateAnalysis(serviceId)));
+            Task.FromResult<ServiceFailureAnalysis?>(CreateAnalysis(serviceId)));
         var handler = new LogEvidenceQueryHandler(analyzer, TimeProvider.System);
 
         var missing = await handler.HandleAsync(null);
@@ -80,7 +79,7 @@ public sealed class LogEvidenceQueryTests
         var analyzer = new FakeAnalyzer((serviceId, _) =>
         {
             var analysis = CreateAnalysis(serviceId);
-            return Task.FromResult<ServiceFailureAnalysisDto?>(
+            return Task.FromResult<ServiceFailureAnalysis?>(
                 serviceId == ServiceIdentityCatalog.ToServiceId(RmsServiceCatalog.BranchServiceName)
                     ? analysis with { ServiceDisplayName = "Unexpected service" }
                     : analysis with { Summary = "password=secret" });
@@ -137,7 +136,7 @@ public sealed class LogEvidenceQueryTests
         InvocationAuthorizationLevel.LocalOperator,
         correlationId);
 
-    private static ServiceFailureAnalysisDto CreateAnalysis(string serviceId, bool bounded = false)
+    private static ServiceFailureAnalysis CreateAnalysis(string serviceId, bool bounded = false)
     {
         var definition = RmsServiceCatalog.Definitions.Single(item =>
             ServiceIdentityCatalog.ToServiceId(item.ServiceName) == serviceId);
@@ -151,7 +150,7 @@ public sealed class LogEvidenceQueryTests
             DateTimeOffset.UtcNow,
             bounded
                 ? Enumerable.Range(0, 12)
-                    .Select(index => new FailureEvidenceDto(
+                    .Select(index => new FailureEvidence(
                         "SCM",
                         DateTimeOffset.UtcNow,
                         $"Bounded evidence {index}",
@@ -165,7 +164,7 @@ public sealed class LogEvidenceQueryTests
                 : [],
             bounded
                 ? Enumerable.Range(0, 4)
-                    .Select(index => new FailureRecommendationDto(
+                    .Select(index => new FailureRecommendation(
                         $"rec-{index}",
                         $"Recommendation {index}",
                         "Review the bounded evidence."))
@@ -174,14 +173,14 @@ public sealed class LogEvidenceQueryTests
     }
 
     private sealed class FakeAnalyzer(
-        Func<string, CancellationToken, Task<ServiceFailureAnalysisDto?>> responder)
+        Func<string, CancellationToken, Task<ServiceFailureAnalysis?>> responder)
         : IServiceFailureAnalyzer
     {
         public int CallCount => Volatile.Read(ref callCount);
 
         private int callCount;
 
-        public async Task<ServiceFailureAnalysisDto?> AnalyzeAsync(
+        public async Task<ServiceFailureAnalysis?> AnalyzeAsync(
             string serviceId,
             CancellationToken cancellationToken)
         {

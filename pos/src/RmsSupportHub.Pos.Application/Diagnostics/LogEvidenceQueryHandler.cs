@@ -1,5 +1,4 @@
 using RmsSupportHub.Pos.Application.Invocation;
-using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Application.Diagnostics;
@@ -41,7 +40,7 @@ public sealed class LogEvidenceQueryHandler
         }
     }
 
-    public async Task<ApplicationResult<LogEvidenceSnapshotDto>> HandleAsync(
+    public async Task<ApplicationResult<LogEvidenceSnapshot>> HandleAsync(
         InvocationContext? context,
         CancellationToken cancellationToken = default)
     {
@@ -50,7 +49,7 @@ public sealed class LogEvidenceQueryHandler
             AgentOperationRisk.ReadOnlyDiagnostic);
         if (!decision.Allowed)
         {
-            return ApplicationResult<LogEvidenceSnapshotDto>.Failure(
+            return ApplicationResult<LogEvidenceSnapshot>.Failure(
                 decision.Code,
                 decision.Message);
         }
@@ -70,12 +69,12 @@ public sealed class LogEvidenceQueryHandler
                 || analyses.Any(analysis => analysis is null)
                 || !TryValidateAnalyses(analyses!, out var safeAnalyses))
             {
-                return ApplicationResult<LogEvidenceSnapshotDto>.Failure(
+                return ApplicationResult<LogEvidenceSnapshot>.Failure(
                     "logs_evidence_unavailable",
                     "RMS diagnostic evidence is currently unavailable.");
             }
 
-            return ApplicationResult<LogEvidenceSnapshotDto>.Success(
+            return ApplicationResult<LogEvidenceSnapshot>.Success(
                 new(
                     clock.GetUtcNow(),
                     DetermineOverallState(safeAnalyses),
@@ -87,20 +86,20 @@ public sealed class LogEvidenceQueryHandler
         }
         catch (OperationCanceledException) when (timeoutSource.IsCancellationRequested)
         {
-            return ApplicationResult<LogEvidenceSnapshotDto>.Failure(
+            return ApplicationResult<LogEvidenceSnapshot>.Failure(
                 "logs_evidence_timeout",
                 "RMS diagnostic evidence timed out.");
         }
         catch
         {
-            return ApplicationResult<LogEvidenceSnapshotDto>.Failure(
+            return ApplicationResult<LogEvidenceSnapshot>.Failure(
                 "logs_evidence_unavailable",
                 "RMS diagnostic evidence is currently unavailable.");
         }
     }
 
     private static LogEvidenceOverallState DetermineOverallState(
-        IReadOnlyList<ServiceFailureAnalysisDto> analyses)
+        IReadOnlyList<ServiceFailureAnalysis> analyses)
     {
         if (analyses.Count != FixedServices.Count)
         {
@@ -125,8 +124,8 @@ public sealed class LogEvidenceQueryHandler
     }
 
     private static bool TryValidateAnalyses(
-        IReadOnlyList<ServiceFailureAnalysisDto?> analyses,
-        out IReadOnlyList<ServiceFailureAnalysisDto> safeAnalyses)
+        IReadOnlyList<ServiceFailureAnalysis?> analyses,
+        out IReadOnlyList<ServiceFailureAnalysis> safeAnalyses)
     {
         safeAnalyses = [];
         if (analyses.Count != FixedServices.Count)
@@ -134,7 +133,7 @@ public sealed class LogEvidenceQueryHandler
             return false;
         }
 
-        var values = new List<ServiceFailureAnalysisDto>(FixedServices.Count);
+        var values = new List<ServiceFailureAnalysis>(FixedServices.Count);
         foreach (var (expected, analysis) in FixedServices.Zip(analyses))
         {
             if (analysis is null
