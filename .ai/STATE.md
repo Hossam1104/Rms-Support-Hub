@@ -92,11 +92,13 @@ Draft/open for Sol acceptance.
 
 ## Runtime and environment boundary
 
-- Final Release WPF runtime verification passed at
+- Post-delivery final Release rebuild passed with 0 warnings/0 errors. Final WPF
+  runtime verification passed at
   `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
-  PID 9028, title `RMS Support Hub`, `Responding=True`, exactly one process at
-  the exact path. The process required the process-local `WINDIR=C:\WINDOWS`
-  environment normalization for WPF font initialization and is left running.
+  PID 7420, title `RMS Support Hub`, `Responding=True`, exactly one process at
+  the exact path, started `2026-08-23T22:07:05.1204584+03:00`. The process
+  required the process-local `WINDIR=C:\WINDOWS` environment normalization for
+  WPF font initialization and is left running.
 - The computer-use native pipe was unavailable after two required attempts;
   no visible Logs/filter or Support Bundle screenshot/click evidence is claimed.
 - Final repository runtime probe ran `scripts/dev.ps1`: `GET

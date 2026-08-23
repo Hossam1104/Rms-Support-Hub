@@ -79,4 +79,4 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 
 | Milestone | Evidence | Outcome |
 |---|---|---|
-| WPF-05 Logs, safe diagnostic evidence, and Support Bundle | Commits `8e288a6`, `ac6dbb7`; Draft PR #36; final exact-head CI 7/7 green; local 578/578, PowerShell 37/37, Pester 172/172 | Added bounded redacted Logs/evidence and typed `rms.logs.evidence`, plus administrator-only typed `support.bundle.generate` metadata with principal binding, audit/revocation, fixed roots, and no WPF artifact export. Exact Release PID 9028 responds; Computer Use was unavailable. |
+| WPF-05 bounded remediation | Commit `62d8139`; Draft PR #36; exact-head CI 7/7; POS 583/583; PowerShell 37/37; Pester 172/172 | Decoupled Application diagnostics, closed bounded redaction and Support Bundle security evidence, and kept WPF-06 gated. |
