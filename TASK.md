@@ -38,10 +38,23 @@ HTTPS, SCM, registry, filesystem, or process access was added.
   0 errors.
 - Full POS Release tests: Domain 12/12, Application 98/98, Infrastructure
   155/155, Agent Integration 235/235, WPF 25/25; 525/525 total.
+- Exact-head Draft PR #34 POS CI and Support Hub CI: all seven checks passed
+  for the final branch head after one unrelated external-configuration test
+  fixture rerun.
 - Focused service-health/application, Local IPC/Agent, and WPF suites passed
   at the same counts above for their affected projects.
 - PowerShell quality gate: 37/37 tracked PowerShell files parse cleanly.
 - Pester 3.4.0: 8/8 passed, 0 failed, 0 skipped, 0 pending.
+- `.\scripts\dev.ps1` runtime probes: frontend `/` 200, backend
+  `/health/live` 200, and backend `/health/ready` 200.
+- Release WPF executable was launched from the workspace and verified alive,
+  responsive, and titled `RMS Support Hub`; one exact-path instance remains
+  running. The host required the process-local `WINDIR=C:\WINDOWS` environment
+  value for WPF font initialization.
+- Read-only machine check found no `RmsSupportAgent` service and no `RMS
+  Support Operators` local group; no prerequisite was provisioned. Computer
+  Use was unavailable, so screenshot and actual Refresh-click evidence are
+  not claimed.
 - `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and
   `git diff --check`: passed after implementation and documentation updates.
 
