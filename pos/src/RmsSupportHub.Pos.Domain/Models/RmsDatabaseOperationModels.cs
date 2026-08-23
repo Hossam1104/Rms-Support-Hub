@@ -77,7 +77,18 @@ public sealed record RmsApprovedDatabaseBackup(
     string Sha256Checksum,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? ExpiresAtUtc,
-    string ServerPath);
+    string ServerPath,
+    RmsDatabaseBackupAvailability Availability = RmsDatabaseBackupAvailability.Available,
+    string? PrincipalSid = null);
+
+public enum RmsDatabaseBackupAvailability
+{
+    Available,
+    Expired,
+    Missing,
+    ChecksumMismatch,
+    Invalid
+}
 
 public interface IRmsDatabaseSqlOperations
 {
@@ -113,15 +124,29 @@ public interface IRmsDatabaseBackupStorage
     Task<RmsApprovedDatabaseBackup?> RegisterAsync(
         RmsDatabaseKind database,
         RmsDatabaseBackupAllocation allocation,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? principalSid = null);
 
     Task<RmsApprovedDatabaseBackup?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? principalSid = null);
 
     Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
         RmsDatabaseKind database,
+        CancellationToken cancellationToken = default,
+        string? principalSid = null);
+
+    Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListInventoryAsync(
+        RmsDatabaseKind database,
+        string principalSid,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> RevokeAsync(
+        RmsDatabaseKind database,
+        string artifactId,
+        string principalSid,
         CancellationToken cancellationToken = default);
 }
 
@@ -152,7 +177,8 @@ public interface IRmsDatabaseWorkflow
     Task<RmsDatabaseWorkflowResult> BackupAsync(
         RmsDatabaseKind database,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? principalSid = null);
 
     Task<RmsDatabaseWorkflowResult> RestoreAsync(
         RmsDatabaseKind database,

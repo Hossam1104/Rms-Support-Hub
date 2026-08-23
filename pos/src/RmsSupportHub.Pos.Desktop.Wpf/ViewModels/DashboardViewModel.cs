@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using RmsSupportHub.Pos.Contracts.V1.Artifacts;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
+using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
+using RmsSupportHub.Pos.Contracts.V1.Rms;
 using RmsSupportHub.Pos.Desktop.Wpf.Models;
 using RmsSupportHub.Pos.Desktop.Wpf.Services;
 
@@ -17,6 +19,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private readonly ILocalDatabaseHealthClient databaseHealthClient;
     private readonly ILocalLogEvidenceClient logEvidenceClient;
     private readonly ILocalSupportBundleClient supportBundleClient;
+    private readonly ILocalBackupClient backupClient;
+    private readonly ILocalArtifactDestinationPicker destinationPicker;
+    private readonly IOverwriteConfirmation overwriteConfirmation;
     private readonly TimeSpan refreshInterval;
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource shutdown = new();
@@ -25,7 +30,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private readonly AsyncCommand showServicesCommand;
     private readonly AsyncCommand showDatabaseCommand;
     private readonly AsyncCommand showLogsCommand;
+    private readonly AsyncCommand showBackupCommand;
     private readonly AsyncCommand generateSupportBundleCommand;
+    private readonly AsyncCommand createBranchBackupCommand;
+    private readonly AsyncCommand createCashierBackupCommand;
+    private readonly AsyncParameterCommand<BackupArtifactRow> exportBackupCommand;
+    private readonly AsyncCommand exportSupportBundleCommand;
     private CancellationTokenSource? supportBundleCancellation;
     private Task? refreshLoop;
     private bool disposed;
@@ -34,6 +44,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private bool servicesWorkspace;
     private bool databaseWorkspace;
     private bool logsWorkspace;
+    private bool backupWorkspace;
     private HealthViewState state = HealthViewState.Loading;
     private string agentStatus = "Checking";
     private string ipcStatus = "Checking";
@@ -67,6 +78,19 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<string> supportBundleIncludedSections = [];
     private string supportBundleErrorCode = string.Empty;
     private string supportBundleErrorDetail = string.Empty;
+    private BackupViewState backupState = BackupViewState.Idle;
+    private IReadOnlyList<BackupArtifactRow> backupItems = [];
+    private DateTimeOffset? backupInventoryCheckedAtUtc;
+    private string backupErrorCode = string.Empty;
+    private string backupErrorDetail = string.Empty;
+    private bool backupCanRead;
+    private bool backupCanCreate;
+    private bool backupCanExport;
+    private CancellationTokenSource? backupCancellation;
+    private ArtifactExportResult artifactExport = ArtifactExportResult.Failure(
+        ArtifactExportViewState.Idle,
+        string.Empty,
+        string.Empty);
 
     public DashboardViewModel(
         ILocalAgentHealthClient healthClient,
@@ -77,6 +101,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
             new UnavailableDatabaseHealthClient(),
             new UnavailableLogEvidenceClient(),
             new UnavailableSupportBundleClient(),
+            new UnavailableBackupClient(),
+            new SaveFileDialogDestinationPicker(),
+            new MessageBoxOverwriteConfirmation(),
             refreshInterval)
     {
     }
@@ -91,6 +118,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
             new UnavailableDatabaseHealthClient(),
             new UnavailableLogEvidenceClient(),
             new UnavailableSupportBundleClient(),
+            new UnavailableBackupClient(),
+            new SaveFileDialogDestinationPicker(),
+            new MessageBoxOverwriteConfirmation(),
             refreshInterval)
     {
     }
@@ -106,6 +136,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
             databaseHealthClient,
             new UnavailableLogEvidenceClient(),
             new UnavailableSupportBundleClient(),
+            new UnavailableBackupClient(),
+            new SaveFileDialogDestinationPicker(),
+            new MessageBoxOverwriteConfirmation(),
             refreshInterval)
     {
     }
@@ -117,12 +150,38 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         ILocalLogEvidenceClient logEvidenceClient,
         ILocalSupportBundleClient supportBundleClient,
         TimeSpan? refreshInterval = null)
+        : this(
+            healthClient,
+            serviceHealthClient,
+            databaseHealthClient,
+            logEvidenceClient,
+            supportBundleClient,
+            new UnavailableBackupClient(),
+            new SaveFileDialogDestinationPicker(),
+            new MessageBoxOverwriteConfirmation(),
+            refreshInterval)
+    {
+    }
+
+    public DashboardViewModel(
+        ILocalAgentHealthClient healthClient,
+        ILocalServiceHealthClient serviceHealthClient,
+        ILocalDatabaseHealthClient databaseHealthClient,
+        ILocalLogEvidenceClient logEvidenceClient,
+        ILocalSupportBundleClient supportBundleClient,
+        ILocalBackupClient backupClient,
+        ILocalArtifactDestinationPicker destinationPicker,
+        IOverwriteConfirmation overwriteConfirmation,
+        TimeSpan? refreshInterval = null)
     {
         this.healthClient = healthClient ?? throw new ArgumentNullException(nameof(healthClient));
         this.serviceHealthClient = serviceHealthClient ?? throw new ArgumentNullException(nameof(serviceHealthClient));
         this.databaseHealthClient = databaseHealthClient ?? throw new ArgumentNullException(nameof(databaseHealthClient));
         this.logEvidenceClient = logEvidenceClient ?? throw new ArgumentNullException(nameof(logEvidenceClient));
         this.supportBundleClient = supportBundleClient ?? throw new ArgumentNullException(nameof(supportBundleClient));
+        this.backupClient = backupClient ?? throw new ArgumentNullException(nameof(backupClient));
+        this.destinationPicker = destinationPicker ?? throw new ArgumentNullException(nameof(destinationPicker));
+        this.overwriteConfirmation = overwriteConfirmation ?? throw new ArgumentNullException(nameof(overwriteConfirmation));
         this.refreshInterval = refreshInterval ?? DefaultRefreshInterval;
         if (this.refreshInterval < TimeSpan.FromSeconds(5)
             || this.refreshInterval > TimeSpan.FromMinutes(2))
@@ -131,7 +190,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         }
 
         refreshCommand = new AsyncCommand(
-            () => RefreshAsync(logsWorkspace),
+            () => RefreshAsync(logsWorkspace, backupWorkspace),
             () => !IsRefreshing && !disposed);
         showDashboardCommand = new AsyncCommand(
             ShowDashboardAsync,
@@ -145,9 +204,24 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         showLogsCommand = new AsyncCommand(
             ShowLogsAsync,
             () => !disposed);
+        showBackupCommand = new AsyncCommand(
+            ShowBackupAsync,
+            () => !disposed);
         generateSupportBundleCommand = new AsyncCommand(
             GenerateSupportBundleAsync,
             () => CanGenerateSupportBundle);
+        createBranchBackupCommand = new AsyncCommand(
+            () => CreateBackupAsync(RmsDatabaseTarget.Branch),
+            () => CanCreateBackup);
+        createCashierBackupCommand = new AsyncCommand(
+            () => CreateBackupAsync(RmsDatabaseTarget.Cashier),
+            () => CanCreateBackup);
+        exportBackupCommand = new AsyncParameterCommand<BackupArtifactRow>(
+            ExportBackupAsync,
+            row => CanExportArtifact(row));
+        exportSupportBundleCommand = new AsyncCommand(
+            ExportSupportBundleAsync,
+            () => CanExportSupportBundle);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -162,7 +236,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ShowLogsCommand => showLogsCommand;
 
+    public ICommand ShowBackupCommand => showBackupCommand;
+
     public ICommand GenerateSupportBundleCommand => generateSupportBundleCommand;
+
+    public ICommand CreateBranchBackupCommand => createBranchBackupCommand;
+
+    public ICommand CreateCashierBackupCommand => createCashierBackupCommand;
+
+    public ICommand ExportBackupCommand => exportBackupCommand;
+
+    public ICommand ExportSupportBundleCommand => exportSupportBundleCommand;
 
     public HealthViewState State
     {
@@ -530,6 +614,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsLogsVisible => logsWorkspace;
 
+    public bool IsBackupVisible => backupWorkspace;
+
     public string SupportBundleStateLabel => SupportBundleState switch
     {
         SupportBundleViewState.Idle => "Generate Support Bundle",
@@ -599,6 +685,149 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         : string.Join("  |  ", SupportBundleIncludedSections);
 
     public string SupportBundleArtifactId => SupportBundleArtifact?.ArtifactId ?? "Unavailable";
+
+    public BackupViewState BackupState
+    {
+        get => backupState;
+        private set => SetProperty(ref backupState, value);
+    }
+
+    public IReadOnlyList<BackupArtifactRow> BackupItems
+    {
+        get => backupItems;
+        private set => SetProperty(ref backupItems, value);
+    }
+
+    public DateTimeOffset? BackupInventoryCheckedAtUtc
+    {
+        get => backupInventoryCheckedAtUtc;
+        private set
+        {
+            if (SetProperty(ref backupInventoryCheckedAtUtc, value))
+            {
+                OnPropertyChanged(nameof(BackupInventoryCheckedDisplay));
+            }
+        }
+    }
+
+    public string BackupErrorCode
+    {
+        get => backupErrorCode;
+        private set => SetProperty(ref backupErrorCode, value);
+    }
+
+    public string BackupErrorDetail
+    {
+        get => backupErrorDetail;
+        private set => SetProperty(ref backupErrorDetail, value);
+    }
+
+    public bool CanCreateBackup => !disposed
+        && backupCanCreate
+        && BackupState is not BackupViewState.Creating;
+
+    public bool CanExportBackup => !disposed && backupCanExport;
+
+    public bool CanExportSupportBundle => !disposed
+        && backupCanExport
+        && SupportBundleArtifact is not null
+        && SupportBundleState == SupportBundleViewState.Succeeded
+        && ArtifactExport.State != ArtifactExportViewState.Exporting;
+
+    public ArtifactExportResult ArtifactExport
+    {
+        get => artifactExport;
+        private set
+        {
+            if (SetProperty(ref artifactExport, value))
+            {
+                OnPropertyChanged(nameof(ArtifactExportStateLabel));
+                OnPropertyChanged(nameof(ArtifactExportStatusSummary));
+                OnPropertyChanged(nameof(IsArtifactExportVisible));
+                OnPropertyChanged(nameof(CanExportSupportBundle));
+                exportSupportBundleCommand.RaiseCanExecuteChanged();
+                exportBackupCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string BackupStateLabel => BackupState switch
+    {
+        BackupViewState.Idle => "Ready",
+        BackupViewState.Loading => "Loading",
+        BackupViewState.Creating => "Creating",
+        BackupViewState.Succeeded => "Ready",
+        BackupViewState.Unavailable => "Unavailable",
+        BackupViewState.Unauthorized => "Administrator access required",
+        BackupViewState.TimedOut => "Timed out",
+        BackupViewState.ProtocolMismatch => "Version mismatch",
+        BackupViewState.SecurityVerificationFailed => "Connection not verified",
+        BackupViewState.InvalidResponse => "Invalid response",
+        BackupViewState.AuditUnavailable => "Audit unavailable",
+        BackupViewState.OperationInProgress => "Operation in progress",
+        BackupViewState.Cancelled => "Cancelled",
+        _ => "Unable to determine"
+    };
+
+    public string BackupStatusSummary => BackupState switch
+    {
+        BackupViewState.Idle => "View the bounded inventory of Agent-owned Branch and Cashier backup artifacts.",
+        BackupViewState.Loading => "Reading the fixed, principal-scoped backup inventory.",
+        BackupViewState.Creating => "The Agent is creating a server-owned database backup.",
+        BackupViewState.Succeeded => "Backup inventory is current. Creation and export remain explicitly user initiated.",
+        BackupViewState.Unavailable => "The RMS Support Agent or approved backup storage is unavailable.",
+        BackupViewState.Unauthorized => "Local operator access is read-only. Administrator authority is required to create or export.",
+        BackupViewState.TimedOut => "The backup request timed out before a truthful result was available.",
+        BackupViewState.ProtocolMismatch => "Desktop and Agent versions are not compatible.",
+        BackupViewState.SecurityVerificationFailed => "The local Agent connection could not be verified.",
+        BackupViewState.InvalidResponse => "The Agent returned an invalid backup response.",
+        BackupViewState.AuditUnavailable => "The backup was not accepted because its required audit record was unavailable.",
+        BackupViewState.OperationInProgress => "Another backup for this database is already in progress.",
+        BackupViewState.Cancelled => "The backup was cancelled.",
+        _ => "The backup operation could not be completed."
+    };
+
+    public string BackupInventoryCheckedDisplay => BackupInventoryCheckedAtUtc is { } checkedAt
+        ? checkedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+        : "No successful inventory check yet";
+
+    public string BackupAuthorizationNote => backupCanCreate
+        ? "Local administrator authority is required. The desktop does not initiate UAC or accept a destination for backup creation."
+        : "Local operator access is read-only. Administrator authority is required to create or export artifacts.";
+
+    public string ArtifactExportStateLabel => ArtifactExport.State switch
+    {
+        ArtifactExportViewState.Idle => "No export yet",
+        ArtifactExportViewState.SelectingDestination => "Select destination",
+        ArtifactExportViewState.Exporting => "Exporting...",
+        ArtifactExportViewState.Succeeded => "Exported",
+        ArtifactExportViewState.DestinationExists => "Destination exists",
+        ArtifactExportViewState.DestinationRejected => "Destination rejected",
+        ArtifactExportViewState.ArtifactExpired => "Artifact expired",
+        ArtifactExportViewState.ArtifactNotFound => "Artifact unavailable",
+        ArtifactExportViewState.ChecksumMismatch => "Checksum mismatch",
+        ArtifactExportViewState.Unauthorized => "Administrator access required",
+        ArtifactExportViewState.Cancelled => "Cancelled",
+        _ => "Export failed"
+    };
+
+    public string ArtifactExportStatusSummary => ArtifactExport.State switch
+    {
+        ArtifactExportViewState.Idle => "Artifacts are delivered by the Agent through a validated local destination.",
+        ArtifactExportViewState.SelectingDestination => "Choose a local output destination.",
+        ArtifactExportViewState.Exporting => "The Agent is streaming and verifying the artifact.",
+        ArtifactExportViewState.Succeeded => "The artifact was exported and its checksum was verified.",
+        ArtifactExportViewState.DestinationExists => "The selected destination exists. Explicit confirmation is required before overwrite.",
+        ArtifactExportViewState.DestinationRejected => "The selected destination is outside the approved local export policy.",
+        ArtifactExportViewState.ArtifactExpired => "The artifact has expired and cannot be exported.",
+        ArtifactExportViewState.ArtifactNotFound => "The artifact is unavailable to this authenticated principal.",
+        ArtifactExportViewState.ChecksumMismatch => "The artifact checksum did not verify.",
+        ArtifactExportViewState.Unauthorized => "Administrator authority is required to export artifacts.",
+        ArtifactExportViewState.Cancelled => "Artifact export was cancelled.",
+        _ => "The artifact export could not be completed."
+    };
+
+    public bool IsArtifactExportVisible => ArtifactExport.State != ArtifactExportViewState.Idle;
 
     public TimeSpan RefreshInterval => refreshInterval;
 
@@ -782,10 +1011,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
-        => await RefreshAsync(refreshLogs: false, cancellationToken).ConfigureAwait(true);
+        => await RefreshAsync(refreshLogs: false, cancellationToken: cancellationToken).ConfigureAwait(true);
 
     private async Task RefreshAsync(
         bool refreshLogs,
+        bool refreshBackup = false,
         CancellationToken cancellationToken = default)
     {
         if (disposed)
@@ -901,6 +1131,13 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
                         "agent_unavailable",
                         "RMS Support Agent is not available on this machine.",
                         requestCorrelationId));
+                }
+                if (refreshBackup)
+                {
+                    ApplyBackupFailure(
+                        BackupViewState.Unavailable,
+                        "agent_unavailable",
+                        "RMS Support Agent is not available on this machine.");
                 }
                 return;
             }
@@ -1035,6 +1272,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 
                 ApplyLogEvidenceResult(logResult);
             }
+
+            if (refreshBackup)
+            {
+                await LoadBackupInventoryAsync(linkedCancellation.Token).ConfigureAwait(true);
+            }
         }
         finally
         {
@@ -1057,8 +1299,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         showServicesCommand.RaiseCanExecuteChanged();
         showDatabaseCommand.RaiseCanExecuteChanged();
         showLogsCommand.RaiseCanExecuteChanged();
+        showBackupCommand.RaiseCanExecuteChanged();
         generateSupportBundleCommand.RaiseCanExecuteChanged();
+        createBranchBackupCommand.RaiseCanExecuteChanged();
+        createCashierBackupCommand.RaiseCanExecuteChanged();
+        exportBackupCommand.RaiseCanExecuteChanged();
+        exportSupportBundleCommand.RaiseCanExecuteChanged();
         supportBundleCancellation?.Cancel();
+        backupCancellation?.Cancel();
         shutdown.Dispose();
     }
 
@@ -1072,10 +1320,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         servicesWorkspace = false;
         databaseWorkspace = false;
         logsWorkspace = false;
+        backupWorkspace = false;
         OnPropertyChanged(nameof(IsDashboardVisible));
         OnPropertyChanged(nameof(IsServicesVisible));
         OnPropertyChanged(nameof(IsDatabaseVisible));
         OnPropertyChanged(nameof(IsLogsVisible));
+        OnPropertyChanged(nameof(IsBackupVisible));
         return Task.CompletedTask;
     }
 
@@ -1089,10 +1339,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         servicesWorkspace = true;
         databaseWorkspace = false;
         logsWorkspace = false;
+        backupWorkspace = false;
         OnPropertyChanged(nameof(IsDashboardVisible));
         OnPropertyChanged(nameof(IsServicesVisible));
         OnPropertyChanged(nameof(IsDatabaseVisible));
         OnPropertyChanged(nameof(IsLogsVisible));
+        OnPropertyChanged(nameof(IsBackupVisible));
         return Task.CompletedTask;
     }
 
@@ -1106,10 +1358,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         servicesWorkspace = false;
         databaseWorkspace = true;
         logsWorkspace = false;
+        backupWorkspace = false;
         OnPropertyChanged(nameof(IsDashboardVisible));
         OnPropertyChanged(nameof(IsServicesVisible));
         OnPropertyChanged(nameof(IsDatabaseVisible));
         OnPropertyChanged(nameof(IsLogsVisible));
+        OnPropertyChanged(nameof(IsBackupVisible));
         return Task.CompletedTask;
     }
 
@@ -1123,11 +1377,198 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         servicesWorkspace = false;
         databaseWorkspace = false;
         logsWorkspace = true;
+        backupWorkspace = false;
         OnPropertyChanged(nameof(IsDashboardVisible));
         OnPropertyChanged(nameof(IsServicesVisible));
         OnPropertyChanged(nameof(IsDatabaseVisible));
         OnPropertyChanged(nameof(IsLogsVisible));
+        OnPropertyChanged(nameof(IsBackupVisible));
         await RefreshAsync(refreshLogs: true).ConfigureAwait(true);
+    }
+
+    private async Task ShowBackupAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        servicesWorkspace = false;
+        databaseWorkspace = false;
+        logsWorkspace = false;
+        backupWorkspace = true;
+        OnPropertyChanged(nameof(IsDashboardVisible));
+        OnPropertyChanged(nameof(IsServicesVisible));
+        OnPropertyChanged(nameof(IsDatabaseVisible));
+        OnPropertyChanged(nameof(IsLogsVisible));
+        OnPropertyChanged(nameof(IsBackupVisible));
+        await LoadBackupInventoryAsync(shutdown.Token).ConfigureAwait(true);
+    }
+
+    private async Task LoadBackupInventoryAsync(CancellationToken cancellationToken)
+    {
+        if (disposed) return;
+        BackupState = BackupViewState.Loading;
+        BackupErrorCode = string.Empty;
+        BackupErrorDetail = string.Empty;
+        NotifyBackupStateChanged();
+        try
+        {
+            var result = await backupClient.GetInventoryAsync(cancellationToken).ConfigureAwait(true);
+            if (!disposed)
+            {
+                BackupState = result.State;
+                BackupItems = result.Items;
+                BackupInventoryCheckedAtUtc = result.CheckedAtUtc;
+                BackupErrorCode = result.ErrorCode;
+                BackupErrorDetail = result.ErrorDetail;
+                backupCanRead = result.CanRead;
+                backupCanCreate = result.CanCreate;
+                backupCanExport = result.CanExport;
+                NotifyBackupStateChanged();
+            }
+        }
+        catch (OperationCanceledException) when (!shutdown.IsCancellationRequested && !disposed)
+        {
+            BackupState = BackupViewState.Cancelled;
+            BackupErrorCode = "cancelled";
+            BackupErrorDetail = "Backup inventory was cancelled.";
+            NotifyBackupStateChanged();
+        }
+        catch
+        {
+            BackupState = BackupViewState.Failed;
+            BackupErrorCode = "backup_inventory_failed";
+            BackupErrorDetail = "Backup inventory could not be determined.";
+            NotifyBackupStateChanged();
+        }
+    }
+
+    private void ApplyBackupFailure(
+        BackupViewState state,
+        string errorCode,
+        string errorDetail)
+    {
+        BackupState = state;
+        BackupItems = Array.Empty<BackupArtifactRow>();
+        BackupErrorCode = errorCode;
+        BackupErrorDetail = errorDetail;
+        backupCanRead = false;
+        backupCanCreate = false;
+        backupCanExport = false;
+        NotifyBackupStateChanged();
+    }
+
+    private async Task CreateBackupAsync(RmsDatabaseTarget target)
+    {
+        if (!CanCreateBackup || disposed) return;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(shutdown.Token);
+        backupCancellation = cancellation;
+        BackupState = BackupViewState.Creating;
+        BackupErrorCode = string.Empty;
+        BackupErrorDetail = string.Empty;
+        NotifyBackupStateChanged();
+        try
+        {
+            var result = await backupClient.CreateAsync(target, cancellation.Token).ConfigureAwait(true);
+            if (!disposed)
+            {
+                BackupState = result.State;
+                BackupErrorCode = result.ErrorCode;
+                BackupErrorDetail = result.ErrorDetail;
+                NotifyBackupStateChanged();
+                if (result.State == BackupViewState.Succeeded)
+                {
+                    await LoadBackupInventoryAsync(cancellation.Token).ConfigureAwait(true);
+                }
+            }
+        }
+        catch (Exception) when (!disposed)
+        {
+            BackupState = BackupViewState.Failed;
+            BackupErrorCode = "backup_failed";
+            BackupErrorDetail = "The RMS database backup could not be completed.";
+            NotifyBackupStateChanged();
+        }
+        finally
+        {
+            backupCancellation = null;
+            NotifyBackupStateChanged();
+        }
+    }
+
+    private bool CanExportArtifact(BackupArtifactRow? row) =>
+        row is not null
+        && CanExportBackup
+        && row.CanExport
+        && ArtifactExport.State != ArtifactExportViewState.Exporting;
+
+    private async Task ExportBackupAsync(BackupArtifactRow? row)
+    {
+        if (row is null || !CanExportArtifact(row) || disposed) return;
+        await ExportArtifactAsync(
+            new(LocalIpcArtifactKind.DatabaseBackup, row.ArtifactId, row.Target, string.Empty, false),
+            row.DisplayName,
+            ".bak").ConfigureAwait(true);
+    }
+
+    private async Task ExportSupportBundleAsync()
+    {
+        if (!CanExportSupportBundle || SupportBundleArtifact is null || disposed) return;
+        await ExportArtifactAsync(
+            new(LocalIpcArtifactKind.SupportBundle, SupportBundleArtifact.ArtifactId, null, string.Empty, false),
+            SupportBundleArtifact.DisplayName,
+            ".zip").ConfigureAwait(true);
+    }
+
+    private async Task ExportArtifactAsync(
+        LocalArtifactExportRequest request,
+        string suggestedFileName,
+        string extension)
+    {
+        ArtifactExport = ArtifactExportResult.Failure(
+            ArtifactExportViewState.SelectingDestination,
+            string.Empty,
+            string.Empty,
+            request.ArtifactId);
+        var destination = await destinationPicker.PickAsync(suggestedFileName, extension, shutdown.Token).ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(destination))
+        {
+            ArtifactExport = ArtifactExportResult.Failure(
+                ArtifactExportViewState.Cancelled,
+                "cancelled",
+                "Artifact export was cancelled.",
+                request.ArtifactId);
+            return;
+        }
+
+        ArtifactExport = ArtifactExportResult.Failure(
+            ArtifactExportViewState.Exporting,
+            string.Empty,
+            string.Empty,
+            request.ArtifactId);
+        var result = await backupClient.ExportAsync(
+            request with { DestinationPath = destination, OverwriteConfirmed = false },
+            shutdown.Token).ConfigureAwait(true);
+        if (result.State == ArtifactExportViewState.DestinationExists)
+        {
+            var confirm = await overwriteConfirmation.ConfirmAsync(suggestedFileName, shutdown.Token).ConfigureAwait(true);
+            if (!confirm)
+            {
+                ArtifactExport = ArtifactExportResult.Failure(
+                    ArtifactExportViewState.Cancelled,
+                    "overwrite_not_confirmed",
+                    "The existing destination was not overwritten.",
+                    request.ArtifactId);
+                return;
+            }
+
+            result = await backupClient.ExportAsync(
+                request with { DestinationPath = destination, OverwriteConfirmed = true },
+                shutdown.Token).ConfigureAwait(true);
+        }
+
+        ArtifactExport = result;
     }
 
     private async Task GenerateSupportBundleAsync()
@@ -1331,6 +1772,24 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(SupportBundleIncludedSectionsDisplay));
         OnPropertyChanged(nameof(SupportBundleArtifactId));
         generateSupportBundleCommand.RaiseCanExecuteChanged();
+        exportSupportBundleCommand.RaiseCanExecuteChanged();
+    }
+
+    private void NotifyBackupStateChanged()
+    {
+        OnPropertyChanged(nameof(BackupStateLabel));
+        OnPropertyChanged(nameof(BackupStatusSummary));
+        OnPropertyChanged(nameof(BackupAuthorizationNote));
+        OnPropertyChanged(nameof(CanCreateBackup));
+        OnPropertyChanged(nameof(CanExportBackup));
+        OnPropertyChanged(nameof(CanExportSupportBundle));
+        OnPropertyChanged(nameof(ArtifactExportStateLabel));
+        OnPropertyChanged(nameof(ArtifactExportStatusSummary));
+        OnPropertyChanged(nameof(IsArtifactExportVisible));
+        createBranchBackupCommand.RaiseCanExecuteChanged();
+        createCashierBackupCommand.RaiseCanExecuteChanged();
+        exportBackupCommand.RaiseCanExecuteChanged();
+        exportSupportBundleCommand.RaiseCanExecuteChanged();
     }
 
     private bool SetProperty<T>(
@@ -1397,5 +1856,31 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
                 "agent_unavailable",
                 "RMS Support Agent is not available on this machine.",
                 correlationId));
+    }
+
+    private sealed class UnavailableBackupClient : ILocalBackupClient
+    {
+        public Task<BackupInventoryResult> GetInventoryAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(BackupInventoryResult.Failure(
+                BackupViewState.Unavailable,
+                "agent_unavailable",
+                "RMS Support Agent is not available on this machine."));
+
+        public Task<BackupOperationResult> CreateAsync(
+            RmsDatabaseTarget target,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(BackupOperationResult.Failure(
+                BackupViewState.Unavailable,
+                "agent_unavailable",
+                "RMS Support Agent is not available on this machine."));
+
+        public Task<ArtifactExportResult> ExportAsync(
+            LocalArtifactExportRequest request,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ArtifactExportResult.Failure(
+                ArtifactExportViewState.Failed,
+                "agent_unavailable",
+                "RMS Support Agent is not available on this machine.",
+                request.ArtifactId));
     }
 }

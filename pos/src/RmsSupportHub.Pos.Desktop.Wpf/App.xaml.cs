@@ -17,12 +17,16 @@ public partial class App : Application
         var databaseHealthClient = new LocalAgentDatabaseHealthClient(localIpcClient);
         var logEvidenceClient = new LocalAgentLogEvidenceClient(localIpcClient);
         var supportBundleClient = new LocalAgentSupportBundleClient(localIpcClient);
+        var backupClient = new LocalAgentBackupClient(localIpcClient);
         var dashboard = new DashboardViewModel(
             healthClient,
             serviceHealthClient,
             databaseHealthClient,
             logEvidenceClient,
-            supportBundleClient);
+            supportBundleClient,
+            backupClient,
+            new SaveFileDialogDestinationPicker(),
+            new MessageBoxOverwriteConfirmation());
         MainWindow = new MainWindow(dashboard);
         MainWindow.Show();
     }

@@ -2,7 +2,7 @@
 
 **Product:** RMS+ Support Hub
 **Architecture Rebaseline:** Post PR #31
-**Status:** WPF-01 through WPF-04 are merged; WPF-05 Logs and Safe Support Bundle is the current implementation slice on `feat/wpf-05-logs-support-bundle`
+**Status:** WPF-01 through WPF-05 are merged; WPF-06 Database Backup & Local Artifact Delivery is the current Draft implementation slice on `feat/wpf-06-database-backup-artifact-delivery`
 **Date:** 2026-08-23
 **Authority:** GPT-5.6 Sol
 
@@ -85,17 +85,22 @@ shared Agent/Application seam and typed Local IPC:
 - **WPF-03 - RMS service health:** merged (PR #34).
 - **WPF-04 - Database health and diagnostics:** Sol accepted and merged (PR
   #35, main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`).
-- **WPF-05 - Logs and Safe Support Bundle:** current branch and story
-  #13035. Detailed logs are on-demand; Support Bundle UI exposes validated
-  metadata only and defers artifact export/download. The diagnostic projection
-  is transport-neutral in Application and mapped to V1 only by the Agent; it
+- **WPF-05 - Logs and Safe Support Bundle:** accepted at
+  `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as
+  `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`, and tracked as Closed/P1
+  (#13035). Detailed logs are on-demand; its diagnostic projection is
+  transport-neutral in Application and mapped to V1 only by the Agent. It
   exposes bounded redacted stack-frame labels, not raw or unbounded stack
   traces. Redaction tests cover secrets, credentials, connection-string secret
   values, host paths, Windows identities, SIDs, and bounded stack-frame paths,
   but WPF-05 does not claim universal customer-data/PII-free output. Task
   #13116 defines the remaining privacy policy and deterministic validation.
-- **WPF-06 - Database Backup & Local Artifact Delivery:** next gated slice,
-  story #13034. It must not start until Sol accepts WPF-05.
+- **WPF-06 - Database Backup & Local Artifact Delivery:** current Draft slice,
+  story #13034. It implements fixed Branch/Cashier backup creation,
+  principal-scoped bounded inventory, and a shared Agent-owned local export
+  path for database backups and Support Bundles. Guarded database restore is
+  deliberately deferred and #13034 remains Active/P1 until its governance is
+  separately reconciled.
 
 The remaining local parity work includes approved backup/artifact delivery,
 restore only when separately authorized, safety snapshots, cleanup/reset,

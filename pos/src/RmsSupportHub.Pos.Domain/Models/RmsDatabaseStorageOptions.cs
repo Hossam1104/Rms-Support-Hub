@@ -12,6 +12,8 @@ public sealed class RmsDatabaseStorageOptions
 
     public int MaximumBackupsPerDatabase { get; init; } = 32;
 
+    public long MaximumBackupBytes { get; init; } = 512L * 1024 * 1024;
+
     /// <summary>
     /// Maximum age of a physical database backup before the durable backup catalog prunes it. This
     /// is a dedicated policy for physical RMS database backups and is intentionally independent of
@@ -29,6 +31,11 @@ public sealed class RmsDatabaseStorageOptions
         if (MaximumBackupsPerDatabase is < 1 or > 256)
         {
             throw new ArgumentOutOfRangeException(nameof(MaximumBackupsPerDatabase));
+        }
+
+        if (MaximumBackupBytes is < 1 or > 4L * 1024 * 1024 * 1024)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumBackupBytes));
         }
 
         if (BackupRetention <= TimeSpan.Zero)

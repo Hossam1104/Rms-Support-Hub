@@ -211,12 +211,16 @@ The architecture re-baseline and subsequent migration shall be accepted when:
 The original Phase 1/WPF-01 gate required CR-001 and ADR-0029 acceptance,
 Azure E16-E19 hierarchy synchronization, and explicit acceptance of the
 first implementation slice. That gate was satisfied before WPF-01 PR #32;
-WPF-01 through WPF-04 are now merged, with WPF-04 PR #35 at main
-`0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`. Each later WPF slice remains
-separately bounded and requires GPT-5.6 Sol acceptance before merge; WPF-05
-Logs and Safe Support Bundle is the current Draft slice. WPF-05 has not
-implemented artifact export/download, backup/restore, service or database
-mutation, fleet/SignalR supervision, or Production migration. Its diagnostic
-privacy evidence is bounded and redacted, but it does not establish a
-universal customer-data/PII-free guarantee; Task #13116 tracks policy
-definition and deterministic validation.
+WPF-01 through WPF-05 are now merged. WPF-04 is at main
+`0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`, and WPF-05 was accepted at
+`ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as
+`e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`. Each later WPF slice remains
+separately bounded and requires GPT-5.6 Sol acceptance before merge. WPF-06
+is the current Draft slice: it implements fixed Branch/Cashier backup
+creation, principal-scoped inventory, and shared local artifact export for
+database backups and Support Bundles. Guarded restore, service/database
+mutation beyond backup creation, fleet/SignalR supervision, and Production
+migration remain outside this slice. Diagnostic privacy evidence remains
+bounded and redacted, but does not establish a universal customer-data/PII-
+free guarantee; Task #13116 tracks policy definition and deterministic
+validation.

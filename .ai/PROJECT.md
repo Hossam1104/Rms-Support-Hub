@@ -45,7 +45,9 @@ Do not copy facts that can be cheaply discovered from the repository.
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
   credentials and capabilities server-owned; WPF uses typed Local IPC for read-only RMS/Agent health; inspection remains Agent-owned. Application diagnostics are transport-neutral and mapped to V1 at the Agent boundary.
-- WPF-04 merged; WPF-05 metadata-only IPC; WPF-06 owns export. Bounded redacted frames are visible; universal PII/customer-data-free output is not claimed; #13116 tracks policy.
+- WPF-04/05 merged; WPF-05 is `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`;
+  WPF-06 adds backups, principal inventory, export; restore is
+  gated. Redacted frames are not universal PII-free evidence; #13116 tracks it.
 - Slice C establishes the permanent product/service identity
   `RmsSupportAgent`, safe migration inputs for the two historical Testing
   service names, machine-pinned package trust with a deterministic canonical

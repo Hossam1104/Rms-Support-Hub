@@ -14,11 +14,13 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
     private readonly IBackupFileSystem fileSystem;
     private readonly RmsDatabaseBackupCatalog catalog;
     private readonly RmsDatabaseStorageOptions options;
+    private readonly TimeProvider timeProvider;
 
     public RmsDatabaseBackupStorage(
         IBackupFileSystem fileSystem,
         RmsDatabaseBackupCatalog catalog,
-        RmsDatabaseStorageOptions options) : this(fileSystem, catalog, options, validate: true)
+        RmsDatabaseStorageOptions options,
+        TimeProvider? timeProvider = null) : this(fileSystem, catalog, options, timeProvider, validate: true)
     {
     }
 
@@ -26,11 +28,13 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
         IBackupFileSystem fileSystem,
         RmsDatabaseBackupCatalog catalog,
         RmsDatabaseStorageOptions options,
+        TimeProvider? timeProvider,
         bool validate)
     {
         this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         this.options = options ?? throw new ArgumentNullException(nameof(options));
+        this.timeProvider = timeProvider ?? TimeProvider.System;
         if (validate)
         {
             this.options.Validate();
@@ -61,7 +65,8 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
     public async Task<RmsApprovedDatabaseBackup?> RegisterAsync(
         RmsDatabaseKind database,
         RmsDatabaseBackupAllocation allocation,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? principalSid = null)
     {
         ArgumentNullException.ThrowIfNull(allocation);
         var path = Path.GetFullPath(allocation.ServerPath);
@@ -78,8 +83,9 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
         try
         {
             size = fileSystem.GetFileLength(path);
-            if (size <= 0)
+            if (size <= 0 || size > options.MaximumBackupBytes)
             {
+                try { await fileSystem.DeleteFileAsync(path, CancellationToken.None).ConfigureAwait(false); } catch { }
                 return null;
             }
 
@@ -101,7 +107,8 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             size,
             checksum,
             allocation.CreatedAtUtc,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            principalSid).ConfigureAwait(false);
 
         return ToApproved(entry);
     }
@@ -109,7 +116,8 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
     public async Task<RmsApprovedDatabaseBackup?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? principalSid = null)
     {
         if (string.IsNullOrWhiteSpace(artifactId)
             || artifactId.Length > 128
@@ -118,19 +126,76 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             return null;
         }
 
-        var entry = await catalog.ResolveAsync(database, artifactId, cancellationToken).ConfigureAwait(false);
-        return entry is null ? null : ToApproved(entry);
+        var entry = await catalog.ResolveAsync(database, artifactId, cancellationToken, principalSid).ConfigureAwait(false);
+        if (entry is null)
+        {
+            return null;
+        }
+
+        var artifact = await InspectAsync(entry, cancellationToken).ConfigureAwait(false);
+        return artifact.Availability == RmsDatabaseBackupAvailability.Available
+            ? artifact
+            : null;
     }
 
     public async Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
         RmsDatabaseKind database,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? principalSid = null)
     {
-        var entries = await catalog.ListAsync(database, cancellationToken).ConfigureAwait(false);
-        return entries.Select(ToApproved).ToArray();
+        var entries = await catalog.ListAsync(database, cancellationToken, principalSid).ConfigureAwait(false);
+        var result = new List<RmsApprovedDatabaseBackup>(entries.Count);
+        foreach (var entry in entries)
+        {
+            var artifact = await InspectAsync(entry, cancellationToken).ConfigureAwait(false);
+            if (artifact.Availability == RmsDatabaseBackupAvailability.Available)
+            {
+                result.Add(artifact);
+            }
+        }
+
+        return result;
     }
 
-    private RmsApprovedDatabaseBackup ToApproved(RmsDatabaseBackupCatalogEntry entry) =>
+    public async Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListInventoryAsync(
+        RmsDatabaseKind database,
+        string principalSid,
+        CancellationToken cancellationToken = default)
+    {
+        var entries = await catalog.ListInventoryAsync(database, principalSid, cancellationToken).ConfigureAwait(false);
+        var result = new List<RmsApprovedDatabaseBackup>(entries.Count);
+        foreach (var entry in entries)
+        {
+            result.Add(await InspectAsync(entry, cancellationToken).ConfigureAwait(false));
+        }
+
+        return result;
+    }
+
+    public Task<bool> RevokeAsync(
+        RmsDatabaseKind database,
+        string artifactId,
+        string principalSid,
+        CancellationToken cancellationToken = default) =>
+        catalog.RevokeAsync(database, artifactId, principalSid, cancellationToken);
+
+    private async Task<RmsApprovedDatabaseBackup> InspectAsync(
+        RmsDatabaseBackupCatalogEntry entry,
+        CancellationToken cancellationToken)
+    {
+        var path = Path.GetFullPath(Path.Combine(options.BackupRootPath, entry.FileName));
+        var expiresAtUtc = entry.CreatedAtUtc + options.BackupRetention;
+        var availability = timeProvider.GetUtcNow() >= expiresAtUtc
+            ? RmsDatabaseBackupAvailability.Expired
+            : await IsPhysicallyValidAsync(entry, path, cancellationToken).ConfigureAwait(false);
+        return ToApproved(entry, path, expiresAtUtc, availability);
+    }
+
+    private RmsApprovedDatabaseBackup ToApproved(
+        RmsDatabaseBackupCatalogEntry entry,
+        string? path = null,
+        DateTimeOffset? expiresAtUtc = null,
+        RmsDatabaseBackupAvailability availability = RmsDatabaseBackupAvailability.Available) =>
         new(
             entry.Database,
             entry.ArtifactId,
@@ -138,8 +203,45 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             entry.SizeBytes,
             entry.Sha256Checksum,
             entry.CreatedAtUtc,
-            null,
-            Path.GetFullPath(Path.Combine(options.BackupRootPath, entry.FileName)));
+            expiresAtUtc ?? entry.CreatedAtUtc + options.BackupRetention,
+            path ?? Path.GetFullPath(Path.Combine(options.BackupRootPath, entry.FileName)),
+            availability,
+            entry.PrincipalSid);
+
+    private async Task<RmsDatabaseBackupAvailability> IsPhysicallyValidAsync(
+        RmsDatabaseBackupCatalogEntry entry,
+        string path,
+        CancellationToken cancellationToken)
+    {
+        if (!BackupPathSafety.IsSafePath(fileSystem, options.BackupRootPath, path)
+            || !string.Equals(Path.GetExtension(path), ".bak", StringComparison.OrdinalIgnoreCase)
+            || !fileSystem.FileExists(path)
+            || fileSystem.IsReparsePoint(path))
+        {
+            return RmsDatabaseBackupAvailability.Missing;
+        }
+
+        try
+        {
+            if (fileSystem.GetFileLength(path) != entry.SizeBytes)
+            {
+                return RmsDatabaseBackupAvailability.ChecksumMismatch;
+            }
+
+            var checksum = await fileSystem.ComputeSha256Async(path, cancellationToken).ConfigureAwait(false);
+            return string.Equals(checksum, entry.Sha256Checksum, StringComparison.OrdinalIgnoreCase)
+                ? RmsDatabaseBackupAvailability.Available
+                : RmsDatabaseBackupAvailability.ChecksumMismatch;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return RmsDatabaseBackupAvailability.Invalid;
+        }
+    }
 
     private void EnsureSafeExistingDirectory(string path)
     {

@@ -80,3 +80,11 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 | Milestone | Evidence | Outcome |
 |---|---|---|
 | WPF-05 bounded remediation | Commit `62d8139`; Draft PR #36; exact-head CI 7/7; POS 583/583; PowerShell 37/37; Pester 172/172 | Decoupled Application diagnostics, closed bounded redaction and Support Bundle security evidence, and kept WPF-06 gated. |
+
+## WPF-06
+
+| Milestone | Evidence | Outcome |
+|---|---|---|
+| WPF-05 acceptance and merge | PR #36; merge `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837` | Squash merged; #13035 Closed/P1. |
+| WPF-06 implementation | Feature branch; Draft PR pending | Fixed backups, bounded principal inventory, typed IPC, shared Agent export; no restore. #13034 Active/P1. |
+| WPF-06 validation | Release 0/0; POS 613/613; PowerShell 37/37; Pester 172/172; memory passed | Full validation passed; live mutation unavailable/unclaimed. |

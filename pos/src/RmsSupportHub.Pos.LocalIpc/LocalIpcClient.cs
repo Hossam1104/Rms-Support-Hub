@@ -102,9 +102,76 @@ public sealed class LocalIpcClient
             correlationId,
             cancellationToken);
 
+    public Task<LocalIpcCallResult<LocalIpcAuthorizationDto>> GetAuthorizationAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcAuthorizationDto>(
+            LocalIpcProtocol.AuthorizationOperation,
+            correlationId,
+            payload: null,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<LocalIpcBackupInventoryDto>> GetBackupInventoryAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcBackupInventoryDto>(
+            LocalIpcProtocol.BackupInventoryOperation,
+            correlationId,
+            payload: null,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<RmsDatabaseOperationDto>> CreateBackupAsync(
+        RmsDatabaseTarget target,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseOperationDto>(
+            LocalIpcProtocol.BackupCreateOperation,
+            correlationId,
+            new LocalIpcBackupCreateRequestDto(target),
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<RmsDatabaseOperationDto>> GetBackupStatusAsync(
+        RmsDatabaseTarget target,
+        string operationId,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseOperationDto>(
+            LocalIpcProtocol.BackupStatusOperation,
+            correlationId,
+            new LocalIpcBackupOperationRequestDto(target, operationId),
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<RmsDatabaseOperationDto>> CancelBackupAsync(
+        RmsDatabaseTarget target,
+        string operationId,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseOperationDto>(
+            LocalIpcProtocol.BackupCancelOperation,
+            correlationId,
+            new LocalIpcBackupOperationRequestDto(target, operationId),
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<LocalIpcArtifactExportResultDto>> ExportArtifactAsync(
+        LocalIpcArtifactExportRequestDto request,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcArtifactExportResultDto>(
+            LocalIpcProtocol.ArtifactExportOperation,
+            correlationId,
+            request,
+            cancellationToken);
+
     private async Task<LocalIpcCallResult<T>> SendAsync<T>(
         string operation,
         string? correlationId,
+        CancellationToken cancellationToken) =>
+        await SendAsync<T>(operation, correlationId, payload: null, cancellationToken).ConfigureAwait(false);
+
+    private async Task<LocalIpcCallResult<T>> SendAsync<T>(
+        string operation,
+        string? correlationId,
+        object? payload,
         CancellationToken cancellationToken)
     {
         var requestId = Guid.NewGuid().ToString("N");
@@ -114,7 +181,9 @@ public sealed class LocalIpcClient
             requestId,
             effectiveCorrelationId,
             operation,
-            null);
+            payload is null
+                ? null
+                : JsonSerializer.SerializeToElement(payload, JsonOptions));
         var requestBytes = JsonSerializer.SerializeToUtf8Bytes(request, JsonOptions);
         if (requestBytes.Length > options.MaxRequestBytes)
         {

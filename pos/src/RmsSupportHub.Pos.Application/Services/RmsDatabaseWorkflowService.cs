@@ -22,7 +22,8 @@ public sealed class RmsDatabaseWorkflowService(
     public async Task<RmsDatabaseWorkflowResult> BackupAsync(
         RmsDatabaseKind database,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? principalSid = null)
     {
         var definition = RmsDatabaseCatalog.For(database);
         Report(progress, 5, "preflight", "Checking the installed RMS database configuration.");
@@ -68,7 +69,7 @@ public sealed class RmsDatabaseWorkflowService(
         }
 
         Report(progress, 80, "catalog", "Registering the server-owned backup artifact.");
-        var artifact = await storage.RegisterAsync(database, allocation, cancellationToken)
+        var artifact = await storage.RegisterAsync(database, allocation, cancellationToken, principalSid)
             .ConfigureAwait(false);
         if (artifact is null)
         {

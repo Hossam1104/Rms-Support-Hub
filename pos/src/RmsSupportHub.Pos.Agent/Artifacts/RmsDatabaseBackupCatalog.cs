@@ -17,7 +17,8 @@ public sealed record RmsDatabaseBackupCatalogEntry(
     string FileName,
     long SizeBytes,
     string Sha256Checksum,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    string? PrincipalSid = null);
 
 /// <summary>
 /// Durable, Agent-owned catalog of RMS database backup artifacts. Metadata is persisted as a single
@@ -73,7 +74,8 @@ public sealed class RmsDatabaseBackupCatalog
         long sizeBytes,
         string sha256Checksum,
         DateTimeOffset createdAtUtc,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? principalSid = null)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -86,7 +88,8 @@ public sealed class RmsDatabaseBackupCatalog
                 Path.GetFileName(absolutePath),
                 sizeBytes,
                 sha256Checksum,
-                createdAtUtc);
+                createdAtUtc,
+                IsSafeSid(principalSid) ? principalSid : null);
 
             entries[entry.ArtifactId] = entry;
             var evicted = ApplyRetentionLocked(entries, database);
@@ -104,13 +107,16 @@ public sealed class RmsDatabaseBackupCatalog
     public async Task<RmsDatabaseBackupCatalogEntry?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? principalSid = null)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
-            if (!entries.TryGetValue(artifactId, out var entry) || entry.Database != database)
+            if (!entries.TryGetValue(artifactId, out var entry)
+                || entry.Database != database
+                || !PrincipalMatches(entry, principalSid))
             {
                 return null;
             }
@@ -126,7 +132,8 @@ public sealed class RmsDatabaseBackupCatalog
     /// <summary>Lists physically-valid catalog entries for one canonical database, newest first, bounded by the configured maximum.</summary>
     public async Task<IReadOnlyList<RmsDatabaseBackupCatalogEntry>> ListAsync(
         RmsDatabaseKind database,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? principalSid = null)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -134,7 +141,7 @@ public sealed class RmsDatabaseBackupCatalog
             var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
             var result = new List<RmsDatabaseBackupCatalogEntry>();
             foreach (var entry in entries.Values
-                         .Where(candidate => candidate.Database == database)
+                         .Where(candidate => candidate.Database == database && PrincipalMatches(candidate, principalSid))
                          .OrderByDescending(candidate => candidate.CreatedAtUtc))
             {
                 if (await IsPhysicallyValidAsync(entry, cancellationToken).ConfigureAwait(false))
@@ -144,6 +151,71 @@ public sealed class RmsDatabaseBackupCatalog
             }
 
             return result.Take(options.MaximumBackupsPerDatabase).ToArray();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Returns bounded catalog metadata for inventory, including records whose physical file is
+    /// missing, expired, or has a changed checksum. The caller classifies those records without
+    /// receiving the backing path.
+    /// </summary>
+    public async Task<IReadOnlyList<RmsDatabaseBackupCatalogEntry>> ListInventoryAsync(
+        RmsDatabaseKind database,
+        string principalSid,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
+            return entries.Values
+                .Where(candidate => candidate.Database == database && PrincipalMatches(candidate, principalSid))
+                .OrderByDescending(candidate => candidate.CreatedAtUtc)
+                .Take(options.MaximumBackupsPerDatabase)
+                .ToArray();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<bool> RevokeAsync(
+        RmsDatabaseKind database,
+        string artifactId,
+        string principalSid,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
+            if (!entries.TryGetValue(artifactId, out var entry)
+                || entry.Database != database
+                || !PrincipalMatches(entry, principalSid)
+                || !string.Equals(entry.PrincipalSid, principalSid, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            entries.Remove(artifactId);
+            await SaveLockedAsync(entries, cancellationToken).ConfigureAwait(false);
+            var path = ResolveAbsolutePath(entry);
+            if (BackupPathSafety.IsSafePath(fileSystem, options.BackupRootPath, path))
+            {
+                try
+                {
+                    await fileSystem.DeleteFileAsync(path, cancellationToken).ConfigureAwait(false);
+                }
+                catch (FileNotFoundException) { }
+                catch (DirectoryNotFoundException) { }
+            }
+
+            return true;
         }
         finally
         {
@@ -308,6 +380,17 @@ public sealed class RmsDatabaseBackupCatalog
         && entry.SizeBytes > 0
         && entry.Sha256Checksum.Length == 64
         && entry.Sha256Checksum.All(Uri.IsHexDigit);
+
+    private static bool PrincipalMatches(RmsDatabaseBackupCatalogEntry entry, string? principalSid) =>
+        principalSid is null
+            ? true
+            : IsSafeSid(principalSid)
+                && string.Equals(entry.PrincipalSid, principalSid, StringComparison.Ordinal);
+
+    private static bool IsSafeSid(string? value) =>
+        value is { Length: > 0 and <= 184 }
+        && value.StartsWith("S-", StringComparison.OrdinalIgnoreCase)
+        && value.All(character => char.IsLetterOrDigit(character) || character == '-');
 
     private async Task SaveLockedAsync(
         Dictionary<string, RmsDatabaseBackupCatalogEntry> entries,
