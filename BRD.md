@@ -4,7 +4,7 @@
 **Status:** Baselined with Approved WPF Agent & Fleet Supervision Re-Architecture (CR-001)
 **Product:** RMS+ Support Hub
 **Repository:** `Hossam1104/Rms-Support-Hub`
-**Prepared:** 2026-08-22
+**Prepared:** 2026-08-23
 **Acceptance Authority:** GPT-5.6 Sol
 
 ---
@@ -251,7 +251,7 @@ Separate authorized environment requiring:
 
 ---
 
-## 11. Current Delivery Status — 2026-08-22
+## 11. Current Delivery Status — 2026-08-23
 
 ### Delivered on `main` (Merge `9272041`)
 - Unified Support Hub shell and QA Prompt Studio.
@@ -268,12 +268,16 @@ Separate authorized environment requiring:
 - E11 reconciled as superseded roadmap; E12 updated to target architecture.
 - Conversion roadmap (Phases 0–9) and first slice (`WPF-01`) defined.
 
-### Planned Implementation (Phases 1–9)
-- `WPF-01`: Extract shared Agent application layer + secure Named Pipe IPC foundation.
-- `WPF-02`: WPF native desktop application shell and local capability parity.
-- `WPF-03`: Agent-initiated SignalR connection, device identity, and fleet supervision in Angular Hub.
-- `WPF-04`: Allowlisted typed remote commands, backup streaming, and admin RBAC.
-- `WPF-05`: Side-by-side parity validation on representative machines and cutover.
+### WPF implementation status
+- `WPF-01`: Shared Agent application layer and secure Named Pipe IPC foundation — merged.
+- `WPF-02`: WPF native desktop shell and local Agent health experience — merged.
+- `WPF-03`: Local RMS service health through the shared Agent/IPC seam — merged.
+- `WPF-04`: Read-only database health and diagnostics — Sol accepted and merged in PR #35.
+- `WPF-05`: Bounded redacted Logs/evidence and administrator-only Support Bundle metadata — current implementation slice on story #13035; Draft PR and Sol acceptance remain pending.
+
+### Remaining planned implementation
+- `WPF-06`: Database backup creation, bounded artifact inventory, and local artifact delivery/export; primary story #13034. Database restore remains separately gated.
+- Later phases: safety snapshots, cleanup/reset, package lifecycle, rollback/recovery, local audit, SignalR/device identity, fleet supervision, remote operations, parity validation, and rollout.
 
 ---
 

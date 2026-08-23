@@ -1,4 +1,5 @@
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Domain.Enums;
 using RmsSupportHub.Pos.Domain.Interfaces;
@@ -16,7 +17,7 @@ public sealed class ServiceFailureAnalyzer(
     IServiceManager serviceManager,
     IRmsDiagnosticEvidenceReader evidenceReader,
     IRmsInstallationDiscovery discovery,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : IServiceFailureAnalyzer
 {
     public async Task<ServiceFailureAnalysisDto?> AnalyzeAsync(
         string? serviceId,

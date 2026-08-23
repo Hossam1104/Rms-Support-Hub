@@ -15,10 +15,14 @@ public partial class App : Application
         var healthClient = new LocalAgentHealthClient(localIpcClient);
         var serviceHealthClient = new LocalAgentServiceHealthClient(localIpcClient);
         var databaseHealthClient = new LocalAgentDatabaseHealthClient(localIpcClient);
+        var logEvidenceClient = new LocalAgentLogEvidenceClient(localIpcClient);
+        var supportBundleClient = new LocalAgentSupportBundleClient(localIpcClient);
         var dashboard = new DashboardViewModel(
             healthClient,
             serviceHealthClient,
-            databaseHealthClient);
+            databaseHealthClient,
+            logEvidenceClient,
+            supportBundleClient);
         MainWindow = new MainWindow(dashboard);
         MainWindow.Show();
     }

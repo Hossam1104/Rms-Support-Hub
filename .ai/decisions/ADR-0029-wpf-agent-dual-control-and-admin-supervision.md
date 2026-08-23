@@ -1,6 +1,6 @@
 # ADR-0029: WPF Standalone Agent, Dual Control Surfaces, and Admin Fleet Supervision
 
-- Status: Accepted for architecture / implementation pending
+- Status: Accepted; incremental WPF implementation is in progress
 - Affected area: POS Agent architecture, WPF desktop application, Angular admin dashboard, local IPC transport, SignalR outbound connectivity, device identity, fleet supervision
 - Supersedes (as future target architecture only): ADR-0015, ADR-0016
 

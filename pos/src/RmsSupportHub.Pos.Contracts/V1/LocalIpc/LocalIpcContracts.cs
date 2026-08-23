@@ -15,6 +15,10 @@ public static class LocalIpcProtocol
     public const string ServiceHealthOperation = "rms.services.health";
 
     public const string DatabaseHealthOperation = "rms.databases.health";
+
+    public const string LogEvidenceOperation = "rms.logs.evidence";
+
+    public const string SupportBundleOperation = "support.bundle.generate";
 }
 
 public sealed record LocalIpcRequestEnvelope(

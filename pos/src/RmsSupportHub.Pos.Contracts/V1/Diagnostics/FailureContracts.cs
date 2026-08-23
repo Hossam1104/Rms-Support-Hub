@@ -34,6 +34,15 @@ public enum FailureConfidence
     Unknown
 }
 
+/// <summary>Aggregate state for the fixed, bounded local evidence projection.</summary>
+public enum LogEvidenceOverallState
+{
+    Healthy,
+    Degraded,
+    Unavailable,
+    Unknown
+}
+
 /// <summary>One redacted exception, event, or bounded log evidence item.</summary>
 public sealed record FailureEvidenceDto(
     /// <summary>Safe evidence source label such as SCM, Application Event Log, or RMS log.</summary>
@@ -80,3 +89,12 @@ public sealed record ServiceFailureAnalysisDto(
     IReadOnlyList<string> UnknownReasons,
     /// <summary>Non-executing next-step guidance.</summary>
     IReadOnlyList<FailureRecommendationDto> Recommendations);
+
+/// <summary>
+/// Safe snapshot of bounded diagnostic evidence for the server-owned RMS service catalog. The
+/// service set is selected by the Agent; callers cannot submit service names, paths, or filters.
+/// </summary>
+public sealed record LogEvidenceSnapshotDto(
+    DateTimeOffset CheckedAtUtc,
+    LogEvidenceOverallState OverallState,
+    IReadOnlyList<ServiceFailureAnalysisDto> Services);

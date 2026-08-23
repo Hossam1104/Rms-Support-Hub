@@ -44,7 +44,8 @@ Do not copy facts that can be cheaply discovered from the repository.
   generated client artifacts, direct browser transport, and no Support Hub API
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
-  credentials, and operation capabilities server-owned; native WPF uses typed Local IPC for bounded read-only RMS/Agent health; inspection remains Agent/Application-owned.
+  credentials and capabilities remain server-owned; WPF uses typed Local IPC for read-only RMS/Agent health; inspection remains Agent-owned.
+- WPF-04 merged; WPF-05 metadata-only IPC; WPF-06 owns export.
 - Slice C establishes the permanent product/service identity
   `RmsSupportAgent`, safe migration inputs for the two historical Testing
   service names, machine-pinned package trust with a deterministic canonical

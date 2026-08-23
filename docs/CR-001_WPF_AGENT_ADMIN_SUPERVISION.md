@@ -2,7 +2,7 @@
 
 **Product:** RMS+ Support Hub
 **Change Type:** Architecture / Major Capability Re-baseline
-**Status:** Approved for planning; implementation gated by architecture/backlog acceptance
+**Status:** Approved architecture; incremental WPF slice implementation is in progress
 **Date:** 2026-08-22
 **Acceptance Authority:** GPT-5.6 Sol
 
@@ -206,9 +206,11 @@ The architecture re-baseline and subsequent migration shall be accepted when:
 
 ---
 
-## 12. Implementation Gate
+## 12. Implementation Gate (satisfied for WPF-01)
 
-Implementation of Phase 1 (WPF-01) may begin only after:
-- CR-001 and ADR-0029 are committed and accepted by GPT-5.6 Sol.
-- Azure DevOps Epics E16–E19 and child user stories are established and synchronized in backlog traceability.
-- The first implementation slice (`WPF-01 — Shared Agent Application + Local IPC Foundation`) is explicitly accepted for development.
+The original Phase 1/WPF-01 gate required CR-001 and ADR-0029 acceptance,
+Azure E16-E19 hierarchy synchronization, and explicit acceptance of the
+first implementation slice. That gate was satisfied before WPF-01 PR #32;
+WPF-01 through WPF-04 are now merged. Each later WPF slice remains separately
+bounded and requires GPT-5.6 Sol acceptance before merge; WPF-05 Logs and Safe
+Support Bundle is the current open slice.

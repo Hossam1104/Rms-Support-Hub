@@ -191,6 +191,9 @@ builder.Services.AddSingleton<IRmsDiagnosticEvidenceReader, WindowsRmsDiagnostic
 builder.Services.AddSingleton(new RmsFixedHealthOptions());
 builder.Services.AddSingleton<IRmsFixedHealthReader, WindowsRmsFixedHealthReader>();
 builder.Services.AddSingleton<ServiceFailureAnalyzer>();
+builder.Services.AddSingleton<IServiceFailureAnalyzer>(services =>
+    services.GetRequiredService<ServiceFailureAnalyzer>());
+builder.Services.AddSingleton<LogEvidenceQueryHandler>();
 builder.Services.AddSingleton<IncidentTimelineStore>();
 builder.Services.AddSingleton<IncidentTimelineService>();
 builder.Services.AddSingleton<RmsConnectivityDiagnostics>();
@@ -200,6 +203,7 @@ builder.Services.AddSingleton<RmsDatabaseHealthService>();
 builder.Services.AddSingleton<PosHealthService>();
 builder.Services.AddSingleton(new SupportBundleOptions());
 builder.Services.AddSingleton<SupportBundleService>();
+builder.Services.AddSingleton<SupportBundleExecutor>();
 builder.Services.AddSingleton<SupportBundleRuntime>();
 builder.Services.AddSingleton<DeviceDiagnosticsService>();
 builder.Services.AddSingleton<IServiceManager, WindowsServiceManager>();

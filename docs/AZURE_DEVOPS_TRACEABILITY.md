@@ -2,7 +2,7 @@
 
 **Azure Organization:** `DBSMENA`
 **Azure Project:** `Rms_Support_Hub`
-**Process Template:** `Agile-RMS` (Hierarchy: Epic -> User Story)
+**Process Template:** `Agile-RMS` (Hierarchy: Epic -> User Story -> Task where present)
 **Rebaseline Date:** `2026-08-22`
 **BRD Source:** [`BRD.md`](../BRD.md) (Version 1.1)
 **Architecture Rebaseline:** [`docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md`](CR-001_WPF_AGENT_ADMIN_SUPERVISION.md) / [ADR-0029](../.ai/decisions/ADR-0029-wpf-agent-dual-control-and-admin-supervision.md)
@@ -10,12 +10,37 @@
 
 ## Delivery Hierarchy Summary
 
-- **Total Epics:** 19 (10 Closed, 2 Active, 7 New/Planned)
-- **Total User Stories:** 175 (96 Closed, 1 Active, 78 New/Planned/Conditional)
-- **Total Work Items:** 194
-- **Closed (Done / Superseded):** 96 Stories / 10 Epics
-- **Active (Ongoing Governance & Active Integrations):** 1 Story / 2 Epics (E06, E15)
-- **New (Planned / Architecture Baseline):** 78 Stories / 7 Epics (E12, E13, E14, E16, E17, E18, E19)
+- **Total Epics:** 19 (10 Closed, 4 Active, 5 New)
+- **Total User Stories:** 176 (99 Closed, 7 Active, 70 New)
+- **Total Tasks:** 4 (all New, Online Order integrated-testing work)
+- **Total Work Items:** 199
+- **Closed:** 99 User Stories / 10 Epics
+- **Active:** 7 User Stories / 4 Epics (E06, E15, E16, E17)
+- **New:** 70 User Stories / 5 Epics / 4 Tasks
+
+## Live Azure reconciliation - 2026-08-23
+
+This matrix was reconciled from a live Azure DevOps query on 2026-08-23.
+The WPF epics and child states below are current Azure truth; the evidence
+column distinguishes delivered local slices from future remote/fleet work.
+
+- E16 #13017 is Active/P2 and E17 #13018 is Active/P1. E18 #13019 remains
+  New/P2 and E19 #13020 remains New/P1.
+- WPF P1 items: #13018, #13020, #13021, #13022, #13024, #13025, #13026,
+  #13028, #13031, #13032, #13033, #13035, #13039, #13041, #13042, #13043,
+  #13046, #13054, #13055, #13058, #13059, #13060, #13063, #13064, #13065,
+  #13066, #13069, #13071.
+- WPF P2 items: #13017, #13019, #13023, #13027, #13029, #13030, #13034,
+  #13036, #13037, #13038, #13040, #13044, #13045, #13047, #13048, #13049,
+  #13050, #13051, #13052, #13053, #13056, #13057, #13061, #13062, #13067,
+  #13068.
+- WPF P3 item: #13070. Preserved Online Order items are #13072/#13073/
+  #13074/#13076 at P1 and #13075 at P2. Conditional/deferred items #12900,
+  #12901, #12902, and #12949 remain New/P3.
+- #13022, #13024, and #13031 are Closed/P1; #13023, #13029, and #13030 are
+  Active/P2; #13032, #13033, and #13035 are Active/P1. WPF-04 evidence is
+  PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; WPF-05 is the
+  current Draft-PR implementation slice and must remain open for Sol review.
 
 ## Azure Classification Structure
 
@@ -80,8 +105,8 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **E13** | 12851 | Epic | [E13] Future Online Order Integrations | — | **New** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-07 - Future Integrations | BR-006, BR-024 | Planned roadmap |
 | **E14** | 12852 | Epic | [E14] Operational Hardening & Observability | — | **New** | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-05 - Operational Hardening | BR-017, BR-020, BR-023 | Planned roadmap |
 | **E15** | 12853 | Epic | [E15] Delivery Governance & Traceability | — | **Active** | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-06 - Governance and Traceability | BR-025 | [PR #27](https://github.com/Hossam1104/Rms-Support-Hub/pull/27) |
-| **E16** | 13017 | Epic | [E16] Agent Platform Re-Architecture | — | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-027, BR-030, BR-032, BR-033, BR-034, BR-035, BR-036, BR-037 | CR-001 / ADR-0029 |
-| **E17** | 13018 | Epic | [E17] WPF Standalone Local Operations | — | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030, BR-034, BR-036, BR-038, BR-039 | CR-001 / ADR-0029 |
+| **E16** | 13017 | Epic | [E16] Agent Platform Re-Architecture | — | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-027, BR-030, BR-032, BR-033, BR-034, BR-035, BR-036, BR-037 | Active/P2; WPF local foundation delivered, remote/fleet work remains |
+| **E17** | 13018 | Epic | [E17] WPF Standalone Local Operations | — | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030, BR-034, BR-036, BR-038, BR-039 | Active/P1; WPF-01 through WPF-04 merged, WPF-05 current |
 | **E18** | 13019 | Epic | [E18] Admin Fleet Supervision & Remote Support | — | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-09 - Admin Fleet Supervision | BR-029, BR-030, BR-031, BR-032, BR-033, BR-035, BR-037, BR-038, BR-040 | CR-001 / ADR-0029 |
 | **E19** | 13020 | Epic | [E19] WPF Migration, Compatibility & Rollout | — | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-10 - WPF Migration and Rollout | BR-019, BR-021, BR-027, BR-038, BR-039 | CR-001 / ADR-0029 |
 | **US-E01-01** | 12854 | User Story | [US-E01-01] Unified application shell | E01 (#12839) | **Closed** | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-01 - Platform Foundation | BR-001, BR-024 | [PR #19](https://github.com/Hossam1104/Rms-Support-Hub/pull/19) |
@@ -209,20 +234,20 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **US-E15-04** | 12972 | User Story | [US-E15-04] Link validation evidence to work items | E15 (#12853) | **Closed** | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-06 - Governance and Traceability | BR-025 | [PR #27](https://github.com/Hossam1104/Rms-Support-Hub/pull/27) |
 | **US-E15-05** | 12973 | User Story | [US-E15-05] Maintain BRD-to-backlog traceability | E15 (#12853) | **Active** | Rms_Support_Hub\Platform | Rms_Support_Hub\PLAT-06 - Governance and Traceability | BR-025 | [PR #27](https://github.com/Hossam1104/Rms-Support-Hub/pull/27) |
 | **US-E16-01** | 13021 | User Story | [US-E16-01] Inventory and parity-map existing Agent capabilities | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-027, BR-030 | Architecture baseline |
-| **US-E16-02** | 13022 | User Story | [US-E16-02] Extract shared Agent command/query application layer | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-027, BR-030 | Architecture baseline |
-| **US-E16-03** | 13023 | User Story | [US-E16-03] Define local/remote invocation context and authorization source | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-030, BR-034, BR-035, BR-040 | Architecture baseline |
-| **US-E16-04** | 13024 | User Story | [US-E16-04] Secure WPF-to-Agent Windows Named Pipe transport | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-028, BR-034 | Architecture baseline |
+| **US-E16-02** | 13022 | User Story | [US-E16-02] Extract shared Agent command/query application layer | E16 (#13017) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-027, BR-030 | P1; shared Agent/Application seam delivered through WPF-01 |
+| **US-E16-03** | 13023 | User Story | [US-E16-03] Define local/remote invocation context and authorization source | E16 (#13017) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-030, BR-034, BR-035, BR-040 | P2; local context delivered, remote Hub authorization remains future |
+| **US-E16-04** | 13024 | User Story | [US-E16-04] Secure WPF-to-Agent Windows Named Pipe transport | E16 (#13017) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-028, BR-034 | P1; secure typed Local IPC foundation delivered through WPF-01 |
 | **US-E16-05** | 13025 | User Story | [US-E16-05] Agent-initiated SignalR Hub connection | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-032, BR-033 | Architecture baseline |
 | **US-E16-06** | 13026 | User Story | [US-E16-06] Machine registration and per-device identity | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-032, BR-033 | Architecture baseline |
 | **US-E16-07** | 13027 | User Story | [US-E16-07] Offline event queue, reconnect and state synchronization | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-028, BR-036 | Architecture baseline |
 | **US-E16-08** | 13028 | User Story | [US-E16-08] Unified correlation, audit, progress and cancellation contracts | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-030, BR-035, BR-037 | Architecture baseline |
-| **US-E16-09** | 13029 | User Story | [US-E16-09] Agent/WPF version compatibility contract | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-031, BR-038 | Architecture baseline |
-| **US-E16-10** | 13030 | User Story | [US-E16-10] Architecture security and failure-mode test harness | E16 (#13017) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-030, BR-034, BR-035, BR-036 | Architecture baseline |
-| **US-E17-01** | 13031 | User Story | [US-E17-01] WPF shell and local machine dashboard | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | Architecture baseline |
-| **US-E17-02** | 13032 | User Story | [US-E17-02] Agent/RMS service health and approved service control | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030 | Architecture baseline |
-| **US-E17-03** | 13033 | User Story | [US-E17-03] Database health and diagnostics | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | Architecture baseline |
+| **US-E16-09** | 13029 | User Story | [US-E16-09] Agent/WPF version compatibility contract | E16 (#13017) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-031, BR-038 | P2; protocol/version compatibility is delivered, fleet telemetry remains future |
+| **US-E16-10** | 13030 | User Story | [US-E16-10] Architecture security and failure-mode test harness | E16 (#13017) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-07 - WPF Agent Architecture | BR-030, BR-034, BR-035, BR-036 | P2; local IPC failure coverage delivered, SignalR/offline coverage remains future |
+| **US-E17-01** | 13031 | User Story | [US-E17-01] WPF shell and local machine dashboard | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; WPF shell/dashboard delivered through WPF-02 |
+| **US-E17-02** | 13032 | User Story | [US-E17-02] Agent/RMS service health and approved service control | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030 | P1; read-only service health delivered, mutation remains future |
+| **US-E17-03** | 13033 | User Story | [US-E17-03] Database health and diagnostics | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` |
 | **US-E17-04** | 13034 | User Story | [US-E17-04] Database backup/download and guarded restore | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
-| **US-E17-05** | 13035 | User Story | [US-E17-05] Logs and safe Support Bundle | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
+| **US-E17-05** | 13035 | User Story | [US-E17-05] Logs and safe Support Bundle | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-05 bounded redacted evidence and administrator-only Support Bundle metadata, Draft PR pending |
 | **US-E17-06** | 13036 | User Story | [US-E17-06] Safety Snapshots and incident timeline | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
 | **US-E17-07** | 13037 | User Story | [US-E17-07] Cleanup and branch-reset workflows | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |
 | **US-E17-08** | 13038 | User Story | [US-E17-08] Package install/upgrade/repair/uninstall | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-038 | Architecture baseline |
@@ -258,4 +283,9 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **US-E19-11** | 13068 | User Story | [US-E19-11] Pilot deployment | E19 (#13020) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-10 - WPF Migration and Rollout | BR-039 | Architecture baseline |
 | **US-E19-12** | 13069 | User Story | [US-E19-12] Fleet rollout and rollback procedure | E19 (#13020) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-10 - WPF Migration and Rollout | BR-038, BR-039 | Architecture baseline |
 | **US-E19-13** | 13070 | User Story | [US-E19-13] Support/admin runbooks and training | E19 (#13020) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-10 - WPF Migration and Rollout | BR-027, BR-029 | Architecture baseline |
-| **US-E19-14** | 13071 | User Story | [US-E19-14] Final migration acceptance | E19 (#13020) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-10 - WPF Migration and Rollout | BR-027, BR-039 | Architecture baseline |
+| **US-E19-14** | 13071 | User Story | [US-E19-14] Final migration acceptance | E19 (#13020) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-10 - WPF Migration and Rollout | BR-027, BR-039 | P1; future migration acceptance |
+| **OO-05-01** | 13072 | User Story | Adaptive Online Order card visibility by active integration connectivity | — | **New** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | — | P1; preserved live backlog item |
+| **OO-05-02** | 13073 | Task | Define server-owned active Online Order integration-family selection | — | **New** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | — | P1; preserved live backlog task |
+| **OO-05-03** | 13074 | Task | Render Online Order cards and environment lanes from usable connectivity | — | **New** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | — | P1; preserved live backlog task |
+| **OO-05-04** | 13075 | Task | Add polished Online Order loading, empty, and recovery states | — | **New** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | — | P2; preserved live backlog task |
+| **OO-05-05** | 13076 | Task | Add adaptive Online Order connectivity and route-security regression matrix | — | **New** | Rms_Support_Hub\Online Orders | Rms_Support_Hub\OO-05 - Integrated Testing | — | P1; preserved live backlog task |

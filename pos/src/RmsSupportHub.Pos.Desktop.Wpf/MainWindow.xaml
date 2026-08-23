@@ -191,10 +191,10 @@
                             CornerRadius="{DynamicResource CardCornerRadius}">
                             <StackPanel>
                                 <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SCOPE" />
-                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Read-only Agent, service, and canonical database health. Mutations remain out of scope." TextWrapping="Wrap" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Read-only Agent health plus bounded, redacted logs and evidence. Mutations remain out of scope." TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
-                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-04  /  PROTOCOL v1" />
+                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-05  /  PROTOCOL v1" />
                     </StackPanel>
 
                     <StackPanel>
@@ -226,9 +226,17 @@
                                 </StackPanel>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding ShowLogsCommand}" Style="{StaticResource NavButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" Text="Logs &amp; Evidence" />
+                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Safe evidence" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
                         <TextBlock Margin="8,30,0,12" Style="{DynamicResource EyebrowStyle}" Text="COMING LATER" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="RMS" />
-                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Logs" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Backup" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Maintenance" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Packages" />
@@ -768,6 +776,265 @@
                     </Border>
 
                     <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="This workspace performs no backup, restore, cleanup, repair, schema browsing, or database mutation. Those capabilities remain separately gated." TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer
+                Grid.Column="1"
+                Padding="34,30,34,40"
+                Visibility="{Binding IsLogsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="920">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LOGS &amp; EVIDENCE  /  SAFE SNAPSHOT" />
+                            <TextBlock Margin="0,8,0,0" Style="{DynamicResource PageTitleStyle}" Text="RMS Logs &amp; Evidence" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="Bounded, redacted evidence from the fixed RMS service catalog. Details are collected on demand." TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Margin="24,8,0,0"
+                            Command="{Binding RefreshCommand}"
+                            Content="Refresh evidence"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    </Grid>
+
+                    <Border
+                        Margin="0,28,0,0"
+                        Padding="26"
+                        Background="{DynamicResource HeroBrush}"
+                        BorderBrush="{DynamicResource HeroBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource CardCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="OVERALL EVIDENCE STATE" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource HeroStateStyle}" Text="{Binding LogEvidenceStateLabel}" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource HeroMessageStyle}" Text="{Binding LogEvidenceStatusSummary}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource SmallBodyStyle}" Text="No caller-supplied paths, service names, filters, or raw log payloads are accepted." TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="180" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LAST CHECK" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LastLogEvidenceCheckDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Local time" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SERVICES" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LogEvidenceServices.Count}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Fixed RMS service identities" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="ATTENTION" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LogEvidenceAttentionCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Conservative failure signal" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Margin="7,0,0,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="RECORDS" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LogEvidenceRecordCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Bounded evidence items" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Margin="0,20,0,0" Padding="16" Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource ControlCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Style="{DynamicResource DetailLabelStyle}" Text="FILTERS" />
+                            <ComboBox
+                                Grid.Column="1"
+                                Margin="16,0,0,0"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                ItemsSource="{Binding LogServiceFilters}"
+                                SelectedItem="{Binding SelectedLogServiceFilter, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" Margin="22,0,0,0" VerticalAlignment="Center" Style="{DynamicResource DetailLabelStyle}" Text="SEVERITY" />
+                            <ComboBox
+                                Grid.Column="3"
+                                Margin="14,0,0,0"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                ItemsSource="{Binding LogSeverityFilters}"
+                                SelectedItem="{Binding SelectedLogSeverityFilter, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="4" Margin="20,0,0,0" VerticalAlignment="Center" Style="{DynamicResource TinyMetaStyle}" Text="Filters are client-side display filters only." TextWrapping="Wrap" />
+                        </Grid>
+                    </Border>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="FIXED RMS SERVICE EVIDENCE" />
+                            <ItemsControl Margin="0,18,0,0" ItemsSource="{Binding FilteredLogServices}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,12" Padding="18" Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Style="{DynamicResource DetailValueStyle}" Text="{Binding DisplayName}" />
+                                                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding ServiceId}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="{Binding SeverityLabel}" />
+                                                        <TextBlock Margin="0,4,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ConfidenceLabel}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Margin="0,16,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Margin="0,0,14,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="CLASSIFICATION" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding CategoryLabel}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="BOUNDED RECORDS" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding RecordCountDisplay}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <TextBlock Margin="0,16,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding Summary}" TextWrapping="Wrap" />
+                                                <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding Records}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Margin="0,0,0,8" Padding="12" Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                                                <StackPanel>
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBlock Style="{DynamicResource DetailValueStyle}" Text="{Binding Source}" />
+                                                                        <TextBlock Grid.Column="1" Style="{DynamicResource TinyMetaStyle}" Text="{Binding AtDisplay}" />
+                                                                    </Grid>
+                                                                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding Summary}" TextWrapping="Wrap" />
+                                                                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding ExceptionTypeDisplay}" />
+                                                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding EventIdDisplay}" />
+                                                                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding StackFramesDisplay}" TextWrapping="Wrap" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Border Margin="0,4,0,0" Padding="12,10" Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                                    <StackPanel>
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="UNKNOWN SOURCE REASONS" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding UnknownReasonsDisplay}" TextWrapping="Wrap" />
+                                                        <TextBlock Margin="0,12,0,0" Style="{DynamicResource DetailLabelStyle}" Text="NEXT-STEP GUIDANCE" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding RecommendationDisplay}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Margin="0,8,0,0" Padding="12,10" Background="{DynamicResource SurfaceMutedBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Result code" />
+                                    <TextBlock Margin="16,0,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding LogEvidenceErrorCode}" />
+                                    <TextBlock Margin="16,0,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding LogEvidenceErrorDetail}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,20,0,0" Padding="22" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HeroBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource CardCornerRadius}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SUPPORT BUNDLE" />
+                                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="Generate safe diagnostic evidence" />
+                                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding SupportBundleStatusSummary}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button
+                                    Grid.Column="1"
+                                    Margin="24,0,0,0"
+                                    Command="{Binding GenerateSupportBundleCommand}"
+                                    Content="{Binding SupportBundleStateLabel}"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </Grid>
+                            <TextBlock Margin="0,16,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleAuthorizationNote}" TextWrapping="Wrap" />
+                            <Border Margin="0,16,0,0" Padding="14" Background="{DynamicResource SurfaceMutedBrush}" CornerRadius="{DynamicResource ControlCornerRadius}" Visibility="{Binding IsSupportBundleResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="ARTIFACT" />
+                                    <TextBlock Grid.Column="1" Style="{DynamicResource DetailValueStyle}" Text="{Binding SupportBundleArtifactDisplayName}" />
+                                    <TextBlock Grid.Column="2" Style="{DynamicResource DetailLabelStyle}" Text="SIZE" />
+                                    <TextBlock Grid.Column="3" Style="{DynamicResource DetailValueStyle}" Text="{Binding SupportBundleSizeDisplay}" />
+                                    <TextBlock Grid.Row="1" Margin="0,10,0,0" Style="{DynamicResource DetailLabelStyle}" Text="CHECKSUM" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleChecksumDisplay}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,10,0,0" Style="{DynamicResource DetailLabelStyle}" Text="EXPIRES" />
+                                    <TextBlock Grid.Row="1" Grid.Column="3" Margin="0,10,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding SupportBundleExpiryDisplay}" />
+                                    <TextBlock Grid.Row="2" Margin="0,10,0,0" Style="{DynamicResource DetailLabelStyle}" Text="CREATED" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding SupportBundleCreatedDisplay}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Margin="0,10,0,0" Style="{DynamicResource DetailLabelStyle}" Text="CORRELATION ID" />
+                                    <TextBlock Grid.Row="2" Grid.Column="3" Margin="0,10,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleCorrelationDisplay}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Row="3" Margin="0,10,0,0" Style="{DynamicResource DetailLabelStyle}" Text="SECTIONS" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,10,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleIncludedSectionsDisplay}" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="4" Margin="0,10,0,0" Style="{DynamicResource DetailLabelStyle}" Text="ARTIFACT ID" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,10,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleArtifactId}" />
+                                </Grid>
+                            </Border>
+                            <TextBlock Margin="0,14,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Artifact export/download is deferred; no ZIP bytes or server path are exposed here." TextWrapping="Wrap" />
+                            <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
+                                <TextBlock Style="{DynamicResource TinyMetaStyle}" Text="Result code: " />
+                                <TextBlock Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleErrorCode}" />
+                                <TextBlock Margin="10,0,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding SupportBundleErrorDetail}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Logs and evidence are collected on workspace open or manual refresh; the 30-second health poll never collects detailed evidence. No repair, cleanup, restore, or mutation is performed." TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

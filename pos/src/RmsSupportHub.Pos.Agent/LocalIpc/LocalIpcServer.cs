@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Agent.Rms;
 using RmsSupportHub.Pos.Agent.Services;
+using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Application.Services;
@@ -31,7 +32,9 @@ public sealed class LocalIpcServer(
     DatabaseHealthQueryHandler databaseHealth,
     LocalIpcRuntimeStatus status,
     ILogger<LocalIpcServer> logger,
-    ILocalIpcServerPipeFactory? serverPipeFactory = null) : IHostedService
+    ILocalIpcServerPipeFactory? serverPipeFactory = null,
+    LogEvidenceQueryHandler? logEvidence = null,
+    SupportBundleExecutor? supportBundle = null) : IHostedService
 {
     private static readonly TimeSpan InitialRetryBackoff = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MaximumRetryBackoff = TimeSpan.FromSeconds(5);
@@ -479,6 +482,156 @@ public sealed class LocalIpcServer(
                     effectiveCorrelationId,
                     DatabaseHealthContractMapper.Map(databaseHealthResult.Value),
                     cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.LogEvidenceOperation:
+                if (request.Payload is not null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "invalid_request",
+                        "The log evidence operation does not accept a payload.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                if (logEvidence is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "logs_evidence_unavailable",
+                        "RMS diagnostic evidence is currently unavailable.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var logEvidenceResult = await logEvidence
+                    .HandleAsync(context, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!logEvidenceResult.Succeeded || logEvidenceResult.Value is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        logEvidenceResult.Error?.Code ?? "logs_evidence_unavailable",
+                        logEvidenceResult.Error?.Message ?? "RMS diagnostic evidence is currently unavailable.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    logEvidenceResult.Value,
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.SupportBundleOperation:
+                if (request.Payload is not null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "invalid_request",
+                        "The Support Bundle operation does not accept a payload.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                if (supportBundle is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "support_bundle_unavailable",
+                        "The Support Bundle could not be generated.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                try
+                {
+                    var supportBundleResult = await supportBundle
+                        .ExecuteAsync(
+                            context,
+                            context.AuthenticatedCaller,
+                            effectiveCorrelationId,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    await WriteSuccessAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        supportBundleResult,
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (SupportBundleAuthorizationException exception)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        exception.Message == "invocation_context_invalid"
+                            ? "invocation_context_invalid"
+                            : "administrator_authorization_required",
+                        exception.Message == "invocation_context_invalid"
+                            ? "The authenticated Windows caller could not be verified."
+                            : "Administrator authority is required to generate a Support Bundle.",
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (RmsInstallationDiscoveryAuditUnavailableException)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "audit_unavailable",
+                        "The Support Bundle is temporarily unavailable because required audit recording is unavailable.",
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (SupportBundleAuditUnavailableException)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "audit_unavailable",
+                        "The Support Bundle is temporarily unavailable because required audit recording is unavailable.",
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "support_bundle_timeout",
+                        "Support Bundle generation timed out.",
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "support_bundle_unavailable",
+                        "The Support Bundle could not be generated.",
+                        cancellationToken).ConfigureAwait(false);
+                }
+
                 return;
 
             default:

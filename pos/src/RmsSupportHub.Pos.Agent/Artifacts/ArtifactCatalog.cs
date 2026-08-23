@@ -156,6 +156,38 @@ public sealed class ArtifactCatalog
         return metadata is not null;
     }
 
+    /// <summary>
+    /// Revokes a newly-created capability when a required post-generation security record cannot
+    /// be persisted. The operation remains principal-scoped and never exposes the backing path.
+    /// </summary>
+    public bool TryRevoke(string principal, string artifactId)
+    {
+        if (string.IsNullOrWhiteSpace(principal) || string.IsNullOrWhiteSpace(artifactId))
+        {
+            return false;
+        }
+
+        Entry? retired = null;
+        lock (_gate)
+        {
+            if (_entries.TryGetValue(artifactId, out var entry)
+                && string.Equals(entry.Principal, principal, StringComparison.Ordinal)
+                && entry.ActiveDownloads == 0
+                && TryRetireLocked(artifactId, entry, out retired))
+            {
+                // Physical cleanup is performed outside the catalog lock.
+            }
+        }
+
+        if (retired is null)
+        {
+            return false;
+        }
+
+        DeleteRetiredFiles([retired]);
+        return true;
+    }
+
     public async Task<Stream?> OpenReadAsync(string principal, string artifactId, CancellationToken cancellationToken)
     {
         Prune();

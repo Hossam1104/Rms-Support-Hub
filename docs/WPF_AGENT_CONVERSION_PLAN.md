@@ -2,8 +2,8 @@
 
 **Product:** RMS+ Support Hub
 **Architecture Rebaseline:** Post PR #31
-**Status:** WPF-01 implemented on `feat/wpf-01-shared-agent-local-ipc`; awaiting Sol acceptance before WPF-02
-**Date:** 2026-08-22
+**Status:** WPF-01 through WPF-04 are merged; WPF-05 Logs and Safe Support Bundle is the current implementation slice on `feat/wpf-05-logs-support-bundle`
+**Date:** 2026-08-23
 **Authority:** GPT-5.6 Sol
 
 ---
@@ -74,6 +74,28 @@ This document establishes the phased implementation roadmap for transitioning th
 | Phase 9: Cutover & Deprecation of Browser-Direct Path (Pilot -> Full Rollout)      |
 +-----------------------------------------------------------------------------------+
 ```
+
+### Current implementation status
+
+The local WPF parity programme is progressing in bounded slices through the
+shared Agent/Application seam and typed Local IPC:
+
+- **WPF-01 - Shared Agent + Local IPC:** merged (PR #32).
+- **WPF-02 - WPF shell and local Agent health:** merged (PR #33).
+- **WPF-03 - RMS service health:** merged (PR #34).
+- **WPF-04 - Database health and diagnostics:** Sol accepted and merged (PR
+  #35, main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`).
+- **WPF-05 - Logs and Safe Support Bundle:** current branch and story
+  #13035. Detailed logs are on-demand; Support Bundle UI exposes validated
+  metadata only and defers artifact export/download.
+- **WPF-06 - Database Backup & Local Artifact Delivery:** next gated slice,
+  story #13034. It must not start until Sol accepts WPF-05.
+
+The remaining local parity work includes approved backup/artifact delivery,
+restore only when separately authorized, safety snapshots, cleanup/reset,
+package lifecycle, rollback/recovery, and local audit. SignalR, device
+identity, fleet supervision, remote operations, rollout, and Production
+migration remain later phases.
 
 ---
 
@@ -149,18 +171,17 @@ OPUS-14 and OPUS-16 follow-up work.
 ### Phase 3 — WPF Standalone App / Local Feature Parity
 - **Goal:** Complete, native WPF desktop application covering all retained POS capabilities.
 - **UI Delivery Sequence:**
-  1. **Shell & Dashboard:** Modern desktop shell, navigation, design tokens, machine status summary, Agent connection indicator.
-  2. **Agent & RMS Health:** Real-time service status, component health, connection latency.
-  3. **RMS Service Control:** Approved service restart/control workflows with confirmation prompts.
-  4. **Database Diagnostics:** Connection test, storage usage, integrity checks without exposing connection strings.
-  5. **Database Backup & Download:** On-demand backup creation, artifact inspection, local download.
-  6. **Guarded Database Restore:** Pre-flight checks, mandatory safety snapshot, confirmation modal, mutation lease.
-  7. **Logs & Safe Support Bundle:** Bounded log viewer, severity filtering, credential-redacted Support Bundle ZIP generation.
-  8. **Safety Snapshots & Timeline:** Manual/scheduled snapshot creation, chronological system event timeline.
-  9. **Cleanup & Branch Reset:** Purge preview, pre-reset snapshot, guarded branch reset strictly preserving native RMS services.
-  10. **Package Lifecycle:** Installed version inspection, package signature verification, install, upgrade, repair, uninstall.
-  11. **Rollback & Recovery:** PreviousVersion checkpoint inspection, health-committed rollback execution.
-  12. **Local Activity & Audit:** Searchable chronological audit viewer for all machine maintenance actions.
+  1. **Shell & Dashboard (WPF-02):** Modern desktop shell, navigation, design tokens, machine status summary, Agent connection indicator.
+  2. **Agent & RMS Health (WPF-03):** Read-only service status, component health, and connection state.
+  3. **Database Diagnostics (WPF-04):** Fixed database health projection without exposing connection strings.
+  4. **Logs & Safe Support Bundle (WPF-05):** Bounded redacted evidence, safe filters, and metadata-only administrator Support Bundle generation.
+  5. **Database Backup & Download (WPF-06):** Approved backup creation, artifact inspection, and bounded local delivery/export.
+  6. **Guarded Database Restore:** Separately gated pre-flight checks, safety snapshot, confirmation, and mutation lease.
+  7. **Safety Snapshots & Timeline:** Manual/scheduled snapshot creation and chronological system event timeline.
+  8. **Cleanup & Branch Reset:** Purge preview, pre-reset snapshot, and guarded reset preserving native RMS services.
+  9. **Package Lifecycle:** Installed version inspection, package signature verification, install, upgrade, repair, uninstall.
+  10. **Rollback & Recovery:** PreviousVersion checkpoint inspection and health-committed rollback execution.
+  11. **Local Activity & Audit:** Searchable chronological audit viewer for machine maintenance actions.
 - **Exit Gate:** Functional parity matrix verifies 100% of retained E07–E09 capabilities in WPF; full offline functionality proved.
 
 ---
@@ -259,12 +280,13 @@ pos/
 
 ---
 
-## 4. First Implementation Slice
+## 4. First Implementation Slice (historical)
 
 ### Slice: `WPF-01 — Shared Agent Application + Local IPC Foundation`
 
-> [!CAUTION]
-> **Implementation Hard Stop:** Do **NOT** start implementation of `WPF-01` until GPT-5.6 Sol reviews and formally accepts this Architecture Rebaseline PR.
+> WPF-01 was the first implementation slice. Its architecture gate was
+> satisfied and it is merged; the scope below is retained as historical
+> traceability rather than an active execution prompt.
 
 #### Scope of WPF-01:
 1. **Application Seam Extraction:**
