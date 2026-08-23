@@ -4,8 +4,8 @@
 - **Repository baseline:** `main` was verified clean at
   `e2da601cfad42a324fa49aa68ad14c3008a42605` before WPF-03 work.
 - **Working branch:** `feat/wpf-03-local-rms-service-health`.
-- **Status:** WPF-03 read-only implementation is committed at `e00447b`;
-  Draft PR delivery and GPT-5.6 Sol review remain pending.
+- **Status:** WPF-03 read-only implementation is committed at `e00447b` and
+  delivered in Draft PR #34; GPT-5.6 Sol review remains pending.
 - **Authority:** CR-001 and ADR-0029 remain accepted; GPT-5.6 Sol is the
   acceptance authority. WPF-04 is explicitly blocked until that review.
 
@@ -33,7 +33,8 @@
 - WPF remains a WinExe referencing only `RmsSupportHub.Pos.LocalIpc`. Structural
   tests reject WPF ServiceController/SCM/PowerShell/process/HTTPS access.
 - Service start/stop/restart and all other mutation controls were not added.
-  #13032 remains Active/P1 for this reason; #13033 remains the next candidate.
+  #13032 remains Active/P1 for this reason and its implementation is in Draft
+  PR #34; #13033 remains the next candidate after acceptance.
 
 ## Validation evidence
 

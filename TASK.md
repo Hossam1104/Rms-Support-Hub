@@ -7,7 +7,7 @@ REPOSITORY: `D:\AI Tools\DBS\Rms-Support-Hub`
 BRANCH: `feat/wpf-03-local-rms-service-health`
 EPIC: E17 - WPF Standalone Local Operations (#13018)
 PRIMARY STORY: US-E17-02 - Agent/RMS service health and approved service control (#13032)
-STATUS: Implemented read-only health slice; Draft PR delivery and GPT-5.6 Sol review pending
+STATUS: Implemented read-only health slice; Draft PR #34 open; GPT-5.6 Sol review pending
 
 ## WPF-03 completed implementation
 
@@ -43,23 +43,24 @@ HTTPS, SCM, registry, filesystem, or process access was added.
 - PowerShell quality gate: 37/37 tracked PowerShell files parse cleanly.
 - Pester 3.4.0: 8/8 passed, 0 failed, 0 skipped, 0 pending.
 - `python .ai/scripts/check_memory.py`, `python .ai/scripts/context.py`, and
-  `git diff --check`: passed before delivery documentation synchronization.
+  `git diff --check`: passed after implementation and documentation updates.
 
 ## Azure reconciliation
 
 - #13018 remains Active/P1.
 - #13031 remains Closed/P1 with WPF-02 merge evidence.
-- #13032 remains Active/P1; read-only WPF-03 health is implemented and
-  start/stop/restart/service mutation is intentionally deferred.
+- #13032 remains Active/P1; read-only WPF-03 health is delivered in Draft PR
+  #34 and start/stop/restart/service mutation is intentionally deferred.
 - #13033 remains New/P1.
 - #13072-#13076 remain unchanged in the preserved Online Order backlog.
 
 ## Delivery gate
 
 The implementation commit is `e00447b` (`feat: add local RMS service health
-to WPF`). Create and keep the pull request Draft; do not merge or mark it
-ready. Do not contact Production, provision the operator group, install or
-mutate a Windows service, or mutate native RMS/database state.
+to WPF`) and Draft PR #34 is open from the current branch. Keep the pull
+request Draft; do not merge or mark it ready. Do not contact Production,
+provision the operator group, install or mutate a Windows service, or mutate
+native RMS/database state.
 
 ## Next bounded executable prompt: WPF-04 - Database Health & Diagnostics
 
