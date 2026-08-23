@@ -37,20 +37,18 @@ HTTPS, SCM, registry, filesystem, or process access was added.
   `PosAgentSecurity__SupportHubOrigin=https://localhost:4443`: 0 warnings,
   0 errors.
 - Full POS Release tests: Domain 12/12, Application 98/98, Infrastructure
-  155/155, Agent Integration 235/235, WPF 25/25; 525/525 total.
-- Exact-head Draft PR #34 POS CI and Support Hub CI: all seven checks passed
-  for the final branch head after one unrelated external-configuration test
-  fixture rerun.
-- Focused service-health/application, Local IPC/Agent, and WPF suites passed
-  at the same counts above for their affected projects.
+  155/155, Agent Integration 235/235, WPF 28/28; 528/528 total.
+- Focused WPF adapter suite: 28/28, including real Local IPC coverage for
+  `service_health_unavailable` and `agent_unavailable`.
 - PowerShell quality gate: 37/37 tracked PowerShell files parse cleanly.
-- Pester 3.4.0: 8/8 passed, 0 failed, 0 skipped, 0 pending.
+- Pester 3.4.0: 172/172 passed, 0 failed, 0 skipped, 0 pending.
 - `.\scripts\dev.ps1` runtime probes: frontend `/` 200, backend
   `/health/live` 200, and backend `/health/ready` 200.
-- Release WPF executable was launched from the workspace and verified alive,
-  responsive, and titled `RMS Support Hub`; one exact-path instance remains
-  running. The host required the process-local `WINDIR=C:\WINDOWS` environment
-  value for WPF font initialization.
+- Final Release WPF executable was launched from the workspace as PID 12224
+  from the exact Release path, verified alive, responsive, and titled
+  `RMS Support Hub`; that one instance remains running. The host required the
+  process-local `WINDIR=C:\WINDOWS` environment value for WPF font
+  initialization.
 - Read-only machine check found no `RmsSupportAgent` service and no `RMS
   Support Operators` local group; no prerequisite was provisioned. Computer
   Use was unavailable, so screenshot and actual Refresh-click evidence are
@@ -70,10 +68,11 @@ HTTPS, SCM, registry, filesystem, or process access was added.
 ## Delivery gate
 
 The implementation commit is `e00447b` (`feat: add local RMS service health
-to WPF`) and Draft PR #34 is open from the current branch. Keep the pull
-request Draft; do not merge or mark it ready. Do not contact Production,
-provision the operator group, install or mutate a Windows service, or mutate
-native RMS/database state.
+to WPF`) and the final bounded S01 correction is `17b25ae` (`fix: distinguish
+service health lookup failures in WPF`). Draft PR #34 is open from the current
+branch. Keep the pull request Draft; do not merge or mark it ready. Do not
+contact Production, provision the operator group, install or mutate a Windows
+service, or mutate native RMS/database state.
 
 ## Next bounded executable prompt: WPF-04 - Database Health & Diagnostics
 

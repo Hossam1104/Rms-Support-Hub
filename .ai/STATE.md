@@ -4,9 +4,9 @@
 - **Repository baseline:** `main` was verified clean at
   `e2da601cfad42a324fa49aa68ad14c3008a42605` before WPF-03 work.
 - **Working branch:** `feat/wpf-03-local-rms-service-health`.
-- **Status:** WPF-03 read-only implementation is committed at `e00447b`,
-  delivered in Draft PR #34, and exact-head CI is green; GPT-5.6 Sol review
-  remains pending.
+- **Status:** WPF-03 read-only implementation and final bounded S01 correction
+  are committed at `e00447b` and `17b25ae`, delivered in Draft PR #34; GPT-5.6
+  Sol review remains pending.
 - **Authority:** CR-001 and ADR-0029 remain accepted; GPT-5.6 Sol is the
   acceptance authority. WPF-04 is explicitly blocked until that review.
 
@@ -33,6 +33,12 @@
   single-flight gate, cancellation source, and 30-second timer.
 - WPF remains a WinExe referencing only `RmsSupportHub.Pos.LocalIpc`. Structural
   tests reject WPF ServiceController/SCM/PowerShell/process/HTTPS access.
+- `LocalAgentServiceHealthClient` preserves the distinction between Agent IPC
+  unavailability (`agent_unavailable`) and a connected Agent whose fixed
+  service lookup is unavailable (`service_health_unavailable`). The dashboard
+  summary remains neutral for both Unavailable service-health states while the
+  bounded `ServiceErrorDetail` carries the fixed safe copy. `ServiceHealthRow`
+  rejects the contradictory `NotFound` plus `Installed` DTO combination.
 - Service start/stop/restart and all other mutation controls were not added.
   #13032 remains Active/P1 for this reason and its implementation is in Draft
   PR #34; #13033 remains the next candidate after acceptance.
@@ -42,15 +48,12 @@
 - Strict Release build after restore: 0 warnings, 0 errors, using only the
   Testing origin environment variable `https://localhost:4443`.
 - POS Release tests: Domain 12/12, Application 98/98, Infrastructure 155/155,
-  Agent Integration 235/235, WPF 25/25; 525/525 total.
-- PowerShell quality: 37/37 tracked files parse cleanly. Pester 3.4.0: 8/8
-  passed. Memory, context, and `git diff --check` passed.
-- Draft PR #34 exact-head POS CI and Support Hub CI are green. The Support Hub
-  run required one rerun after an unrelated external-configuration fixture
-  failure; the rerun passed all backend/frontend/release-candidate checks.
+  Agent Integration 235/235, WPF 28/28; 528/528 total.
+- Focused WPF adapter tests: 28/28. PowerShell quality: 37/37 tracked files
+  parse cleanly. Pester 3.4.0: 172/172 passed, 0 failed, 0 skipped, 0 pending.
 - `.\scripts\dev.ps1` probes responded with frontend `/` 200, backend
-  `/health/live` 200, and backend `/health/ready` 200. The Release WPF process
-  is alive and responsive with the expected `RMS Support Hub` title.
+  `/health/live` 200, and backend `/health/ready` 200. Final Release WPF PID
+  12224 is alive and responsive with the expected `RMS Support Hub` title.
 - Current machine still has no visible `RmsSupportAgent` service or
   `RMS Support Operators` local group. No prerequisite was provisioned and no
   security mode was weakened. Computer Use is unavailable, so screenshot and
