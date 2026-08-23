@@ -2,7 +2,10 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
+using RmsSupportHub.Pos.Contracts.V1.Services;
 using RmsSupportHub.Pos.Desktop.Wpf.Models;
 using RmsSupportHub.Pos.Desktop.Wpf.Services;
 using RmsSupportHub.Pos.LocalIpc;
@@ -11,6 +14,11 @@ namespace RmsSupportHub.Pos.Desktop.Wpf.Tests;
 
 public sealed class LocalAgentHealthClientTests
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
     [Fact]
     public async Task ServerTrustFailureMapsSafelyAndSendsNoRequestBytes()
     {
@@ -54,6 +62,196 @@ public sealed class LocalAgentHealthClientTests
         Assert.Equal(HealthViewState.InvalidResponse, result.State);
         Assert.Equal("invalid_response", result.ErrorCode);
         Assert.Equal("The Agent returned an invalid health response.", result.ErrorDetail);
+    }
+
+    [Fact]
+    public async Task ServiceHealthResponseMapsToTypedRowsAndPreservesCorrelation()
+    {
+        var options = CreateOptions();
+        using var server = CreateServer(options);
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
+            var requestLine = await reader.ReadLineAsync()
+                ?? throw new InvalidOperationException("The client did not send a request.");
+            var request = JsonSerializer.Deserialize<LocalIpcRequestEnvelope>(requestLine, JsonOptions)
+                ?? throw new InvalidOperationException("The client request was malformed.");
+            var snapshot = new ServiceHealthSnapshotDto(
+                ServiceHealthOverallState.Degraded,
+                DateTimeOffset.UtcNow,
+                [
+                    new ServiceHealthItemDto(
+                        "svc-branch",
+                        "RMS Branch Service",
+                        true,
+                        true,
+                        ServiceRuntimeState.Running,
+                        "running"),
+                    new ServiceHealthItemDto(
+                        "svc-cashier",
+                        "RMS Cashier Service",
+                        true,
+                        false,
+                        ServiceRuntimeState.NotFound,
+                        "not_installed")
+                ]);
+            var response = new LocalIpcResponseEnvelope(
+                LocalIpcProtocol.CurrentVersion,
+                request.RequestId,
+                request.CorrelationId!,
+                true,
+                JsonSerializer.SerializeToElement(snapshot, JsonOptions),
+                null);
+            await server.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions));
+            await server.WriteAsync("\n"u8.ToArray());
+            await server.FlushAsync();
+        });
+        var healthClient = new LocalAgentServiceHealthClient(
+            new LocalIpcClient(options, new FixedIdentityVerifier(true)));
+
+        var result = await healthClient.GetHealthAsync("service-correlation");
+        await serverTask;
+
+        Assert.Equal(ServiceHealthViewState.Degraded, result.State);
+        Assert.Equal("service-correlation", result.CorrelationId);
+        Assert.Equal(2, result.Services.Count);
+        Assert.Equal(1, result.RunningCount);
+        Assert.Equal(1, result.NotInstalledCount);
+        Assert.Equal("Not installed", result.Services[1].RuntimeLabel);
+        Assert.Equal("Not installed", result.Services[1].InstallationLabel);
+    }
+
+    [Fact]
+    public async Task ServiceHealthErrorResponseMapsToBoundedTimeoutState()
+    {
+        var options = CreateOptions();
+        using var server = CreateServer(options);
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
+            var requestLine = await reader.ReadLineAsync()
+                ?? throw new InvalidOperationException("The client did not send a request.");
+            var request = JsonSerializer.Deserialize<LocalIpcRequestEnvelope>(requestLine, JsonOptions)
+                ?? throw new InvalidOperationException("The client request was malformed.");
+            var response = new LocalIpcResponseEnvelope(
+                LocalIpcProtocol.CurrentVersion,
+                request.RequestId,
+                request.CorrelationId!,
+                false,
+                null,
+                new LocalIpcErrorDto("service_health_timeout", "native exception details"));
+            await server.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions));
+            await server.WriteAsync("\n"u8.ToArray());
+            await server.FlushAsync();
+        });
+        var healthClient = new LocalAgentServiceHealthClient(
+            new LocalIpcClient(options, new FixedIdentityVerifier(true)));
+
+        var result = await healthClient.GetHealthAsync("service-timeout");
+        await serverTask;
+
+        Assert.Equal(ServiceHealthViewState.TimedOut, result.State);
+        Assert.Equal("service_health_timeout", result.ErrorCode);
+        Assert.Equal("Service health check timed out.", result.ErrorDetail);
+        Assert.DoesNotContain("native", result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ServiceHealthUnavailablePreservesServiceHealthClassificationAndSafeCopy()
+    {
+        var options = CreateOptions();
+        using var server = CreateServer(options);
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
+            var requestLine = await reader.ReadLineAsync()
+                ?? throw new InvalidOperationException("The client did not send a request.");
+            var request = JsonSerializer.Deserialize<LocalIpcRequestEnvelope>(requestLine, JsonOptions)
+                ?? throw new InvalidOperationException("The client request was malformed.");
+            Assert.Equal(LocalIpcProtocol.ServiceHealthOperation, request.Operation);
+            var response = new LocalIpcResponseEnvelope(
+                LocalIpcProtocol.CurrentVersion,
+                request.RequestId,
+                request.CorrelationId!,
+                false,
+                null,
+                new LocalIpcErrorDto(
+                    "service_health_unavailable",
+                    "native exception from SCM for PID 31372 at path C:\\Windows\\System32\\rms.exe"));
+            await server.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions));
+            await server.WriteAsync("\n"u8.ToArray());
+            await server.FlushAsync();
+        });
+        var healthClient = new LocalAgentServiceHealthClient(
+            new LocalIpcClient(options, new FixedIdentityVerifier(true)));
+
+        var result = await healthClient.GetHealthAsync("service-unavailable");
+        await serverTask;
+
+        Assert.Equal(ServiceHealthViewState.Unavailable, result.State);
+        Assert.Equal("service_health_unavailable", result.ErrorCode);
+        Assert.Equal("RMS service health is currently unavailable.", result.ErrorDetail);
+        Assert.DoesNotContain("native", result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("exception", result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SCM", result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("PID", result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("path", result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            "RMS Support Agent is not available",
+            result.ErrorDetail,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AgentUnavailableErrorKeepsAgentUnavailableCopy()
+    {
+        var options = CreateOptions();
+        using var server = CreateServer(options);
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
+            var requestLine = await reader.ReadLineAsync()
+                ?? throw new InvalidOperationException("The client did not send a request.");
+            var request = JsonSerializer.Deserialize<LocalIpcRequestEnvelope>(requestLine, JsonOptions)
+                ?? throw new InvalidOperationException("The client request was malformed.");
+            var response = new LocalIpcResponseEnvelope(
+                LocalIpcProtocol.CurrentVersion,
+                request.RequestId,
+                request.CorrelationId!,
+                false,
+                null,
+                new LocalIpcErrorDto("agent_unavailable", "native Agent connection detail"));
+            await server.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions));
+            await server.WriteAsync("\n"u8.ToArray());
+            await server.FlushAsync();
+        });
+        var healthClient = new LocalAgentServiceHealthClient(
+            new LocalIpcClient(options, new FixedIdentityVerifier(true)));
+
+        var result = await healthClient.GetHealthAsync("agent-unavailable");
+        await serverTask;
+
+        Assert.Equal(ServiceHealthViewState.Unavailable, result.State);
+        Assert.Equal("agent_unavailable", result.ErrorCode);
+        Assert.Equal("RMS Support Agent is not available on this machine.", result.ErrorDetail);
+    }
+
+    [Fact]
+    public void ContradictoryNotFoundInstallationIsRejected()
+    {
+        var item = new ServiceHealthItemDto(
+            "svc-branch",
+            "RMS Branch Service",
+            true,
+            true,
+            ServiceRuntimeState.NotFound,
+            "not_installed");
+
+        Assert.False(ServiceHealthRow.TryCreate(item, out _));
     }
 
     private static LocalIpcOptions CreateOptions() => new()

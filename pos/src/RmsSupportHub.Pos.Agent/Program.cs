@@ -204,6 +204,8 @@ builder.Services.AddSingleton<SupportBundleRuntime>();
 builder.Services.AddSingleton<DeviceDiagnosticsService>();
 builder.Services.AddSingleton<IServiceManager, WindowsServiceManager>();
 builder.Services.AddSingleton<ServiceAllowList>();
+builder.Services.AddSingleton<ServiceHealthReader>();
+builder.Services.AddSingleton<ServiceHealthQueryHandler>();
 builder.Services.AddSingleton<ReadOnlyServiceStatusService>();
 builder.Services.AddSingleton(new ServiceActionOptions());
 builder.Services.AddSingleton<ServiceActionIdempotencyStore>();

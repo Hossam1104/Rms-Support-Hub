@@ -17,6 +17,8 @@
     Closed="OnClosed">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
         <Style x:Key="NavButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -189,15 +191,15 @@
                             CornerRadius="{DynamicResource CardCornerRadius}">
                             <StackPanel>
                                 <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SCOPE" />
-                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="This slice exposes Agent health only. Later operations will appear here after review." TextWrapping="Wrap" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Read-only Agent and RMS service health. Service controls remain bounded for a later slice." TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
-                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-02  /  PROTOCOL v1" />
+                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-03  /  PROTOCOL v1" />
                     </StackPanel>
 
                     <StackPanel>
                         <TextBlock Margin="8,0,0,12" Style="{DynamicResource EyebrowStyle}" Text="WORKSPACES" />
-                        <Button Style="{StaticResource NavButtonStyle}" IsDefault="True">
+                        <Button Command="{Binding ShowDashboardCommand}" Style="{StaticResource NavButtonStyle}" IsDefault="True">
                             <StackPanel Orientation="Horizontal">
                                 <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
                                 <StackPanel>
@@ -206,9 +208,17 @@
                                 </StackPanel>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding ShowServicesCommand}" Style="{StaticResource NavButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" Text="Services" />
+                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Read-only status" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
                         <TextBlock Margin="8,30,0,12" Style="{DynamicResource EyebrowStyle}" Text="COMING LATER" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="RMS" />
-                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Services" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Database" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Logs" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Backup" />
@@ -223,6 +233,7 @@
             <ScrollViewer
                 Grid.Column="1"
                 Padding="34,30,34,40"
+                Visibility="{Binding IsDashboardVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="920">
@@ -322,6 +333,25 @@
                     </Grid>
 
                     <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="RMS SERVICES" />
+                                <TextBlock Margin="0,10,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding ServiceSummaryDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding ServiceSummaryDetail}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="154" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="OVERALL STATUS" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ServiceStateLabel}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding LastServiceCheckDisplay}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
                         <StackPanel>
                             <TextBlock Style="{DynamicResource EyebrowStyle}" Text="CONNECTION DETAILS" />
                             <Grid Margin="0,18,0,0">
@@ -348,7 +378,176 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only the Dashboard is active in WPF-02. Unsupported workspaces remain visibly bounded until a later migration slice." TextWrapping="Wrap" />
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Dashboard and Services are active in WPF-03. Service health is read-only; mutation controls remain intentionally deferred." TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer
+                Grid.Column="1"
+                Padding="34,30,34,40"
+                Visibility="{Binding IsServicesVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="920">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SERVICES  /  LOCAL SNAPSHOT" />
+                            <TextBlock Margin="0,8,0,0" Style="{DynamicResource PageTitleStyle}" Text="RMS services" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="Read-only status for the fixed RMS and Agent Windows service identities." TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Margin="24,8,0,0"
+                            Command="{Binding RefreshCommand}"
+                            Content="Refresh"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    </Grid>
+
+                    <Border
+                        Margin="0,28,0,0"
+                        Padding="26"
+                        Background="{DynamicResource HeroBrush}"
+                        BorderBrush="{DynamicResource HeroBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource CardCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="12" Height="12" Margin="0,3,12,0" Fill="{DynamicResource StatusNeutralBrush}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{DynamicResource StatusNeutralBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ServiceState}" Value="{x:Static models:ServiceHealthViewState.Healthy}">
+                                                        <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ServiceState}" Value="{x:Static models:ServiceHealthViewState.Degraded}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ServiceState}" Value="{x:Static models:ServiceHealthViewState.Loading}">
+                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ServiceState}" Value="{x:Static models:ServiceHealthViewState.TimedOut}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ServiceState}" Value="{x:Static models:ServiceHealthViewState.Unknown}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Style="{DynamicResource HeroStateStyle}" Text="{Binding ServiceStateLabel}" />
+                                </StackPanel>
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource HeroMessageStyle}" Text="{Binding ServiceStatusSummary}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource SmallBodyStyle}" Text="The Agent owns service inspection. No service is started, stopped, or changed by this workspace." TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="154" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LAST CHECK" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LastServiceCheckDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Local time" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="RUNNING" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding ServiceRunningCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Fixed service identities" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="STOPPED" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding ServiceStoppedCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Requires attention when required" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Margin="7,0,0,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="UNKNOWN" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding ServiceUnknownCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Paused, changing, or unknown" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="FIXED SERVICE CATALOG" />
+                            <ItemsControl Margin="0,18,0,0" ItemsSource="{Binding ServiceItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8" Padding="16" Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Style="{DynamicResource DetailValueStyle}" Text="{Binding DisplayName}" />
+                                                    <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding RequirementLabel}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" MinWidth="140" Margin="18,0,18,0">
+                                                    <TextBlock Style="{DynamicResource EyebrowStyle}" Text="STATUS" />
+                                                    <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                                        <TextBlock FontSize="14" Text="{Binding StatusGlyph}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource StatusNeutralBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:ServiceHealthRowState.Running}">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:ServiceHealthRowState.Stopped}">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:ServiceHealthRowState.Paused}">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:ServiceHealthRowState.Transitioning}">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding State}" Value="{x:Static models:ServiceHealthRowState.Unknown}">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBlock Margin="8,0,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding RuntimeLabel}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" MinWidth="118">
+                                                    <TextBlock Style="{DynamicResource EyebrowStyle}" Text="INSTALLATION" />
+                                                    <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding InstallationLabel}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,10,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding ServiceErrorDetail}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only fixed server-owned service identities are queried. Start, stop, restart, and other service-control actions are not part of WPF-03." TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

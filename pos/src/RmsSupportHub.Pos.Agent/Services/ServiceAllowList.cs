@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Services;
@@ -39,13 +37,10 @@ public sealed class ServiceAllowList
     }
 
     public static string ToServiceId(string serviceName) =>
-        "svc-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(serviceName.Trim())))
-            .ToLowerInvariant()[..16];
+        ServiceIdentityCatalog.ToServiceId(serviceName);
 
     public static bool IsOpaqueServiceId(string? serviceId) =>
-        serviceId is { Length: 20 }
-        && serviceId.StartsWith("svc-", StringComparison.Ordinal)
-        && serviceId[4..].All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
+        ServiceIdentityCatalog.IsOpaqueServiceId(serviceId);
 
 }
 

@@ -11,6 +11,7 @@ using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
 using RmsSupportHub.Pos.LocalIpc;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
@@ -195,6 +196,7 @@ public sealed class LocalIpcServerLifecycleRemediationTests
             new CurrentUserSecurityDescriptorFactory(),
             new TestInvocationContextFactory(),
             new RmsInstallationDiscoveryQueryHandler(new UnusedDiscovery(), new SuccessfulAuditSink(), TimeProvider.System),
+            ServiceHealthTestSupport.CreateHandler(),
             status,
             NullLogger<LocalIpcServer>.Instance,
             pipeFactory);
