@@ -44,7 +44,7 @@ Do not copy facts that can be cheaply discovered from the repository.
   generated client artifacts, direct browser transport, and no Support Hub API
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
-  credentials, and operation capabilities server-owned.
+  credentials, and operation capabilities server-owned; native WPF uses typed Local IPC for bounded read-only RMS/Agent health; inspection remains Agent/Application-owned.
 - Slice C establishes the permanent product/service identity
   `RmsSupportAgent`, safe migration inputs for the two historical Testing
   service names, machine-pinned package trust with a deterministic canonical
