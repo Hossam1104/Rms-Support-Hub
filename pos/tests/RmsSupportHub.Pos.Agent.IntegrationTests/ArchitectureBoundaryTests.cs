@@ -213,6 +213,34 @@ public sealed class ArchitectureBoundaryTests
     }
 
     [Fact]
+    public void ApplicationDiagnosticSeamDoesNotDependOnTransportContracts()
+    {
+        var root = FindRepoRoot();
+        var applicationDirectory = Path.Combine(root, "pos", "src", "RmsSupportHub.Pos.Application");
+        var project = File.ReadAllText(Path.Combine(
+            applicationDirectory,
+            "RmsSupportHub.Pos.Application.csproj"));
+
+        Assert.DoesNotContain("RmsSupportHub.Pos.Contracts", project, StringComparison.Ordinal);
+
+        foreach (var file in Directory.EnumerateFiles(applicationDirectory, "*.cs", SearchOption.AllDirectories))
+        {
+            Assert.DoesNotContain(
+                "RmsSupportHub.Pos.Contracts.V1",
+                File.ReadAllText(file),
+                StringComparison.Ordinal);
+        }
+
+        var domainProject = File.ReadAllText(Path.Combine(
+            root,
+            "pos",
+            "src",
+            "RmsSupportHub.Pos.Domain",
+            "RmsSupportHub.Pos.Domain.csproj"));
+        Assert.DoesNotContain("RmsSupportHub.Pos.Contracts", domainProject, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WpfServiceHealthUsesLocalIpcAndContainsNoNativeServiceControlSurface()
     {
         var root = FindRepoRoot();
@@ -242,6 +270,20 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("Process.Start", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("sc.exe", contents, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("powershell", contents, StringComparison.OrdinalIgnoreCase);
+        foreach (var forbidden in new[]
+        {
+            "EventLog",
+            "EventLogReader",
+            "IRmsDiagnosticEvidenceReader",
+            "SqlConnection",
+            "Microsoft.Data.SqlClient",
+            "NamedPipeClientStream"
+        })
+        {
+            Assert.DoesNotContain(forbidden, contents, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("LocalIpcClient", contents, StringComparison.Ordinal);
     }
 
     private static string FindRepoRoot()

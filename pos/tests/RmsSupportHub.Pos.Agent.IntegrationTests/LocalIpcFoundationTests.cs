@@ -465,6 +465,33 @@ public sealed class LocalIpcFoundationTests
     }
 
     [Fact]
+    public async Task Wpf05OperationsFailClosedWhenOptionalHandlersAreNotConfigured()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var options = CreateOptions();
+        var server = CreateServer(options, currentSid);
+        await server.StartAsync(CancellationToken.None);
+        try
+        {
+            var client = new LocalIpcClient(options, new FixedIdentityVerifier(true));
+            var evidence = await client.GetLogEvidenceAsync("logs-handler-missing");
+            var bundle = await client.GenerateSupportBundleAsync("bundle-handler-missing");
+
+            Assert.False(evidence.Succeeded);
+            Assert.Equal("logs_evidence_unavailable", evidence.ErrorCode);
+            Assert.Equal("RMS diagnostic evidence is currently unavailable.", evidence.ErrorMessage);
+            Assert.False(bundle.Succeeded);
+            Assert.Equal("support_bundle_unavailable", bundle.ErrorCode);
+            Assert.Equal("The Support Bundle could not be generated.", bundle.ErrorMessage);
+        }
+        finally
+        {
+            await server.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task MalformedAndOversizedRequestsAreRejectedWithoutTerminatingTheServer()
     {
         var currentSid = WindowsIdentity.GetCurrent().User

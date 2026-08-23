@@ -1,13 +1,9 @@
 using RmsSupportHub.Pos.Agent.Correlation;
-using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Application.Invocation;
-using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
 using RmsSupportHub.Pos.Contracts.V1.Support;
-using RmsSupportHub.Pos.Domain.Interfaces;
-using RmsSupportHub.Pos.Domain.Models;
 
 namespace RmsSupportHub.Pos.Agent.Support;
 
@@ -34,13 +30,11 @@ public sealed record SupportBundleExecutionResult(
 
 /// <summary>Applies the exact one-use token boundary before generating a local Support Bundle.</summary>
 public sealed class SupportBundleRuntime(
-    SupportBundleService bundles,
-    IncidentTimelineService timeline,
+    SupportBundleExecutor executor,
     IMutationTokenStore mutationTokens,
     IAgentPrincipalSidResolver principalSidResolver,
     IAgentInvocationContextFactory contextFactory,
-    AgentSecurityOptions securityOptions,
-    IAgentAuditSink audit)
+    AgentSecurityOptions securityOptions)
 {
     public async Task<SupportBundleExecutionResult> ExecuteAsync(
         HttpContext context,
@@ -81,26 +75,9 @@ public sealed class SupportBundleRuntime(
 
         var correlationId = CorrelationIdContext.TryGet(context) ?? "unavailable";
         var invocation = contextFactory.CreateLegacyLoopback(context);
-        var response = await bundles
-            .GenerateAsync(invocation, principalSid, correlationId, cancellationToken)
+        var response = await executor
+            .ExecuteAsync(invocation, principalSid, correlationId, cancellationToken)
             .ConfigureAwait(false);
-        timeline.Record(
-            principalSid,
-            "SupportBundle",
-            FailureSeverity.Informational,
-            "A redacted Support Bundle was generated.",
-            operationId: SupportBundleOperation.OperationId,
-            correlationId: correlationId);
-        audit.Record(new AgentAuditEvent(
-            DateTimeOffset.UtcNow,
-            principalSid,
-            "support-bundle.generate",
-            SupportBundleOperation.OperationId,
-            correlationId,
-            "completed",
-            null,
-            typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
-            null));
         return new(response);
     }
 }

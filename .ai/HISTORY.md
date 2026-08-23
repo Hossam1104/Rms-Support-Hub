@@ -74,3 +74,9 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 | WPF-03 final bounded S01 remediation | Commit `17b25ae`; local strict Release build 0/0; POS tests 528/528; PowerShell 37/37; Pester 172/172; final WPF PID 12224 | Split `service_health_unavailable` from `agent_unavailable` in the WPF adapter with fixed safe copy, added real Named Pipe regression coverage for both mappings, rejected contradictory `NotFound` plus `Installed` DTO rows, and recorded the final host/runtime evidence. |
 | WPF-03 acceptance and merge | Accepted merge `803dc85c60bc3662f78b041c8c99499195656e08`; PR #34 | WPF-03 was accepted, squash merged, and synced to `main`; WPF-04 became the next executable native slice. |
 | WPF-04 database health and diagnostics | Branch `feat/wpf-04-database-health-diagnostics`; commit `fca899d`; POS Release tests 562/562 | Added the shared fixed Branch/Cashier database-health projection, typed no-payload `rms.databases.health` Local IPC operation, safe legacy parity mapping, functional WPF Database workspace, Dashboard summary, bounded state/error handling, and focused authorization/contract/IPC/WPF coverage. No SQL, backup/restore, service mutation, provisioning, or Production work was added. |
+
+## WPF-05
+
+| Milestone | Evidence | Outcome |
+|---|---|---|
+| WPF-05 bounded remediation | Commit `62d8139`; Draft PR #36; exact-head CI 7/7; POS 583/583; PowerShell 37/37; Pester 172/172 | Decoupled Application diagnostics, closed bounded redaction and Support Bundle security evidence, and kept WPF-06 gated. |

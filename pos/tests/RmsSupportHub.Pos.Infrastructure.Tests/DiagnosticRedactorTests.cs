@@ -11,7 +11,7 @@ public sealed class DiagnosticRedactorTests
             "Data Source=sql.synthetic.test;Database=RmsBranchSrv;User ID=reader;Password=super-secret; " +
             "Bearer bearer-secret token=token-secret ApiKey=api-secret " +
             "https://main.synthetic.test/api?password=url-secret " +
-            @"C:\ProgramData\RMS_Plus\private.pfx DOMAIN\operator S-1-5-21-100-200-300-400 " +
+            @"C:\ProgramData\RMS_Plus\private.pfx \\server\share\RMS\private.pfx DOMAIN\operator S-1-5-21-100-200-300-400 " +
             "DPAPI=dpapi-secret PFX=pfx-secret";
 
         var redacted = DiagnosticRedactor.RedactSummary(value);
@@ -22,6 +22,7 @@ public sealed class DiagnosticRedactorTests
         Assert.DoesNotContain("api-secret", redacted, StringComparison.Ordinal);
         Assert.DoesNotContain("url-secret", redacted, StringComparison.Ordinal);
         Assert.DoesNotContain("ProgramData", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("server", redacted, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("operator", redacted, StringComparison.Ordinal);
         Assert.DoesNotContain("S-1-5-21", redacted, StringComparison.Ordinal);
         Assert.DoesNotContain("dpapi-secret", redacted, StringComparison.Ordinal);
@@ -78,5 +79,17 @@ public sealed class DiagnosticRedactorTests
         Assert.Single(frames);
         Assert.StartsWith("at ", frames[0], StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ProgramData", frames[0], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void StackFramesKeepTheTwelveFrameBoundAndPerFrameLengthBound()
+    {
+        var frames = DiagnosticRedactor.StackFrames(
+            Enumerable.Range(0, 20).Select(index =>
+                $"at RMS.Worker.Method{index}() in \\\\server\\share\\RMS\\{new string('x', 400)}.cs:line {index}"));
+
+        Assert.Equal(12, frames.Count);
+        Assert.All(frames, frame => Assert.InRange(frame.Length, 4, 256));
+        Assert.All(frames, frame => Assert.DoesNotContain("server", frame, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -17,7 +17,9 @@ public static class DiagnosticsEndpoints
                     CancellationToken cancellationToken) =>
                 {
                     var result = await analyzer.AnalyzeAsync(serviceId, cancellationToken).ConfigureAwait(false);
-                    return result is null ? Results.NotFound() : Results.Ok(result);
+                    return result is null
+                        ? Results.NotFound()
+                        : Results.Ok(ServiceFailureContractMapper.Map(result));
                 })
             .RequireAuthorization(PolicyNames.LocalAdministratorsOnly)
             .WithName("GetServiceFailureAnalysis")

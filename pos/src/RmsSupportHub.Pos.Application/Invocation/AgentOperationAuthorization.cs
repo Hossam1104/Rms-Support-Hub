@@ -3,6 +3,7 @@ namespace RmsSupportHub.Pos.Application.Invocation;
 public enum AgentOperationRisk
 {
     ReadOnlyDiagnostic,
+    AdministratorOnlyDiagnostic,
     AdministratorOnlyMutation
 }
 
@@ -45,6 +46,7 @@ public static class AgentOperationAuthorization
         }
 
         if (risk is not AgentOperationRisk.ReadOnlyDiagnostic
+            and not AgentOperationRisk.AdministratorOnlyDiagnostic
             and not AgentOperationRisk.AdministratorOnlyMutation)
         {
             return AgentAuthorizationDecision.Deny(
@@ -52,7 +54,8 @@ public static class AgentOperationAuthorization
                 "The requested operation risk is not supported.");
         }
 
-        if (risk == AgentOperationRisk.AdministratorOnlyMutation)
+        if (risk is AgentOperationRisk.AdministratorOnlyDiagnostic
+            or AgentOperationRisk.AdministratorOnlyMutation)
         {
             return context.Source switch
             {

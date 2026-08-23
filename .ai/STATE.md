@@ -1,74 +1,115 @@
 # Current Project State
 
 - **Updated:** 2026-08-23
-- **Repository baseline:** WPF-04 started from accepted WPF-03 main
-  `803dc85c60bc3662f78b041c8c99499195656e08`.
-- **Working branch:** `feat/wpf-04-database-health-diagnostics`.
-- **Implementation commit:** `fca899d` (`feat: add RMS database health to WPF`).
-- **Status:** WPF-04 is implemented and locally validated. The branch remains
-  Draft/pending Sol review and merge; WPF-05 has not started.
+- **Repository baseline:** WPF-05 started from accepted WPF-04 main
+  `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` (PR #35).
+- **Working branch:** `feat/wpf-05-logs-support-bundle`.
+- **Status:** WPF-05 Logs, safe diagnostic evidence, and Support Bundle
+  metadata is implemented, pushed in Draft PR #36, and exact-head CI is green.
+  Sol acceptance remains pending.
 - **Authority:** CR-001 and ADR-0029 remain accepted; GPT-5.6 Sol is the
-  acceptance authority.
+  acceptance authority. WPF-06 must not start before Sol accepts WPF-05.
 
-## WPF-04 durable facts
+## WPF-05 durable facts
 
-- `DatabaseHealthQueryHandler` is the shared transport-independent read seam.
-  It authorizes LocalWpf LocalOperator/LocalAdministrator callers, invokes the
-  existing `IRmsDatabaseDiagnostics` for the fixed Branch/Cashier set in
-  parallel, bounds cancellation, validates the projection, and maps all
-  failures to fixed safe copies. Polling is non-audited.
-- The typed `rms.databases.health` Local IPC operation accepts no payload and
-  returns only the bounded snapshot DTO. The existing Local IPC framing,
-  request/correlation matching, protocol v1, size/time bounds, Windows caller
-  identity, server identity/PID verification, ACL, and impersonation boundary
-  are unchanged.
-- The legacy RMS diagnostics composition now consumes the same shared database
-  projection seam while preserving its existing HTTP contract and backup
-  metadata. No second SQL adapter, parser, config reader, or probe was added.
-- WPF owns only typed IPC models/adapters. The Database workspace and Dashboard
-  summary share the existing single-flight/cancel-aware refresh lifecycle and
-  30-second timer. Agent unavailability remains distinct from
-  `database_health_unavailable`, timeout, protocol, security, and invalid
-  response states.
-- Canonical statuses remain `NotConfigured`, `ConfigurationInvalid`,
-  `DatabaseNameMismatch`, `Reachable`, `AuthenticationFailed`,
-  `DatabaseUnavailable`, and `Unreachable`. The explicit aggregate rule is:
-  both reachable = Healthy; all three definitive unavailable statuses =
-  Unavailable; otherwise a complete two-row result = Degraded.
-- WPF has no `SqlConnection`, connection-string/config/registry access, HTTPS
-  path, Agent/Infrastructure reference, arbitrary SQL, backup/restore,
-  service mutation, or provisioning surface. Contradictory DTOs and unsafe
-  display/detail values fail closed.
+- `LogEvidenceQueryHandler` is the shared, transport-independent read seam.
+  Its Application models have no Contracts dependency; Agent maps them to V1.
+  It authorizes LocalWpf LocalOperator/LocalAdministrator callers, uses the
+  fixed three RMS service identities and existing analyzer/evidence reader,
+  bounds each query to 15 seconds, caps records/unknown reasons/
+  recommendations, and validates safe aggregate state before returning a
+  typed projection.
+- The typed `rms.logs.evidence` Local IPC operation accepts no payload. The
+  existing Local IPC framing, request/correlation matching, protocol v1,
+  response bounds, Windows caller identity, server identity/PID verification,
+  ACL, impersonation boundary, and fail-closed authorization remain intact.
+- `SupportBundleExecutor` is the shared typed execution seam for local
+  Support Bundle generation. It requires local administrator authority,
+  verifies the principal/correlation boundary, invokes the existing fixed-root
+  redacted/bounded generator, audits once, revokes an artifact if audit is
+  unavailable, and records the successful SupportBundle timeline only after audit.
+- The typed `support.bundle.generate` Local IPC operation accepts a
+  correlation ID only and returns validated artifact metadata, creation time,
+  expiry, checksum, included sections, and correlation ID. WPF never receives
+  ZIP bytes, server paths, arbitrary paths, or an export destination.
+- Detailed Logs evidence is collected only when the Logs workspace opens or
+  the user presses Refresh. The 30-second automatic health poll does not
+  collect detailed evidence. Support Bundle generation is explicit and is not
+  automatic.
+- WPF owns typed IPC adapters, safe view models, bounded client-side service
+  and severity filters, and metadata-only rendering. It has no Agent or
+  Infrastructure reference, SQL connection, filesystem reader, process launch,
+  HTTPS client, service mutation, database mutation, or provisioning surface.
+- The WPF-05 UI shows the fixed service cards, safe evidence records, unknown
+  source reasons, bounded recommendations, safe error codes, and Support
+  Bundle metadata (artifact, size, checksum, created, expiry, sections,
+  correlation, opaque artifact ID). Artifact export/download is explicitly
+  deferred to WPF-06.
+- WPF-05 intentionally exposes bounded redacted stack-frame labels, not raw or
+  unbounded traces. Redaction covers secrets, credentials, secret connection
+  values, host paths, Windows identities, SIDs, and frame paths; no universal
+  customer-data/PII-free guarantee is claimed. Task #13116 tracks policy.
 
 ## Validation evidence
 
-- Strict Release solution build after restore: 0 warnings, 0 errors, using only
-  the Testing origin environment variable
-  `https://localhost:4443`.
-- Final POS Release tests: Domain 12/12, Application 110/110,
-  Infrastructure 155/155, Agent Integration 237/237, WPF 48/48;
-  562/562 total.
-- PowerShell quality: 37/37 tracked files parse cleanly. Pester: 172/172
-  passed, 0 failed, 0 skipped, 0 pending.
-- Final Release WPF process: PID 18836, exact Release executable, title
-  `RMS Support Hub`, alive and responsive after a second probe. The process
-  required only process-local `WINDIR=C:\WINDOWS` for font initialization.
-  Computer Use failed its native-pipe retry, so screenshot/navigation/Refresh
-  click evidence is intentionally not claimed.
-- Current machine has no visible `RmsSupportAgent` service and no `RMS
-  Support Operators` local group. No prerequisite or security mode was
-  provisioned.
+Targeted WPF-05 validation completed:
+
+- Application `LogEvidenceQueryTests`: 6/6.
+- WPF `LogsAndSupportBundleViewModelTests`: 5/5.
+- WPF `LocalAgentLogsAndSupportBundleClientTests`: 4/4.
+- Agent Integration optional-handler fail-closed test: 1/1; new Support Bundle
+  audit/revocation/principal/mapper/architecture coverage is included.
+- Existing HTTP Support Bundle/audit-unavailable regression tests plus new
+  boundary coverage passed.
+- WPF Debug build and relevant Release project builds: 0 warnings, 0 errors.
+- `git diff --check`: passed.
+
+Final validation on the task state passed: strict Release solution build with
+Testing-only origin was 0 warnings/0 errors; Domain 12/12, Application 116/116,
+Infrastructure 156/156, Agent Integration 242/242, and WPF 57/57 (583/583);
+PowerShell quality 37/37; Pester 172 passed, 0 failed, 0 skipped, 0 pending;
+`git diff --check` passed; and both context/memory checks passed. The security
+classification found only the intended typed Named Pipe boundary, Agent-side
+diagnostics/HTTP composition, and redaction keyword checks/tests; no prohibited
+WPF machine-access path was introduced.
+Implementation and evidence commits are pushed in Draft PR #36; all seven
+required checks passed for the latest verified branch head. The PR remains
+Draft/open for Sol acceptance.
 
 ## Azure and backlog
 
-- Live read before reconciliation: #13018 Active/P1; #13031 Closed/P1;
-  #13032 Active/P1; #13033 New/P1; #13034 New/P2; #13035 New/P1.
-- #13033 is the active WPF-04 story and was reconciled to Active/P1 with
-  implementation evidence; it must not be closed before Sol acceptance and
-  Draft PR merge. #13032 remains Active/P1 because service mutation is
-  deferred. #13035 remains P1, #13034 remains P2, and #13072-#13076 remain
-  unchanged in the preserved Online Order backlog.
-- OPUS-14 and OPUS-16 remain deferred.
+- Live 2026-08-23 reconciliation: E16 #13017 Active/P2; E17 #13018
+  Active/P1; E18 #13019 New/P2; E19 #13020 New/P2.
+- WPF children now match live states/priorities: #13022/#13024/#13031/#13033
+  Closed/P1; #13023/#13029/#13030 Active/P2; #13032/#13035 Active/P1;
+  #13034/#13116 New/P2; remaining WPF local/future children retain live New
+  priorities.
+- #13072-#13076 remain New in the Online Order integrated-testing backlog;
+  #12900-#12902 remain New/P3 conditional and #12949 remains New/P3 deferred
+  Production acceptance.
+- Azure #13035 has implementation and Draft PR #36 evidence for this branch;
+  it remains Active/P1 until Sol acceptance and merge.
+
+## Runtime and environment boundary
+
+- Post-delivery final Release rebuild passed with 0 warnings/0 errors. Final WPF
+  runtime verification passed at
+  `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
+  PID 7420, title `RMS Support Hub`, `Responding=True`, exactly one process at
+  the exact path, started `2026-08-23T22:07:05.1204584+03:00`. The process
+  required the process-local `WINDIR=C:\WINDOWS` environment normalization for
+  WPF font initialization and is left running.
+- The computer-use native pipe was unavailable after two required attempts;
+  no visible Logs/filter or Support Bundle screenshot/click evidence is claimed.
+- Final repository runtime probe ran `scripts/dev.ps1`: `GET
+  http://localhost:5200/api/health/live` returned 200/healthy,
+  `GET http://localhost:5200/api/health/ready` returned 200/ready with the
+  Testing tier, and `http://localhost:4200/` returned 200 HTML. The owner API
+  process (PID 34580) and Angular process (PID 13048) are left running with
+  the WPF process.
+- No Agent service, operator group, Production endpoint, Production database,
+  native RMS state, machine provisioning, or service mutation is authorized or
+  claimed.
 
 `.ai/HANDOFF.md` remains `Empty`; no incomplete implementation handoff is
-needed.
+needed while this execution continues.

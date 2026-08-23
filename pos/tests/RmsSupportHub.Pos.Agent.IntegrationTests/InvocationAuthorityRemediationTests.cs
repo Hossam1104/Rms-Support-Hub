@@ -24,6 +24,32 @@ public sealed class InvocationAuthorityRemediationTests
             parameter => parameter.ParameterType == typeof(InvocationContext)));
     }
 
+    [Fact]
+    public void SupportBundleGenerationAllowsLocalAdministratorOnly()
+    {
+        var localOperator = new InvocationContext(
+            InvocationSource.LocalWpf,
+            "S-1-5-21-1111111111-2222222222-3333333333-2304",
+            InvocationAuthorizationLevel.LocalOperator,
+            "support-bundle-operator");
+        var localAdministrator = localOperator with
+        {
+            AuthorizationLevel = InvocationAuthorizationLevel.LocalAdministrator,
+            CorrelationId = "support-bundle-administrator"
+        };
+
+        var operatorDecision = AgentOperationAuthorization.Authorize(
+            localOperator,
+            AgentOperationRisk.AdministratorOnlyDiagnostic);
+        var administratorDecision = AgentOperationAuthorization.Authorize(
+            localAdministrator,
+            AgentOperationRisk.AdministratorOnlyDiagnostic);
+
+        Assert.False(operatorDecision.Allowed);
+        Assert.Equal("administrator_authorization_required", operatorDecision.Code);
+        Assert.True(administratorDecision.Allowed);
+    }
+
     [Theory]
     [InlineData(InvocationAuthorizationLevel.LocalAdministrator)]
     [InlineData(InvocationAuthorizationLevel.LocalOperator)]

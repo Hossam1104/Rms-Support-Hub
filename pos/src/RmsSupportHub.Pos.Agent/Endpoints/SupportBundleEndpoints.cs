@@ -46,6 +46,14 @@ public static class SupportBundleEndpoints
                             "The Support Bundle is temporarily unavailable.",
                             RmsInstallationDiscoveryFailureCodes.AuditUnavailable);
                     }
+                    catch (SupportBundleAuditUnavailableException)
+                    {
+                        return AgentProblemDetails.CreateResult(
+                            context,
+                            StatusCodes.Status503ServiceUnavailable,
+                            "The Support Bundle is temporarily unavailable.",
+                            "audit_unavailable");
+                    }
                     catch
                     {
                         return AgentProblemDetails.CreateResult(

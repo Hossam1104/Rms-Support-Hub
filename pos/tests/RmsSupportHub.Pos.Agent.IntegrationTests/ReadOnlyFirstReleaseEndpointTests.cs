@@ -2,11 +2,14 @@ using System.Net;
 using System.Text.Json;
 using System.IO.Compression;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RmsSupportHub.Pos.Agent.MutationTokens;
 using RmsSupportHub.Pos.Agent.Security;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
+using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Domain.Interfaces;
 
 namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 
@@ -247,7 +250,14 @@ public sealed class ReadOnlyFirstReleaseEndpointTests : IClassFixture<AgentWebAp
             .Select(item => item.GetProperty("kind").GetString())
             .ToArray();
         Assert.Contains("HealthCheck", kinds);
-        Assert.Contains("SupportBundle", kinds);
+        Assert.Single(kinds, kind => kind == "SupportBundle");
+
+        var auditReader = _factory.Services.GetRequiredService<IAgentAuditReader>();
+        var auditEvents = await auditReader.ReadRecentAsync(64);
+        Assert.Single(auditEvents, audit =>
+            audit.Operation == "support-bundle.generate"
+            && audit.Target == SupportBundleOperation.OperationId
+            && audit.Outcome == "completed");
     }
 
     private static async Task<JsonDocument> GetDocumentAsync(HttpClient client, string path)

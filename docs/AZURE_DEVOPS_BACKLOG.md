@@ -2,7 +2,7 @@
 
 **Azure DevOps Project:** `Rms_Support_Hub`
 **Implementation Source of Truth:** `Hossam1104/Rms-Support-Hub`
-**Prepared:** 2026-08-22
+**Prepared:** 2026-08-23
 **Architecture Rebaseline:** Post PR #30 / CR-001 / ADR-0029
 
 ## Status Rules
@@ -38,6 +38,33 @@ Azure DevOps items are classified by:
      - `POS-09 - Admin Fleet Supervision` (New Target — E18)
      - `POS-10 - WPF Migration and Rollout` (New Target — E19)
    - **Platform Iterations:** `PLAT-01 - Platform Foundation`, `PLAT-02 - Release and Testing Deployment`, `PLAT-03 - Integration Acceptance`, `PLAT-04 - Production Readiness`, `PLAT-05 - Operational Hardening`, `PLAT-06 - Governance and Traceability`
+
+---
+
+## Live Azure reconciliation - 2026-08-23
+
+This blueprint was reconciled against the live `Rms_Support_Hub` work items
+on 2026-08-23. The WPF epic and child states/priorities below are live values,
+not the original architecture-baseline defaults.
+
+- E16 #13017 is Active/P2; #13022 and #13024 are Closed/P1; #13023,
+  #13029, and #13030 are Active/P2; #13021, #13025, #13026, and #13028 are
+  New/P1; #13027 is New/P2.
+- E17 #13018 is Active/P1; #13031 and #13033 are Closed/P1; #13032 is
+  Active/P1; #13034 is New/P2; #13035 is Active/P1; #13036, #13037,
+  #13038, and #13040 are New/P2; #13039, #13041, #13042, and #13043 are
+  New/P1.
+- E18 #13019 remains New/P2 and E19 #13020 is New/P2. Their future
+  children retain their live New states and priorities.
+- #13072 is New/P1; #13073 and #13074 are New/P1; #13075 is New/P2; and
+  #13076 is New/P1 in `OO-05 - Integrated Testing`.
+- #12900, #12901, and #12902 remain New/P3 conditional upstream work;
+  #12949 remains New/P3 deferred Production acceptance.
+
+The implementation-started note on #13035 records branch
+`feat/wpf-05-logs-support-bundle`, bounded redacted evidence, typed Local IPC
+Support Bundle metadata, and the requirement to wait for Sol acceptance and
+exact-head validation before closure.
 
 ---
 
@@ -497,10 +524,10 @@ Azure DevOps items are classified by:
 ---
 
 # E16 — Agent Platform Re-Architecture (#13017)
-**Epic Status:** New (Approved under CR-001 / ADR-0029)
+**Epic Status:** Active | **Priority:** 2 (Live Azure reconciliation 2026-08-23)
 **Area:** `Rms_Support_Hub\POS`
 **Iteration:** `Rms_Support_Hub\POS-07 - WPF Agent Architecture`
-**Priority:** 1
+**Priority:** 2
 
 ### US-E16-01 — Inventory and parity-map existing Agent capabilities (#13021)
 **Status:** New | **Priority:** 2 | **Traceability:** BR-027, BR-030
@@ -510,7 +537,7 @@ Azure DevOps items are classified by:
 - No capability is missed or dropped.
 
 ### US-E16-02 — Extract shared Agent command/query application layer (#13022)
-**Status:** New | **Priority:** 1 | **Traceability:** BR-027, BR-030
+**Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-030 | **Evidence:** Shared transport-independent Agent/Application seam merged through WPF-01.
 **Acceptance Criteria:**
 - Shared command/query handlers exist in a reusable application layer.
 - Handlers are transport-agnostic (usable by Named Pipes, SignalR, or HTTP).
@@ -518,7 +545,7 @@ Azure DevOps items are classified by:
 - Mutation leases, idempotency guards, and bounded redaction are preserved.
 
 ### US-E16-03 — Define local/remote invocation context and authorization source (#13023)
-**Status:** New | **Priority:** 1 | **Traceability:** BR-030, BR-034, BR-035, BR-040
+**Status:** Active | **Priority:** 2 | **Traceability:** BR-030, BR-034, BR-035, BR-040 | **Evidence:** LocalWpf/RemoteHub InvocationContext and fail-closed authorization are delivered; remote Hub authorization remains future.
 **Acceptance Criteria:**
 - InvocationContext captures caller source (LocalWpf vs RemoteHub), identity, and correlation ID.
 - InvocationContext distinguishes authenticated local operator/admin authority and remote admin/device authority.
@@ -526,7 +553,7 @@ Azure DevOps items are classified by:
 - Authorization fails closed when context is missing, invalid, or insufficient.
 
 ### US-E16-04 — Secure WPF-to-Agent Windows Named Pipe transport (#13024)
-**Status:** New | **Priority:** 1 | **Traceability:** BR-028, BR-034
+**Status:** Closed | **Priority:** 1 | **Traceability:** BR-028, BR-034 | **Evidence:** Secure typed Local IPC foundation merged through WPF-01.
 **Acceptance Criteria:**
 - Agent exposes secure Windows Named Pipe listener with restricted ACLs permitting only SYSTEM, Local Administrators, and the dedicated RMS Support Operators group.
 - Unauthorized local identities (Everyone, Guests, anonymous, unrestricted Authenticated Users) are rejected fail-closed at IPC connection.
@@ -566,7 +593,7 @@ Azure DevOps items are classified by:
 - Audit records include caller identity, machine ID, operation, and outcome.
 
 ### US-E16-09 — Agent/WPF version compatibility contract (#13029)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-031, BR-038
+**Status:** Active | **Priority:** 2 | **Traceability:** BR-031, BR-038 | **Evidence:** Protocol/version and typed response compatibility are delivered; fleet version telemetry remains future.
 **Acceptance Criteria:**
 - Named Pipe handshake validates protocol version and assembly compatibility.
 - Major version mismatch blocks execution with clear upgrade instruction.
@@ -574,7 +601,7 @@ Azure DevOps items are classified by:
 - Backward-compatible minor versions operate without disruption.
 
 ### US-E16-10 — Architecture security and failure-mode test harness (#13030)
-**Status:** New | **Priority:** 1 | **Traceability:** BR-030, BR-034, BR-035, BR-036
+**Status:** Active | **Priority:** 2 | **Traceability:** BR-030, BR-034, BR-035, BR-036 | **Evidence:** Local IPC authorization/failure tests are present; SignalR/offline/collision coverage remains future.
 **Acceptance Criteria:**
 - Automated tests prove unauthorized IPC connections fail closed.
 - SignalR disconnect/reconnect and offline queue recovery are verified.
@@ -584,25 +611,28 @@ Azure DevOps items are classified by:
 ---
 
 # E17 — WPF Standalone Local Operations (#13018)
-**Epic Status:** New (Approved under CR-001 / ADR-0029)
+**Epic Status:** Active | **Priority:** 1 (Live Azure reconciliation 2026-08-23)
 **Area:** `Rms_Support_Hub\POS`
 **Iteration:** `Rms_Support_Hub\POS-08 - WPF Local Experience`
-**Priority:** 2
+**Priority:** 1
 
 ### US-E17-01 — WPF shell and local machine dashboard (#13031)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-027, BR-028
+**Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF shell/dashboard delivered and merged through WPF-02.
 
 ### US-E17-02 — Agent/RMS service health and approved service control (#13032)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-027, BR-028, BR-030
+**Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028, BR-030 | **Evidence:** Read-only service health is delivered; Start/Stop/Restart mutation remains out of scope.
 
 ### US-E17-03 — Database health and diagnostics (#13033)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-027, BR-028
+**Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF-04 was Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; live Azure was closed after reconciliation.
 
 ### US-E17-04 — Database backup/download and guarded restore (#13034)
 **Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
 
 ### US-E17-05 — Logs and safe Support Bundle (#13035)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
+**Status:** Active | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-05 current branch adds bounded redacted evidence and administrator-only typed Support Bundle metadata; Draft PR and Sol acceptance pending. Bounded redacted stack-frame labels are intentionally exposed; no universal customer-data/PII-free guarantee is claimed. Privacy policy and deterministic validation are tracked by Task #13116 (New/P2).
+
+### Diagnostic evidence PII/redaction policy (#13116)
+**Status:** New | **Priority:** 2 | **Parent:** US-E17-05 (#13035) | **Traceability:** BR-030 | **Purpose:** Define permitted business/customer identifiers in diagnostic evidence and validate deterministic redaction/privacy rules before any remote or fleet log exposure.
 
 ### US-E17-06 — Safety Snapshots and incident timeline (#13036)
 **Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
@@ -623,7 +653,7 @@ Azure DevOps items are classified by:
 **Status:** New | **Priority:** 1 | **Traceability:** BR-028, BR-034
 **Acceptance Criteria:**
 - High-risk mutating operations (database restore, branch reset, cleanup execution, package install/upgrade/repair/uninstall, rollback/recovery, privileged service control) require local Administrator/elevated authorization and explicit confirmation.
-- Authorized Local Operators can execute non-destructive diagnostic, health, log, backup, and support bundle operations without elevation.
+- Authorized Local Operators can execute read-only diagnostic, health, and bounded log operations without elevation; Support Bundle generation and future backup creation require Local Administrator authority.
 - Non-admin users attempting elevated operations receive clear permission-denied feedback and elevation guidance.
 - All authorization decisions and high-risk operation confirmations are durably audited.
 
@@ -689,7 +719,7 @@ Azure DevOps items are classified by:
 **Epic Status:** New (Approved under CR-001 / ADR-0029)
 **Area:** `Rms_Support_Hub\POS`
 **Iteration:** `Rms_Support_Hub\POS-10 - WPF Migration and Rollout`
-**Priority:** 1
+**Priority:** 2
 
 ### US-E19-01 — Preserve/reuse existing E07-E09 capability contracts (#13058)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-027, BR-030
@@ -734,3 +764,25 @@ Azure DevOps items are classified by:
 
 ### US-E19-14 — Final migration acceptance (#13071)
 **Status:** New | **Priority:** 1 | **Traceability:** BR-027, BR-039
+
+---
+
+# Online Order integrated-testing additions
+
+These live items are preserved outside the WPF epics and are not part of
+WPF-05:
+
+### Adaptive Online Order card visibility by active integration connectivity (#13072)
+**Type:** User Story | **Status:** New | **Priority:** 1 | **Iteration:** `Rms_Support_Hub\OO-05 - Integrated Testing`
+
+### Define server-owned active Online Order integration-family selection (#13073)
+**Type:** Task | **Status:** New | **Priority:** 1 | **Iteration:** `Rms_Support_Hub\OO-05 - Integrated Testing`
+
+### Render Online Order cards and environment lanes from usable connectivity (#13074)
+**Type:** Task | **Status:** New | **Priority:** 1 | **Iteration:** `Rms_Support_Hub\OO-05 - Integrated Testing`
+
+### Add polished Online Order loading, empty, and recovery states (#13075)
+**Type:** Task | **Status:** New | **Priority:** 2 | **Iteration:** `Rms_Support_Hub\OO-05 - Integrated Testing`
+
+### Add adaptive Online Order connectivity and route-security regression matrix (#13076)
+**Type:** Task | **Status:** New | **Priority:** 1 | **Iteration:** `Rms_Support_Hub\OO-05 - Integrated Testing`

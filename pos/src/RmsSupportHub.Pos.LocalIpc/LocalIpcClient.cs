@@ -6,6 +6,8 @@ using System.Security.Principal;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
 using RmsSupportHub.Pos.Contracts.V1.Services;
+using RmsSupportHub.Pos.Contracts.V1.Diagnostics;
+using RmsSupportHub.Pos.Contracts.V1.Support;
 
 namespace RmsSupportHub.Pos.LocalIpc;
 
@@ -81,6 +83,22 @@ public sealed class LocalIpcClient
         CancellationToken cancellationToken = default) =>
         SendAsync<RmsDatabaseHealthSnapshotDto>(
             LocalIpcProtocol.DatabaseHealthOperation,
+            correlationId,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<LogEvidenceSnapshotDto>> GetLogEvidenceAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LogEvidenceSnapshotDto>(
+            LocalIpcProtocol.LogEvidenceOperation,
+            correlationId,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<SupportBundleDto>> GenerateSupportBundleAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<SupportBundleDto>(
+            LocalIpcProtocol.SupportBundleOperation,
             correlationId,
             cancellationToken);
 

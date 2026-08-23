@@ -97,6 +97,22 @@ public sealed class ArtifactCatalogTests : IDisposable
         Assert.True(File.Exists(path));
     }
 
+    [Fact]
+    public void ArtifactCannotBeRevokedByAnotherPrincipal()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var catalog = CreateCatalog(clock);
+        var path = CreateArtifact("revoke-scoped.zip", "artifact-content");
+        var metadata = catalog.Register(Sid, "revoke-scoped.zip", path, new FileInfo(path).Length, "checksum", Start);
+        const string otherPrincipal = "S-1-5-21-1111111111-2222222222-3333333333-1002";
+
+        Assert.False(catalog.TryRevoke(otherPrincipal, metadata.ArtifactId));
+        Assert.True(catalog.TryGet(Sid, metadata.ArtifactId, out _));
+        Assert.True(catalog.TryRevoke(Sid, metadata.ArtifactId));
+        Assert.False(catalog.TryGet(Sid, metadata.ArtifactId, out _));
+        Assert.False(File.Exists(path));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

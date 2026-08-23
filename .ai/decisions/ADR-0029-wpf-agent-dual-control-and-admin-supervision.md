@@ -1,6 +1,6 @@
 # ADR-0029: WPF Standalone Agent, Dual Control Surfaces, and Admin Fleet Supervision
 
-- Status: Accepted for architecture / implementation pending
+- Status: Accepted; incremental WPF implementation is in progress
 - Affected area: POS Agent architecture, WPF desktop application, Angular admin dashboard, local IPC transport, SignalR outbound connectivity, device identity, fleet supervision
 - Supersedes (as future target architecture only): ADR-0015, ADR-0016
 
@@ -87,7 +87,7 @@ The central Angular Support Hub POS area transitions into an administrator-only 
 - Enforcing server-side admin RBAC and audit correlation
 
 ### 2.4 Shared Capability Authority (Zero Privilege Duplication)
-Both local WPF calls and remote Hub commands converge on a single, transport-agnostic Agent command/query application layer. Handlers enforce machine-wide mutation leases, idempotency, bounded redaction, error handling, and durable audit logs identically regardless of invocation channel.
+Both local WPF calls and remote Hub commands converge on a single, transport-agnostic Agent command/query application layer. Handlers enforce machine-wide mutation leases, idempotency, bounded redaction, error handling, and durable audit logs identically regardless of invocation channel. Application diagnostic models remain independent of the V1 transport contracts; the Agent maps those models to the existing DTOs at the composition boundary.
 
 ### 2.5 Two-Layer Local WPF Authorization Model
 Communication between the WPF desktop application and the Agent Service uses a two-layer security model over Windows Named Pipes (`\\.\pipe\RmsSupportAgent.Ipc`):
@@ -102,8 +102,8 @@ Access is strictly prohibited for `Everyone`, `Guests`, anonymous identities, an
 
 #### Layer B — Per-Command Authorization
 Connecting to the Named Pipe does **not** grant authorization for every operation (`PIPE CONNECTION AUTHORIZATION != COMMAND AUTHORIZATION`). The Agent application layer enforces per-command authorization against the caller's authenticated Windows identity:
-- **Authorized Local Operator:** May invoke low/medium-risk local maintenance operations including machine/Agent/RMS health inspection, database health and read-only diagnostics, log viewing, safe Support Bundle generation, local activity/history inspection, approved backup creation, and other explicitly classified non-destructive operations.
-- **Local Administrator / Elevated Operator:** Required for high-risk mutating operations including privileged Windows service restarts/mutations, database restore, cleanup execution, branch reset, package install/upgrade/repair/uninstall, rollback/recovery, and other destructive/high-risk commands.
+- **Authorized Local Operator:** May invoke read-only local diagnostics including machine/Agent/RMS health inspection, database health, and bounded log evidence.
+- **Local Administrator / Elevated Operator:** Required for Support Bundle generation and high-risk mutating operations including privileged Windows service restarts/mutations, database restore, cleanup execution, branch reset, package install/upgrade/repair/uninstall, rollback/recovery, and other destructive/high-risk commands.
 
 All operations remain strictly typed and allowlisted.
 
