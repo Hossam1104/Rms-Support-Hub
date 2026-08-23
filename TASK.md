@@ -61,7 +61,7 @@ The final Release executable was launched from the exact workspace path:
 
 `pos\src\RmsSupportHub.Pos.Desktop.Wpf\bin\Release\net10.0-windows10.0.19041.0\RmsSupportHub.Pos.Desktop.Wpf.exe`
 
-PID 22068 remained alive and responsive with window title `RMS Support Hub`
+PID 26924 remained alive and responsive with window title `RMS Support Hub`
 after a second probe. The executor required process-local `WINDIR=C:\WINDOWS`
 for WPF font initialization; this is not a product setting. Computer Use was
 unavailable after its required retry, so Database navigation visibility,
@@ -72,10 +72,10 @@ The machine was not provisioned with an Agent service or operator group.
 
 Live Azure read before reconciliation found #13018 Active/P1, #13031 Closed/P1,
 #13032 Active/P1, #13033 New/P1, #13034 New/P2, #13035 New/P1, and #13072-
-#13076 unchanged in New state. After implementation, #13033 is to remain
-Active/P1 with a WPF-04 evidence note; it must not be closed before Sol
-acceptance and the Draft PR merge. Keep #13032 Active/P1, #13035 P1,
-#13034 P2, and #13072-#13076 unchanged.
+#13076 unchanged in New state. After implementation, #13033 was reconciled to
+Active/P1 with the WPF-04 evidence note and must not be closed before Sol
+acceptance and the Draft PR merge. Keep #13032 Active/P1, #13035 P1, #13034
+P2, and #13072-#13076 unchanged.
 
 ## Next bounded executable prompt: WPF-05 - Logs & Safe Support Bundle
 

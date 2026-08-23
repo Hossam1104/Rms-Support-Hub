@@ -50,7 +50,7 @@
   562/562 total.
 - PowerShell quality: 37/37 tracked files parse cleanly. Pester: 172/172
   passed, 0 failed, 0 skipped, 0 pending.
-- Final Release WPF process: PID 22068, exact Release executable, title
+- Final Release WPF process: PID 26924, exact Release executable, title
   `RMS Support Hub`, alive and responsive after a second probe. The process
   required only process-local `WINDIR=C:\WINDOWS` for font initialization.
   Computer Use failed its native-pipe retry, so screenshot/navigation/Refresh
@@ -63,7 +63,7 @@
 
 - Live read before reconciliation: #13018 Active/P1; #13031 Closed/P1;
   #13032 Active/P1; #13033 New/P1; #13034 New/P2; #13035 New/P1.
-- #13033 is the active WPF-04 story and is to be moved to Active/P1 with
+- #13033 is the active WPF-04 story and was reconciled to Active/P1 with
   implementation evidence; it must not be closed before Sol acceptance and
   Draft PR merge. #13032 remains Active/P1 because service mutation is
   deferred. #13035 remains P1, #13034 remains P2, and #13072-#13076 remain
