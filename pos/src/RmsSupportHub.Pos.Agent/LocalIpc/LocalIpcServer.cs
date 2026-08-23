@@ -28,6 +28,7 @@ public sealed class LocalIpcServer(
     IAgentInvocationContextFactory contextFactory,
     RmsInstallationDiscoveryQueryHandler installationDiscovery,
     ServiceHealthQueryHandler serviceHealth,
+    DatabaseHealthQueryHandler databaseHealth,
     LocalIpcRuntimeStatus status,
     ILogger<LocalIpcServer> logger,
     ILocalIpcServerPipeFactory? serverPipeFactory = null) : IHostedService
@@ -441,6 +442,42 @@ public sealed class LocalIpcServer(
                     request.RequestId,
                     effectiveCorrelationId,
                     ServiceHealthContractMapper.Map(serviceHealthResult.Value),
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.DatabaseHealthOperation:
+                if (request.Payload is not null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "invalid_request",
+                        "The database health operation does not accept a payload.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var databaseHealthResult = await databaseHealth
+                    .HandleAsync(context, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!databaseHealthResult.Succeeded || databaseHealthResult.Value is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        databaseHealthResult.Error?.Code ?? "database_health_unavailable",
+                        databaseHealthResult.Error?.Message ?? "RMS database health is currently unavailable.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    DatabaseHealthContractMapper.Map(databaseHealthResult.Value),
                     cancellationToken).ConfigureAwait(false);
                 return;
 

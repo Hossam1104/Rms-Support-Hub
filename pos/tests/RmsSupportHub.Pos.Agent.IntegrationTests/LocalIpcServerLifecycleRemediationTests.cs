@@ -197,6 +197,7 @@ public sealed class LocalIpcServerLifecycleRemediationTests
             new TestInvocationContextFactory(),
             new RmsInstallationDiscoveryQueryHandler(new UnusedDiscovery(), new SuccessfulAuditSink(), TimeProvider.System),
             ServiceHealthTestSupport.CreateHandler(),
+            DatabaseHealthTestSupport.CreateHandler(),
             status,
             NullLogger<LocalIpcServer>.Instance,
             pipeFactory);

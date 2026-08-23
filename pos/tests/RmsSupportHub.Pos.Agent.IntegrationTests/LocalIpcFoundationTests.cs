@@ -256,6 +256,7 @@ public sealed class LocalIpcFoundationTests
             new TestInvocationContextFactory(),
             handler,
             ServiceHealthTestSupport.CreateHandler(),
+            DatabaseHealthTestSupport.CreateHandler(),
             status,
             NullLogger<LocalIpcServer>.Instance);
 
@@ -267,6 +268,7 @@ public sealed class LocalIpcFoundationTests
             var health = await client.GetHealthAsync("health-correlation");
             var installation = await client.GetInstallationDiscoveryAsync("diagnostic-correlation");
             var serviceHealth = await client.GetServiceHealthAsync("service-health-correlation");
+            var databaseHealth = await client.GetDatabaseHealthAsync("database-health-correlation");
 
             Assert.True(health.Succeeded);
             Assert.Equal("ready", health.Result?.IpcStatus);
@@ -287,6 +289,77 @@ public sealed class LocalIpcFoundationTests
                 Assert.Equal(ServiceRuntimeState.Running, service.RuntimeState);
                 Assert.Equal("running", service.SafeStatusCode);
             });
+            Assert.True(databaseHealth.Succeeded);
+            Assert.Equal("database-health-correlation", databaseHealth.CorrelationId);
+            Assert.Equal(
+                RmsDatabaseHealthOverallState.Healthy,
+                databaseHealth.Result?.OverallState);
+            Assert.Equal(2, databaseHealth.Result?.Databases.Count);
+            Assert.Equal("RmsBranchSrv", databaseHealth.Result?.Databases[0].ExpectedDatabase);
+            Assert.Equal("RmsCashierSrv", databaseHealth.Result?.Databases[1].ExpectedDatabase);
+        }
+        finally
+        {
+            await server.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task NamedPipeDatabaseHealthReturnsDegradedTypedSnapshot()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var options = CreateOptions();
+        var server = CreateServer(
+            options,
+            currentSid,
+            databaseHealth: DatabaseHealthTestSupport.CreateHandler(
+                RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.Reachable,
+                RmsSupportHub.Pos.Domain.Interfaces.RmsDatabaseDiagnosticStatus.AuthenticationFailed));
+        await server.StartAsync(CancellationToken.None);
+        try
+        {
+            var result = await new LocalIpcClient(options, new FixedIdentityVerifier(true))
+                .GetDatabaseHealthAsync("database-degraded-correlation");
+
+            Assert.True(result.Succeeded);
+            Assert.Equal(
+                RmsDatabaseHealthOverallState.Degraded,
+                result.Result?.OverallState);
+            Assert.Equal(
+                RmsDatabaseDiagnosticStatus.Reachable,
+                result.Result?.Databases[0].Status);
+            Assert.Equal(
+                RmsDatabaseDiagnosticStatus.AuthenticationFailed,
+                result.Result?.Databases[1].Status);
+        }
+        finally
+        {
+            await server.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task NamedPipeDatabaseHealthTimeoutReturnsBoundedError()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var options = CreateOptions();
+        var server = CreateServer(
+            options,
+            currentSid,
+            databaseHealth: DatabaseHealthTestSupport.CreateHandler(
+                timeout: TimeSpan.FromMilliseconds(20),
+                delay: Timeout.InfiniteTimeSpan));
+        await server.StartAsync(CancellationToken.None);
+        try
+        {
+            var result = await new LocalIpcClient(options, new FixedIdentityVerifier(true))
+                .GetDatabaseHealthAsync("database-timeout-correlation");
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("database_health_timeout", result.ErrorCode);
+            Assert.Equal("Database health check timed out.", result.ErrorMessage);
         }
         finally
         {
@@ -373,6 +446,17 @@ public sealed class LocalIpcFoundationTests
                 "arbitrary",
                 servicePayload.RootElement.GetRawText(),
                 StringComparison.OrdinalIgnoreCase);
+
+            using var databasePayload = await SendRawAsync(options, new LocalIpcRequestEnvelope(
+                LocalIpcProtocol.CurrentVersion,
+                "request-database-payload",
+                "correlation-database-payload",
+                LocalIpcProtocol.DatabaseHealthOperation,
+                JsonSerializer.SerializeToElement(new { database = "arbitrary", sql = "SELECT 1" })));
+            Assert.False(databasePayload.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal(
+                "invalid_request",
+                databasePayload.RootElement.GetProperty("error").GetProperty("code").GetString());
         }
         finally
         {
@@ -546,6 +630,7 @@ public sealed class LocalIpcFoundationTests
                 new RecordingAuditSink(),
                 TimeProvider.System),
             ServiceHealthTestSupport.CreateHandler(),
+            DatabaseHealthTestSupport.CreateHandler(),
             status,
             NullLogger<LocalIpcServer>.Instance);
 
@@ -564,7 +649,8 @@ public sealed class LocalIpcFoundationTests
     private static LocalIpcServer CreateServer(
         LocalIpcOptions options,
         SecurityIdentifier currentSid,
-        RecordingAuditSink? audit = null) =>
+        RecordingAuditSink? audit = null,
+        RmsSupportHub.Pos.Application.Services.DatabaseHealthQueryHandler? databaseHealth = null) =>
         new(
             options,
             new FixedOperatorGroupResolver(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null)),
@@ -575,6 +661,7 @@ public sealed class LocalIpcFoundationTests
                 audit ?? new RecordingAuditSink(),
                 TimeProvider.System),
             ServiceHealthTestSupport.CreateHandler(),
+            databaseHealth ?? DatabaseHealthTestSupport.CreateHandler(),
             new LocalIpcRuntimeStatus(),
             NullLogger<LocalIpcServer>.Instance);
 

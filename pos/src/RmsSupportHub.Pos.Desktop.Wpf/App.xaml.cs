@@ -14,7 +14,11 @@ public partial class App : Application
         var localIpcClient = new LocalIpcClient();
         var healthClient = new LocalAgentHealthClient(localIpcClient);
         var serviceHealthClient = new LocalAgentServiceHealthClient(localIpcClient);
-        var dashboard = new DashboardViewModel(healthClient, serviceHealthClient);
+        var databaseHealthClient = new LocalAgentDatabaseHealthClient(localIpcClient);
+        var dashboard = new DashboardViewModel(
+            healthClient,
+            serviceHealthClient,
+            databaseHealthClient);
         MainWindow = new MainWindow(dashboard);
         MainWindow.Show();
     }

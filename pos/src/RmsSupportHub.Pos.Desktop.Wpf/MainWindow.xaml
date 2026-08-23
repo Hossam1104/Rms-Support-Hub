@@ -191,10 +191,10 @@
                             CornerRadius="{DynamicResource CardCornerRadius}">
                             <StackPanel>
                                 <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SCOPE" />
-                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Read-only Agent and RMS service health. Service controls remain bounded for a later slice." TextWrapping="Wrap" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Read-only Agent, service, and canonical database health. Mutations remain out of scope." TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
-                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-03  /  PROTOCOL v1" />
+                        <TextBlock Margin="2,18,0,0" Style="{DynamicResource TinyMetaStyle}" Text="WPF-04  /  PROTOCOL v1" />
                     </StackPanel>
 
                     <StackPanel>
@@ -217,9 +217,17 @@
                                 </StackPanel>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding ShowDatabaseCommand}" Style="{StaticResource NavButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" Text="Database" />
+                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Health &amp; identity" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
                         <TextBlock Margin="8,30,0,12" Style="{DynamicResource EyebrowStyle}" Text="COMING LATER" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="RMS" />
-                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Database" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Logs" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Backup" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Maintenance" />
@@ -352,6 +360,25 @@
                     </Border>
 
                     <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="RMS DATABASES" />
+                                <TextBlock Margin="0,10,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding DatabaseSummaryDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding DatabaseSummaryDetail}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="154" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="OVERALL STATUS" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding DatabaseStateLabel}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding LastDatabaseCheckDisplay}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
                         <StackPanel>
                             <TextBlock Style="{DynamicResource EyebrowStyle}" Text="CONNECTION DETAILS" />
                             <Grid Margin="0,18,0,0">
@@ -378,7 +405,7 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Dashboard and Services are active in WPF-03. Service health is read-only; mutation controls remain intentionally deferred." TextWrapping="Wrap" />
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Dashboard, Services, and Database are read-only. The Agent remains the only native diagnostic authority." TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>
 
@@ -547,7 +574,200 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only fixed server-owned service identities are queried. Start, stop, restart, and other service-control actions are not part of WPF-03." TextWrapping="Wrap" />
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only fixed server-owned service identities are queried. Start, stop, restart, and other service-control actions remain out of scope." TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer
+                Grid.Column="1"
+                Padding="34,30,34,40"
+                Visibility="{Binding IsDatabaseVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="920">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="DATABASE  /  READ-ONLY HEALTH" />
+                            <TextBlock Margin="0,8,0,0" Style="{DynamicResource PageTitleStyle}" Text="RMS databases" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="Truthful connectivity and canonical identity for the fixed Branch and Cashier databases." TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Margin="24,8,0,0"
+                            Command="{Binding RefreshCommand}"
+                            Content="Refresh"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    </Grid>
+
+                    <Border
+                        Margin="0,28,0,0"
+                        Padding="26"
+                        Background="{DynamicResource HeroBrush}"
+                        BorderBrush="{DynamicResource HeroBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource CardCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="12" Height="12" Margin="0,3,12,0" Fill="{DynamicResource StatusNeutralBrush}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{DynamicResource StatusNeutralBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding DatabaseState}" Value="{x:Static models:DatabaseHealthViewState.Healthy}">
+                                                        <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding DatabaseState}" Value="{x:Static models:DatabaseHealthViewState.Degraded}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding DatabaseState}" Value="{x:Static models:DatabaseHealthViewState.Loading}">
+                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding DatabaseState}" Value="{x:Static models:DatabaseHealthViewState.TimedOut}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding DatabaseState}" Value="{x:Static models:DatabaseHealthViewState.Unavailable}">
+                                                        <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Style="{DynamicResource HeroStateStyle}" Text="{Binding DatabaseStateLabel}" />
+                                </StackPanel>
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource HeroMessageStyle}" Text="{Binding DatabaseStatusSummary}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource SmallBodyStyle}" Text="The Agent chooses the database set and owns the fixed identity probe. No SQL or connection details are accepted here." TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="154" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LAST CHECK" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding LastDatabaseCheckDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Local time" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="CONNECTED" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding DatabaseConnectedCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Canonical database identities" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="7,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="ATTENTION" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="{Binding DatabaseAttentionCount}" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Configuration or connectivity issue" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Margin="7,0,0,0" Style="{DynamicResource MetricCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="PROBE" />
+                                <TextBlock Margin="0,12,0,0" Style="{DynamicResource MetricValueStyle}" Text="DB_NAME()" />
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Fixed read-only identity query" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="CANONICAL DATABASE CATALOG" />
+                            <ItemsControl Margin="0,18,0,0" ItemsSource="{Binding DatabaseItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10" Padding="18" Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock
+                                                            Width="20"
+                                                            Foreground="{DynamicResource AccentBrush}"
+                                                            FontSize="15"
+                                                            Text="{Binding StatusGlyph}"
+                                                            VerticalAlignment="Center" />
+                                                        <StackPanel Margin="10,0,0,0">
+                                                            <TextBlock Style="{DynamicResource DetailValueStyle}" Text="{Binding DisplayName}" />
+                                                            <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding KindLabel}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" MinWidth="150" HorizontalAlignment="Right">
+                                                        <TextBlock Style="{DynamicResource EyebrowStyle}" Text="STATUS" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding StatusLabel}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Margin="0,18,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Margin="0,0,14,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Expected database" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ExpectedDatabase}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="14,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Configured database" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ConfiguredDatabaseDisplay}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Margin="14,0,0,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Server" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ServerDisplayValue}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Margin="0,16,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Margin="0,0,14,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Configured" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ConfiguredLabel}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Database name match" />
+                                                        <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding NameMatchLabel}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Border Margin="0,16,0,0" Padding="12,10" Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Detail" />
+                                                        <TextBlock Margin="16,0,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding SafeDetail}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Margin="0,8,0,0" Padding="12,10" Background="{DynamicResource SurfaceMutedBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="Result code" />
+                                    <TextBlock Margin="16,0,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding DatabaseErrorCode}" />
+                                    <TextBlock Margin="16,0,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding DatabaseErrorDetail}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="This workspace performs no backup, restore, cleanup, repair, schema browsing, or database mutation. Those capabilities remain separately gated." TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

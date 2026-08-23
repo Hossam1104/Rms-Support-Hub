@@ -226,6 +226,8 @@ public sealed class ArchitectureBoundaryTests
         var project = File.ReadAllText(Path.Combine(wpfDirectory, "RmsSupportHub.Pos.Desktop.Wpf.csproj"));
 
         Assert.Contains("LocalAgentServiceHealthClient", contents, StringComparison.Ordinal);
+        Assert.Contains("LocalAgentDatabaseHealthClient", contents, StringComparison.Ordinal);
+        Assert.Contains("GetDatabaseHealthAsync", contents, StringComparison.Ordinal);
         Assert.Contains("RmsSupportHub.Pos.LocalIpc", project, StringComparison.Ordinal);
         Assert.DoesNotContain("RmsSupportHub.Pos.Agent", project, StringComparison.Ordinal);
         Assert.DoesNotContain("RmsSupportHub.Pos.Infrastructure", project, StringComparison.Ordinal);
@@ -233,6 +235,10 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("ServiceController", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("OpenSCManager", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("ControlService", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft.Data.SqlClient", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("IRmsDatabaseConnectionStringSource", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("RmsDatabaseDiagnostics", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("RmsDatabaseHealthService", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("Process.Start", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("sc.exe", contents, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("powershell", contents, StringComparison.OrdinalIgnoreCase);
