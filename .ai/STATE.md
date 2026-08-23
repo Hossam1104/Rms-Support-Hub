@@ -65,10 +65,9 @@ PowerShell quality 37/37; Pester 172 passed, 0 failed, 0 skipped, 0 pending;
 classification found only the intended typed Named Pipe boundary, Agent-side
 diagnostics/HTTP composition, and redaction keyword checks/tests; no prohibited
 WPF machine-access path was introduced.
-Implementation commit `8e288a6` and final evidence commit
-`ac6dbb7cc07532124ebd920570bc733233501f49` are pushed in Draft PR #36; all
-seven checks passed for the final exact head (POS/Support Hub run 32656066049
-and Support Hub release-candidate run 32656066047).
+Implementation and evidence commits are pushed in Draft PR #36; all seven
+required checks passed for the latest verified branch head. The PR remains
+Draft/open for Sol acceptance.
 
 ## Azure and backlog
 
