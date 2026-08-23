@@ -31,8 +31,9 @@ WPF has no Agent or Infrastructure reference, filesystem reader, SQL connection,
 - PowerShell quality 37/37; Pester 172/172 passed, 0 failed, 0 skipped, 0 pending.
 - `git diff --check` passed. `python .ai/scripts/context.py` and
   `python .ai/scripts/check_memory.py` passed after the final task-state edits.
-- Commit `8e288a68956fc08c008988364f03e3fafce66fc5` is pushed as Draft PR #36;
-  all seven exact-head CI checks are green. Do not mark ready or merge.
+- Implementation commit `8e288a6` plus evidence commit
+  `ac6dbb7cc07532124ebd920570bc733233501f49` are pushed as Draft PR #36;
+  all seven checks are green for the current exact head. Do not mark ready or merge.
 
 ## Live Azure truth - read 2026-08-23
 

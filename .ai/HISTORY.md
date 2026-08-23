@@ -79,4 +79,4 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 
 | Milestone | Evidence | Outcome |
 |---|---|---|
-| WPF-05 Logs, safe diagnostic evidence, and Support Bundle | Commit `8e288a6`; Draft PR #36; exact-head CI 7/7 green; local 578/578, PowerShell 37/37, Pester 172/172 | Added bounded redacted Logs/evidence and typed `rms.logs.evidence`, plus administrator-only typed `support.bundle.generate` metadata with principal binding, audit/revocation, fixed roots, and no WPF artifact export. Exact Release PID 9028 responds; Computer Use was unavailable. |
+| WPF-05 Logs, safe diagnostic evidence, and Support Bundle | Commits `8e288a6`, `ac6dbb7`; Draft PR #36; final exact-head CI 7/7 green; local 578/578, PowerShell 37/37, Pester 172/172 | Added bounded redacted Logs/evidence and typed `rms.logs.evidence`, plus administrator-only typed `support.bundle.generate` metadata with principal binding, audit/revocation, fixed roots, and no WPF artifact export. Exact Release PID 9028 responds; Computer Use was unavailable. |
