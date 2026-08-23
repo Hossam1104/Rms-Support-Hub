@@ -162,7 +162,12 @@ public sealed class LocalAgentServiceHealthClient(LocalIpcClient localIpcClient)
                 "invalid_response",
                 "The Agent returned an invalid service health response.",
                 correlationId),
-            "service_health_unavailable" or "agent_unavailable" => ServiceHealthResult.Failure(
+            "service_health_unavailable" => ServiceHealthResult.Failure(
+                ServiceHealthViewState.Unavailable,
+                "service_health_unavailable",
+                "RMS service health is currently unavailable.",
+                correlationId),
+            "agent_unavailable" => ServiceHealthResult.Failure(
                 ServiceHealthViewState.Unavailable,
                 "agent_unavailable",
                 "RMS Support Agent is not available on this machine.",

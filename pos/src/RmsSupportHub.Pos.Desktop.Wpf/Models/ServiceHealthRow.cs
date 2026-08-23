@@ -53,6 +53,11 @@ public sealed record ServiceHealthRow(
             return false;
         }
 
+        if (item.RuntimeState == ServiceRuntimeState.NotFound && item.Installed)
+        {
+            return false;
+        }
+
         var state = item.RuntimeState switch
         {
             ServiceRuntimeState.Running => ServiceHealthRowState.Running,
