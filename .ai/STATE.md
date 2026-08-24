@@ -2,8 +2,9 @@
 
 - **Updated:** 2026-08-24
 - **Branch:** `feat/wpf-07-guarded-rms-service-control`
-- **WPF-07 status:** Implementation complete on this branch; Draft PR and Sol
-  acceptance are still pending. Do not merge WPF-07 or begin WPF-08.
+- **WPF-07 status:** Implementation complete in commit `ac1b3ef` on this branch;
+  Draft PR and Sol acceptance are still pending. Do not merge WPF-07 or begin
+  WPF-08.
 - **WPF-07 baseline:** Started from `main` at WPF-06 merge
   `7af1e54042dbe31ef86a34d6ec687da66539be62`, after exact-head acceptance of
   `8267e7de7e698c6d31be0e682c96a1c1ceca98fd` and PR #37.
