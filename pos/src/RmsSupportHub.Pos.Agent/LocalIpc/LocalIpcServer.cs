@@ -336,6 +336,18 @@ public sealed class LocalIpcServer(
                     return;
                 }
 
+                if (!HasExpectedImpersonationLevel(request.Operation, identity))
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        requestId,
+                        correlationId,
+                        "security_verification_failed",
+                        "The IPC caller security posture was rejected.",
+                        timeout.Token).ConfigureAwait(false);
+                    return;
+                }
+
                 var context = contextFactory.CreateLocalWpf(identity, operatorGroupSid, correlationId);
                 await DispatchAsync(pipe, request, context, identity!, correlationId, timeout.Token).ConfigureAwait(false);
             }
@@ -933,6 +945,28 @@ public sealed class LocalIpcServer(
         }
         catch (JsonException)
         {
+            return false;
+        }
+    }
+
+    private static bool HasExpectedImpersonationLevel(
+        string operation,
+        WindowsIdentity identity)
+    {
+        try
+        {
+            var expected = string.Equals(
+                operation,
+                LocalIpcProtocol.ArtifactExportOperation,
+                StringComparison.Ordinal)
+                ? TokenImpersonationLevel.Impersonation
+                : TokenImpersonationLevel.Identification;
+            return identity.ImpersonationLevel == expected;
+        }
+        catch
+        {
+            // Token details are never returned to the caller. A token that cannot be inspected is
+            // not an acceptable basis for either a diagnostic or a destination write.
             return false;
         }
     }

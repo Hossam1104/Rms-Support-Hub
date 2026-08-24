@@ -10,8 +10,8 @@
   creation, principal-scoped bounded inventory, and one shared Agent-owned
   local artifact-delivery path for database backups and Support Bundles.
   Restore is deliberately not implemented and formal Sol acceptance is still
-  pending. Delivered in commit `f548477265d3718a3e568fa62768b0dbb471a0d2`;
-  PR #37 remains open and Draft.
+  pending. The remediation is currently in the working tree from baseline
+  `8b7a7035d03b2caffd7e5b5dcd804830cf25a42a`; PR #37 remains open and Draft.
 - **Authority:** CR-001 and ADR-0029 remain accepted; ADR-0030 is Proposed
   pending GPT-5.6 Sol acceptance. Sol is the acceptance authority. The WPF-06
   PR must remain Draft and must not be marked ready or merged by this
@@ -24,8 +24,9 @@
   reads by the authenticated principal, and never projects server paths.
 - `LocalRmsDatabaseBackupRuntime` reuses the existing typed RMS backup
   workflow and machine-wide concurrency gate. It derives authority and
-  principal from the trusted invocation context, audits once, revokes an
-  artifact when audit fails, and supports cancellation without claiming an
+  principal from the trusted invocation context, records ordered privileged
+  audit events with pre-mutation fail-closed behavior, revokes an artifact
+  when final audit fails, and supports cancellation without claiming an
   ambiguous success.
 - `ArtifactDeliveryService` is the shared local export seam for database
   backups and Support Bundles. It enforces administrator-only local authority,
@@ -40,6 +41,9 @@
   interactive-folder environment. Source reads remain Agent-owned and only
   destination-side export operations run under the caller token through the
   dedicated export authority.
+- Normal Local IPC requests use Identification; only artifact export uses
+  Impersonation. The Agent checks exact operation-scoped SQOS, rejects
+  Delegation, and export independently binds the token SID to the principal.
 - RMS backup catalog access is principal-bound in every transport. The explicit
   legacy compatibility mode permits exact-owner records plus historical
   null-owner records only; null is never unrestricted. Retention is scoped by
@@ -62,22 +66,21 @@
 - `dotnet restore pos/RmsSupportHub.Pos.slnx`: passed; all projects up to date.
 - Strict Testing-origin Release solution build with `--warnaserror`: passed,
   0 warnings and 0 errors.
-- Release POS tests: aggregate 622/622 passed with no failures or skips.
+- Release POS tests: aggregate 633/633 passed with no failures or skips;
+  focused Agent remediation coverage is 93/93 and Application query coverage
+  is 6/6.
 - Focused WPF-06 coverage includes Application authorization/inventory,
   Agent backup runtime and shared artifact delivery, WPF workspace behavior,
   architecture boundaries, principal isolation, cancellation, audit failure,
   expiry/checksum states, unsafe destinations, overwrite confirmation, and
   same-destination conflict control.
-- PowerShell quality: 37/37 files parsed with no dangling continuations.
-  Pester: 172 passed, 0 failed, 0 skipped, 0 pending.
-- Repository build gate: backend 342/342, backend Release build 0/0, and
-  Angular production build passed. `python .ai/scripts/context.py` and
-  `python .ai/scripts/check_memory.py` passed. `git diff --check` passed;
-  line-ending normalization warnings are Git working-copy warnings only.
-- Exact-head GitHub CI for final head `53233d4` passed all seven checks.
-  An earlier hosted run exposed a transient ACL-fixture failure; its rerun
-  passed the POS Infrastructure job 156/156 and the complete workflow is
-  green.
+- PowerShell quality: 37/37 files parsed; Pester 172/172 passed with no
+  skips/pending. `python .ai/scripts/context.py`,
+  `python .ai/scripts/check_memory.py`, and `git diff --check` passed.
+- `scripts/build.ps1` first attempt was blocked only by the existing
+  project-owned API PID 41932 locking Debug backend DLLs; rerun after the
+  authorized runtime restart remains part of completion. CI must be checked
+  again at the final pushed head.
 
 ## Azure and backlog
 
@@ -92,20 +95,21 @@
 - #13035 records WPF-05 acceptance, PR #36, and its merge. #13034 records
   WPF-06 as the active story while guarded restore remains separately gated.
   Azure child #13129 (`Implement guarded RMS database restore in WPF`) is
-  New/P2 under #13034. #13032 remains Active/P1 as the next recommended
-  guarded service-control slice; WPF-07 is not started.
+  New/P2 under #13034; #13142 is New/P2 for representative size/retention
+  validation and #13143 is New/P3 for deferred storage hygiene. #13032 remains
+  Active/P1 as the next recommended guarded service-control slice; WPF-07 is
+  not started.
 
 ## Runtime and environment boundary
 
-- Final WPF runtime verification is complete for the current Release artifact
-  from PR #37 at
+- The prior WPF runtime PID 34128 is from the pre-remediation baseline and
+  must be replaced before completion. Final verification will use the Release
+  artifact at
   `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
-  PID 34128, title `RMS Support Hub`, `Responding=True`, exactly one process,
-  started `2026-08-24T12:40:11.7268188+03:00`, Session 2. It is left running.
-- `scripts/dev.ps1` runtime probes returned API live 200/healthy, API ready
-  200/ready with Testing tier, and Angular `http://localhost:4200/` 200 HTML.
-  Current project-owned API PID is 41932 and Angular PID is 44228; both remain
-  running. WPF was launched with process-local `WINDIR=C:\WINDOWS`.
+  It must be exactly one responsive current-head process, left running.
+- Existing project-owned API/Angular processes remain available for runtime
+  checks until the build gate is rerun; WPF must be launched with process-local
+  `WINDIR=C:\WINDOWS`.
 - The current machine has no authorized Agent service/operator-group/database
   mutation session. No live backup, restore, service mutation, Production
   contact, machine provisioning, fleet/remote work, or customer-data mutation

@@ -29,7 +29,7 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         var (path, size, checksum) = await CreateBackupFileAsync("RmsBranchSrv_20260811_120000_a.bak", "branch-backup-content");
 
         var registered = await catalogA.RegisterAsync(
-            RmsDatabaseKind.Branch, path, "RmsBranchSrv_20260811_120000_a.bak", size, checksum, Start, CancellationToken.None);
+            RmsDatabaseKind.Branch, path, "RmsBranchSrv_20260811_120000_a.bak", size, checksum, Start, PrincipalA, CancellationToken.None);
 
         // A fresh instance simulates the Agent process restarting; it must load the same durable
         // metadata from disk rather than starting with an empty in-memory catalog.
@@ -57,6 +57,54 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
     }
 
     [Fact]
+    public async Task NewRegistrationRejectsMissingOwnerPrincipal()
+    {
+        var options = CreateOptions();
+        var catalog = CreateCatalog(options, new ManualTimeProvider(Start));
+        var (path, size, checksum) = await CreateBackupFileAsync("missing-owner.bak", "missing-owner-content");
+
+        await Assert.ThrowsAsync<ArgumentException>(() => catalog.RegisterAsync(
+            RmsDatabaseKind.Branch,
+            path,
+            "missing-owner.bak",
+            size,
+            checksum,
+            Start,
+            principalSid: null!,
+            cancellationToken: CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task HistoricalNullOwnerRecordLoadsOnlyThroughExplicitLegacyCompatibility()
+    {
+        var options = CreateOptions();
+        var (path, size, checksum) = await CreateBackupFileAsync("historical.bak", "historical-content");
+        var artifactId = "0123456789abcdef0123456789abcdef";
+        var catalogDirectory = Path.Combine(options.BackupRootPath, ".catalog");
+        Directory.CreateDirectory(catalogDirectory);
+        var historical = $$"""
+            {"SchemaVersion":1,"Entries":[{"ArtifactId":"{{artifactId}}","Database":"Branch","DisplayName":"historical.bak","FileName":"historical.bak","SizeBytes":{{size}},"Sha256Checksum":"{{checksum}}","CreatedAtUtc":"2026-08-11T12:00:00+00:00","PrincipalSid":null}]}
+            """;
+        await File.WriteAllTextAsync(Path.Combine(catalogDirectory, "backups.v1.json"), historical);
+        var catalog = CreateCatalog(options, new ManualTimeProvider(Start));
+
+        Assert.Null(await catalog.ResolveAsync(
+            RmsDatabaseKind.Branch,
+            artifactId,
+            PrincipalA,
+            CancellationToken.None));
+        var legacy = await catalog.ResolveAsync(
+            RmsDatabaseKind.Branch,
+            artifactId,
+            PrincipalA,
+            CancellationToken.None,
+            RmsDatabaseBackupAccessMode.LegacyCompatibility);
+
+        Assert.NotNull(legacy);
+        Assert.Null(legacy!.PrincipalSid);
+    }
+
+    [Fact]
     public async Task CorruptCatalogFile_FailsClosedToEmptyCatalog()
     {
         var options = CreateOptions();
@@ -76,7 +124,7 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         var catalog = CreateCatalog(options, new ManualTimeProvider(Start));
         var (path, size, checksum) = await CreateBackupFileAsync("RmsCashierSrv_missing.bak", "cashier-backup-content");
         var registered = await catalog.RegisterAsync(
-            RmsDatabaseKind.Cashier, path, "RmsCashierSrv_missing.bak", size, checksum, Start, CancellationToken.None);
+            RmsDatabaseKind.Cashier, path, "RmsCashierSrv_missing.bak", size, checksum, Start, PrincipalA, CancellationToken.None);
 
         File.Delete(path);
 
@@ -91,7 +139,7 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         var catalog = CreateCatalog(options, new ManualTimeProvider(Start));
         var (path, size, checksum) = await CreateBackupFileAsync("RmsBranchSrv_tampered.bak", "original-backup-bytes");
         var registered = await catalog.RegisterAsync(
-            RmsDatabaseKind.Branch, path, "RmsBranchSrv_tampered.bak", size, checksum, Start, CancellationToken.None);
+            RmsDatabaseKind.Branch, path, "RmsBranchSrv_tampered.bak", size, checksum, Start, PrincipalA, CancellationToken.None);
 
         // Same length, different bytes, so the size check alone would not catch the tampering.
         await File.WriteAllTextAsync(path, "replaced-backup-byte5");
@@ -124,7 +172,7 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         var catalog = new RmsDatabaseBackupCatalog(fileSystem, options, new ManualTimeProvider(Start));
         var (path, size, checksum) = await CreateBackupFileAsync("RmsBranchSrv_reparse.bak", "reparse-backup-content");
         var registered = await catalog.RegisterAsync(
-            RmsDatabaseKind.Branch, path, "RmsBranchSrv_reparse.bak", size, checksum, Start, CancellationToken.None);
+            RmsDatabaseKind.Branch, path, "RmsBranchSrv_reparse.bak", size, checksum, Start, PrincipalA, CancellationToken.None);
 
         fileSystem.ReparsePaths.Add(Path.GetFullPath(path));
 
@@ -138,7 +186,7 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         var catalog = CreateCatalog(options, new ManualTimeProvider(Start));
         var (path, size, checksum) = await CreateBackupFileAsync("RmsBranchSrv_target.bak", "branch-only-content");
         var registered = await catalog.RegisterAsync(
-            RmsDatabaseKind.Branch, path, "RmsBranchSrv_target.bak", size, checksum, Start, CancellationToken.None);
+            RmsDatabaseKind.Branch, path, "RmsBranchSrv_target.bak", size, checksum, Start, PrincipalA, CancellationToken.None);
 
         Assert.Null(await catalog.ResolveAsync(RmsDatabaseKind.Cashier, registered.ArtifactId, CancellationToken.None));
     }
@@ -265,10 +313,10 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         string fileName,
         string content,
         DateTimeOffset createdAtUtc,
-        string? principalSid = null)
+        string principalSid = PrincipalA)
     {
         var (path, size, checksum) = await CreateBackupFileAsync(fileName, content);
-        var entry = await catalog.RegisterAsync(RmsDatabaseKind.Branch, path, fileName, size, checksum, createdAtUtc, CancellationToken.None, principalSid);
+        var entry = await catalog.RegisterAsync(RmsDatabaseKind.Branch, path, fileName, size, checksum, createdAtUtc, principalSid, CancellationToken.None);
         return (entry, path);
     }
 
@@ -319,7 +367,7 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
 /// </summary>
 internal static class RmsDatabaseBackupCatalogTestExtensions
 {
-    private const string LegacyCompatibilityPrincipal = "S-1-5-18";
+    private const string LegacyCompatibilityPrincipal = "S-1-5-21-1111111111-2222222222-3333333333-1001";
 
     public static Task<RmsDatabaseBackupCatalogEntry?> ResolveAsync(
         this RmsDatabaseBackupCatalog catalog,

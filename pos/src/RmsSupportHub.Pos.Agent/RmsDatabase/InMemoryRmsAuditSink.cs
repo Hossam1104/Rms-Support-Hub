@@ -14,7 +14,7 @@ public sealed class InMemoryRmsAuditSink(
     private readonly object gate = new();
     private readonly List<RmsPrivilegedAuditEvent> events = [];
 
-    public void Record(RmsPrivilegedAuditEvent auditEvent)
+    public bool Record(RmsPrivilegedAuditEvent auditEvent)
     {
         ArgumentNullException.ThrowIfNull(auditEvent);
         lock (gate)
@@ -30,6 +30,8 @@ public sealed class InMemoryRmsAuditSink(
             {
                 events.RemoveRange(0, events.Count - retention.MaxActivityEntries);
             }
+
+            return true;
         }
     }
 

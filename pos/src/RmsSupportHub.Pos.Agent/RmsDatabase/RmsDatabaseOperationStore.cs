@@ -106,6 +106,18 @@ public sealed class RmsDatabaseOperationStore(
         });
     }
 
+    /// <summary>
+    /// Removes an accepted-but-never-dispatched operation when a required pre-mutation audit
+    /// cannot be persisted. Such a reservation must not consume bounded operation capacity.
+    /// </summary>
+    public bool Remove(string operationId)
+    {
+        lock (gate)
+        {
+            return entries.Remove(operationId);
+        }
+    }
+
     public bool Progress(string operationId, RmsDatabaseProgress progress)
     {
         ArgumentNullException.ThrowIfNull(progress);

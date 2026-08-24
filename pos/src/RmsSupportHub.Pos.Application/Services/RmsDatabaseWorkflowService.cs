@@ -21,11 +21,18 @@ public sealed class RmsDatabaseWorkflowService(
 {
     public async Task<RmsDatabaseWorkflowResult> BackupAsync(
         RmsDatabaseKind database,
+        string principalSid,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default,
-        string? principalSid = null)
+        CancellationToken cancellationToken = default)
     {
         var definition = RmsDatabaseCatalog.For(database);
+        if (!IsSafeSid(principalSid))
+        {
+            return NotAttempted(
+                "backup_principal_unavailable",
+                "The authenticated principal for the backup was unavailable; no backup was attempted.");
+        }
+
         Report(progress, 5, "preflight", "Checking the installed RMS database configuration.");
 
         var preflight = await CheckDatabaseAsync(database, cancellationToken).ConfigureAwait(false);
@@ -69,8 +76,24 @@ public sealed class RmsDatabaseWorkflowService(
         }
 
         Report(progress, 80, "catalog", "Registering the server-owned backup artifact.");
-        var artifact = await storage.RegisterAsync(database, allocation, cancellationToken, principalSid)
-            .ConfigureAwait(false);
+        RmsApprovedDatabaseBackup? artifact;
+        try
+        {
+            artifact = await storage.RegisterAsync(database, allocation, principalSid, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (RmsDatabaseBackupSizeLimitException)
+        {
+            Report(progress, 100, "failed", "The RMS database backup exceeded the configured size limit.");
+            return new(
+                RmsDatabaseWorkflowOutcome.Failed,
+                "backup_exceeds_size_limit",
+                "The RMS database backup exceeded the configured size limit.",
+                null,
+                true,
+                false,
+                []);
+        }
         if (artifact is null)
         {
             Report(progress, 100, "outcome-unknown", "The SQL backup completed, but its approved artifact could not be registered.");
@@ -404,4 +427,9 @@ public sealed class RmsDatabaseWorkflowService(
         string stage,
         string detail) =>
         progress?.Report(new(Math.Clamp(percent, 0, 100), stage, detail));
+
+    private static bool IsSafeSid(string? value) =>
+        value is { Length: > 0 and <= 184 }
+        && value.StartsWith("S-", StringComparison.OrdinalIgnoreCase)
+        && value.All(character => char.IsLetterOrDigit(character) || character == '-');
 }

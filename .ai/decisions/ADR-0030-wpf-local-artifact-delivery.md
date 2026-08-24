@@ -23,6 +23,25 @@ safe destination filename/path selected by the native output dialog, and an
 explicit overwrite confirmation when a destination already exists. The Agent
 derives authority and caller identity from its trusted invocation context.
 
+WPF-01 originally established Identification-only local IPC. WPF-06 adds one
+deliberately scoped exception: only `artifact.export.local` requests
+`TokenImpersonationLevel.Impersonation`, because destination filesystem work
+must execute with the authenticated local caller's authority. All other
+current operations continue to request Identification. The Agent checks the
+connected pipe token's actual SQOS posture against the typed operation and
+rejects Identification, Anonymous, or Delegation for export, as well as
+Impersonation or Delegation for normal operations. Delegation is never
+accepted.
+
+The server obtains the connected caller through the production `RunAsClient` /
+`WindowsIdentity.GetCurrent()` pattern. The export service independently
+requires a valid local administrator context, an authenticated principal SID
+equal to the context SID, a non-null caller token with the same SID, and exact
+Impersonation level before destination policy or filesystem mutation. A real
+Windows Named Pipe integration test proves the Impersonation token level and a
+bounded `RunImpersonatedAsync` write; an Identification client is rejected
+before destination mutation.
+
 For local export, the authenticated caller SID is resolved to the machine-owned
 ProfileList entry and its fixed Desktop, Documents, and Downloads roots. The
 Agent never uses LocalSystem's interactive-folder environment to select a
@@ -45,6 +64,17 @@ is scoped by database and owner principal. Database-backup requests are limited
 to Branch/Cashier and `.bak`; Support Bundle requests require a null database
 target and `.zip`.
 
+Local IPC database backup creation uses the same privileged RMS database audit
+stream as the equivalent browser operation. It durably records Requested,
+Accepted, Started, Dispatch when the typed workflow reaches that stage, and
+exactly one terminal Completed, Failed, OutcomeUnknown, or Cancelled event.
+Requested, Accepted, and Started audit persistence are fail-closed before any
+database workflow dispatch. If final Completed audit persistence fails after a
+physical backup, the new principal-bound artifact is revoked and no success or
+artifact metadata is returned. New backup registration APIs require a valid
+principal SID; null owner values remain supported only when loading historical
+catalog records through explicit LegacyCompatibility reads.
+
 Inventory is metadata-only, fixed to Branch and Cashier, principal-scoped,
 bounded, newest-first, and never returns server paths. Local operators may
 read inventory; local administrators alone may create backups or export
@@ -59,6 +89,15 @@ WPF-06 capability and remains separately governed.
   destination, so successful UI outcomes remain truthful.
 - Missing, expired, checksum-mismatched, oversized, unsafe, or wrong-principal
   artifacts cannot be delivered and do not disclose server paths.
+- The current destination model intentionally supports ProfileList plus literal
+  Desktop, Documents, and Downloads roots. Redirected or OneDrive Known
+  Folders may fail closed and make export unavailable; this is a compatibility
+  limitation, not a permission bypass. Representative-machine validation must
+  cover those environments before Production.
+- The default backup ceiling remains 512 MiB until representative Branch and
+  Cashier sizing evidence is available. Oversized results use the distinct
+  `backup_exceeds_size_limit` code; size/retention validation remains a
+  representative-machine gate.
 - The shared seam keeps Support Bundle and database-backup delivery aligned;
   future remote/fleet delivery must introduce a separately authorized typed
   channel rather than reusing local destination input.

@@ -30,15 +30,100 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
         var operation = await WaitForFinalAsync(runtime, context, started.Operation!, RmsDatabaseTarget.Branch);
 
         Assert.Equal(RmsDatabaseOperationOutcome.Completed, operation.Outcome);
-        Assert.Single(audit.Events);
-        Assert.Equal("completed", audit.Events[0].Outcome);
+        Assert.Equal(
+            [
+                RmsPrivilegedAuditEventKind.Requested,
+                RmsPrivilegedAuditEventKind.Accepted,
+                RmsPrivilegedAuditEventKind.Started,
+                RmsPrivilegedAuditEventKind.Dispatch,
+                RmsPrivilegedAuditEventKind.Completed
+            ],
+            audit.Events.Select(item => item.Kind));
         Assert.Empty(storage.RevokedArtifactIds);
     }
 
     [Fact]
-    public async Task AuditFailureRevokesNewArtifactAndNeverReportsSuccess()
+    public async Task RequestedAuditUnavailablePreventsWorkflowDispatch()
     {
         var audit = new RecordingAuditSink { Result = false };
+        var storage = new RecordingStorage();
+        var workflow = new ControlledWorkflow(_ => Task.FromResult(CompletedResult()));
+        var runtime = CreateRuntime(
+            workflow,
+            storage,
+            audit,
+            out var context);
+
+        var started = await runtime.StartAsync(context, RmsDatabaseTarget.Branch, context.CorrelationId);
+
+        Assert.False(started.Succeeded);
+        Assert.Equal("audit_unavailable", started.ErrorCode);
+        Assert.Equal(0, workflow.Calls);
+        Assert.Empty(storage.RevokedArtifactIds);
+    }
+
+    [Fact]
+    public async Task AcceptedAuditUnavailablePreventsWorkflowDispatchAndCleansReservation()
+    {
+        var audit = new RecordingAuditSink { FailedKinds = [RmsPrivilegedAuditEventKind.Accepted] };
+        var storage = new RecordingStorage();
+        var workflow = new ControlledWorkflow(_ => Task.FromResult(CompletedResult()));
+        var runtime = CreateRuntime(workflow, storage, audit, out var context);
+
+        var started = await runtime.StartAsync(context, RmsDatabaseTarget.Branch, context.CorrelationId);
+
+        Assert.False(started.Succeeded);
+        Assert.Equal("audit_unavailable", started.ErrorCode);
+        Assert.Equal(0, workflow.Calls);
+        Assert.Empty(storage.RevokedArtifactIds);
+    }
+
+    [Fact]
+    public async Task StartedAuditUnavailablePreventsWorkflowDispatch()
+    {
+        var audit = new RecordingAuditSink { FailedKinds = [RmsPrivilegedAuditEventKind.Started] };
+        var storage = new RecordingStorage();
+        var workflow = new ControlledWorkflow(_ => Task.FromResult(CompletedResult()));
+        var runtime = CreateRuntime(workflow, storage, audit, out var context);
+
+        var started = await runtime.StartAsync(context, RmsDatabaseTarget.Branch, context.CorrelationId);
+        var operation = await WaitForFinalAsync(runtime, context, started.Operation!, RmsDatabaseTarget.Branch);
+
+        Assert.Equal(RmsDatabaseOperationOutcome.Failed, operation.Outcome);
+        Assert.Equal("audit_unavailable", operation.ErrorCode);
+        Assert.Equal(0, workflow.Calls);
+    }
+
+    [Fact]
+    public async Task DispatchAuditUnavailablePreventsSqlDispatch()
+    {
+        var audit = new RecordingAuditSink { FailedKinds = [RmsPrivilegedAuditEventKind.Dispatch] };
+        var storage = new RecordingStorage();
+        var workflow = new ControlledWorkflow(_ => Task.FromResult(CompletedResult()));
+        var runtime = CreateRuntime(workflow, storage, audit, out var context);
+
+        var started = await runtime.StartAsync(context, RmsDatabaseTarget.Branch, context.CorrelationId);
+        var operation = await WaitForFinalAsync(runtime, context, started.Operation!, RmsDatabaseTarget.Branch);
+
+        Assert.Equal(RmsDatabaseOperationOutcome.Failed, operation.Outcome);
+        Assert.Equal("audit_unavailable", operation.ErrorCode);
+        Assert.True(workflow.Calls > 0);
+        Assert.False(workflow.DispatchReached);
+        Assert.Equal(
+            [
+                RmsPrivilegedAuditEventKind.Requested,
+                RmsPrivilegedAuditEventKind.Accepted,
+                RmsPrivilegedAuditEventKind.Started,
+                RmsPrivilegedAuditEventKind.Dispatch,
+                RmsPrivilegedAuditEventKind.Failed
+            ],
+            audit.Events.Select(item => item.Kind));
+    }
+
+    [Fact]
+    public async Task FinalCompletedAuditFailureRevokesNewArtifactAndNeverReportsSuccess()
+    {
+        var audit = new RecordingAuditSink { FailedKinds = [RmsPrivilegedAuditEventKind.Completed] };
         var storage = new RecordingStorage();
         var runtime = CreateRuntime(
             new ControlledWorkflow(_ => Task.FromResult(CompletedResult())),
@@ -51,8 +136,8 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
 
         Assert.Equal(RmsDatabaseOperationOutcome.Failed, operation.Outcome);
         Assert.Equal("audit_unavailable", operation.ErrorCode);
+        Assert.Null(operation.Artifact);
         Assert.Single(storage.RevokedArtifactIds);
-        Assert.Single(audit.Events);
     }
 
     [Fact]
@@ -175,11 +260,20 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
 
     private sealed class ControlledWorkflow(Func<CancellationToken, Task<RmsDatabaseWorkflowResult>> backup) : IRmsDatabaseWorkflow
     {
+        public int Calls { get; private set; }
+        public bool DispatchReached { get; private set; }
+
         public Task<RmsDatabaseWorkflowResult> BackupAsync(
             RmsDatabaseKind database,
+            string principalSid,
             IProgress<RmsDatabaseProgress>? progress = null,
-            CancellationToken cancellationToken = default,
-            string? principalSid = null) => backup(cancellationToken);
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            progress?.Report(new(20, "dispatch", "The typed test backup was dispatched."));
+            DispatchReached = true;
+            return backup(cancellationToken);
+        }
 
         public Task<RmsDatabaseWorkflowResult> RestoreAsync(
             RmsDatabaseKind database,
@@ -197,7 +291,7 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
         public Task<RmsDatabaseBackupAllocation> AllocateAsync(RmsDatabaseKind database, DateTimeOffset createdAtUtc, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        public Task<RmsApprovedDatabaseBackup?> RegisterAsync(RmsDatabaseKind database, RmsDatabaseBackupAllocation allocation, CancellationToken cancellationToken = default, string? principalSid = null) =>
+        public Task<RmsApprovedDatabaseBackup?> RegisterAsync(RmsDatabaseKind database, RmsDatabaseBackupAllocation allocation, string principalSid, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         public Task<RmsApprovedDatabaseBackup?> ResolveAsync(RmsDatabaseKind database, string artifactId, string principalSid, CancellationToken cancellationToken = default, RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped) =>
@@ -216,15 +310,16 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
         }
     }
 
-    private sealed class RecordingAuditSink : IAgentAuditSink
+    private sealed class RecordingAuditSink : IRmsPrivilegedAuditSink
     {
         public bool Result { get; set; } = true;
-        public List<AgentAuditEvent> Events { get; } = [];
+        public HashSet<RmsPrivilegedAuditEventKind> FailedKinds { get; init; } = [];
+        public List<RmsPrivilegedAuditEvent> Events { get; } = [];
 
-        public bool Record(AgentAuditEvent auditEvent)
+        public bool Record(RmsPrivilegedAuditEvent auditEvent)
         {
             Events.Add(auditEvent);
-            return Result;
+            return Result && !FailedKinds.Contains(auditEvent.Kind);
         }
     }
 }

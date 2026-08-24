@@ -74,9 +74,14 @@ public sealed class RmsDatabaseBackupCatalog
         long sizeBytes,
         string sha256Checksum,
         DateTimeOffset createdAtUtc,
-        CancellationToken cancellationToken,
-        string? principalSid = null)
+        string principalSid,
+        CancellationToken cancellationToken = default)
     {
+        if (!IsSafeSid(principalSid))
+        {
+            throw new ArgumentException("A valid authenticated owner principal is required.", nameof(principalSid));
+        }
+
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -89,7 +94,7 @@ public sealed class RmsDatabaseBackupCatalog
                 sizeBytes,
                 sha256Checksum,
                 createdAtUtc,
-                IsSafeSid(principalSid) ? principalSid : null);
+                principalSid);
 
             entries[entry.ArtifactId] = entry;
             var evicted = ApplyRetentionLocked(entries, database, entry.PrincipalSid);

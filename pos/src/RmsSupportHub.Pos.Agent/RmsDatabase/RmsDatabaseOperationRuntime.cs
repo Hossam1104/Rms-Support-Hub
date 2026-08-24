@@ -334,7 +334,7 @@ public sealed class RmsDatabaseOperationRuntime(
                 }
             });
             var result = operation == RmsDatabaseOperationKind.Backup
-                ? await workflow.BackupAsync(database, progress, CancellationToken.None, principalSid).ConfigureAwait(false)
+                ? await workflow.BackupAsync(database, principalSid, progress, CancellationToken.None).ConfigureAwait(false)
                 : await workflow.RestoreAsync(database, artifactId!, progress, CancellationToken.None, principalSid).ConfigureAwait(false);
 
             operations.Complete(

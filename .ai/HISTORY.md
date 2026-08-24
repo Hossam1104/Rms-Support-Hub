@@ -86,4 +86,5 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 | Milestone | Evidence | Outcome |
 |---|---|---|
 | WPF-05 acceptance and merge | PR #36; merge `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837` | Squash merged; #13035 Closed/P1. |
-| WPF-06 implementation and final remediation | `a85c6f0`, `f548477`; Draft PR #37; POS 622/622; full build, PS, Pester, runtime | Added backups, principal-scoped inventory/retention, caller-bound export, truthful audit/rollback, bounded coordination, and typed IPC. Restore/service-control remain gated pending Sol acceptance. |
+| WPF-06 implementation | `a85c6f0`, `f548477`; Draft PR #37 | Added backups, inventory, export, audit/rollback, coordination, and typed IPC; restore remains gated. |
+| WPF-06 Opus remediation | PR #37; Agent 93/93; POS 633/633 | Closed SQOS, token, audit, principal, and size gates; Azure #13142/#13143. Restore/WPF-07 gated. |

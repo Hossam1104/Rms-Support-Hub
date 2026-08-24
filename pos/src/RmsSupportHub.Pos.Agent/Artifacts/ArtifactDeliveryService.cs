@@ -30,7 +30,7 @@ public sealed class ArtifactDeliveryService(
         InvocationContext context,
         string principalSid,
         LocalIpcArtifactExportRequestDto request,
-        WindowsIdentity callerIdentity,
+        WindowsIdentity? callerIdentity,
         CancellationToken cancellationToken = default)
     {
         var decision = AgentOperationAuthorization.Authorize(
@@ -39,10 +39,12 @@ public sealed class ArtifactDeliveryService(
         if (!decision.Allowed
             || !IsSafeSid(principalSid)
             || !string.Equals(principalSid, context.AuthenticatedCaller, StringComparison.Ordinal)
-            || callerIdentity is null)
+            || !HasExportAuthority(principalSid, callerIdentity))
         {
             return Failure(request?.ArtifactId, LocalIpcArtifactExportState.Unauthorized, "unauthorized");
         }
+
+        var exportIdentity = callerIdentity!;
 
         if (!TryValidateRequest(request, out var expectedExtension))
         {
@@ -95,7 +97,7 @@ public sealed class ArtifactDeliveryService(
             {
                 await using var input = await source.OpenReadAsync(cancellationToken).ConfigureAwait(false);
                 writeResult = await destinationAuthority.RunAsync(
-                    callerIdentity,
+                    exportIdentity,
                     () => WriteDestinationAsync(
                         principalSid,
                         destination,
@@ -133,7 +135,7 @@ public sealed class ArtifactDeliveryService(
                 try
                 {
                     await destinationAuthority.RunAsync(
-                        callerIdentity,
+                        exportIdentity,
                         () => CompensateAsync(destination, source, writeResult)).ConfigureAwait(false);
                 }
                 catch
@@ -148,13 +150,15 @@ public sealed class ArtifactDeliveryService(
             try
             {
                 await destinationAuthority.RunAsync(
-                    callerIdentity,
+                    exportIdentity,
                     () => CleanupRollbackAsync(writeResult.RollbackPath)).ConfigureAwait(false);
             }
             catch
             {
                 // The completed audit is durable and the output is valid. A stale rollback temp is
-                // not exposed through the protocol and is retried by the next bounded operation.
+                // not exposed through the protocol. Cleanup is attempted for this operation;
+                // process termination can leave caller-owned temporary/rollback files requiring
+                // later hygiene.
             }
 
             return new(
@@ -495,6 +499,21 @@ public sealed class ArtifactDeliveryService(
         value is { Length: > 0 and <= 184 }
         && value.StartsWith("S-", StringComparison.OrdinalIgnoreCase)
         && value.All(character => char.IsLetterOrDigit(character) || character == '-');
+
+    internal static bool HasExportAuthority(string principalSid, WindowsIdentity? callerIdentity)
+    {
+        try
+        {
+            return callerIdentity is not null
+                && callerIdentity.User?.Value is { } callerSid
+                && string.Equals(callerSid, principalSid, StringComparison.Ordinal)
+                && callerIdentity.ImpersonationLevel == TokenImpersonationLevel.Impersonation;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private static bool IsValidChecksum(string? value) =>
         value is { Length: 64 } && value.All(Uri.IsHexDigit);

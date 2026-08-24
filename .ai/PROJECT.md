@@ -48,8 +48,9 @@ Do not copy facts that can be cheaply discovered from the repository.
 - WPF-04/05 merged; WPF-05 is `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`;
   WPF-06 adds backup, inventory, and export. Its proposed ADR-0030 boundary
   binds roots to the authenticated SID's ProfileList, uses caller-token-only
-  destination I/O, truthful audit/rollback, owner-scoped retention, explicit
-  legacy compatibility, and bounded coordination; restore remains gated.
+  destination I/O, exact operation-scoped SQOS, truthful audit/rollback,
+  owner-scoped retention, explicit legacy compatibility, principal-required
+  registration, and bounded coordination; restore remains gated.
   Redacted frames are not universal PII-free evidence; #13116 tracks it.
 - Slice C establishes permanent `RmsSupportAgent` identity, safe legacy-name
   migration, machine-pinned package trust, LocalMachine signing, checkpointed

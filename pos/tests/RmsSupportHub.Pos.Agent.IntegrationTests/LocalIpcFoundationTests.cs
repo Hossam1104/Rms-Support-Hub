@@ -465,6 +465,90 @@ public sealed class LocalIpcFoundationTests
     }
 
     [Fact]
+    public async Task LocalIpcServerEnforcesOperationScopedSqos()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var options = CreateOptions();
+        var server = CreateServer(options, currentSid);
+        await server.StartAsync(CancellationToken.None);
+        try
+        {
+            using var normalImpersonation = await SendRawAtLevelAsync(
+                options,
+                new LocalIpcRequestEnvelope(
+                    LocalIpcProtocol.CurrentVersion,
+                    "sqos-normal-impersonation",
+                    "sqos-normal-impersonation",
+                    LocalIpcProtocol.HealthOperation,
+                    null),
+                TokenImpersonationLevel.Impersonation);
+            AssertSecurityVerificationFailure(normalImpersonation);
+
+            using var normalDelegation = await SendRawAtLevelAsync(
+                options,
+                new LocalIpcRequestEnvelope(
+                    LocalIpcProtocol.CurrentVersion,
+                    "sqos-normal-delegation",
+                    "sqos-normal-delegation",
+                    LocalIpcProtocol.HealthOperation,
+                    null),
+                TokenImpersonationLevel.Delegation);
+            AssertSecurityVerificationFailure(normalDelegation);
+
+            using var normalAnonymous = await SendRawAtLevelAsync(
+                options,
+                new LocalIpcRequestEnvelope(
+                    LocalIpcProtocol.CurrentVersion,
+                    "sqos-normal-anonymous",
+                    "sqos-normal-anonymous",
+                    LocalIpcProtocol.HealthOperation,
+                    null),
+                TokenImpersonationLevel.Anonymous);
+            AssertSecurityVerificationFailure(normalAnonymous);
+
+            using var exportIdentification = await SendRawAtLevelAsync(
+                options,
+                new LocalIpcRequestEnvelope(
+                    LocalIpcProtocol.CurrentVersion,
+                    "sqos-export-identification",
+                    "sqos-export-identification",
+                    LocalIpcProtocol.ArtifactExportOperation,
+                    JsonSerializer.SerializeToElement(new LocalIpcArtifactExportRequestDto(
+                        LocalIpcArtifactKind.SupportBundle,
+                        "0123456789abcdef0123456789abcdef",
+                        null,
+                        "C:\\export.zip",
+                        false))),
+                TokenImpersonationLevel.Identification);
+            AssertSecurityVerificationFailure(exportIdentification);
+
+            using var exportImpersonation = await SendRawAtLevelAsync(
+                options,
+                new LocalIpcRequestEnvelope(
+                    LocalIpcProtocol.CurrentVersion,
+                    "sqos-export-impersonation",
+                    "sqos-export-impersonation",
+                    LocalIpcProtocol.ArtifactExportOperation,
+                    JsonSerializer.SerializeToElement(new LocalIpcArtifactExportRequestDto(
+                        LocalIpcArtifactKind.SupportBundle,
+                        "0123456789abcdef0123456789abcdef",
+                        null,
+                        "C:\\export.zip",
+                        false))),
+                TokenImpersonationLevel.Impersonation);
+            Assert.False(exportImpersonation.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal(
+                "invalid_request",
+                exportImpersonation.RootElement.GetProperty("error").GetProperty("code").GetString());
+        }
+        finally
+        {
+            await server.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Wpf05OperationsFailClosedWhenOptionalHandlersAreNotConfigured()
     {
         var currentSid = WindowsIdentity.GetCurrent().User
@@ -716,7 +800,13 @@ public sealed class LocalIpcFoundationTests
 
     private static async Task<JsonDocument> SendRawTextAsync(LocalIpcOptions options, string text)
     {
-        using var pipe = new NamedPipeClientStream(".", options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        using var pipe = new NamedPipeClientStream(
+            ".",
+            options.PipeName,
+            PipeDirection.InOut,
+            PipeOptions.Asynchronous,
+            TokenImpersonationLevel.Identification,
+            HandleInheritability.None);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await pipe.ConnectAsync(timeout.Token);
         var bytes = Encoding.UTF8.GetBytes(text + "\n");
@@ -726,6 +816,38 @@ public sealed class LocalIpcFoundationTests
         var response = await reader.ReadLineAsync(timeout.Token)
             ?? throw new InvalidOperationException("The IPC server closed without a bounded error response.");
         return JsonDocument.Parse(response);
+    }
+
+    private static async Task<JsonDocument> SendRawAtLevelAsync(
+        LocalIpcOptions options,
+        LocalIpcRequestEnvelope request,
+        TokenImpersonationLevel impersonationLevel)
+    {
+        using var pipe = new NamedPipeClientStream(
+            ".",
+            options.PipeName,
+            PipeDirection.InOut,
+            PipeOptions.Asynchronous,
+            impersonationLevel,
+            HandleInheritability.None);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await pipe.ConnectAsync(timeout.Token);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(request, JsonOptions);
+        await pipe.WriteAsync(bytes, timeout.Token);
+        await pipe.WriteAsync("\n"u8.ToArray(), timeout.Token);
+        await pipe.FlushAsync(timeout.Token);
+        using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
+        var response = await reader.ReadLineAsync(timeout.Token)
+            ?? throw new InvalidOperationException("The IPC server closed without a bounded error response.");
+        return JsonDocument.Parse(response);
+    }
+
+    private static void AssertSecurityVerificationFailure(JsonDocument response)
+    {
+        Assert.False(response.RootElement.GetProperty("success").GetBoolean());
+        Assert.Contains(
+            response.RootElement.GetProperty("error").GetProperty("code").GetString(),
+            new[] { "security_verification_failed", "caller_identity_unavailable" });
     }
 
     private static string CreatePaddedRequest(int targetBytes)

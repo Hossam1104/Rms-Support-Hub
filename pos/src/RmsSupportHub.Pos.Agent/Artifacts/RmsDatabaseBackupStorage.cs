@@ -1,5 +1,6 @@
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
+using RmsSupportHub.Pos.Domain.Exceptions;
 
 namespace RmsSupportHub.Pos.Agent.Artifacts;
 
@@ -65,10 +66,15 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
     public async Task<RmsApprovedDatabaseBackup?> RegisterAsync(
         RmsDatabaseKind database,
         RmsDatabaseBackupAllocation allocation,
-        CancellationToken cancellationToken = default,
-        string? principalSid = null)
+        string principalSid,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(allocation);
+        if (!IsSafeSid(principalSid))
+        {
+            return null;
+        }
+
         var path = Path.GetFullPath(allocation.ServerPath);
         if (!BackupPathSafety.IsSafePath(fileSystem, options.BackupRootPath, path)
             || !string.Equals(Path.GetExtension(path), ".bak", StringComparison.OrdinalIgnoreCase)
@@ -86,12 +92,16 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             if (size <= 0 || size > options.MaximumBackupBytes)
             {
                 try { await fileSystem.DeleteFileAsync(path, CancellationToken.None).ConfigureAwait(false); } catch { }
-                return null;
+                throw new RmsDatabaseBackupSizeLimitException();
             }
 
             checksum = await fileSystem.ComputeSha256Async(path, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (RmsDatabaseBackupSizeLimitException)
         {
             throw;
         }
@@ -107,8 +117,8 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             size,
             checksum,
             allocation.CreatedAtUtc,
-            cancellationToken,
-            principalSid).ConfigureAwait(false);
+            principalSid,
+            cancellationToken).ConfigureAwait(false);
 
         return ToApproved(entry);
     }
@@ -209,6 +219,11 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             path ?? Path.GetFullPath(Path.Combine(options.BackupRootPath, entry.FileName)),
             availability,
             entry.PrincipalSid);
+
+    private static bool IsSafeSid(string? value) =>
+        value is { Length: > 0 and <= 184 }
+        && value.StartsWith("S-", StringComparison.OrdinalIgnoreCase)
+        && value.All(character => char.IsLetterOrDigit(character) || character == '-');
 
     private async Task<RmsDatabaseBackupAvailability> IsPhysicallyValidAsync(
         RmsDatabaseBackupCatalogEntry entry,

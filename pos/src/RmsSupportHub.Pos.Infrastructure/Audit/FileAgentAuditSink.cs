@@ -57,7 +57,7 @@ public sealed class FileAgentAuditSink(
         }
     }
 
-    public void Record(RmsPrivilegedAuditEvent auditEvent) => Record(new AgentAuditEvent(
+    public bool Record(RmsPrivilegedAuditEvent auditEvent) => Record(new AgentAuditEvent(
         auditEvent.AtUtc,
         auditEvent.PrincipalSid,
         $"database.{auditEvent.Operation}.{auditEvent.Kind}",

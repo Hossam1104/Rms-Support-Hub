@@ -3,7 +3,7 @@
 **Azure Organization:** `DBSMENA`
 **Azure Project:** `Rms_Support_Hub`
 **Process Template:** `Agile-RMS` (Hierarchy: Epic -> User Story -> Task where present)
-**Rebaseline Date:** `2026-08-22`
+**Rebaseline Date:** `2026-08-24`
 **BRD Source:** [`BRD.md`](../BRD.md) (Version 1.1)
 **Architecture Rebaseline:** [`docs/CR-001_WPF_AGENT_ADMIN_SUPERVISION.md`](CR-001_WPF_AGENT_ADMIN_SUPERVISION.md) / [ADR-0029](../.ai/decisions/ADR-0029-wpf-agent-dual-control-and-admin-supervision.md)
 **Backlog Blueprint:** [`docs/AZURE_DEVOPS_BACKLOG.md`](AZURE_DEVOPS_BACKLOG.md)
@@ -12,15 +12,15 @@
 
 - **Total Epics:** 19 (10 Closed, 4 Active, 5 New)
 - **Total User Stories:** 176 (99 Closed, 7 Active, 70 New)
-- **Total Tasks:** 4 (all New, Online Order integrated-testing work)
-- **Total Work Items:** 199
+- **Total Tasks:** 6 (4 Online Order integrated-testing tasks; 2 WPF-06 follow-up tasks)
+- **Total Work Items:** 201
 - **Closed:** 99 User Stories / 10 Epics
 - **Active:** 7 User Stories / 4 Epics (E06, E15, E16, E17)
-- **New:** 70 User Stories / 5 Epics / 4 Tasks
+- **New:** 70 User Stories / 5 Epics / 6 Tasks
 
-## Live Azure reconciliation - 2026-08-23
+## Live Azure reconciliation - 2026-08-24
 
-This matrix was reconciled from a live Azure DevOps query on 2026-08-23.
+This matrix was reconciled from a live Azure DevOps query on 2026-08-24.
 The WPF epics and child states below are current Azure truth; the evidence
 column distinguishes delivered local slices from future remote/fleet work.
 
@@ -46,7 +46,9 @@ column distinguishes delivered local slices from future remote/fleet work.
   final security remediation binds export roots to the authenticated
   ProfileList SID, uses caller-token-only destination operations, requires
   truthful final audit/rollback, and scopes catalog access/retention by owner.
-  Restore remains deferred under #13034; child #13129 is New/P2. The next
+  Restore remains deferred under #13034; child #13129 is New/P2. New child
+  tasks #13142 (New/P2) and #13143 (New/P3) track backup sizing/retention
+  validation and deferred storage hygiene. The next
   recommended slice is guarded RMS service control under #13032, not Safety
   Snapshots.
 
@@ -254,8 +256,10 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **US-E17-01** | 13031 | User Story | [US-E17-01] WPF shell and local machine dashboard | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; WPF shell/dashboard delivered through WPF-02 |
 | **US-E17-02** | 13032 | User Story | [US-E17-02] Agent/RMS service health and approved service control | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030 | P1; read-only service health delivered, mutation remains future |
 | **US-E17-03** | 13033 | User Story | [US-E17-03] Database health and diagnostics | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` |
-| **US-E17-04** | 13034 | User Story | [US-E17-04] Database backup/download and guarded restore | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-06 Draft PR adds fixed Branch/Cashier backup creation, principal-scoped bounded inventory, shared local artifact export, caller-bound ProfileList roots, caller-token-only destination I/O, truthful audit/rollback, and owner-scoped retention/access; final remediation pending Sol acceptance; child #13129 New/P2 tracks restore |
+| **US-E17-04** | 13034 | User Story | [US-E17-04] Database backup/download and guarded restore | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-06 Draft PR adds fixed Branch/Cashier backup creation, principal-scoped bounded inventory, shared local artifact export, caller-bound ProfileList roots, caller-token-only destination I/O, truthful audit/rollback, owner-scoped retention/access, operation-scoped SQOS, real Named Pipe caller-token evidence, and fail-closed privileged backup audit; child #13129 New/P2 tracks restore and #13142/#13143 track sizing/retention validation and deferred storage hygiene |
 | **T-E17-04-01** | 13129 | Task | Implement guarded RMS database restore in WPF | US-E17-04 (#13034) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P2; separately gated restore work, not part of WPF-06 or the next guarded service-control slice |
+| **T-E17-04-02** | 13142 | Task | Validate representative RMS backup size and retention limits | US-E17-04 (#13034) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P2; Testing-only representative backup sizing/retention validation, no Production or customer-data execution implied |
+| **T-E17-04-03** | 13143 | Task | Harden age-only and global-root backup storage hygiene | US-E17-04 (#13034) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P3; deferred hardening, not part of WPF-06 remediation or WPF-07 |
 | **US-E17-05** | 13035 | User Story | [US-E17-05] Logs and safe Support Bundle | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; WPF-05 accepted at `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`; privacy policy Task #13116 remains New/P2 |
 | **T-E17-05-01** | 13116 | Task | Define and validate diagnostic evidence PII/redaction policy | US-E17-05 (#13035) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-030 | P2; define permitted customer/business identifiers and deterministic redaction/privacy tests |
 | **US-E17-06** | 13036 | User Story | [US-E17-06] Safety Snapshots and incident timeline | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |

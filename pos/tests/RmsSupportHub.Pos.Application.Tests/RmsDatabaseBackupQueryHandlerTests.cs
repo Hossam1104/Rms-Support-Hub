@@ -71,9 +71,9 @@ public sealed class RmsDatabaseBackupQueryHandlerTests
 
         public Task<RmsDatabaseWorkflowResult> BackupAsync(
             RmsDatabaseKind database,
+            string principalSid,
             IProgress<RmsDatabaseProgress>? progress = null,
-            CancellationToken cancellationToken = default,
-            string? principalSid = null)
+            CancellationToken cancellationToken = default)
         {
             Database = database;
             PrincipalSid = principalSid;
@@ -110,7 +110,7 @@ public sealed class RmsDatabaseBackupQueryHandlerTests
         public Task<RmsDatabaseBackupAllocation> AllocateAsync(RmsDatabaseKind database, DateTimeOffset createdAtUtc, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        public Task<RmsApprovedDatabaseBackup?> RegisterAsync(RmsDatabaseKind database, RmsDatabaseBackupAllocation allocation, CancellationToken cancellationToken = default, string? principalSid = null) =>
+        public Task<RmsApprovedDatabaseBackup?> RegisterAsync(RmsDatabaseKind database, RmsDatabaseBackupAllocation allocation, string principalSid, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         public Task<RmsApprovedDatabaseBackup?> ResolveAsync(RmsDatabaseKind database, string artifactId, string principalSid, CancellationToken cancellationToken = default, RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped) =>

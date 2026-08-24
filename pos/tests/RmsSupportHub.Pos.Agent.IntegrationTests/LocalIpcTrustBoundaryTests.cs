@@ -6,6 +6,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Contracts;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 using RmsSupportHub.Pos.LocalIpc;
@@ -175,6 +176,67 @@ public sealed class LocalIpcTrustBoundaryTests
     public void LocalIpcClientRequestsIdentificationImpersonationOnly()
     {
         Assert.Equal(TokenImpersonationLevel.Identification, LocalIpcClient.RequestedImpersonationLevel);
+        Assert.Equal(TokenImpersonationLevel.Impersonation, LocalIpcClient.ArtifactExportRequestedImpersonationLevel);
+    }
+
+    [Fact]
+    public async Task RealNamedPipeImpersonationSupportsCallerTokenWriteAndIdentificationFailsClosed()
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The test process does not have a Windows SID.");
+        var root = Directory.CreateTempSubdirectory("rms-ipc-impersonation-").FullName;
+        var impersonationPath = Path.Combine(root, "impersonation.txt");
+        var identificationPath = Path.Combine(root, "identification.txt");
+        try
+        {
+            var (impersonationServer, impersonationClient) = await ConnectPipeAtLevelAsync(
+                currentSid,
+                TokenImpersonationLevel.Impersonation);
+            using (impersonationServer)
+            using (impersonationClient)
+            {
+                WindowsIdentity? identity = null;
+                impersonationServer.RunAsClient(() => identity = WindowsIdentity.GetCurrent());
+                using (identity)
+                {
+                    Assert.NotNull(identity);
+                    Assert.Equal(TokenImpersonationLevel.Impersonation, identity!.ImpersonationLevel);
+                    Assert.True(ArtifactDeliveryService.HasExportAuthority(currentSid.Value, identity));
+
+                    await WindowsIdentity.RunImpersonatedAsync(
+                        identity.AccessToken,
+                        () => File.WriteAllTextAsync(impersonationPath, "real-pipe-token"));
+                }
+            }
+
+            Assert.True(File.Exists(impersonationPath));
+            Assert.Equal("real-pipe-token", await File.ReadAllTextAsync(impersonationPath));
+
+            var (identificationServer, identificationClient) = await ConnectPipeAtLevelAsync(
+                currentSid,
+                TokenImpersonationLevel.Identification);
+            using (identificationServer)
+            using (identificationClient)
+            {
+                WindowsIdentity? identity = null;
+                identificationServer.RunAsClient(() => identity = WindowsIdentity.GetCurrent());
+                using (identity)
+                {
+                    Assert.NotNull(identity);
+                    Assert.Equal(TokenImpersonationLevel.Identification, identity!.ImpersonationLevel);
+                    Assert.False(ArtifactDeliveryService.HasExportAuthority(currentSid.Value, identity));
+                }
+            }
+
+            Assert.False(File.Exists(identificationPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
     }
 
     [Fact]
@@ -278,6 +340,53 @@ public sealed class LocalIpcTrustBoundaryTests
             CreateTestPipeSecurity(currentSid));
         var waitForConnection = server.WaitForConnectionAsync();
         var client = new NamedPipeClientStream(".", options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await client.ConnectAsync(timeout.Token);
+            await waitForConnection;
+            return (server, client);
+        }
+        catch
+        {
+            client.Dispose();
+            server.Dispose();
+            try
+            {
+                await waitForConnection;
+            }
+            catch
+            {
+                // Disposal bounds the server-side wait after setup failure.
+            }
+
+            throw;
+        }
+    }
+
+    private static async Task<(NamedPipeServerStream Server, NamedPipeClientStream Client)> ConnectPipeAtLevelAsync(
+        SecurityIdentifier currentSid,
+        TokenImpersonationLevel impersonationLevel)
+    {
+        var options = CreateOptions();
+        var security = CreateTestPipeSecurity(currentSid);
+        var server = NamedPipeServerStreamAcl.Create(
+            options.PipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous,
+            0,
+            0,
+            security);
+        var waitForConnection = server.WaitForConnectionAsync();
+        var client = new NamedPipeClientStream(
+            ".",
+            options.PipeName,
+            PipeDirection.InOut,
+            PipeOptions.Asynchronous,
+            impersonationLevel,
+            HandleInheritability.None);
         try
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));

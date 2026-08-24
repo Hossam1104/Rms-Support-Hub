@@ -135,8 +135,8 @@ public interface IRmsDatabaseBackupStorage
     Task<RmsApprovedDatabaseBackup?> RegisterAsync(
         RmsDatabaseKind database,
         RmsDatabaseBackupAllocation allocation,
-        CancellationToken cancellationToken = default,
-        string? principalSid = null);
+        string principalSid,
+        CancellationToken cancellationToken = default);
 
     Task<RmsApprovedDatabaseBackup?> ResolveAsync(
         RmsDatabaseKind database,
@@ -189,9 +189,9 @@ public interface IRmsDatabaseWorkflow
 {
     Task<RmsDatabaseWorkflowResult> BackupAsync(
         RmsDatabaseKind database,
+        string principalSid,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default,
-        string? principalSid = null);
+        CancellationToken cancellationToken = default);
 
     Task<RmsDatabaseWorkflowResult> RestoreAsync(
         RmsDatabaseKind database,
@@ -210,7 +210,8 @@ public enum RmsPrivilegedAuditEventKind
     Dispatch,
     Completed,
     Failed,
-    OutcomeUnknown
+    OutcomeUnknown,
+    Cancelled
 }
 
 public sealed record RmsPrivilegedAuditEvent(

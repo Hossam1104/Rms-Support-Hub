@@ -3,6 +3,7 @@ using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
+using RmsSupportHub.Pos.Domain.Exceptions;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 
@@ -18,7 +19,7 @@ public sealed class LocalRmsDatabaseBackupRuntime(
     RmsDatabaseOperationStore operations,
     RmsDatabaseConcurrencyGate concurrency,
     IRmsDatabaseBackupStorage storage,
-    IAgentAuditSink audit,
+    IRmsPrivilegedAuditSink audit,
     TimeProvider timeProvider)
 {
     private readonly ConcurrentDictionary<string, CancellationTokenSource> cancellations = new(StringComparer.Ordinal);
@@ -45,6 +46,18 @@ public sealed class LocalRmsDatabaseBackupRuntime(
             return LocalRmsDatabaseOperationResult.Failure(
                 "invalid_request",
                 "The backup request was invalid.");
+        }
+
+        if (!TryRecordAudit(
+                context,
+                database,
+                correlationId,
+                RmsPrivilegedAuditEventKind.Requested,
+                "The local typed RMS database backup was requested."))
+        {
+            return LocalRmsDatabaseOperationResult.Failure(
+                "audit_unavailable",
+                "The backup is temporarily unavailable because required audit recording is unavailable.");
         }
 
         var lease = concurrency.TryEnter(database);
@@ -80,6 +93,22 @@ public sealed class LocalRmsDatabaseBackupRuntime(
             return LocalRmsDatabaseOperationResult.Failure(
                 "operation_in_progress",
                 "The backup operation could not be registered safely.");
+        }
+
+        if (!TryRecordAudit(
+                context,
+                database,
+                correlationId,
+                RmsPrivilegedAuditEventKind.Accepted,
+                "The local typed RMS database backup passed preflight and was accepted."))
+        {
+            cancellations.TryRemove(handle.OperationId, out var failedCancellation);
+            failedCancellation?.Dispose();
+            operations.Remove(handle.OperationId);
+            lease.Dispose();
+            return LocalRmsDatabaseOperationResult.Failure(
+                "audit_unavailable",
+                "The backup is temporarily unavailable because required audit recording is unavailable.");
         }
 
         operations.Start(handle.OperationId);
@@ -135,7 +164,45 @@ public sealed class LocalRmsDatabaseBackupRuntime(
     {
         try
         {
-            var progress = new Progress<RmsDatabaseProgress>(update => operations.Progress(handle.OperationId, update));
+            if (!TryRecordAudit(
+                    context,
+                    database,
+                    correlationId,
+                    RmsPrivilegedAuditEventKind.Started,
+                    "The local typed RMS database backup started."))
+            {
+                CompleteAndAudit(
+                    handle,
+                    context,
+                    database,
+                    correlationId,
+                    RmsDatabaseWorkflowOutcome.Failed,
+                    RmsPrivilegedAuditEventKind.Failed,
+                    "audit_unavailable",
+                    "The backup was not started because required audit recording is unavailable.",
+                    null,
+                    false,
+                    false,
+                    []);
+                return;
+            }
+
+            var progress = new InlineProgress(update =>
+            {
+                operations.Progress(handle.OperationId, update);
+                if (update.Stage == "dispatch")
+                {
+                    if (!TryRecordAudit(
+                            context,
+                            database,
+                            correlationId,
+                            RmsPrivilegedAuditEventKind.Dispatch,
+                            update.Detail))
+                    {
+                        throw new RmsDatabaseAuditUnavailableException();
+                    }
+                }
+            });
             var result = await handler
                 .CreateAsync(context, database, progress, operationCancellation.Token)
                 .ConfigureAwait(false);
@@ -148,6 +215,7 @@ public sealed class LocalRmsDatabaseBackupRuntime(
                     database,
                     correlationId,
                     RmsDatabaseWorkflowOutcome.Failed,
+                    RmsPrivilegedAuditEventKind.Failed,
                     result.Code,
                     result.Detail,
                     null,
@@ -175,6 +243,7 @@ public sealed class LocalRmsDatabaseBackupRuntime(
                     database,
                     correlationId,
                     RmsDatabaseWorkflowOutcome.Failed,
+                    RmsPrivilegedAuditEventKind.Cancelled,
                     "cancelled",
                     "The database backup was cancelled.",
                     null,
@@ -184,35 +253,34 @@ public sealed class LocalRmsDatabaseBackupRuntime(
                 return;
             }
 
-            var outcome = workflowResult.Outcome;
+            var outcome = workflowResult.Outcome == RmsDatabaseWorkflowOutcome.NotAttempted
+                ? RmsDatabaseWorkflowOutcome.Failed
+                : workflowResult.Outcome;
             var code = workflowResult.Code;
             var detail = workflowResult.Detail;
             var artifact = workflowResult.Backup;
-            if (outcome == RmsDatabaseWorkflowOutcome.Completed
-                && !TryRecordAudit(
-                    context,
-                    database,
-                    correlationId,
-                    "completed",
-                    null))
+            var terminalKind = ToAuditKind(outcome);
+            if (!TryRecordAudit(context, database, correlationId, terminalKind, detail))
             {
-                if (artifact is not null)
+                if (outcome == RmsDatabaseWorkflowOutcome.Completed)
                 {
-                    await storage.RevokeAsync(
-                        database,
-                        artifact.ArtifactId,
-                        context.AuthenticatedCaller,
-                        CancellationToken.None).ConfigureAwait(false);
+                    if (artifact is not null)
+                    {
+                        await storage.RevokeAsync(
+                            database,
+                            artifact.ArtifactId,
+                            context.AuthenticatedCaller,
+                            CancellationToken.None).ConfigureAwait(false);
+                    }
+
+                    outcome = RmsDatabaseWorkflowOutcome.Failed;
+                    artifact = null;
                 }
 
-                outcome = RmsDatabaseWorkflowOutcome.Failed;
                 code = "audit_unavailable";
-                detail = "The backup completed but its required audit record could not be persisted.";
-                artifact = null;
-            }
-            else if (outcome != RmsDatabaseWorkflowOutcome.Completed)
-            {
-                TryRecordAudit(context, database, correlationId, outcome.ToString().ToLowerInvariant(), code);
+                detail = outcome == RmsDatabaseWorkflowOutcome.Failed
+                    ? "The backup outcome was not durably audited."
+                    : "The backup outcome is unknown because its required audit record could not be persisted.";
             }
 
             operations.Complete(
@@ -225,9 +293,30 @@ public sealed class LocalRmsDatabaseBackupRuntime(
                 workflowResult.RecoveryRequired,
                 workflowResult.Warnings);
         }
+        catch (RmsDatabaseAuditUnavailableException)
+        {
+            CompleteAndAudit(
+                handle,
+                context,
+                database,
+                correlationId,
+                RmsDatabaseWorkflowOutcome.Failed,
+                RmsPrivilegedAuditEventKind.Failed,
+                "audit_unavailable",
+                "The backup was not dispatched because required audit recording is unavailable.",
+                null,
+                false,
+                false,
+                []);
+        }
         catch (OperationCanceledException) when (operationCancellation.IsCancellationRequested)
         {
-            TryRecordAudit(context, database, correlationId, "cancelled", "cancelled");
+            TryRecordAudit(
+                context,
+                database,
+                correlationId,
+                RmsPrivilegedAuditEventKind.Cancelled,
+                "The database backup was cancelled.");
             operations.Complete(
                 handle.OperationId,
                 RmsDatabaseWorkflowOutcome.Failed,
@@ -240,15 +329,20 @@ public sealed class LocalRmsDatabaseBackupRuntime(
         }
         catch
         {
-            TryRecordAudit(context, database, correlationId, "failed", "backup_failed");
+            TryRecordAudit(
+                context,
+                database,
+                correlationId,
+                RmsPrivilegedAuditEventKind.OutcomeUnknown,
+                "The database backup outcome is unknown.");
             operations.Complete(
                 handle.OperationId,
-                RmsDatabaseWorkflowOutcome.Failed,
-                "backup_failed",
-                "The RMS database backup could not be completed.",
+                RmsDatabaseWorkflowOutcome.OutcomeUnknown,
+                "database_operation_outcome_unknown",
+                "The database backup failed ambiguously. Check database and service state before any retry.",
                 null,
-                false,
-                false,
+                true,
+                true,
                 []);
         }
         finally
@@ -265,6 +359,7 @@ public sealed class LocalRmsDatabaseBackupRuntime(
         RmsDatabaseKind database,
         string correlationId,
         RmsDatabaseWorkflowOutcome outcome,
+        RmsPrivilegedAuditEventKind auditKind,
         string code,
         string detail,
         RmsApprovedDatabaseBackup? artifact,
@@ -272,7 +367,7 @@ public sealed class LocalRmsDatabaseBackupRuntime(
         bool recoveryRequired,
         IReadOnlyList<string> warnings)
     {
-        TryRecordAudit(context, database, correlationId, outcome.ToString().ToLowerInvariant(), code);
+        TryRecordAudit(context, database, correlationId, auditKind, detail);
         operations.Complete(
             handle.OperationId,
             outcome,
@@ -288,30 +383,32 @@ public sealed class LocalRmsDatabaseBackupRuntime(
         InvocationContext context,
         RmsDatabaseKind database,
         string correlationId,
-        string outcome,
-        string? failureCode)
+        RmsPrivilegedAuditEventKind kind,
+        string detail)
     {
         try
         {
-            return audit.Record(new AgentAuditEvent(
+            return audit.Record(new RmsPrivilegedAuditEvent(
                 timeProvider.GetUtcNow(),
-                context.AuthenticatedCaller,
-                "rms.database.backup.create",
-                database == RmsDatabaseKind.Branch ? "branch" : "cashier",
+                kind,
+                database,
+                "rms.database.backup",
                 correlationId,
-                outcome,
-                failureCode,
-                typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
-                null)
-            {
-                Source = InvocationSource.LocalWpf.ToString()
-            });
+                context.AuthenticatedCaller,
+                detail));
         }
         catch
         {
             return false;
         }
     }
+
+    private static RmsPrivilegedAuditEventKind ToAuditKind(RmsDatabaseWorkflowOutcome outcome) => outcome switch
+    {
+        RmsDatabaseWorkflowOutcome.Completed => RmsPrivilegedAuditEventKind.Completed,
+        RmsDatabaseWorkflowOutcome.OutcomeUnknown => RmsPrivilegedAuditEventKind.OutcomeUnknown,
+        _ => RmsPrivilegedAuditEventKind.Failed
+    };
 
     private static bool IsAdministrator(InvocationContext context) =>
         AgentOperationAuthorization.Authorize(context, AgentOperationRisk.AdministratorOnlyMutation).Allowed;
@@ -350,6 +447,12 @@ public sealed class LocalRmsDatabaseBackupRuntime(
             return false;
         }
     }
+
+    private sealed class InlineProgress(Action<RmsDatabaseProgress> callback) : IProgress<RmsDatabaseProgress>
+    {
+        public void Report(RmsDatabaseProgress value) => callback(value);
+    }
+
 }
 
 public sealed record LocalRmsDatabaseOperationResult(

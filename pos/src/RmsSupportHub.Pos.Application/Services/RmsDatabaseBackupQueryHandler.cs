@@ -1,4 +1,5 @@
 using RmsSupportHub.Pos.Application.Invocation;
+using RmsSupportHub.Pos.Domain.Exceptions;
 using RmsSupportHub.Pos.Domain.Interfaces;
 using RmsSupportHub.Pos.Domain.Models;
 
@@ -33,13 +34,19 @@ public sealed class RmsDatabaseBackupQueryHandler(
         try
         {
             var result = await workflow
-                .BackupAsync(database, progress, cancellationToken, context.AuthenticatedCaller)
+                .BackupAsync(database, context.AuthenticatedCaller, progress, cancellationToken)
                 .ConfigureAwait(false);
             return RmsDatabaseApplicationResult<RmsDatabaseWorkflowResult>.Success(result);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (RmsDatabaseAuditUnavailableException)
+        {
+            return RmsDatabaseApplicationResult<RmsDatabaseWorkflowResult>.Failure(
+                "audit_unavailable",
+                "The RMS database backup was not dispatched because required audit recording is unavailable.");
         }
         catch
         {

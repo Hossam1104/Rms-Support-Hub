@@ -38,7 +38,14 @@ public sealed class LocalIpcServerIdentityException()
 /// </summary>
 public sealed class LocalIpcClient
 {
+    /// <summary>
+    /// WPF-01's normal local IPC posture. Only the typed artifact export operation is allowed
+    /// to request the stronger destination-write token posture below.
+    /// </summary>
     public const TokenImpersonationLevel RequestedImpersonationLevel = TokenImpersonationLevel.Identification;
+
+    public const TokenImpersonationLevel ArtifactExportRequestedImpersonationLevel =
+        TokenImpersonationLevel.Impersonation;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -160,19 +167,26 @@ public sealed class LocalIpcClient
             LocalIpcProtocol.ArtifactExportOperation,
             correlationId,
             request,
-            cancellationToken);
+            cancellationToken,
+            ArtifactExportRequestedImpersonationLevel);
 
     private async Task<LocalIpcCallResult<T>> SendAsync<T>(
         string operation,
         string? correlationId,
         CancellationToken cancellationToken) =>
-        await SendAsync<T>(operation, correlationId, payload: null, cancellationToken).ConfigureAwait(false);
+        await SendAsync<T>(
+            operation,
+            correlationId,
+            payload: null,
+            cancellationToken,
+            RequestedImpersonationLevel).ConfigureAwait(false);
 
     private async Task<LocalIpcCallResult<T>> SendAsync<T>(
         string operation,
         string? correlationId,
         object? payload,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TokenImpersonationLevel impersonationLevel = RequestedImpersonationLevel)
     {
         var requestId = Guid.NewGuid().ToString("N");
         var effectiveCorrelationId = IsSafeToken(correlationId) ? correlationId! : requestId;
@@ -197,7 +211,7 @@ public sealed class LocalIpcClient
             options.PipeName,
             PipeDirection.InOut,
             PipeOptions.Asynchronous,
-            RequestedImpersonationLevel,
+            impersonationLevel,
             HandleInheritability.None);
         await pipe.ConnectAsync(timeout.Token).ConfigureAwait(false);
 
