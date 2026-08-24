@@ -10,8 +10,8 @@
   creation, principal-scoped bounded inventory, and one shared Agent-owned
   local artifact-delivery path for database backups and Support Bundles.
   Restore is deliberately not implemented and formal Sol acceptance is still
-  pending. The remediation is currently in the working tree from baseline
-  `8b7a7035d03b2caffd7e5b5dcd804830cf25a42a`; PR #37 remains open and Draft.
+  pending. Delivered in commit `fddf6fedf11552330e3e3629627e5cdad81bd3a6`;
+  PR #37 remains open and Draft.
 - **Authority:** CR-001 and ADR-0029 remain accepted; ADR-0030 is Proposed
   pending GPT-5.6 Sol acceptance. Sol is the acceptance authority. The WPF-06
   PR must remain Draft and must not be marked ready or merged by this
@@ -77,10 +77,9 @@
 - PowerShell quality: 37/37 files parsed; Pester 172/172 passed with no
   skips/pending. `python .ai/scripts/context.py`,
   `python .ai/scripts/check_memory.py`, and `git diff --check` passed.
-- `scripts/build.ps1` first attempt was blocked only by the existing
-  project-owned API PID 41932 locking Debug backend DLLs; rerun after the
-  authorized runtime restart remains part of completion. CI must be checked
-  again at the final pushed head.
+- Repository build gate: backend 342/342, backend Release build 0/0, and
+  Angular production build passed. Exact-head CI for commit `fddf6fe` is 7/7
+  green; no skipped/pending checks remain.
 
 ## Azure and backlog
 
@@ -102,13 +101,13 @@
 
 ## Runtime and environment boundary
 
-- The prior WPF runtime PID 34128 is from the pre-remediation baseline and
-  must be replaced before completion. Final verification will use the Release
-  artifact at
+- Final WPF Release artifact at
   `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
-  It must be exactly one responsive current-head process, left running.
-- Existing project-owned API/Angular processes remain available for runtime
-  checks until the build gate is rerun; WPF must be launched with process-local
+  PID 35600, title `RMS Support Hub`, `Responding=True`, exactly one process,
+  started `2026-08-24T14:56:08+03:00`; it is left running.
+- `scripts/dev.ps1` probes returned API live 200/healthy, API ready 200/ready
+  with Testing tier, and Angular `http://localhost:4200/` 200 HTML. Current
+  project-owned API PID is 8120 and Angular PID is 29192; WPF used process-local
   `WINDIR=C:\WINDOWS`.
 - The current machine has no authorized Agent service/operator-group/database
   mutation session. No live backup, restore, service mutation, Production
