@@ -59,9 +59,6 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 | Milestone | Evidence | Outcome |
 |---|---|---|
 | WPF-01 Shared Agent Application + Local IPC Foundation | Merged PR #32; main `c09e4ec` | Added the shared invocation/application seam, typed RMS installation discovery adapter, bounded Windows Named Pipe client/server with explicit three-principal ACL, protocol/error bounds, generated client contract, and focused authorization/transport/parity tests. Accepted before WPF-02; no WPF UI, SignalR, Production, native RMS, or customer database changes. |
-| WPF-01 Sol security remediation | Commits `ab4bf1b`, `1c26e55`, `fa9169a` on `feat/wpf-01-shared-agent-local-ipc`; Draft PR #32 remains Draft | Closed S01-S09 with least-privilege operator ACL, explicit NETWORK deny, LocalSystem server-token verification, local-only group resolution, truthful invocation propagation, strict correlation matching, source-coherent authorization, and fail-closed diagnostic audit semantics. Stable AccessControl 5.0.0 was tried, then removed because .NET 10 provides the API and strict CI treats NU1510 as an error. Local POS build/tests and final exact-head POS/Support Hub CI pass. No WPF UI, SignalR, Production, native RMS, or customer database changes. |
-| WPF-01 S03 server identity remediation | Local validation on 2026-08-22; Draft PR #32 remains Draft | Replaced process-token/LocalSystem verification with canonical `RmsSupportAgent` SCM PID matching using query-only SCM rights and bounded injectable PID resolvers. S03 tests 12/12, Local IPC 23/23, full Agent Integration 195/195, strict Release build 0/0, PowerShell 37/37, Pester 172/172, and generated contracts unchanged. No Production contact, native RMS mutation, machine-group provisioning, or WPF-02 work. |
-| WPF-01 final bounded OPUS remediation | Commit `701869b`; exact-head POS/Support Hub CI green; Draft PR #32 | Closed OPUS-01..13 and OPUS-15 with listener recovery/lifecycle, authority, trust, audit, architecture, namespace, impersonation, and exact-bound fixes. POS tests 490/490, Agent Integration 234/234, Pester 172/172, and Release build 0/0 passed. OPUS-14 rate limiting and OPUS-16 representative-machine/operator-group E2E remain deferred. |
 
 ## WPF-02
 
@@ -88,3 +85,11 @@ Authorized HOSSAM local Testing deployment and activation occurred; no Productio
 | WPF-05 acceptance and merge | PR #36; merge `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837` | Squash merged; #13035 Closed/P1. |
 | WPF-06 implementation | `a85c6f0`, `f548477`; Draft PR #37 | Added backups, inventory, export, audit/rollback, coordination, and typed IPC; restore remains gated. |
 | WPF-06 Opus remediation | PR #37; Agent 93/93; POS 633/633 | Closed SQOS, token, audit, principal, and size gates; Azure #13142/#13143. Restore/WPF-07 gated. |
+
+## WPF-06 acceptance and WPF-07
+
+| Milestone | Evidence | Outcome |
+|---|---|---|
+| WPF-06 Sol acceptance and merge | Accepted head `8267e7de7e698c6d31be0e682c96a1c1ceca98fd`; PR #37; merge `7af1e54042dbe31ef86a34d6ec687da66539be62` | Exact-head POS/Support Hub checks were green; PR #37 was marked ready, squash merged, and `main` was fast-forward synchronized. ADR-0030 became accepted; #13034 remains active with guarded restore separately tracked. |
+| WPF-07 guarded RMS service control | Commit `ac1b3ef`; branch `feat/wpf-07-guarded-rms-service-control`; Draft PR pending | Added fixed opaque RMS catalog, typed Local IPC authorization issue/consume and one-use grant binding, typed Start/Stop/Restart control, transport-neutral Application service, LocalAdministrator/operator authorization, Agent self-protection, exact confirmation, bounded mutation coordinator, ordered audit, post-action verification, truthful cancellation/timeout, and WPF Services controls. No real RMS mutation was performed. |
+| WPF-07 validation | WPF 65/65; Application service-control 10/10; Agent Integration 281/281; WPF Release build 0 warnings/0 errors | Focused and full deterministic validation passed, including one-use authorization replay/mismatch coverage and the architecture-boundary rerun after removing the WPF `ControlService` identifier collision. Draft PR and Sol acceptance remain pending. |

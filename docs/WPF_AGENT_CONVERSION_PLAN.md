@@ -2,8 +2,8 @@
 
 **Product:** RMS+ Support Hub
 **Architecture Rebaseline:** Post PR #31
-**Status:** WPF-01 through WPF-05 are merged; WPF-06 Database Backup & Local Artifact Delivery is the current Draft implementation slice on `feat/wpf-06-database-backup-artifact-delivery`, with final security/correctness remediation pending Sol acceptance
-**Date:** 2026-08-23
+**Status:** WPF-01 through WPF-06 are accepted and merged; WPF-07 Guarded RMS Service Control is implemented on Draft branch `feat/wpf-07-guarded-rms-service-control` and awaits Sol acceptance before merge
+**Date:** 2026-08-24
 **Authority:** GPT-5.6 Sol
 
 ---
@@ -95,8 +95,9 @@ shared Agent/Application seam and typed Local IPC:
   values, host paths, Windows identities, SIDs, and bounded stack-frame paths,
   but WPF-05 does not claim universal customer-data/PII-free output. Task
   #13116 defines the remaining privacy policy and deterministic validation.
-- **WPF-06 - Database Backup & Local Artifact Delivery:** current Draft slice,
-  story #13034. It implements fixed Branch/Cashier backup creation,
+- **WPF-06 - Database Backup & Local Artifact Delivery:** accepted and merged
+  in PR #37 as `7af1e54042dbe31ef86a34d6ec687da66539be62`, story #13034. It
+  implements fixed Branch/Cashier backup creation,
   principal-scoped bounded inventory, and a shared Agent-owned local export
   path for database backups and Support Bundles. Final remediation binds
   destinations to the authenticated SID's Windows ProfileList roots, uses a
@@ -104,14 +105,21 @@ shared Agent/Application seam and typed Local IPC:
   accepted/final audit outcomes with rollback compensation, isolates catalog
   access and retention by principal, and bounds destination coordination.
   Guarded database restore is deliberately deferred; Azure child #13129 is
-  New/P2 under #13034, which remains Active/P1.
+  New/P2 under #13034, which remains Active/P2.
 
-The next recommended local parity work is guarded RMS service control under
-#13032 (Active/P1), not Safety Snapshots. Restore only when separately
-authorized, safety snapshots, cleanup/reset, package lifecycle,
-rollback/recovery, and local audit remain later work. SignalR, device identity,
-fleet supervision, remote operations, rollout, and Production migration remain
-later phases.
+- **WPF-07 - Guarded RMS Service Control:** current Draft implementation for
+  story #13032 (Active/P1), on `feat/wpf-07-guarded-rms-service-control`. It
+  adds fixed opaque RMS service IDs, typed Start/Stop/Restart through the shared
+  Application seam, local Administrator authorization, exact confirmation,
+  bounded coordination, ordered audit, truthful state verification, and the WPF
+  Services controls. No real service mutation was performed; Sol acceptance and
+  merge remain required.
+
+The next prepared slice is WPF-08 Safety Snapshots & Incident Timeline. Restore
+only when separately authorized; cleanup/reset, package lifecycle,
+rollback/recovery, local audit expansion, SignalR, device identity, fleet
+supervision, remote operations, rollout, and Production migration remain later
+phases.
 
 ---
 

@@ -585,7 +585,7 @@
                         <StackPanel>
                             <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SERVICES  /  LOCAL SNAPSHOT" />
                             <TextBlock Margin="0,8,0,0" Style="{DynamicResource PageTitleStyle}" Text="RMS services" />
-                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="Read-only status for the fixed RMS and Agent Windows service identities." TextWrapping="Wrap" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="Fixed RMS service health with guarded administrator controls. The Support Agent remains protected." TextWrapping="Wrap" />
                         </StackPanel>
                         <Button
                             Grid.Column="1"
@@ -636,7 +636,7 @@
                                     <TextBlock Style="{DynamicResource HeroStateStyle}" Text="{Binding ServiceStateLabel}" />
                                 </StackPanel>
                                 <TextBlock Margin="0,14,0,0" Style="{DynamicResource HeroMessageStyle}" Text="{Binding ServiceStatusSummary}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource SmallBodyStyle}" Text="The Agent owns service inspection. No service is started, stopped, or changed by this workspace." TextWrapping="Wrap" />
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Service actions are typed, audited, and verified by the local Agent. Stop and Restart always ask for confirmation." TextWrapping="Wrap" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" MinWidth="154" Margin="30,0,0,0" HorizontalAlignment="Right">
                                 <TextBlock Style="{DynamicResource EyebrowStyle}" Text="LAST CHECK" />
@@ -685,7 +685,8 @@
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel>
@@ -726,16 +727,69 @@
                                                     <TextBlock Style="{DynamicResource EyebrowStyle}" Text="INSTALLATION" />
                                                     <TextBlock Margin="0,5,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding InstallationLabel}" />
                                                 </StackPanel>
+                                                <StackPanel Grid.Column="3" Margin="18,0,0,0" HorizontalAlignment="Right">
+                                                    <StackPanel.Style>
+                                                        <Style TargetType="StackPanel">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding CanControl}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </StackPanel.Style>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button
+                                                            Margin="0,0,6,0"
+                                                            Command="{Binding DataContext.StartActionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="Start"
+                                                            IsEnabled="{Binding DataContext.CanManageRmsServices, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Style="{StaticResource PrimaryButtonStyle}" />
+                                                        <Button
+                                                            Margin="0,0,6,0"
+                                                            Command="{Binding DataContext.StopActionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="Stop"
+                                                            IsEnabled="{Binding DataContext.CanManageRmsServices, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Style="{StaticResource PrimaryButtonStyle}" />
+                                                        <Button
+                                                            Command="{Binding DataContext.RestartActionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="Restart"
+                                                            IsEnabled="{Binding DataContext.CanManageRmsServices, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Style="{StaticResource PrimaryButtonStyle}" />
+                                                    </StackPanel>
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <Border Margin="0,16,0,0" Padding="12,10" Background="{DynamicResource SurfaceMutedBrush}" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                <StackPanel>
+                                    <TextBlock Style="{DynamicResource DetailValueStyle}" Text="{Binding ServiceActionStateLabel}" />
+                                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding ServiceActionStatusSummary}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding ServiceControlErrorCode}" />
+                                </StackPanel>
+                            </Border>
                             <TextBlock Margin="0,10,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding ServiceErrorDetail}" TextWrapping="Wrap" />
+                            <TextBlock Margin="0,10,0,0" Text="Administrator authorization is required to control RMS services." TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SmallBodyStyle}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CanManageRmsServices}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only fixed server-owned service identities are queried. Start, stop, restart, and other service-control actions remain out of scope." TextWrapping="Wrap" />
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only fixed server-owned RMS identities can be controlled. The Agent service has no Start, Stop, or Restart controls." TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>
 

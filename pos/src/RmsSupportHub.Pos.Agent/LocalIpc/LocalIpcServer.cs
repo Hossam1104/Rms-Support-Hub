@@ -42,7 +42,8 @@ public sealed class LocalIpcServer(
     SupportBundleExecutor? supportBundle = null,
     RmsDatabaseBackupQueryHandler? backupHandler = null,
     LocalRmsDatabaseBackupRuntime? localBackup = null,
-    ArtifactDeliveryService? artifactDelivery = null) : IHostedService
+    ArtifactDeliveryService? artifactDelivery = null,
+    ServiceControlApplicationService? serviceControl = null) : IHostedService
 {
     private static readonly TimeSpan InitialRetryBackoff = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MaximumRetryBackoff = TimeSpan.FromSeconds(5);
@@ -670,7 +671,87 @@ public sealed class LocalIpcServer(
                         context.AuthorizationLevel.ToString(),
                         context.AuthorizationLevel is InvocationAuthorizationLevel.LocalOperator or InvocationAuthorizationLevel.LocalAdministrator,
                         context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator,
+                        context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator,
                         context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator),
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.ServiceControlAuthorizationOperation:
+                if (serviceControl is null
+                    || !TryDeserializeStrictServiceActionAuthorizationPayload(request.Payload, out var authorizationRequest)
+                    || authorizationRequest is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "invalid_request",
+                        "The service-control authorization request was invalid.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var authorization = serviceControl.IssueMutationAuthorization(
+                    context,
+                    authorizationRequest.ServiceId,
+                    MapServiceAction(authorizationRequest.Action),
+                    authorizationRequest.Confirmation);
+                if (!authorization.Succeeded)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        authorization.Code,
+                        authorization.Detail,
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    new LocalIpcServiceActionAuthorizationResponseDto(
+                        authorization.Token,
+                        authorization.ExpiresAtUtc,
+                        authorizationRequest.ServiceId,
+                        authorizationRequest.Action,
+                        effectiveCorrelationId),
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.ServiceControlOperation:
+                if (serviceControl is null
+                    || !TryDeserializeStrictServiceActionPayload(request.Payload, out var serviceRequest)
+                    || serviceRequest is null)
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        request.RequestId,
+                        effectiveCorrelationId,
+                        "invalid_request",
+                        "The service-control request was invalid.",
+                        cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var serviceResult = await serviceControl
+                    .ExecuteAsync(
+                        new ServiceControlRequest(
+                            context,
+                            serviceRequest.ServiceId,
+                            MapServiceAction(serviceRequest.Action),
+                            serviceRequest.Confirmation,
+                            serviceRequest.IdempotencyKey,
+                            serviceRequest.MutationAuthorization),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    ToServiceActionResponse(serviceResult),
                     cancellationToken).ConfigureAwait(false);
                 return;
 
@@ -927,6 +1008,126 @@ public sealed class LocalIpcServer(
         !string.IsNullOrWhiteSpace(value)
         && value.Length <= 128
         && value.All(character => character is >= '!' and <= '~');
+
+    private static bool TryDeserializeStrictServiceActionPayload(
+        JsonElement? payload,
+        out LocalIpcServiceActionRequestDto? value)
+    {
+        value = null;
+        if (payload is not { ValueKind: JsonValueKind.Object } element)
+        {
+            return false;
+        }
+
+        var expected = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "serviceId",
+            "action",
+            "confirmation",
+            "idempotencyKey",
+            "mutationAuthorization"
+        };
+        if (element.EnumerateObject().Any(property => !expected.Contains(property.Name)))
+        {
+            return false;
+        }
+
+        try
+        {
+            value = element.Deserialize<LocalIpcServiceActionRequestDto>(JsonOptions);
+            return value is not null
+                && !string.IsNullOrWhiteSpace(value.ServiceId)
+                && Enum.IsDefined(value.Action)
+                && IsSafeToken(value.IdempotencyKey)
+                && IsSafeToken(value.MutationAuthorization)
+                && (value.Confirmation is null || IsSafeToken(value.Confirmation));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryDeserializeStrictServiceActionAuthorizationPayload(
+        JsonElement? payload,
+        out LocalIpcServiceActionAuthorizationRequestDto? value)
+    {
+        value = null;
+        if (payload is not { ValueKind: JsonValueKind.Object } element)
+        {
+            return false;
+        }
+
+        var expected = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "serviceId",
+            "action",
+            "confirmation"
+        };
+        if (element.EnumerateObject().Any(property => !expected.Contains(property.Name)))
+        {
+            return false;
+        }
+
+        try
+        {
+            value = element.Deserialize<LocalIpcServiceActionAuthorizationRequestDto>(JsonOptions);
+            return value is not null
+                && !string.IsNullOrWhiteSpace(value.ServiceId)
+                && Enum.IsDefined(value.Action)
+                && (value.Confirmation is null || IsSafeToken(value.Confirmation));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static RmsSupportHub.Pos.Domain.Enums.ServiceControlAction MapServiceAction(
+        RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind action) => action switch
+    {
+        RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Start => RmsSupportHub.Pos.Domain.Enums.ServiceControlAction.Start,
+        RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Stop => RmsSupportHub.Pos.Domain.Enums.ServiceControlAction.Stop,
+        RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Restart => RmsSupportHub.Pos.Domain.Enums.ServiceControlAction.Restart,
+        _ => throw new ArgumentOutOfRangeException(nameof(action))
+    };
+
+    private static LocalIpcServiceActionResponseDto ToServiceActionResponse(
+        ServiceControlOperationResult result) => new(
+            result.OperationId,
+            result.ServiceId,
+            result.Action switch
+            {
+                RmsSupportHub.Pos.Domain.Enums.ServiceControlAction.Start => RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Start,
+                RmsSupportHub.Pos.Domain.Enums.ServiceControlAction.Stop => RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Stop,
+                RmsSupportHub.Pos.Domain.Enums.ServiceControlAction.Restart => RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Restart,
+                _ => throw new ArgumentOutOfRangeException()
+            },
+            result.State switch
+            {
+                ServiceControlOperationState.Queued => LocalIpcServiceActionState.Queued,
+                ServiceControlOperationState.Accepted => LocalIpcServiceActionState.Accepted,
+                ServiceControlOperationState.Running => LocalIpcServiceActionState.Running,
+                ServiceControlOperationState.Completed => LocalIpcServiceActionState.Completed,
+                ServiceControlOperationState.Failed => LocalIpcServiceActionState.Failed,
+                ServiceControlOperationState.Cancelled => LocalIpcServiceActionState.Cancelled,
+                _ => LocalIpcServiceActionState.OutcomeUnknown
+            },
+            result.ProgressPercent,
+            result.Stage,
+            result.ObservedState switch
+            {
+                RmsSupportHub.Pos.Domain.Enums.ServiceStatus.Running => RmsSupportHub.Pos.Contracts.V1.Services.ServiceRuntimeState.Running,
+                RmsSupportHub.Pos.Domain.Enums.ServiceStatus.Stopped => RmsSupportHub.Pos.Contracts.V1.Services.ServiceRuntimeState.Stopped,
+                RmsSupportHub.Pos.Domain.Enums.ServiceStatus.Paused => RmsSupportHub.Pos.Contracts.V1.Services.ServiceRuntimeState.Paused,
+                RmsSupportHub.Pos.Domain.Enums.ServiceStatus.Transitioning => RmsSupportHub.Pos.Contracts.V1.Services.ServiceRuntimeState.Transitioning,
+                RmsSupportHub.Pos.Domain.Enums.ServiceStatus.NotFound => RmsSupportHub.Pos.Contracts.V1.Services.ServiceRuntimeState.NotFound,
+                _ => result.ObservedState is null ? null : RmsSupportHub.Pos.Contracts.V1.Services.ServiceRuntimeState.Unknown
+            },
+            result.Code,
+            result.Detail,
+            result.CorrelationId,
+            result.RecoveryRequired);
 
     private static string NewCorrelationId() => Guid.NewGuid().ToString("N");
 

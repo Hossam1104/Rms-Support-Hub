@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RmsSupportHub.Pos.Contracts.V1.Rms;
+using RmsSupportHub.Pos.Contracts.V1.Services;
 
 namespace RmsSupportHub.Pos.Contracts.V1.LocalIpc;
 
@@ -32,6 +33,10 @@ public static class LocalIpcProtocol
     public const string BackupCancelOperation = "rms.database.backup.cancel";
 
     public const string ArtifactExportOperation = "artifact.export.local";
+
+    public const string ServiceControlOperation = "rms.services.control";
+
+    public const string ServiceControlAuthorizationOperation = "rms.services.control.authorization";
 }
 
 public sealed record LocalIpcRequestEnvelope(
@@ -62,7 +67,55 @@ public sealed record LocalIpcAuthorizationDto(
     string AuthorizationLevel,
     bool CanReadBackupInventory,
     bool CanCreateBackup,
-    bool CanExportArtifacts);
+    bool CanExportArtifacts,
+    bool CanManageRmsServices = false);
+
+/// <summary>
+/// Local service-control payload. ServiceId is an opaque server-owned catalog key; no Windows
+/// service name, command, executable, timeout, or native target is accepted.
+/// </summary>
+public sealed record LocalIpcServiceActionRequestDto(
+    string ServiceId,
+    ServiceActionKind Action,
+    string? Confirmation,
+    string IdempotencyKey,
+    string MutationAuthorization);
+
+public sealed record LocalIpcServiceActionAuthorizationRequestDto(
+    string ServiceId,
+    ServiceActionKind Action,
+    string? Confirmation);
+
+public sealed record LocalIpcServiceActionAuthorizationResponseDto(
+    string MutationAuthorization,
+    DateTimeOffset ExpiresAtUtc,
+    string ServiceId,
+    ServiceActionKind Action,
+    string CorrelationId);
+
+public sealed record LocalIpcServiceActionResponseDto(
+    string OperationId,
+    string ServiceId,
+    ServiceActionKind Action,
+    LocalIpcServiceActionState State,
+    int ProgressPercent,
+    string Stage,
+    ServiceRuntimeState? ObservedState,
+    string Code,
+    string Detail,
+    string CorrelationId,
+    bool RecoveryRequired);
+
+public enum LocalIpcServiceActionState
+{
+    Queued,
+    Accepted,
+    Running,
+    Completed,
+    Failed,
+    OutcomeUnknown,
+    Cancelled
+}
 
 public sealed record LocalIpcBackupCreateRequestDto(RmsDatabaseTarget Target);
 
