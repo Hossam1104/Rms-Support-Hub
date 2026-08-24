@@ -337,7 +337,7 @@ public sealed class LocalIpcServer(
                 }
 
                 var context = contextFactory.CreateLocalWpf(identity, operatorGroupSid, correlationId);
-                await DispatchAsync(pipe, request, context, correlationId, timeout.Token).ConfigureAwait(false);
+                await DispatchAsync(pipe, request, context, identity!, correlationId, timeout.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (serverCancellationToken.IsCancellationRequested)
             {
@@ -399,6 +399,7 @@ public sealed class LocalIpcServer(
         NamedPipeServerStream pipe,
         LocalIpcRequestEnvelope request,
         InvocationContext context,
+        WindowsIdentity identity,
         string effectiveCorrelationId,
         CancellationToken cancellationToken)
     {
@@ -750,7 +751,7 @@ public sealed class LocalIpcServer(
                 }
 
                 var exportResult = await artifactDelivery
-                    .ExportAsync(context, context.AuthenticatedCaller, exportRequest, cancellationToken)
+                    .ExportAsync(context, context.AuthenticatedCaller, exportRequest, identity, cancellationToken)
                     .ConfigureAwait(false);
                 await WriteSuccessAsync(pipe, request.RequestId, effectiveCorrelationId, exportResult, cancellationToken).ConfigureAwait(false);
                 return;

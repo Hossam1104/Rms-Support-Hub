@@ -218,9 +218,16 @@ WPF-01 through WPF-05 are now merged. WPF-04 is at main
 separately bounded and requires GPT-5.6 Sol acceptance before merge. WPF-06
 is the current Draft slice: it implements fixed Branch/Cashier backup
 creation, principal-scoped inventory, and shared local artifact export for
-database backups and Support Bundles. Guarded restore, service/database
-mutation beyond backup creation, fleet/SignalR supervision, and Production
-migration remain outside this slice. Diagnostic privacy evidence remains
-bounded and redacted, but does not establish a universal customer-data/PII-
-free guarantee; Task #13116 tracks policy definition and deterministic
-validation.
+database backups and Support Bundles. Its final security/correctness
+remediation is pending Sol acceptance: caller roots come from the
+authenticated SID's Windows ProfileList mapping, source reads remain
+Agent-owned, destination filesystem operations use a dedicated caller-token
+authority, final audit truth compensates outputs when unavailable, and catalog
+retention/access are principal-scoped with explicit legacy compatibility.
+Guarded restore, service/database mutation beyond backup creation,
+fleet/SignalR supervision, and Production migration remain outside this
+slice. Azure child #13129 tracks guarded restore under Active/P1 #13034.
+The next recommended slice is guarded RMS service control under Active/P1
+#13032, not Safety Snapshots. Diagnostic privacy evidence remains bounded and
+redacted, but does not establish a universal customer-data/PII-free guarantee;
+Task #13116 tracks policy definition and deterministic validation.

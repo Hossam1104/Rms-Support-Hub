@@ -100,7 +100,8 @@ public sealed class RmsDatabaseBackupQueryHandlerTests
             RmsDatabaseKind database,
             string artifactId,
             IProgress<RmsDatabaseProgress>? progress = null,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default,
+            string? principalSid = null) =>
             throw new InvalidOperationException("Restore is not part of the WPF-06 local backup seam.");
     }
 
@@ -112,10 +113,10 @@ public sealed class RmsDatabaseBackupQueryHandlerTests
         public Task<RmsApprovedDatabaseBackup?> RegisterAsync(RmsDatabaseKind database, RmsDatabaseBackupAllocation allocation, CancellationToken cancellationToken = default, string? principalSid = null) =>
             throw new NotSupportedException();
 
-        public Task<RmsApprovedDatabaseBackup?> ResolveAsync(RmsDatabaseKind database, string artifactId, CancellationToken cancellationToken = default, string? principalSid = null) =>
+        public Task<RmsApprovedDatabaseBackup?> ResolveAsync(RmsDatabaseKind database, string artifactId, string principalSid, CancellationToken cancellationToken = default, RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped) =>
             throw new NotSupportedException();
 
-        public Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(RmsDatabaseKind database, CancellationToken cancellationToken = default, string? principalSid = null) =>
+        public Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(RmsDatabaseKind database, string principalSid, CancellationToken cancellationToken = default, RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped) =>
             throw new NotSupportedException();
 
         public virtual Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListInventoryAsync(RmsDatabaseKind database, string principalSid, CancellationToken cancellationToken = default) =>

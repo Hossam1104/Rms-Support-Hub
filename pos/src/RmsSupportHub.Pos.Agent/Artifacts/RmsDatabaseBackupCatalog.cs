@@ -27,7 +27,7 @@ public sealed record RmsDatabaseBackupCatalogEntry(
 /// entries recorded here are ever treated as approved restore sources: a <c>.bak</c> file that
 /// appears in the backup root without a matching catalog entry is never auto-imported.
 ///
-/// Retention (both a maximum count per database and a maximum age) is owned and enforced entirely
+/// Retention (both a maximum count per database and owner principal, and a maximum age) is owned and enforced entirely
 /// here, independently of the generic <see cref="ArtifactCatalog"/> browser-download lifetime, so a
 /// database backup is never deleted merely because a browser download capability expired.
 /// </summary>
@@ -92,7 +92,7 @@ public sealed class RmsDatabaseBackupCatalog
                 IsSafeSid(principalSid) ? principalSid : null);
 
             entries[entry.ArtifactId] = entry;
-            var evicted = ApplyRetentionLocked(entries, database);
+            var evicted = ApplyRetentionLocked(entries, database, entry.PrincipalSid);
             await SaveLockedAsync(entries, cancellationToken).ConfigureAwait(false);
             await DeleteEvictedFilesAsync(evicted, cancellationToken).ConfigureAwait(false);
             return entry;
@@ -107,8 +107,9 @@ public sealed class RmsDatabaseBackupCatalog
     public async Task<RmsDatabaseBackupCatalogEntry?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
+        string principalSid,
         CancellationToken cancellationToken,
-        string? principalSid = null)
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -116,7 +117,7 @@ public sealed class RmsDatabaseBackupCatalog
             var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
             if (!entries.TryGetValue(artifactId, out var entry)
                 || entry.Database != database
-                || !PrincipalMatches(entry, principalSid))
+                || !PrincipalMatches(entry, principalSid, accessMode))
             {
                 return null;
             }
@@ -132,8 +133,9 @@ public sealed class RmsDatabaseBackupCatalog
     /// <summary>Lists physically-valid catalog entries for one canonical database, newest first, bounded by the configured maximum.</summary>
     public async Task<IReadOnlyList<RmsDatabaseBackupCatalogEntry>> ListAsync(
         RmsDatabaseKind database,
+        string principalSid,
         CancellationToken cancellationToken,
-        string? principalSid = null)
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -141,7 +143,7 @@ public sealed class RmsDatabaseBackupCatalog
             var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
             var result = new List<RmsDatabaseBackupCatalogEntry>();
             foreach (var entry in entries.Values
-                         .Where(candidate => candidate.Database == database && PrincipalMatches(candidate, principalSid))
+                         .Where(candidate => candidate.Database == database && PrincipalMatches(candidate, principalSid, accessMode))
                          .OrderByDescending(candidate => candidate.CreatedAtUtc))
             {
                 if (await IsPhysicallyValidAsync(entry, cancellationToken).ConfigureAwait(false))
@@ -151,6 +153,38 @@ public sealed class RmsDatabaseBackupCatalog
             }
 
             return result.Take(options.MaximumBackupsPerDatabase).ToArray();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Explicit Agent-internal health view. It is not a caller-facing ownership bypass and is
+    /// never used by Local IPC, browser workspace, export, or restore resolution.
+    /// </summary>
+    public async Task<IReadOnlyList<RmsDatabaseBackupCatalogEntry>> ListForHealthAsync(
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
+            var result = new List<RmsDatabaseBackupCatalogEntry>();
+            foreach (var entry in entries.Values
+                         .Where(candidate => candidate.Database == database)
+                         .OrderByDescending(candidate => candidate.CreatedAtUtc)
+                         .Take(options.MaximumBackupsPerDatabase))
+            {
+                if (await IsPhysicallyValidAsync(entry, cancellationToken).ConfigureAwait(false))
+                {
+                    result.Add(entry);
+                }
+            }
+
+            return result;
         }
         finally
         {
@@ -173,7 +207,8 @@ public sealed class RmsDatabaseBackupCatalog
         {
             var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
             return entries.Values
-                .Where(candidate => candidate.Database == database && PrincipalMatches(candidate, principalSid))
+                .Where(candidate => candidate.Database == database
+                    && PrincipalMatches(candidate, principalSid, RmsDatabaseBackupAccessMode.PrincipalScoped))
                 .OrderByDescending(candidate => candidate.CreatedAtUtc)
                 .Take(options.MaximumBackupsPerDatabase)
                 .ToArray();
@@ -196,7 +231,7 @@ public sealed class RmsDatabaseBackupCatalog
             var entries = await LoadLockedAsync(cancellationToken).ConfigureAwait(false);
             if (!entries.TryGetValue(artifactId, out var entry)
                 || entry.Database != database
-                || !PrincipalMatches(entry, principalSid)
+                || !PrincipalMatches(entry, principalSid, RmsDatabaseBackupAccessMode.PrincipalScoped)
                 || !string.Equals(entry.PrincipalSid, principalSid, StringComparison.Ordinal))
             {
                 return false;
@@ -260,11 +295,13 @@ public sealed class RmsDatabaseBackupCatalog
     /// <summary>Removes entries beyond the count cap or older than the age cutoff for one database; caller deletes the returned files.</summary>
     private List<RmsDatabaseBackupCatalogEntry> ApplyRetentionLocked(
         Dictionary<string, RmsDatabaseBackupCatalogEntry> entries,
-        RmsDatabaseKind database)
+        RmsDatabaseKind database,
+        string? principalSid)
     {
         var cutoff = timeProvider.GetUtcNow() - options.BackupRetention;
         var scoped = entries.Values
-            .Where(entry => entry.Database == database)
+            .Where(entry => entry.Database == database
+                && string.Equals(entry.PrincipalSid, principalSid, StringComparison.Ordinal))
             .OrderByDescending(entry => entry.CreatedAtUtc)
             .ToList();
 
@@ -381,11 +418,14 @@ public sealed class RmsDatabaseBackupCatalog
         && entry.Sha256Checksum.Length == 64
         && entry.Sha256Checksum.All(Uri.IsHexDigit);
 
-    private static bool PrincipalMatches(RmsDatabaseBackupCatalogEntry entry, string? principalSid) =>
-        principalSid is null
-            ? true
-            : IsSafeSid(principalSid)
-                && string.Equals(entry.PrincipalSid, principalSid, StringComparison.Ordinal);
+    private static bool PrincipalMatches(
+        RmsDatabaseBackupCatalogEntry entry,
+        string? principalSid,
+        RmsDatabaseBackupAccessMode accessMode) =>
+        IsSafeSid(principalSid)
+        && (string.Equals(entry.PrincipalSid, principalSid, StringComparison.Ordinal)
+            || accessMode == RmsDatabaseBackupAccessMode.LegacyCompatibility
+                && entry.PrincipalSid is null);
 
     private static bool IsSafeSid(string? value) =>
         value is { Length: > 0 and <= 184 }

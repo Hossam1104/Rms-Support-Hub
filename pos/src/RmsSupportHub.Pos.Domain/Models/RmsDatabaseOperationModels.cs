@@ -81,6 +81,17 @@ public sealed record RmsApprovedDatabaseBackup(
     RmsDatabaseBackupAvailability Availability = RmsDatabaseBackupAvailability.Available,
     string? PrincipalSid = null);
 
+/// <summary>
+/// Explicit ownership policy for catalog reads. Principal-scoped reads match only the exact
+/// authenticated owner. Legacy compatibility additionally exposes explicitly unowned historical
+/// records; null is never an unrestricted principal bypass.
+/// </summary>
+public enum RmsDatabaseBackupAccessMode
+{
+    PrincipalScoped,
+    LegacyCompatibility
+}
+
 public enum RmsDatabaseBackupAvailability
 {
     Available,
@@ -130,13 +141,15 @@ public interface IRmsDatabaseBackupStorage
     Task<RmsApprovedDatabaseBackup?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
+        string principalSid,
         CancellationToken cancellationToken = default,
-        string? principalSid = null);
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped);
 
     Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
         RmsDatabaseKind database,
+        string principalSid,
         CancellationToken cancellationToken = default,
-        string? principalSid = null);
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped);
 
     Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListInventoryAsync(
         RmsDatabaseKind database,
@@ -184,7 +197,8 @@ public interface IRmsDatabaseWorkflow
         RmsDatabaseKind database,
         string artifactId,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? principalSid = null);
 }
 
 public enum RmsPrivilegedAuditEventKind

@@ -2,7 +2,7 @@
 
 **Product:** RMS+ Support Hub
 **Architecture Rebaseline:** Post PR #31
-**Status:** WPF-01 through WPF-05 are merged; WPF-06 Database Backup & Local Artifact Delivery is the current Draft implementation slice on `feat/wpf-06-database-backup-artifact-delivery`
+**Status:** WPF-01 through WPF-05 are merged; WPF-06 Database Backup & Local Artifact Delivery is the current Draft implementation slice on `feat/wpf-06-database-backup-artifact-delivery`, with final security/correctness remediation pending Sol acceptance
 **Date:** 2026-08-23
 **Authority:** GPT-5.6 Sol
 
@@ -98,15 +98,20 @@ shared Agent/Application seam and typed Local IPC:
 - **WPF-06 - Database Backup & Local Artifact Delivery:** current Draft slice,
   story #13034. It implements fixed Branch/Cashier backup creation,
   principal-scoped bounded inventory, and a shared Agent-owned local export
-  path for database backups and Support Bundles. Guarded database restore is
-  deliberately deferred and #13034 remains Active/P1 until its governance is
-  separately reconciled.
+  path for database backups and Support Bundles. Final remediation binds
+  destinations to the authenticated SID's Windows ProfileList roots, uses a
+  dedicated caller-token authority for destination operations, records truthful
+  accepted/final audit outcomes with rollback compensation, isolates catalog
+  access and retention by principal, and bounds destination coordination.
+  Guarded database restore is deliberately deferred; Azure child #13129 is
+  New/P2 under #13034, which remains Active/P1.
 
-The remaining local parity work includes approved backup/artifact delivery,
-restore only when separately authorized, safety snapshots, cleanup/reset,
-package lifecycle, rollback/recovery, and local audit. SignalR, device
-identity, fleet supervision, remote operations, rollout, and Production
-migration remain later phases.
+The next recommended local parity work is guarded RMS service control under
+#13032 (Active/P1), not Safety Snapshots. Restore only when separately
+authorized, safety snapshots, cleanup/reset, package lifecycle,
+rollback/recovery, and local audit remain later work. SignalR, device identity,
+fleet supervision, remote operations, rollout, and Production migration remain
+later phases.
 
 ---
 

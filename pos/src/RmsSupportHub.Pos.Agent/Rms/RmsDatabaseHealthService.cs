@@ -26,7 +26,7 @@ public sealed class RmsDatabaseHealthService(
         var inventoryAvailable = true;
         try
         {
-            backups = await backupCatalog.ListAsync(database, cancellationToken).ConfigureAwait(false);
+            backups = await backupCatalog.ListForHealthAsync(database, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -99,12 +99,25 @@ public sealed class RmsDatabaseWorkflowService(
         RmsDatabaseKind database,
         string artifactId,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? principalSid = null)
     {
         var definition = RmsDatabaseCatalog.For(database);
         Report(progress, 3, "preflight", "Checking the approved backup artifact.");
 
-        var artifact = await storage.ResolveAsync(database, artifactId, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(principalSid))
+        {
+            return NotAttempted(
+                "restore_principal_unavailable",
+                "The authenticated principal for the approved backup was unavailable; no restore was attempted.");
+        }
+
+        var artifact = await storage.ResolveAsync(
+            database,
+            artifactId,
+            principalSid,
+            cancellationToken,
+            RmsDatabaseBackupAccessMode.LegacyCompatibility).ConfigureAwait(false);
         if (artifact is null)
         {
             return NotAttempted(

@@ -77,6 +77,39 @@ public sealed class RmsDatabaseEndpointTests : IClassFixture<AgentWebApplication
     }
 
     [Fact]
+    public async Task PrincipalBoundBackupCannotCrossLegacyWorkspaceOrRestoreResolution()
+    {
+        ResetFakes();
+        const string principalA = "S-1-5-21-1111111111-2222222222-3333333333-1001";
+        const string principalB = "S-1-5-21-1111111111-2222222222-3333333333-1002";
+        using var clientA = factory.CreateClientWithSid(principalA);
+        using var clientB = factory.CreateClientWithSid(principalB);
+
+        var backup = await RunBackupAsync(clientA, "branch");
+        var artifactId = backup.GetProperty("artifact").GetProperty("artifactId").GetString()!;
+
+        using var workspaceAResponse = await clientA.GetAsync("/api/v1/rms/databases/branch");
+        using var workspaceBResponse = await clientB.GetAsync("/api/v1/rms/databases/branch");
+        var workspaceA = await ReadJsonAsync(workspaceAResponse);
+        var workspaceB = await ReadJsonAsync(workspaceBResponse);
+        Assert.Contains(workspaceA.GetProperty("approvedBackups").EnumerateArray(), item =>
+            item.GetProperty("artifactId").GetString() == artifactId);
+        Assert.DoesNotContain(workspaceB.GetProperty("approvedBackups").EnumerateArray(), item =>
+            item.GetProperty("artifactId").GetString() == artifactId);
+
+        var restoreToken = await IssueTokenAsync(clientB, RmsDatabaseOperation.RestoreOperationId, "branch");
+        var restore = await SendRestoreAsync(
+            clientB,
+            "branch",
+            restoreToken,
+            artifactId,
+            "RESTORE BRANCH DATABASE",
+            UniqueKey());
+        Assert.Equal("restore_backup_not_approved", restore.GetProperty("errorCode").GetString());
+        Assert.Empty(GetSql().RestoreCalls);
+    }
+
+    [Fact]
     public async Task BackupRefusesMismatchAndUnavailableDatabaseBeforeTokenConsumptionOrDispatch()
     {
         ResetFakes();

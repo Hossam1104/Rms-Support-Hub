@@ -268,7 +268,13 @@ builder.Services.AddSingleton<IAgentAuditReader>(services => services.GetRequire
 builder.Services.AddSingleton<IRmsPrivilegedAuditSink>(services => services.GetRequiredService<FileAgentAuditSink>());
 builder.Services.AddSingleton<RmsDatabaseOperationRuntime>();
 builder.Services.AddSingleton<LocalRmsDatabaseBackupRuntime>();
-builder.Services.AddSingleton<LocalArtifactDestinationPolicy>();
+builder.Services.AddSingleton<ILocalCallerProfilePathProvider, WindowsProfileListPathProvider>();
+builder.Services.AddSingleton<ILocalCallerDestinationRootResolver, WindowsProfileListDestinationRootResolver>();
+builder.Services.AddSingleton<LocalArtifactDestinationPolicy>(services =>
+    new LocalArtifactDestinationPolicy(
+        services.GetRequiredService<ILocalCallerDestinationRootResolver>()));
+builder.Services.AddSingleton<IArtifactDestinationAuthority, WindowsArtifactDestinationAuthority>();
+builder.Services.AddSingleton<BoundedKeyedMutationCoordinator>();
 builder.Services.AddSingleton<ArtifactDeliveryService>();
 
 // Slice B server-owned Main Server profiles. The dedicated client is constructed separately

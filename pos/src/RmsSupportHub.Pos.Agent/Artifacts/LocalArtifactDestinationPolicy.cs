@@ -7,23 +7,72 @@ namespace RmsSupportHub.Pos.Agent.Artifacts;
 /// </summary>
 public sealed class LocalArtifactDestinationPolicy
 {
-    private readonly IReadOnlyList<string> allowedRoots;
+    private readonly ILocalCallerDestinationRootResolver? rootResolver;
+    private readonly IReadOnlyList<LocalCallerDestinationRoot>? fixedRoots;
 
-    public LocalArtifactDestinationPolicy()
-        : this(DiscoverAllowedRoots())
+    public LocalArtifactDestinationPolicy(ILocalCallerDestinationRootResolver rootResolver)
     {
+        this.rootResolver = rootResolver ?? throw new ArgumentNullException(nameof(rootResolver));
     }
 
     public LocalArtifactDestinationPolicy(IEnumerable<string> allowedRoots)
     {
-        this.allowedRoots = (allowedRoots ?? [])
+        fixedRoots = (allowedRoots ?? [])
             .Where(root => !string.IsNullOrWhiteSpace(root))
-            .Select(Canonicalize)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(root => new LocalCallerDestinationRoot(CategoryFor(root), Canonicalize(root)))
+            .DistinctBy(root => root.FullPath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
     public bool TryValidate(
+        string principalSid,
+        string? destinationPath,
+        string expectedExtension,
+        out LocalArtifactDestination destination)
+    {
+        destination = default;
+        if (rootResolver is null)
+        {
+            return TryValidateAgainstRoots(fixedRoots ?? [], destinationPath, expectedExtension, out destination);
+        }
+
+        if (!rootResolver.TryResolve(principalSid, out var resolvedRoots))
+        {
+            return false;
+        }
+
+        return TryValidateAgainstRoots(resolvedRoots, destinationPath, expectedExtension, out destination);
+    }
+
+    /// <summary>Test/support overload for an explicitly supplied fixed root set; production DI never uses it.</summary>
+    public bool TryValidate(
+        string? destinationPath,
+        string expectedExtension,
+        out LocalArtifactDestination destination) =>
+        TryValidateAgainstRoots(fixedRoots ?? [], destinationPath, expectedExtension, out destination);
+
+    public bool IsStillSafe(
+        string principalSid,
+        LocalArtifactDestination destination)
+    {
+        IReadOnlyList<LocalCallerDestinationRoot> roots;
+        if (rootResolver is not null)
+        {
+            if (!rootResolver.TryResolve(principalSid, out roots))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            roots = fixedRoots ?? [];
+        }
+
+        return IsStillSafeAgainstRoots(roots, destination);
+    }
+
+    private static bool TryValidateAgainstRoots(
+        IReadOnlyList<LocalCallerDestinationRoot> allowedRoots,
         string? destinationPath,
         string expectedExtension,
         out LocalArtifactDestination destination)
@@ -75,19 +124,19 @@ public sealed class LocalArtifactDestinationPolicy
             return false;
         }
 
-        var matchedRoot = allowedRoots.FirstOrDefault(root => IsWithinRoot(root, parent));
+        var matchedRoot = allowedRoots.FirstOrDefault(root => IsWithinRoot(root.FullPath, parent));
         if (matchedRoot is null
             || !Directory.Exists(parent)
-            || HasReparsePointInPath(matchedRoot, parent)
+            || HasReparsePointInPath(matchedRoot.FullPath, parent)
             || (File.Exists(fullPath) && HasReparsePoint(fullPath))
             || Directory.Exists(fullPath))
         {
             return false;
         }
 
-        var category = CategoryFor(matchedRoot, parent);
+        var category = matchedRoot.Category;
         var temporaryPath = Path.Combine(parent, $".{fileName}.{Guid.NewGuid():N}.tmp");
-        if (temporaryPath.Any(char.IsControl) || !IsWithinRoot(matchedRoot, temporaryPath))
+        if (temporaryPath.Any(char.IsControl) || !IsWithinRoot(matchedRoot.FullPath, temporaryPath))
         {
             return false;
         }
@@ -96,26 +145,19 @@ public sealed class LocalArtifactDestinationPolicy
         return true;
     }
 
-    private static IReadOnlyList<string> DiscoverAllowedRoots()
+    private static bool IsStillSafeAgainstRoots(
+        IReadOnlyList<LocalCallerDestinationRoot> allowedRoots,
+        LocalArtifactDestination destination)
     {
-        var roots = new List<string>();
-        foreach (var folder in new[]
-                 {
-                     Environment.SpecialFolder.DesktopDirectory,
-                     Environment.SpecialFolder.MyDocuments,
-                     Environment.SpecialFolder.UserProfile
-                 })
-        {
-            var path = Environment.GetFolderPath(folder);
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                roots.Add(folder == Environment.SpecialFolder.UserProfile
-                    ? Path.Combine(path, "Downloads")
-                    : path);
-            }
-        }
-
-        return roots;
+        var matchedRoot = allowedRoots.FirstOrDefault(root =>
+            string.Equals(root.Category, destination.Category, StringComparison.Ordinal)
+            && IsWithinRoot(root.FullPath, destination.ParentDirectory));
+        return matchedRoot is not null
+            && Directory.Exists(destination.ParentDirectory)
+            && HasReparsePointInPath(matchedRoot.FullPath, destination.ParentDirectory)
+                is false
+            && (!File.Exists(destination.FullPath) || !HasReparsePoint(destination.FullPath))
+            && (!File.Exists(destination.TemporaryPath) || !HasReparsePoint(destination.TemporaryPath));
     }
 
     private static string Canonicalize(string path) =>
@@ -152,7 +194,7 @@ public sealed class LocalArtifactDestinationPolicy
         }
     }
 
-    private static string CategoryFor(string root, string parent)
+    private static string CategoryFor(string root)
     {
         var leaf = Path.GetFileName(root);
         return leaf.Equals("Desktop", StringComparison.OrdinalIgnoreCase)

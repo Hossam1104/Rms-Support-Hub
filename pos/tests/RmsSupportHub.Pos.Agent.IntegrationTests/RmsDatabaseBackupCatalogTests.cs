@@ -17,6 +17,8 @@ namespace RmsSupportHub.Pos.Agent.IntegrationTests;
 public sealed class RmsDatabaseBackupCatalogTests : IDisposable
 {
     private static readonly DateTimeOffset Start = new(2026, 8, 11, 12, 0, 0, TimeSpan.Zero);
+    private const string PrincipalA = "S-1-5-21-1111111111-2222222222-3333333333-1001";
+    private const string PrincipalB = "S-1-5-21-1111111111-2222222222-3333333333-1002";
     private readonly string _root = Directory.CreateTempSubdirectory("rms-agent-database-backup-catalog-").FullName;
 
     [Fact]
@@ -200,6 +202,29 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         Assert.NotNull(await catalog.ResolveAsync(RmsDatabaseKind.Branch, registered.Entry.ArtifactId, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task RetentionIsScopedByDatabaseAndOwnerPrincipal()
+    {
+        var options = CreateOptions(maximumBackupsPerDatabase: 2);
+        var clock = new ManualTimeProvider(Start);
+        var catalog = CreateCatalog(options, clock);
+
+        await RegisterAtAsync(catalog, "alice-first.bak", "alice-first", clock.GetUtcNow(), PrincipalA);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        await RegisterAtAsync(catalog, "bob-first.bak", "bob-first", clock.GetUtcNow(), PrincipalB);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        await RegisterAtAsync(catalog, "alice-second.bak", "alice-second", clock.GetUtcNow(), PrincipalA);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        await RegisterAtAsync(catalog, "alice-third.bak", "alice-third", clock.GetUtcNow(), PrincipalA);
+
+        var alice = await catalog.ListAsync(RmsDatabaseKind.Branch, PrincipalA, CancellationToken.None);
+        var bob = await catalog.ListAsync(RmsDatabaseKind.Branch, PrincipalB, CancellationToken.None);
+
+        Assert.Equal(2, alice.Count);
+        Assert.Single(bob);
+        Assert.Equal("bob-first.bak", bob[0].DisplayName);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
@@ -239,10 +264,11 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         RmsDatabaseBackupCatalog catalog,
         string fileName,
         string content,
-        DateTimeOffset createdAtUtc)
+        DateTimeOffset createdAtUtc,
+        string? principalSid = null)
     {
         var (path, size, checksum) = await CreateBackupFileAsync(fileName, content);
-        var entry = await catalog.RegisterAsync(RmsDatabaseKind.Branch, path, fileName, size, checksum, createdAtUtc, CancellationToken.None);
+        var entry = await catalog.RegisterAsync(RmsDatabaseKind.Branch, path, fileName, size, checksum, createdAtUtc, CancellationToken.None, principalSid);
         return (entry, path);
     }
 
@@ -285,4 +311,35 @@ public sealed class RmsDatabaseBackupCatalogTests : IDisposable
         public Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken = default) =>
             inner.ComputeSha256Async(path, cancellationToken);
     }
+}
+
+/// <summary>
+/// Keeps pre-WPF-06 catalog tests explicit about their legacy-unowned fixture policy while the
+/// production catalog requires an authenticated principal for every transport-facing read.
+/// </summary>
+internal static class RmsDatabaseBackupCatalogTestExtensions
+{
+    private const string LegacyCompatibilityPrincipal = "S-1-5-18";
+
+    public static Task<RmsDatabaseBackupCatalogEntry?> ResolveAsync(
+        this RmsDatabaseBackupCatalog catalog,
+        RmsDatabaseKind database,
+        string artifactId,
+        CancellationToken cancellationToken) =>
+        catalog.ResolveAsync(
+            database,
+            artifactId,
+            LegacyCompatibilityPrincipal,
+            cancellationToken,
+            RmsDatabaseBackupAccessMode.LegacyCompatibility);
+
+    public static Task<IReadOnlyList<RmsDatabaseBackupCatalogEntry>> ListAsync(
+        this RmsDatabaseBackupCatalog catalog,
+        RmsDatabaseKind database,
+        CancellationToken cancellationToken) =>
+        catalog.ListAsync(
+            database,
+            LegacyCompatibilityPrincipal,
+            cancellationToken,
+            RmsDatabaseBackupAccessMode.LegacyCompatibility);
 }

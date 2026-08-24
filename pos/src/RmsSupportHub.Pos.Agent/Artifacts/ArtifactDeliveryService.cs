@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Security.Principal;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Contracts.V1.Artifacts;
@@ -10,26 +10,27 @@ using RmsSupportHub.Pos.Domain.Models;
 namespace RmsSupportHub.Pos.Agent.Artifacts;
 
 /// <summary>
-/// Shared local delivery path for database backups and Support Bundles. The source is always
-/// resolved from a principal-scoped Agent capability; only the user-selected output path crosses
-/// the Local IPC boundary.
+/// Shared local delivery path for database backups and Support Bundles. Agent-owned source bytes
+/// are resolved from a principal-scoped capability; destination filesystem work is delegated to
+/// the authenticated WPF caller's token by the dedicated export-only authority seam.
 /// </summary>
 public sealed class ArtifactDeliveryService(
     ArtifactCatalog artifacts,
     IRmsDatabaseBackupStorage backups,
     IBackupFileSystem fileSystem,
     LocalArtifactDestinationPolicy destinationPolicy,
+    IArtifactDestinationAuthority destinationAuthority,
+    BoundedKeyedMutationCoordinator destinationCoordinator,
     IAgentAuditSink audit,
     Support.SupportBundleOptions supportBundleOptions,
     RmsDatabaseStorageOptions databaseStorageOptions,
     TimeProvider timeProvider)
 {
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> destinationGates = new(StringComparer.OrdinalIgnoreCase);
-
     public async Task<LocalIpcArtifactExportResultDto> ExportAsync(
         InvocationContext context,
         string principalSid,
         LocalIpcArtifactExportRequestDto request,
+        WindowsIdentity callerIdentity,
         CancellationToken cancellationToken = default)
     {
         var decision = AgentOperationAuthorization.Authorize(
@@ -37,7 +38,8 @@ public sealed class ArtifactDeliveryService(
             AgentOperationRisk.AdministratorOnlyMutation);
         if (!decision.Allowed
             || !IsSafeSid(principalSid)
-            || !string.Equals(principalSid, context.AuthenticatedCaller, StringComparison.Ordinal))
+            || !string.Equals(principalSid, context.AuthenticatedCaller, StringComparison.Ordinal)
+            || callerIdentity is null)
         {
             return Failure(request?.ArtifactId, LocalIpcArtifactExportState.Unauthorized, "unauthorized");
         }
@@ -47,25 +49,18 @@ public sealed class ArtifactDeliveryService(
             return Failure(request?.ArtifactId, LocalIpcArtifactExportState.DestinationRejected, "invalid_request");
         }
 
-        if (!destinationPolicy.TryValidate(request.DestinationPath, expectedExtension, out var destination))
+        if (!destinationPolicy.TryValidate(principalSid, request.DestinationPath, expectedExtension, out var destination))
         {
             return Failure(request.ArtifactId, LocalIpcArtifactExportState.DestinationRejected, "destination_rejected");
         }
 
-        var gate = destinationGates.GetOrAdd(destination.FullPath, static _ => new SemaphoreSlim(1, 1));
-        if (!gate.Wait(0))
+        if (!destinationCoordinator.TryEnter(destination.FullPath, out var lease))
         {
             return Failure(request.ArtifactId, LocalIpcArtifactExportState.Failed, "operation_in_progress");
         }
 
-        try
+        using (lease)
         {
-            if (fileSystem.FileExists(destination.FullPath) && !request.OverwriteConfirmed)
-            {
-                TryRecordAudit(context, request, destination, "destination_exists", "destination_exists");
-                return Failure(request.ArtifactId, LocalIpcArtifactExportState.DestinationExists, "destination_exists");
-            }
-
             var resolution = await ResolveSourceAsync(principalSid, request, cancellationToken).ConfigureAwait(false);
             if (resolution.Artifact is null)
             {
@@ -88,64 +83,272 @@ public sealed class ArtifactDeliveryService(
                 return Failure(request.ArtifactId, LocalIpcArtifactExportState.ChecksumMismatch, "artifact_checksum_mismatch");
             }
 
-            // The audit is deliberately pre-operation and exactly once. If it cannot be persisted,
-            // no destination bytes are written and no success can be reported.
+            // This durable accepted record is required before any destination-side write. A false
+            // return means the sink could not persist the event, even if it retained a fallback.
             if (!TryRecordAudit(context, request, destination, "accepted", null))
             {
                 return Failure(request.ArtifactId, LocalIpcArtifactExportState.Failed, "audit_unavailable");
             }
 
+            DestinationWriteResult writeResult;
             try
             {
                 await using var input = await source.OpenReadAsync(cancellationToken).ConfigureAwait(false);
-                await using (var output = await fileSystem.CreateFileAsync(destination.TemporaryPath, cancellationToken).ConfigureAwait(false))
-                {
-                    await input.CopyToAsync(output, 128 * 1024, cancellationToken).ConfigureAwait(false);
-                    await output.FlushAsync(cancellationToken).ConfigureAwait(false);
-                }
-
-                var size = fileSystem.GetFileLength(destination.TemporaryPath);
-                var checksum = await fileSystem.ComputeSha256Async(destination.TemporaryPath, cancellationToken).ConfigureAwait(false);
-                if (size != source.SizeBytes || !string.Equals(checksum, source.Checksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    return Failure(request.ArtifactId, LocalIpcArtifactExportState.ChecksumMismatch, "artifact_checksum_mismatch");
-                }
-
-                await fileSystem.MoveFileAsync(
-                    destination.TemporaryPath,
-                    destination.FullPath,
-                    request.OverwriteConfirmed,
-                    cancellationToken).ConfigureAwait(false);
-
-                return new(
-                    LocalIpcArtifactExportState.Succeeded,
-                    request.ArtifactId,
-                    source.DisplayName,
-                    source.SizeBytes,
-                    source.Checksum,
-                    destination.Category,
-                    null);
+                writeResult = await destinationAuthority.RunAsync(
+                    callerIdentity,
+                    () => WriteDestinationAsync(
+                        principalSid,
+                        destination,
+                        request.OverwriteConfirmed,
+                        source,
+                        input,
+                        cancellationToken)).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                return Failure(request.ArtifactId, LocalIpcArtifactExportState.Cancelled, "cancelled");
+                writeResult = DestinationWriteResult.Failure(LocalIpcArtifactExportState.Cancelled, "cancelled");
             }
             catch
             {
-                return Failure(request.ArtifactId, LocalIpcArtifactExportState.Failed, "export_failed");
+                writeResult = DestinationWriteResult.Failure(LocalIpcArtifactExportState.Failed, "export_failed");
             }
-            finally
+
+            if (writeResult.State != LocalIpcArtifactExportState.Succeeded)
             {
+                var auditAvailable = TryRecordAudit(
+                    context,
+                    request,
+                    destination,
+                    OutcomeFor(writeResult.State),
+                    writeResult.ErrorCode);
+                return auditAvailable
+                    ? Failure(request.ArtifactId, writeResult.State, writeResult.ErrorCode)
+                    : Failure(request.ArtifactId, LocalIpcArtifactExportState.Failed, "audit_unavailable");
+            }
+
+            if (!TryRecordAudit(context, request, destination, "completed", null))
+            {
+                // A completed output without a durable completed audit is not a success. The
+                // rollback descriptor is retained only for this one compensation attempt.
                 try
                 {
-                    await fileSystem.DeleteFileAsync(destination.TemporaryPath, CancellationToken.None).ConfigureAwait(false);
+                    await destinationAuthority.RunAsync(
+                        callerIdentity,
+                        () => CompensateAsync(destination, source, writeResult)).ConfigureAwait(false);
                 }
-                catch { }
+                catch
+                {
+                    // The safe result remains audit_unavailable; the destination operation never
+                    // becomes a claimed success when compensation itself is unavailable.
+                }
+
+                return Failure(request.ArtifactId, LocalIpcArtifactExportState.Failed, "audit_unavailable");
             }
+
+            try
+            {
+                await destinationAuthority.RunAsync(
+                    callerIdentity,
+                    () => CleanupRollbackAsync(writeResult.RollbackPath)).ConfigureAwait(false);
+            }
+            catch
+            {
+                // The completed audit is durable and the output is valid. A stale rollback temp is
+                // not exposed through the protocol and is retried by the next bounded operation.
+            }
+
+            return new(
+                LocalIpcArtifactExportState.Succeeded,
+                request.ArtifactId,
+                source.DisplayName,
+                source.SizeBytes,
+                source.Checksum,
+                destination.Category,
+                null);
+        }
+    }
+
+    private async Task<DestinationWriteResult> WriteDestinationAsync(
+        string principalSid,
+        LocalArtifactDestination destination,
+        bool overwriteConfirmed,
+        ResolvedArtifact source,
+        Stream input,
+        CancellationToken cancellationToken)
+    {
+        if (!destinationPolicy.IsStillSafe(principalSid, destination))
+        {
+            return DestinationWriteResult.Failure(LocalIpcArtifactExportState.DestinationRejected, "destination_rejected");
+        }
+
+        string? rollbackPath = null;
+        var originalMoved = false;
+        var committed = false;
+        try
+        {
+            var destinationExists = fileSystem.FileExists(destination.FullPath);
+            if (destinationExists && !overwriteConfirmed)
+            {
+                return DestinationWriteResult.Failure(LocalIpcArtifactExportState.DestinationExists, "destination_exists");
+            }
+
+            if (destinationExists)
+            {
+                rollbackPath = Path.Combine(
+                    destination.ParentDirectory,
+                    $".{destination.FileName}.{Guid.NewGuid():N}.rollback");
+                if (!destinationPolicy.IsStillSafe(principalSid, destination)
+                    || !IsWithinParent(destination.ParentDirectory, rollbackPath))
+                {
+                    return DestinationWriteResult.Failure(LocalIpcArtifactExportState.DestinationRejected, "destination_rejected");
+                }
+
+                await fileSystem.MoveFileAsync(destination.FullPath, rollbackPath, overwrite: false, CancellationToken.None).ConfigureAwait(false);
+                originalMoved = true;
+            }
+
+            await using (var output = await fileSystem.CreateFileAsync(destination.TemporaryPath, cancellationToken).ConfigureAwait(false))
+            {
+                await CopyBoundedAsync(input, output, source.MaximumBytes, cancellationToken).ConfigureAwait(false);
+                await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            var size = fileSystem.GetFileLength(destination.TemporaryPath);
+            var checksum = await fileSystem.ComputeSha256Async(destination.TemporaryPath, cancellationToken).ConfigureAwait(false);
+            if (size != source.SizeBytes || !string.Equals(checksum, source.Checksum, StringComparison.OrdinalIgnoreCase))
+            {
+                return DestinationWriteResult.Failure(
+                    LocalIpcArtifactExportState.ChecksumMismatch,
+                    "artifact_checksum_mismatch",
+                    rollbackPath,
+                    originalMoved);
+            }
+
+            if (!destinationPolicy.IsStillSafe(principalSid, destination))
+            {
+                return DestinationWriteResult.Failure(
+                    LocalIpcArtifactExportState.DestinationRejected,
+                    "destination_rejected",
+                    rollbackPath,
+                    originalMoved);
+            }
+
+            await fileSystem.MoveFileAsync(destination.TemporaryPath, destination.FullPath, overwrite: false, cancellationToken).ConfigureAwait(false);
+            committed = true;
+            return DestinationWriteResult.Success(rollbackPath, originalMoved);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return DestinationWriteResult.Failure(LocalIpcArtifactExportState.Cancelled, "cancelled", rollbackPath, originalMoved);
+        }
+        catch
+        {
+            return DestinationWriteResult.Failure(LocalIpcArtifactExportState.Failed, "export_failed", rollbackPath, originalMoved);
         }
         finally
         {
-            gate.Release();
+            if (!committed)
+            {
+                await DeleteIfPresentAsync(destination.TemporaryPath).ConfigureAwait(false);
+                if (originalMoved && rollbackPath is not null)
+                {
+                    await RestoreRollbackAsync(destination.FullPath, rollbackPath).ConfigureAwait(false);
+                }
+            }
+        }
+    }
+
+    private async Task CompensateAsync(
+        LocalArtifactDestination destination,
+        ResolvedArtifact source,
+        DestinationWriteResult writeResult)
+    {
+        if (!destinationPolicy.IsStillSafe(source.PrincipalSid, destination))
+        {
+            return;
+        }
+
+        if (writeResult.OriginalMoved && writeResult.RollbackPath is not null)
+        {
+            if (fileSystem.FileExists(destination.FullPath)
+                && !fileSystem.IsReparsePoint(destination.FullPath)
+                && fileSystem.GetFileLength(destination.FullPath) == source.SizeBytes
+                && string.Equals(
+                    await fileSystem.ComputeSha256Async(destination.FullPath, CancellationToken.None).ConfigureAwait(false),
+                    source.Checksum,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await fileSystem.DeleteFileAsync(destination.FullPath, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            await RestoreRollbackAsync(destination.FullPath, writeResult.RollbackPath).ConfigureAwait(false);
+            return;
+        }
+
+        if (fileSystem.FileExists(destination.FullPath)
+            && !fileSystem.IsReparsePoint(destination.FullPath)
+            && fileSystem.GetFileLength(destination.FullPath) == source.SizeBytes
+            && string.Equals(
+                await fileSystem.ComputeSha256Async(destination.FullPath, CancellationToken.None).ConfigureAwait(false),
+                source.Checksum,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await fileSystem.DeleteFileAsync(destination.FullPath, CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RestoreRollbackAsync(string destinationPath, string rollbackPath)
+    {
+        try
+        {
+            if (!fileSystem.FileExists(destinationPath))
+            {
+                await fileSystem.MoveFileAsync(rollbackPath, destinationPath, overwrite: false, CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+        catch
+        {
+            // Preserve the rollback file rather than deleting the only known previous output.
+        }
+    }
+
+    private async Task CleanupRollbackAsync(string? rollbackPath)
+    {
+        if (!string.IsNullOrWhiteSpace(rollbackPath))
+        {
+            await DeleteIfPresentAsync(rollbackPath).ConfigureAwait(false);
+        }
+    }
+
+    private async Task DeleteIfPresentAsync(string path)
+    {
+        try
+        {
+            await fileSystem.DeleteFileAsync(path, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
+    }
+
+    private static async Task CopyBoundedAsync(
+        Stream input,
+        Stream output,
+        long maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new byte[128 * 1024];
+        long total = 0;
+        while (true)
+        {
+            var read = await input.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            if (read == 0) return;
+            total = checked(total + read);
+            if (total > maximumBytes)
+            {
+                throw new ArtifactSizeLimitException();
+            }
+
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -168,6 +371,7 @@ public sealed class ArtifactDeliveryService(
                 metadata.Sha256Checksum,
                 metadata.ExpiresAtUtc,
                 supportBundleOptions.MaximumBundleBytes,
+                principalSid,
                 async token => await artifacts.OpenReadAsync(principalSid, request.ArtifactId, token).ConfigureAwait(false)));
         }
 
@@ -177,9 +381,7 @@ public sealed class ArtifactDeliveryService(
             return SourceResolution.Failure(LocalIpcArtifactExportState.ArtifactNotFound, "artifact_not_found");
         }
 
-        var backup = (await backups
-            .ListInventoryAsync(database, principalSid, cancellationToken)
-            .ConfigureAwait(false));
+        var backup = await backups.ListInventoryAsync(database, principalSid, cancellationToken).ConfigureAwait(false);
         var entry = backup.FirstOrDefault(candidate =>
             string.Equals(candidate.ArtifactId, request.ArtifactId, StringComparison.Ordinal));
         if (entry is null)
@@ -197,8 +399,8 @@ public sealed class ArtifactDeliveryService(
                 entry.Sha256Checksum,
                 entry.ExpiresAtUtc,
                 databaseStorageOptions.MaximumBackupBytes,
-                async token => await fileSystem.OpenReadAsync(entry.ServerPath, token).ConfigureAwait(false),
-                entry.ServerPath)),
+                principalSid,
+                async token => await fileSystem.OpenReadAsync(entry.ServerPath, token).ConfigureAwait(false))),
             _ => SourceResolution.Failure(LocalIpcArtifactExportState.ArtifactNotFound, "artifact_not_found")
         };
     }
@@ -223,7 +425,7 @@ public sealed class ArtifactDeliveryService(
                 typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unavailable",
                 null)
             {
-                Source = InvocationSource.LocalWpf.ToString()
+                Source = $"LocalWpf-{destination.Category}"
             });
         }
         catch
@@ -246,11 +448,28 @@ public sealed class ArtifactDeliveryService(
             return false;
         }
 
-        expectedExtension = request.ArtifactKind == LocalIpcArtifactKind.DatabaseBackup
-            ? ".bak"
-            : ".zip";
-        return request.ArtifactKind != LocalIpcArtifactKind.DatabaseBackup || request.DatabaseTarget is not null;
+        if (request.ArtifactKind == LocalIpcArtifactKind.DatabaseBackup)
+        {
+            expectedExtension = ".bak";
+            return request.DatabaseTarget is { } target && Enum.IsDefined(target) && TryResolve(target, out _);
+        }
+
+        if (request.ArtifactKind == LocalIpcArtifactKind.SupportBundle)
+        {
+            expectedExtension = ".zip";
+            return request.DatabaseTarget is null;
+        }
+
+        return false;
     }
+
+    private static string OutcomeFor(LocalIpcArtifactExportState state) => state switch
+    {
+        LocalIpcArtifactExportState.Cancelled => "cancelled",
+        LocalIpcArtifactExportState.ChecksumMismatch => "checksum_mismatch",
+        LocalIpcArtifactExportState.DestinationExists or LocalIpcArtifactExportState.DestinationRejected => "destination_rejected",
+        _ => "failed"
+    };
 
     private static LocalIpcArtifactExportResultDto Failure(
         string? artifactId,
@@ -280,14 +499,17 @@ public sealed class ArtifactDeliveryService(
     private static bool IsValidChecksum(string? value) =>
         value is { Length: 64 } && value.All(Uri.IsHexDigit);
 
+    private static bool IsWithinParent(string parent, string candidate) =>
+        string.Equals(parent, Path.GetDirectoryName(candidate), StringComparison.OrdinalIgnoreCase);
+
     private sealed record ResolvedArtifact(
         string DisplayName,
         long SizeBytes,
         string Checksum,
         DateTimeOffset? ExpiresAtUtc,
         long MaximumBytes,
-        Func<CancellationToken, Task<Stream?>> OpenRead,
-        string? ServerPath = null)
+        string PrincipalSid,
+        Func<CancellationToken, Task<Stream?>> OpenRead)
     {
         public async Task<Stream> OpenReadAsync(CancellationToken cancellationToken) =>
             await OpenRead(cancellationToken).ConfigureAwait(false)
@@ -303,4 +525,23 @@ public sealed class ArtifactDeliveryService(
 
         public static SourceResolution Failure(LocalIpcArtifactExportState state, string code) => new(null, state, code);
     }
+
+    private sealed record DestinationWriteResult(
+        LocalIpcArtifactExportState State,
+        string ErrorCode,
+        string? RollbackPath = null,
+        bool OriginalMoved = false)
+    {
+        public static DestinationWriteResult Success(string? rollbackPath, bool originalMoved) =>
+            new(LocalIpcArtifactExportState.Succeeded, string.Empty, rollbackPath, originalMoved);
+
+        public static DestinationWriteResult Failure(
+            LocalIpcArtifactExportState state,
+            string code,
+            string? rollbackPath = null,
+            bool originalMoved = false) =>
+            new(state, code, rollbackPath, originalMoved);
+    }
+
+    private sealed class ArtifactSizeLimitException : InvalidOperationException;
 }

@@ -42,7 +42,13 @@ column distinguishes delivered local slices from future remote/fleet work.
   is PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; WPF-05 was
   accepted at `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36
   as `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`; WPF-06 is the current
-  Draft-PR implementation slice and must remain open for Sol review.
+  Draft-PR implementation slice and must remain open for Sol review. Its
+  final security remediation binds export roots to the authenticated
+  ProfileList SID, uses caller-token-only destination operations, requires
+  truthful final audit/rollback, and scopes catalog access/retention by owner.
+  Restore remains deferred under #13034; child #13129 is New/P2. The next
+  recommended slice is guarded RMS service control under #13032, not Safety
+  Snapshots.
 
 ## Azure Classification Structure
 
@@ -248,7 +254,8 @@ Azure DevOps uses **Area Paths** and **Iteration Paths** with distinct, orthogon
 | **US-E17-01** | 13031 | User Story | [US-E17-01] WPF shell and local machine dashboard | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; WPF shell/dashboard delivered through WPF-02 |
 | **US-E17-02** | 13032 | User Story | [US-E17-02] Agent/RMS service health and approved service control | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028, BR-030 | P1; read-only service health delivered, mutation remains future |
 | **US-E17-03** | 13033 | User Story | [US-E17-03] Database health and diagnostics | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-027, BR-028 | P1; Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` |
-| **US-E17-04** | 13034 | User Story | [US-E17-04] Database backup/download and guarded restore | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-06 Draft PR adds fixed Branch/Cashier backup creation, principal-scoped bounded inventory, and shared local artifact export; guarded restore remains separately gated |
+| **US-E17-04** | 13034 | User Story | [US-E17-04] Database backup/download and guarded restore | E17 (#13018) | **Active** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; current WPF-06 Draft PR adds fixed Branch/Cashier backup creation, principal-scoped bounded inventory, shared local artifact export, caller-bound ProfileList roots, caller-token-only destination I/O, truthful audit/rollback, and owner-scoped retention/access; final remediation pending Sol acceptance; child #13129 New/P2 tracks restore |
+| **T-E17-04-01** | 13129 | Task | Implement guarded RMS database restore in WPF | US-E17-04 (#13034) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P2; separately gated restore work, not part of WPF-06 or the next guarded service-control slice |
 | **US-E17-05** | 13035 | User Story | [US-E17-05] Logs and safe Support Bundle | E17 (#13018) | **Closed** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | P1; WPF-05 accepted at `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`; privacy policy Task #13116 remains New/P2 |
 | **T-E17-05-01** | 13116 | Task | Define and validate diagnostic evidence PII/redaction policy | US-E17-05 (#13035) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-030 | P2; define permitted customer/business identifiers and deterministic redaction/privacy tests |
 | **US-E17-06** | 13036 | User Story | [US-E17-06] Safety Snapshots and incident timeline | E17 (#13018) | **New** | Rms_Support_Hub\POS | Rms_Support_Hub\POS-08 - WPF Local Experience | BR-028, BR-030 | Architecture baseline |

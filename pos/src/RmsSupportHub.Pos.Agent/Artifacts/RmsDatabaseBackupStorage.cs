@@ -116,8 +116,9 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
     public async Task<RmsApprovedDatabaseBackup?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
+        string principalSid,
         CancellationToken cancellationToken = default,
-        string? principalSid = null)
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped)
     {
         if (string.IsNullOrWhiteSpace(artifactId)
             || artifactId.Length > 128
@@ -126,7 +127,7 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
             return null;
         }
 
-        var entry = await catalog.ResolveAsync(database, artifactId, cancellationToken, principalSid).ConfigureAwait(false);
+        var entry = await catalog.ResolveAsync(database, artifactId, principalSid, cancellationToken, accessMode).ConfigureAwait(false);
         if (entry is null)
         {
             return null;
@@ -140,10 +141,11 @@ public sealed class RmsDatabaseBackupStorage : IRmsDatabaseBackupStorage
 
     public async Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
         RmsDatabaseKind database,
+        string principalSid,
         CancellationToken cancellationToken = default,
-        string? principalSid = null)
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped)
     {
-        var entries = await catalog.ListAsync(database, cancellationToken, principalSid).ConfigureAwait(false);
+        var entries = await catalog.ListAsync(database, principalSid, cancellationToken, accessMode).ConfigureAwait(false);
         var result = new List<RmsApprovedDatabaseBackup>(entries.Count);
         foreach (var entry in entries)
         {

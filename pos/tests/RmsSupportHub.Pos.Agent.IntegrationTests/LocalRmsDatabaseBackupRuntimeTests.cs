@@ -185,7 +185,8 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
             RmsDatabaseKind database,
             string artifactId,
             IProgress<RmsDatabaseProgress>? progress = null,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default,
+            string? principalSid = null) =>
             throw new NotSupportedException();
     }
 
@@ -199,10 +200,10 @@ public sealed class LocalRmsDatabaseBackupRuntimeTests
         public Task<RmsApprovedDatabaseBackup?> RegisterAsync(RmsDatabaseKind database, RmsDatabaseBackupAllocation allocation, CancellationToken cancellationToken = default, string? principalSid = null) =>
             throw new NotSupportedException();
 
-        public Task<RmsApprovedDatabaseBackup?> ResolveAsync(RmsDatabaseKind database, string artifactId, CancellationToken cancellationToken = default, string? principalSid = null) =>
+        public Task<RmsApprovedDatabaseBackup?> ResolveAsync(RmsDatabaseKind database, string artifactId, string principalSid, CancellationToken cancellationToken = default, RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped) =>
             throw new NotSupportedException();
 
-        public Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(RmsDatabaseKind database, CancellationToken cancellationToken = default, string? principalSid = null) =>
+        public Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(RmsDatabaseKind database, string principalSid, CancellationToken cancellationToken = default, RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped) =>
             throw new NotSupportedException();
 
         public Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListInventoryAsync(RmsDatabaseKind database, string principalSid, CancellationToken cancellationToken = default) =>

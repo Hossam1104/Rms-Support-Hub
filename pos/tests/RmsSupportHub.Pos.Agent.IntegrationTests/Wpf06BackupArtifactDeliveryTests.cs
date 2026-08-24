@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.IntegrationTests.TestSupport;
@@ -30,12 +31,14 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var result = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false));
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false),
+            WindowsIdentity.GetCurrent());
 
         Assert.Equal(LocalIpcArtifactExportState.Succeeded, result.State);
         Assert.Equal("branch-backup-content", await File.ReadAllTextAsync(destination));
-        Assert.Single(fixture.Audit.Events);
-        Assert.Equal("accepted", fixture.Audit.Events[0].Outcome);
+        Assert.Equal(["accepted", "completed"], fixture.Audit.Events.Select(item => item.Outcome));
+        Assert.All(fixture.Audit.Events, item => Assert.Equal("correlation-export", item.CorrelationId));
+        Assert.DoesNotContain(fixture.Audit.Events, item => item.Source!.Contains(destination, StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(fixture.BackupRoot, result.DisplayName, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -49,7 +52,8 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var result = await fixture.Delivery.ExportAsync(
             Context(PrincipalB),
             PrincipalB,
-            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false));
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false),
+            WindowsIdentity.GetCurrent());
 
         Assert.Equal(LocalIpcArtifactExportState.ArtifactNotFound, result.State);
         Assert.Equal("artifact_not_found", result.ErrorCode);
@@ -68,7 +72,8 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var expiredResult = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.DatabaseBackup, expired.ArtifactId, RmsDatabaseTarget.Branch, Path.Combine(fixture.DestinationRoot, "expired.bak"), false));
+            new(LocalIpcArtifactKind.DatabaseBackup, expired.ArtifactId, RmsDatabaseTarget.Branch, Path.Combine(fixture.DestinationRoot, "expired.bak"), false),
+            WindowsIdentity.GetCurrent());
 
         Assert.Equal(LocalIpcArtifactExportState.ArtifactExpired, expiredResult.State);
 
@@ -80,7 +85,8 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var tamperedResult = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.DatabaseBackup, tampered.ArtifactId, RmsDatabaseTarget.Branch, Path.Combine(fixture.DestinationRoot, "tampered.bak"), false));
+            new(LocalIpcArtifactKind.DatabaseBackup, tampered.ArtifactId, RmsDatabaseTarget.Branch, Path.Combine(fixture.DestinationRoot, "tampered.bak"), false),
+            WindowsIdentity.GetCurrent());
 
         Assert.Equal(LocalIpcArtifactExportState.ChecksumMismatch, tamperedResult.State);
         Assert.Equal("artifact_checksum_mismatch", tamperedResult.ErrorCode);
@@ -96,7 +102,8 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var result = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false));
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false),
+            WindowsIdentity.GetCurrent());
 
         Assert.Equal(LocalIpcArtifactExportState.Failed, result.State);
         Assert.Equal("audit_unavailable", result.ErrorCode);
@@ -115,14 +122,16 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var rejected = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false));
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, false),
+            WindowsIdentity.GetCurrent());
         Assert.Equal(LocalIpcArtifactExportState.DestinationExists, rejected.State);
         Assert.Equal("old-content", await File.ReadAllTextAsync(destination));
 
         var accepted = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, true));
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, true),
+            WindowsIdentity.GetCurrent());
         Assert.Equal(LocalIpcArtifactExportState.Succeeded, accepted.State);
         Assert.Equal("new-backup", await File.ReadAllTextAsync(destination));
         Assert.DoesNotContain(Directory.EnumerateFiles(fixture.DestinationRoot), path => Path.GetFileName(path).EndsWith(".tmp", StringComparison.OrdinalIgnoreCase));
@@ -147,10 +156,10 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
             destination,
             false);
 
-        var firstTask = Task.Run(() => fixture.Delivery.ExportAsync(Context(PrincipalA), PrincipalA, request));
+        var firstTask = Task.Run(() => fixture.Delivery.ExportAsync(Context(PrincipalA), PrincipalA, request, WindowsIdentity.GetCurrent()));
         await audit.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        var second = await fixture.Delivery.ExportAsync(Context(PrincipalA), PrincipalA, request);
+        var second = await fixture.Delivery.ExportAsync(Context(PrincipalA), PrincipalA, request, WindowsIdentity.GetCurrent());
         Assert.Equal(LocalIpcArtifactExportState.Failed, second.State);
         Assert.Equal("operation_in_progress", second.ErrorCode);
 
@@ -179,11 +188,114 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
         var result = await fixture.Delivery.ExportAsync(
             Context(PrincipalA),
             PrincipalA,
-            new(LocalIpcArtifactKind.SupportBundle, metadata.ArtifactId, null, destination, false));
+            new(LocalIpcArtifactKind.SupportBundle, metadata.ArtifactId, null, destination, false),
+            WindowsIdentity.GetCurrent());
 
         Assert.Equal(LocalIpcArtifactExportState.Succeeded, result.State);
         Assert.Equal("support-bundle", await File.ReadAllTextAsync(destination));
         Assert.Contains(fixture.Audit.Events, audit => audit.Target == "support-bundle");
+    }
+
+    [Fact]
+    public async Task FinalCompletedAuditFailureDoesNotClaimSuccessAndRestoresOverwrite()
+    {
+        var audit = new RecordingAuditSink { Results = new Queue<bool>([true, false]) };
+        var fixture = CreateFixture(new ManualTimeProvider(Start), auditSink: audit);
+        var backup = await fixture.RegisterDatabaseBackupAsync(PrincipalA, "new-backup");
+        var destination = Path.Combine(fixture.DestinationRoot, "rollback.bak");
+        await File.WriteAllTextAsync(destination, "old-content");
+
+        var result = await fixture.Delivery.ExportAsync(
+            Context(PrincipalA),
+            PrincipalA,
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, RmsDatabaseTarget.Branch, destination, true),
+            WindowsIdentity.GetCurrent());
+
+        Assert.Equal(LocalIpcArtifactExportState.Failed, result.State);
+        Assert.Equal("audit_unavailable", result.ErrorCode);
+        Assert.Equal("old-content", await File.ReadAllTextAsync(destination));
+        Assert.DoesNotContain(Directory.EnumerateFiles(fixture.DestinationRoot), path =>
+            Path.GetFileName(path).Contains("rollback", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(path, destination, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task CancellationRecordsCancelledOutcomeWithoutWritingOutput()
+    {
+        var fixture = CreateFixture(new ManualTimeProvider(Start));
+        var sourcePath = Path.Combine(fixture.SourceRoot, "support.zip");
+        await File.WriteAllTextAsync(sourcePath, "support-bundle");
+        var bytes = await File.ReadAllBytesAsync(sourcePath);
+        var metadata = fixture.Artifacts.Register(
+            PrincipalA,
+            "rms-support-bundle.zip",
+            sourcePath,
+            bytes.LongLength,
+            Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(),
+            Start);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var destination = Path.Combine(fixture.DestinationRoot, "cancelled.zip");
+        var result = await fixture.Delivery.ExportAsync(
+            Context(PrincipalA),
+            PrincipalA,
+            new(LocalIpcArtifactKind.SupportBundle, metadata.ArtifactId, null, destination, false),
+            WindowsIdentity.GetCurrent(),
+            cancellation.Token);
+
+        Assert.Equal(LocalIpcArtifactExportState.Cancelled, result.State);
+        Assert.Equal(["accepted", "cancelled"], fixture.Audit.Events.Select(item => item.Outcome));
+        Assert.False(File.Exists(destination));
+    }
+
+    [Fact]
+    public async Task RequestValidationRejectsContradictoryArtifactTargetFields()
+    {
+        var fixture = CreateFixture(new ManualTimeProvider(Start));
+        var backup = await fixture.RegisterDatabaseBackupAsync(PrincipalA, "backup");
+
+        var supportWithTarget = await fixture.Delivery.ExportAsync(
+            Context(PrincipalA),
+            PrincipalA,
+            new(LocalIpcArtifactKind.SupportBundle, backup.ArtifactId, RmsDatabaseTarget.Branch, Path.Combine(fixture.DestinationRoot, "support.zip"), false),
+            WindowsIdentity.GetCurrent());
+        var backupWithoutTarget = await fixture.Delivery.ExportAsync(
+            Context(PrincipalA),
+            PrincipalA,
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, null, Path.Combine(fixture.DestinationRoot, "backup.bak"), false),
+            WindowsIdentity.GetCurrent());
+        var undefinedTarget = await fixture.Delivery.ExportAsync(
+            Context(PrincipalA),
+            PrincipalA,
+            new(LocalIpcArtifactKind.DatabaseBackup, backup.ArtifactId, (RmsDatabaseTarget)99, Path.Combine(fixture.DestinationRoot, "undefined.bak"), false),
+            WindowsIdentity.GetCurrent());
+
+        Assert.All(new[] { supportWithTarget, backupWithoutTarget, undefinedTarget }, result =>
+        {
+            Assert.Equal(LocalIpcArtifactExportState.DestinationRejected, result.State);
+            Assert.Equal("invalid_request", result.ErrorCode);
+        });
+        Assert.Empty(fixture.Audit.Events);
+    }
+
+    [Fact]
+    public void DestinationCoordinationRemovesIdleKeysAndAllowsDifferentDestinations()
+    {
+        var coordinator = new BoundedKeyedMutationCoordinator();
+        Assert.True(coordinator.TryEnter("same.bak", out var first));
+        Assert.False(coordinator.TryEnter("same.bak", out _));
+        Assert.True(coordinator.TryEnter("different.bak", out var different));
+        different.Dispose();
+        first.Dispose();
+
+        for (var index = 0; index < 2_000; index++)
+        {
+            Assert.True(coordinator.TryEnter($"unique-{index}.bak", out var lease));
+            lease.Dispose();
+        }
+
+        Assert.Equal(0, coordinator.ActiveKeyCount);
     }
 
     [Theory]
@@ -244,6 +356,8 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
             storage,
             fileSystem,
             new LocalArtifactDestinationPolicy([destinationRoot]),
+            new WindowsArtifactDestinationAuthority(),
+            new BoundedKeyedMutationCoordinator(),
             audit,
             new SupportBundleOptions { BundleRootPath = sourceRoot },
             options,
@@ -281,6 +395,7 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
     private sealed class RecordingAuditSink : IAgentAuditSink
     {
         public bool Result { get; set; }
+        public Queue<bool>? Results { get; init; }
         public TaskCompletionSource<bool>? Entered { get; init; }
         public TaskCompletionSource<bool>? Release { get; init; }
         public List<AgentAuditEvent> Events { get; } = [];
@@ -290,7 +405,7 @@ public sealed class Wpf06BackupArtifactDeliveryTests : IDisposable
             Events.Add(auditEvent);
             Entered?.TrySetResult(true);
             Release?.Task.GetAwaiter().GetResult();
-            return Result;
+            return Results is { Count: > 0 } ? Results.Dequeue() : Result;
         }
     }
 }

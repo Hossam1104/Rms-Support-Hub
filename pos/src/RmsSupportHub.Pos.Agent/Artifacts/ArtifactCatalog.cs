@@ -254,6 +254,11 @@ public sealed class ArtifactCatalog
             var stream = await _fileSystem.OpenReadAsync(entry.Path, cancellationToken).ConfigureAwait(false);
             return new ArtifactDownloadStream(stream, () => ReleaseDownload(entry));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ReleaseDownload(entry);
+            throw;
+        }
         catch
         {
             ReleaseDownload(entry);

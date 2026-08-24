@@ -5,13 +5,16 @@
   `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as
   `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`.
 - **Working branch:** `feat/wpf-06-database-backup-artifact-delivery`.
-- **Status:** WPF-06 is implemented in a Draft PR candidate. It adds fixed
-  Branch/Cashier backup creation, principal-scoped bounded inventory, and one
-  shared Agent-owned local artifact-delivery path for database backups and
-  Support Bundles. Restore is deliberately not implemented.
-- **Authority:** CR-001, ADR-0029, and ADR-0030 are accepted; GPT-5.6 Sol is
-  the acceptance authority. The WPF-06 PR must remain Draft and must not be
-  marked ready or merged by this execution.
+- **Status:** WPF-06 implementation and final security/correctness remediation
+  are present in the Draft PR candidate. It adds fixed Branch/Cashier backup
+  creation, principal-scoped bounded inventory, and one shared Agent-owned
+  local artifact-delivery path for database backups and Support Bundles.
+  Restore is deliberately not implemented and formal Sol acceptance is still
+  pending.
+- **Authority:** CR-001 and ADR-0029 remain accepted; ADR-0030 is Proposed
+  pending GPT-5.6 Sol acceptance. Sol is the acceptance authority. The WPF-06
+  PR must remain Draft and must not be marked ready or merged by this
+  execution.
 
 ## WPF-06 durable facts
 
@@ -26,8 +29,21 @@
 - `ArtifactDeliveryService` is the shared local export seam for database
   backups and Support Bundles. It enforces administrator-only local authority,
   principal binding, fixed extension/output roots, expiry/checksum/size
-  validation, pre-write audit, per-destination conflict control, bounded
-  streaming, temporary-file cleanup, and atomic finalization.
+  validation, pre-write and final outcome audit, per-destination bounded
+  conflict control, bounded streaming, temporary-file cleanup, and atomic
+  finalization with overwrite rollback compensation when final audit is
+  unavailable.
+- Production destination roots are resolved from the authenticated caller SID
+  through the machine-owned Windows ProfileList mapping to fixed Desktop,
+  Documents, and Downloads directories. The Agent does not use LocalSystem's
+  interactive-folder environment. Source reads remain Agent-owned and only
+  destination-side export operations run under the caller token through the
+  dedicated export authority.
+- RMS backup catalog access is principal-bound in every transport. The explicit
+  legacy compatibility mode permits exact-owner records plus historical
+  null-owner records only; null is never unrestricted. Retention is scoped by
+  database and owner principal. Artifact requests require Branch/Cashier +
+  `.bak` or Support Bundle + null target + `.zip`.
 - WPF owns only typed Local IPC adapters, bounded response validation, safe
   inventory rendering, native Save As destination selection, overwrite
   confirmation, and cancellation. It has no Agent/Infrastructure/SQL/HTTP/
@@ -70,6 +86,9 @@
   Production acceptance.
 - #13035 records WPF-05 acceptance, PR #36, and its merge. #13034 records
   WPF-06 as the active story while guarded restore remains separately gated.
+  Azure child #13129 (`Implement guarded RMS database restore in WPF`) is
+  New/P2 under #13034. #13032 remains Active/P1 as the next recommended
+  guarded service-control slice; WPF-07 is not started.
 
 ## Runtime and environment boundary
 
