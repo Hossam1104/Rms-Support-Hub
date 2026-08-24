@@ -38,7 +38,14 @@ public sealed class LocalIpcServerIdentityException()
 /// </summary>
 public sealed class LocalIpcClient
 {
+    /// <summary>
+    /// WPF-01's normal local IPC posture. Only the typed artifact export operation is allowed
+    /// to request the stronger destination-write token posture below.
+    /// </summary>
     public const TokenImpersonationLevel RequestedImpersonationLevel = TokenImpersonationLevel.Identification;
+
+    public const TokenImpersonationLevel ArtifactExportRequestedImpersonationLevel =
+        TokenImpersonationLevel.Impersonation;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -102,10 +109,84 @@ public sealed class LocalIpcClient
             correlationId,
             cancellationToken);
 
+    public Task<LocalIpcCallResult<LocalIpcAuthorizationDto>> GetAuthorizationAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcAuthorizationDto>(
+            LocalIpcProtocol.AuthorizationOperation,
+            correlationId,
+            payload: null,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<LocalIpcBackupInventoryDto>> GetBackupInventoryAsync(
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcBackupInventoryDto>(
+            LocalIpcProtocol.BackupInventoryOperation,
+            correlationId,
+            payload: null,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<RmsDatabaseOperationDto>> CreateBackupAsync(
+        RmsDatabaseTarget target,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseOperationDto>(
+            LocalIpcProtocol.BackupCreateOperation,
+            correlationId,
+            new LocalIpcBackupCreateRequestDto(target),
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<RmsDatabaseOperationDto>> GetBackupStatusAsync(
+        RmsDatabaseTarget target,
+        string operationId,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseOperationDto>(
+            LocalIpcProtocol.BackupStatusOperation,
+            correlationId,
+            new LocalIpcBackupOperationRequestDto(target, operationId),
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<RmsDatabaseOperationDto>> CancelBackupAsync(
+        RmsDatabaseTarget target,
+        string operationId,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RmsDatabaseOperationDto>(
+            LocalIpcProtocol.BackupCancelOperation,
+            correlationId,
+            new LocalIpcBackupOperationRequestDto(target, operationId),
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<LocalIpcArtifactExportResultDto>> ExportArtifactAsync(
+        LocalIpcArtifactExportRequestDto request,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcArtifactExportResultDto>(
+            LocalIpcProtocol.ArtifactExportOperation,
+            correlationId,
+            request,
+            cancellationToken,
+            ArtifactExportRequestedImpersonationLevel);
+
     private async Task<LocalIpcCallResult<T>> SendAsync<T>(
         string operation,
         string? correlationId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        await SendAsync<T>(
+            operation,
+            correlationId,
+            payload: null,
+            cancellationToken,
+            RequestedImpersonationLevel).ConfigureAwait(false);
+
+    private async Task<LocalIpcCallResult<T>> SendAsync<T>(
+        string operation,
+        string? correlationId,
+        object? payload,
+        CancellationToken cancellationToken,
+        TokenImpersonationLevel impersonationLevel = RequestedImpersonationLevel)
     {
         var requestId = Guid.NewGuid().ToString("N");
         var effectiveCorrelationId = IsSafeToken(correlationId) ? correlationId! : requestId;
@@ -114,7 +195,9 @@ public sealed class LocalIpcClient
             requestId,
             effectiveCorrelationId,
             operation,
-            null);
+            payload is null
+                ? null
+                : JsonSerializer.SerializeToElement(payload, JsonOptions));
         var requestBytes = JsonSerializer.SerializeToUtf8Bytes(request, JsonOptions);
         if (requestBytes.Length > options.MaxRequestBytes)
         {
@@ -128,7 +211,7 @@ public sealed class LocalIpcClient
             options.PipeName,
             PipeDirection.InOut,
             PipeOptions.Asynchronous,
-            RequestedImpersonationLevel,
+            impersonationLevel,
             HandleInheritability.None);
         await pipe.ConnectAsync(timeout.Token).ConfigureAwait(false);
 

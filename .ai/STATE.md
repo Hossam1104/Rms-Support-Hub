@@ -1,115 +1,119 @@
 # Current Project State
 
-- **Updated:** 2026-08-23
-- **Repository baseline:** WPF-05 started from accepted WPF-04 main
-  `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676` (PR #35).
-- **Working branch:** `feat/wpf-05-logs-support-bundle`.
-- **Status:** WPF-05 Logs, safe diagnostic evidence, and Support Bundle
-  metadata is implemented, pushed in Draft PR #36, and exact-head CI is green.
-  Sol acceptance remains pending.
-- **Authority:** CR-001 and ADR-0029 remain accepted; GPT-5.6 Sol is the
-  acceptance authority. WPF-06 must not start before Sol accepts WPF-05.
+- **Updated:** 2026-08-24
+- **Repository baseline:** WPF-06 started from accepted WPF-05 at
+  `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as
+  `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`.
+- **Working branch:** `feat/wpf-06-database-backup-artifact-delivery`.
+- **Status:** WPF-06 implementation and final security/correctness remediation
+  are present in the Draft PR candidate. It adds fixed Branch/Cashier backup
+  creation, principal-scoped bounded inventory, and one shared Agent-owned
+  local artifact-delivery path for database backups and Support Bundles.
+  Restore is deliberately not implemented and formal Sol acceptance is still
+  pending. Delivered in commit `fddf6fedf11552330e3e3629627e5cdad81bd3a6`;
+  PR #37 remains open and Draft.
+- **Authority:** CR-001 and ADR-0029 remain accepted; ADR-0030 is Proposed
+  pending GPT-5.6 Sol acceptance. Sol is the acceptance authority. The WPF-06
+  PR must remain Draft and must not be marked ready or merged by this
+  execution.
 
-## WPF-05 durable facts
+## WPF-06 durable facts
 
-- `LogEvidenceQueryHandler` is the shared, transport-independent read seam.
-  Its Application models have no Contracts dependency; Agent maps them to V1.
-  It authorizes LocalWpf LocalOperator/LocalAdministrator callers, uses the
-  fixed three RMS service identities and existing analyzer/evidence reader,
-  bounds each query to 15 seconds, caps records/unknown reasons/
-  recommendations, and validates safe aggregate state before returning a
-  typed projection.
-- The typed `rms.logs.evidence` Local IPC operation accepts no payload. The
-  existing Local IPC framing, request/correlation matching, protocol v1,
-  response bounds, Windows caller identity, server identity/PID verification,
-  ACL, impersonation boundary, and fail-closed authorization remain intact.
-- `SupportBundleExecutor` is the shared typed execution seam for local
-  Support Bundle generation. It requires local administrator authority,
-  verifies the principal/correlation boundary, invokes the existing fixed-root
-  redacted/bounded generator, audits once, revokes an artifact if audit is
-  unavailable, and records the successful SupportBundle timeline only after audit.
-- The typed `support.bundle.generate` Local IPC operation accepts a
-  correlation ID only and returns validated artifact metadata, creation time,
-  expiry, checksum, included sections, and correlation ID. WPF never receives
-  ZIP bytes, server paths, arbitrary paths, or an export destination.
-- Detailed Logs evidence is collected only when the Logs workspace opens or
-  the user presses Refresh. The 30-second automatic health poll does not
-  collect detailed evidence. Support Bundle generation is explicit and is not
-  automatic.
-- WPF owns typed IPC adapters, safe view models, bounded client-side service
-  and severity filters, and metadata-only rendering. It has no Agent or
-  Infrastructure reference, SQL connection, filesystem reader, process launch,
-  HTTPS client, service mutation, database mutation, or provisioning surface.
-- The WPF-05 UI shows the fixed service cards, safe evidence records, unknown
-  source reasons, bounded recommendations, safe error codes, and Support
-  Bundle metadata (artifact, size, checksum, created, expiry, sections,
-  correlation, opaque artifact ID). Artifact export/download is explicitly
-  deferred to WPF-06.
+- `RmsDatabaseBackupQueryHandler` is transport-neutral and exposes only fixed
+  Branch/Cashier metadata. It bounds inventory, orders newest-first, scopes
+  reads by the authenticated principal, and never projects server paths.
+- `LocalRmsDatabaseBackupRuntime` reuses the existing typed RMS backup
+  workflow and machine-wide concurrency gate. It derives authority and
+  principal from the trusted invocation context, records ordered privileged
+  audit events with pre-mutation fail-closed behavior, revokes an artifact
+  when final audit fails, and supports cancellation without claiming an
+  ambiguous success.
+- `ArtifactDeliveryService` is the shared local export seam for database
+  backups and Support Bundles. It enforces administrator-only local authority,
+  principal binding, fixed extension/output roots, expiry/checksum/size
+  validation, pre-write and final outcome audit, per-destination bounded
+  conflict control, bounded streaming, temporary-file cleanup, and atomic
+  finalization with overwrite rollback compensation when final audit is
+  unavailable.
+- Production destination roots are resolved from the authenticated caller SID
+  through the machine-owned Windows ProfileList mapping to fixed Desktop,
+  Documents, and Downloads directories. The Agent does not use LocalSystem's
+  interactive-folder environment. Source reads remain Agent-owned and only
+  destination-side export operations run under the caller token through the
+  dedicated export authority.
+- Normal Local IPC requests use Identification; only artifact export uses
+  Impersonation. The Agent checks exact operation-scoped SQOS, rejects
+  Delegation, and export independently binds the token SID to the principal.
+- RMS backup catalog access is principal-bound in every transport. The explicit
+  legacy compatibility mode permits exact-owner records plus historical
+  null-owner records only; null is never unrestricted. Retention is scoped by
+  database and owner principal. Artifact requests require Branch/Cashier +
+  `.bak` or Support Bundle + null target + `.zip`.
+- WPF owns only typed Local IPC adapters, bounded response validation, safe
+  inventory rendering, native Save As destination selection, overwrite
+  confirmation, and cancellation. It has no Agent/Infrastructure/SQL/HTTP/
+  process/PowerShell/Named Pipe/filesystem-reader dependency.
+- Local operators can inspect backup inventory but cannot create or export.
+  Local administrators can create backups and export approved artifacts.
+  RemoteHub and unauthenticated callers are denied. No restore control or
+  restore implementation was added.
 - WPF-05 intentionally exposes bounded redacted stack-frame labels, not raw or
-  unbounded traces. Redaction covers secrets, credentials, secret connection
-  values, host paths, Windows identities, SIDs, and frame paths; no universal
-  customer-data/PII-free guarantee is claimed. Task #13116 tracks policy.
+  unbounded traces. No universal customer-data/PII-free guarantee is claimed;
+  Task #13116 remains the privacy-policy task.
 
 ## Validation evidence
 
-Targeted WPF-05 validation completed:
-
-- Application `LogEvidenceQueryTests`: 6/6.
-- WPF `LogsAndSupportBundleViewModelTests`: 5/5.
-- WPF `LocalAgentLogsAndSupportBundleClientTests`: 4/4.
-- Agent Integration optional-handler fail-closed test: 1/1; new Support Bundle
-  audit/revocation/principal/mapper/architecture coverage is included.
-- Existing HTTP Support Bundle/audit-unavailable regression tests plus new
-  boundary coverage passed.
-- WPF Debug build and relevant Release project builds: 0 warnings, 0 errors.
-- `git diff --check`: passed.
-
-Final validation on the task state passed: strict Release solution build with
-Testing-only origin was 0 warnings/0 errors; Domain 12/12, Application 116/116,
-Infrastructure 156/156, Agent Integration 242/242, and WPF 57/57 (583/583);
-PowerShell quality 37/37; Pester 172 passed, 0 failed, 0 skipped, 0 pending;
-`git diff --check` passed; and both context/memory checks passed. The security
-classification found only the intended typed Named Pipe boundary, Agent-side
-diagnostics/HTTP composition, and redaction keyword checks/tests; no prohibited
-WPF machine-access path was introduced.
-Implementation and evidence commits are pushed in Draft PR #36; all seven
-required checks passed for the latest verified branch head. The PR remains
-Draft/open for Sol acceptance.
+- `dotnet restore pos/RmsSupportHub.Pos.slnx`: passed; all projects up to date.
+- Strict Testing-origin Release solution build with `--warnaserror`: passed,
+  0 warnings and 0 errors.
+- Release POS tests: aggregate 633/633 passed with no failures or skips;
+  focused Agent remediation coverage is 93/93 and Application query coverage
+  is 6/6.
+- Focused WPF-06 coverage includes Application authorization/inventory,
+  Agent backup runtime and shared artifact delivery, WPF workspace behavior,
+  architecture boundaries, principal isolation, cancellation, audit failure,
+  expiry/checksum states, unsafe destinations, overwrite confirmation, and
+  same-destination conflict control.
+- PowerShell quality: 37/37 files parsed; Pester 172/172 passed with no
+  skips/pending. `python .ai/scripts/context.py`,
+  `python .ai/scripts/check_memory.py`, and `git diff --check` passed.
+- Repository build gate: backend 342/342, backend Release build 0/0, and
+  Angular production build passed. Exact-head CI for commit `fddf6fe` is 7/7
+  green; no skipped/pending checks remain.
 
 ## Azure and backlog
 
-- Live 2026-08-23 reconciliation: E16 #13017 Active/P2; E17 #13018
-  Active/P1; E18 #13019 New/P2; E19 #13020 New/P2.
-- WPF children now match live states/priorities: #13022/#13024/#13031/#13033
-  Closed/P1; #13023/#13029/#13030 Active/P2; #13032/#13035 Active/P1;
-  #13034/#13116 New/P2; remaining WPF local/future children retain live New
-  priorities.
+- Live state: E16 #13017 Active/P2; E17 #13018 Active/P1; E18 #13019 New/P2;
+  E19 #13020 New/P2.
+- WPF children: #13022/#13024/#13031/#13033/#13035 Closed/P1;
+  #13023/#13029/#13030 Active/P2; #13032/#13034 Active/P1; #13116 New/P2.
+  Remaining WPF local/future children retain their live New priorities.
 - #13072-#13076 remain New in the Online Order integrated-testing backlog;
   #12900-#12902 remain New/P3 conditional and #12949 remains New/P3 deferred
   Production acceptance.
-- Azure #13035 has implementation and Draft PR #36 evidence for this branch;
-  it remains Active/P1 until Sol acceptance and merge.
+- #13035 records WPF-05 acceptance, PR #36, and its merge. #13034 records
+  WPF-06 as the active story while guarded restore remains separately gated.
+  Azure child #13129 (`Implement guarded RMS database restore in WPF`) is
+  New/P2 under #13034; #13142 is New/P2 for representative size/retention
+  validation and #13143 is New/P3 for deferred storage hygiene. #13032 remains
+  Active/P1 as the next recommended guarded service-control slice; WPF-07 is
+  not started.
 
 ## Runtime and environment boundary
 
-- Post-delivery final Release rebuild passed with 0 warnings/0 errors. Final WPF
-  runtime verification passed at
+- Final WPF Release artifact at
   `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
-  PID 7420, title `RMS Support Hub`, `Responding=True`, exactly one process at
-  the exact path, started `2026-08-23T22:07:05.1204584+03:00`. The process
-  required the process-local `WINDIR=C:\WINDOWS` environment normalization for
-  WPF font initialization and is left running.
-- The computer-use native pipe was unavailable after two required attempts;
-  no visible Logs/filter or Support Bundle screenshot/click evidence is claimed.
-- Final repository runtime probe ran `scripts/dev.ps1`: `GET
-  http://localhost:5200/api/health/live` returned 200/healthy,
-  `GET http://localhost:5200/api/health/ready` returned 200/ready with the
-  Testing tier, and `http://localhost:4200/` returned 200 HTML. The owner API
-  process (PID 34580) and Angular process (PID 13048) are left running with
-  the WPF process.
-- No Agent service, operator group, Production endpoint, Production database,
-  native RMS state, machine provisioning, or service mutation is authorized or
-  claimed.
+  PID 35600, title `RMS Support Hub`, `Responding=True`, exactly one process,
+  started `2026-08-24T14:56:08+03:00`; it is left running.
+- `scripts/dev.ps1` probes returned API live 200/healthy, API ready 200/ready
+  with Testing tier, and Angular `http://localhost:4200/` 200 HTML. Current
+  project-owned API PID is 8120 and Angular PID is 29192; WPF used process-local
+  `WINDIR=C:\WINDOWS`.
+- The current machine has no authorized Agent service/operator-group/database
+  mutation session. No live backup, restore, service mutation, Production
+  contact, machine provisioning, fleet/remote work, or customer-data mutation
+  is claimed.
+- No screenshot/click evidence is claimed because Computer Use visual access
+  was unavailable; process/title/responding and endpoint evidence are factual.
 
-`.ai/HANDOFF.md` remains `Empty`; no incomplete implementation handoff is
-needed while this execution continues.
+`.ai/HANDOFF.md` remains `Empty` while this execution completes.

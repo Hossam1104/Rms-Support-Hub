@@ -77,7 +77,29 @@ public sealed record RmsApprovedDatabaseBackup(
     string Sha256Checksum,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? ExpiresAtUtc,
-    string ServerPath);
+    string ServerPath,
+    RmsDatabaseBackupAvailability Availability = RmsDatabaseBackupAvailability.Available,
+    string? PrincipalSid = null);
+
+/// <summary>
+/// Explicit ownership policy for catalog reads. Principal-scoped reads match only the exact
+/// authenticated owner. Legacy compatibility additionally exposes explicitly unowned historical
+/// records; null is never an unrestricted principal bypass.
+/// </summary>
+public enum RmsDatabaseBackupAccessMode
+{
+    PrincipalScoped,
+    LegacyCompatibility
+}
+
+public enum RmsDatabaseBackupAvailability
+{
+    Available,
+    Expired,
+    Missing,
+    ChecksumMismatch,
+    Invalid
+}
 
 public interface IRmsDatabaseSqlOperations
 {
@@ -113,15 +135,31 @@ public interface IRmsDatabaseBackupStorage
     Task<RmsApprovedDatabaseBackup?> RegisterAsync(
         RmsDatabaseKind database,
         RmsDatabaseBackupAllocation allocation,
+        string principalSid,
         CancellationToken cancellationToken = default);
 
     Task<RmsApprovedDatabaseBackup?> ResolveAsync(
         RmsDatabaseKind database,
         string artifactId,
-        CancellationToken cancellationToken = default);
+        string principalSid,
+        CancellationToken cancellationToken = default,
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped);
 
     Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListAsync(
         RmsDatabaseKind database,
+        string principalSid,
+        CancellationToken cancellationToken = default,
+        RmsDatabaseBackupAccessMode accessMode = RmsDatabaseBackupAccessMode.PrincipalScoped);
+
+    Task<IReadOnlyList<RmsApprovedDatabaseBackup>> ListInventoryAsync(
+        RmsDatabaseKind database,
+        string principalSid,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> RevokeAsync(
+        RmsDatabaseKind database,
+        string artifactId,
+        string principalSid,
         CancellationToken cancellationToken = default);
 }
 
@@ -151,6 +189,7 @@ public interface IRmsDatabaseWorkflow
 {
     Task<RmsDatabaseWorkflowResult> BackupAsync(
         RmsDatabaseKind database,
+        string principalSid,
         IProgress<RmsDatabaseProgress>? progress = null,
         CancellationToken cancellationToken = default);
 
@@ -158,7 +197,8 @@ public interface IRmsDatabaseWorkflow
         RmsDatabaseKind database,
         string artifactId,
         IProgress<RmsDatabaseProgress>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? principalSid = null);
 }
 
 public enum RmsPrivilegedAuditEventKind
@@ -170,7 +210,8 @@ public enum RmsPrivilegedAuditEventKind
     Dispatch,
     Completed,
     Failed,
-    OutcomeUnknown
+    OutcomeUnknown,
+    Cancelled
 }
 
 public sealed record RmsPrivilegedAuditEvent(

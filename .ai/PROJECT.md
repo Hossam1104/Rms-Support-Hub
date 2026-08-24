@@ -45,17 +45,19 @@ Do not copy facts that can be cheaply discovered from the repository.
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
   credentials and capabilities server-owned; WPF uses typed Local IPC for read-only RMS/Agent health; inspection remains Agent-owned. Application diagnostics are transport-neutral and mapped to V1 at the Agent boundary.
-- WPF-04 merged; WPF-05 metadata-only IPC; WPF-06 owns export. Bounded redacted frames are visible; universal PII/customer-data-free output is not claimed; #13116 tracks policy.
-- Slice C establishes the permanent product/service identity
-  `RmsSupportAgent`, safe migration inputs for the two historical Testing
-  service names, machine-pinned package trust with a deterministic canonical
-  envelope, a controlled LocalMachine signing/publication boundary, a typed
-  checkpointed Windows install/upgrade/repair/rollback/uninstall lifecycle,
-  machine-owned release mode with distinct Production/Testing signer pins,
-  file-and-ancestor ACL/owner/reparse verification for security-control files,
-  actual LocalSystem CNG key-file evidence, fail-closed certificate/browser-
-  policy contracts, bounded durable JSONL audit, fixed RMS-root health, update
-  state, and insurance-attachment aggregate contracts. Installer/bootstrap scripts execute only after trust, ownership, certificate, ACL, and health prerequisites are proved;
+- WPF-04/05 merged; WPF-05 is `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`;
+  WPF-06 adds backup, inventory, and export. Its proposed ADR-0030 boundary
+  binds roots to the authenticated SID's ProfileList, uses caller-token-only
+  destination I/O, exact operation-scoped SQOS, truthful audit/rollback,
+  owner-scoped retention, explicit legacy compatibility, principal-required
+  registration, and bounded coordination; restore remains gated.
+  Redacted frames are not universal PII-free evidence; #13116 tracks it.
+- Slice C establishes permanent `RmsSupportAgent` identity, safe legacy-name
+  migration, machine-pinned package trust, LocalMachine signing, checkpointed
+  lifecycle, release-mode signer pins, ACL/owner/reparse verification, CNG
+  key evidence, fail-closed certificate/browser policy, durable audit, fixed
+  RMS-root health, update state, and insurance aggregates. Installer/bootstrap
+  scripts require trust, ownership, certificate, ACL, and health evidence;
   absent evidence fails closed and no Production/customer mutation is claimed.
 - POS Slice B adds fixed Main Server profiles/read-only state, manifest-bound
   diagnostics, atomic principal-scoped snapshots, and typed package/repair/

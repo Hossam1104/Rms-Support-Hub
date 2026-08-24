@@ -6,15 +6,19 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RmsSupportHub.Pos.Agent.Artifacts;
 using RmsSupportHub.Pos.Agent.Diagnostics;
 using RmsSupportHub.Pos.Agent.Invocation;
 using RmsSupportHub.Pos.Agent.Rms;
+using RmsSupportHub.Pos.Agent.RmsDatabase;
 using RmsSupportHub.Pos.Agent.Services;
 using RmsSupportHub.Pos.Agent.Support;
 using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Invocation;
 using RmsSupportHub.Pos.Application.Services;
 using RmsSupportHub.Pos.Contracts.V1.LocalIpc;
+using RmsSupportHub.Pos.Contracts.V1.Rms;
+using RmsSupportHub.Pos.Domain.Models;
 using RmsSupportHub.Pos.LocalIpc;
 
 namespace RmsSupportHub.Pos.Agent.LocalIpc;
@@ -35,7 +39,10 @@ public sealed class LocalIpcServer(
     ILogger<LocalIpcServer> logger,
     ILocalIpcServerPipeFactory? serverPipeFactory = null,
     LogEvidenceQueryHandler? logEvidence = null,
-    SupportBundleExecutor? supportBundle = null) : IHostedService
+    SupportBundleExecutor? supportBundle = null,
+    RmsDatabaseBackupQueryHandler? backupHandler = null,
+    LocalRmsDatabaseBackupRuntime? localBackup = null,
+    ArtifactDeliveryService? artifactDelivery = null) : IHostedService
 {
     private static readonly TimeSpan InitialRetryBackoff = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MaximumRetryBackoff = TimeSpan.FromSeconds(5);
@@ -329,8 +336,20 @@ public sealed class LocalIpcServer(
                     return;
                 }
 
+                if (!HasExpectedImpersonationLevel(request.Operation, identity))
+                {
+                    await WriteErrorAsync(
+                        pipe,
+                        requestId,
+                        correlationId,
+                        "security_verification_failed",
+                        "The IPC caller security posture was rejected.",
+                        timeout.Token).ConfigureAwait(false);
+                    return;
+                }
+
                 var context = contextFactory.CreateLocalWpf(identity, operatorGroupSid, correlationId);
-                await DispatchAsync(pipe, request, context, correlationId, timeout.Token).ConfigureAwait(false);
+                await DispatchAsync(pipe, request, context, identity!, correlationId, timeout.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (serverCancellationToken.IsCancellationRequested)
             {
@@ -392,6 +411,7 @@ public sealed class LocalIpcServer(
         NamedPipeServerStream pipe,
         LocalIpcRequestEnvelope request,
         InvocationContext context,
+        WindowsIdentity identity,
         string effectiveCorrelationId,
         CancellationToken cancellationToken)
     {
@@ -635,6 +655,119 @@ public sealed class LocalIpcServer(
 
                 return;
 
+            case LocalIpcProtocol.AuthorizationOperation:
+                if (request.Payload is not null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, "invalid_request", "The authorization operation does not accept a payload.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    new LocalIpcAuthorizationDto(
+                        context.AuthorizationLevel.ToString(),
+                        context.AuthorizationLevel is InvocationAuthorizationLevel.LocalOperator or InvocationAuthorizationLevel.LocalAdministrator,
+                        context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator,
+                        context.AuthorizationLevel == InvocationAuthorizationLevel.LocalAdministrator),
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.BackupInventoryOperation:
+                if (request.Payload is not null || backupHandler is null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, "invalid_request", "The backup inventory request was invalid.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var inventory = await backupHandler.InventoryAsync(context, cancellationToken).ConfigureAwait(false);
+                if (!inventory.Succeeded || inventory.Value is null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, inventory.Code, inventory.Detail, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(
+                    pipe,
+                    request.RequestId,
+                    effectiveCorrelationId,
+                    new LocalIpcBackupInventoryDto(
+                        inventory.Value.CheckedAtUtc,
+                        inventory.Value.Items.Select(ToBackupArtifact).ToArray()),
+                    cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.BackupCreateOperation:
+                if (localBackup is null
+                    || !TryDeserializePayload(request.Payload, out LocalIpcBackupCreateRequestDto? createRequest)
+                    || createRequest is null
+                    || !Enum.IsDefined(createRequest.Target))
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, "invalid_request", "The backup request was invalid.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var created = await localBackup
+                    .StartAsync(context, createRequest.Target, effectiveCorrelationId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!created.Succeeded || created.Operation is null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, created.ErrorCode ?? "backup_failed", created.ErrorMessage ?? "The backup could not be started.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(pipe, request.RequestId, effectiveCorrelationId, created.Operation, cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.BackupStatusOperation:
+                if (localBackup is null
+                    || !TryDeserializePayload(request.Payload, out LocalIpcBackupOperationRequestDto? statusRequest)
+                    || statusRequest is null
+                    || !Enum.IsDefined(statusRequest.Target)
+                    || !IsSafeToken(statusRequest.OperationId)
+                    || !localBackup.TryGet(context, statusRequest.Target, statusRequest.OperationId, out var currentOperation)
+                    || currentOperation is null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, "operation_not_found", "The backup operation was not found.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                await WriteSuccessAsync(pipe, request.RequestId, effectiveCorrelationId, currentOperation, cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.BackupCancelOperation:
+                if (localBackup is null
+                    || !TryDeserializePayload(request.Payload, out LocalIpcBackupOperationRequestDto? cancelRequest)
+                    || cancelRequest is null
+                    || !Enum.IsDefined(cancelRequest.Target)
+                    || !IsSafeToken(cancelRequest.OperationId)
+                    || !localBackup.TryGet(context, cancelRequest.Target, cancelRequest.OperationId, out var cancelOperation)
+                    || cancelOperation is null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, "operation_not_found", "The backup operation was not found.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                localBackup.Cancel(context, cancelRequest.Target, cancelRequest.OperationId);
+                await WriteSuccessAsync(pipe, request.RequestId, effectiveCorrelationId, cancelOperation, cancellationToken).ConfigureAwait(false);
+                return;
+
+            case LocalIpcProtocol.ArtifactExportOperation:
+                if (artifactDelivery is null
+                    || !TryDeserializePayload(request.Payload, out LocalIpcArtifactExportRequestDto? exportRequest)
+                    || exportRequest is null)
+                {
+                    await WriteErrorAsync(pipe, request.RequestId, effectiveCorrelationId, "invalid_request", "The artifact export request was invalid.", cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var exportResult = await artifactDelivery
+                    .ExportAsync(context, context.AuthenticatedCaller, exportRequest, identity, cancellationToken)
+                    .ConfigureAwait(false);
+                await WriteSuccessAsync(pipe, request.RequestId, effectiveCorrelationId, exportResult, cancellationToken).ConfigureAwait(false);
+                return;
+
             default:
                 await WriteErrorAsync(
                     pipe,
@@ -796,6 +929,72 @@ public sealed class LocalIpcServer(
         && value.All(character => character is >= '!' and <= '~');
 
     private static string NewCorrelationId() => Guid.NewGuid().ToString("N");
+
+    private static bool TryDeserializePayload<T>(JsonElement? payload, out T? value)
+    {
+        value = default;
+        if (payload is not { } element)
+        {
+            return false;
+        }
+
+        try
+        {
+            value = element.Deserialize<T>(JsonOptions);
+            return value is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool HasExpectedImpersonationLevel(
+        string operation,
+        WindowsIdentity identity)
+    {
+        try
+        {
+            var expected = string.Equals(
+                operation,
+                LocalIpcProtocol.ArtifactExportOperation,
+                StringComparison.Ordinal)
+                ? TokenImpersonationLevel.Impersonation
+                : TokenImpersonationLevel.Identification;
+            return identity.ImpersonationLevel == expected;
+        }
+        catch
+        {
+            // Token details are never returned to the caller. A token that cannot be inspected is
+            // not an acceptable basis for either a diagnostic or a destination write.
+            return false;
+        }
+    }
+
+    private static LocalIpcBackupArtifactDto ToBackupArtifact(
+        RmsDatabaseInventoryItem item)
+    {
+        var target = item.Database == RmsDatabaseKind.Branch
+            ? RmsDatabaseTarget.Branch
+            : RmsDatabaseTarget.Cashier;
+        var availability = item.Availability switch
+        {
+            RmsDatabaseBackupAvailability.Available => LocalIpcBackupAvailability.Available,
+            RmsDatabaseBackupAvailability.Expired => LocalIpcBackupAvailability.Expired,
+            RmsDatabaseBackupAvailability.Missing => LocalIpcBackupAvailability.Missing,
+            RmsDatabaseBackupAvailability.ChecksumMismatch => LocalIpcBackupAvailability.ChecksumMismatch,
+            _ => LocalIpcBackupAvailability.Invalid
+        };
+        return new(
+            target,
+            item.ArtifactId,
+            item.DisplayName,
+            item.SizeBytes,
+            item.Sha256Checksum,
+            item.CreatedAtUtc,
+            item.ExpiresAtUtc ?? item.CreatedAtUtc,
+            availability);
+    }
 
     private static async Task AwaitWithoutThrowingAsync(Task task, CancellationToken cancellationToken)
     {

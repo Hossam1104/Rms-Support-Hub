@@ -1,77 +1,84 @@
-# WPF-05 - Logs, Safe Diagnostic Evidence, and Support Bundle
+SOL_ACCEPTED_WPF06_SHA=<provided by Sol>
+
+# WPF-07 - Guarded RMS Service Control
 
 ROLE: Implement
-AUTHORITY: GPT-5.6 Sol is Planner, Architect, and Acceptance Authority
-BRANCH: `feat/wpf-05-logs-support-bundle`
-PRIMARY STORY: US-E17-05 / #13035
-STATUS: Implemented in Draft PR #36; exact-head CI green; Sol acceptance pending
+PRIMARY STORY: #13032 - Agent/RMS service health and approved service control
+STATUS: Future prompt only. WPF-06 security/correctness remediation is implemented on `feat/wpf-06-database-backup-artifact-delivery` but remains pending formal GPT-5.6 Sol acceptance. Do not execute this prompt in the current session.
 
-## WPF-05 truth
+## Current truth and hard boundaries
 
-- Started from accepted WPF-04 PR #35 main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; WPF-01/#32 through WPF-04/#35 are merged.
-- `WPF -> rms.logs.evidence` typed Local IPC -> shared Application handler -> existing Agent analyzer/evidence reader. Application models are transport-neutral; Agent maps to V1 DTOs.
-- Agent owns three fixed services, authorization, 15-second timeout, 12 records, 8 unknown reasons, 4 recommendations, redaction, and response bounds. Collection is only on Logs open/Refresh; no polling, arbitrary payload, caller-selected source file, raw log, SQL, path, or mutation.
-- Secrets, credentials, connection-string secret values, host paths, Windows identities, SIDs, and raw/unbounded stack traces do not cross IPC. Bounded redacted stack-frame labels are intentionally visible; WPF-05 does not claim universal customer-data/PII-free output. Task #13116 defines remaining policy validation.
-- `WPF -> support.bundle.generate` -> shared `SupportBundleExecutor`; Local Administrator only; principal/correlation bound; fixed-root generator; one audit; revoke on audit failure; successful SupportBundle timeline only after audit. WPF receives opaque metadata only; export/download is deferred to WPF-06.
-- WPF has no Agent/Infrastructure reference, direct log reader/EventLog/SQL/HTTP/process/PowerShell/Named Pipe client, filesystem reader, mutation, backup/restore, fleet/SignalR, Production, provisioning, or Online Order work.
+- WPF-05 was accepted at `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`, and #13035 is Closed/P1.
+- WPF-06 implements fixed Branch/Cashier backup creation, principal-scoped bounded inventory, and one shared Agent-owned local artifact-delivery path for database backups and Support Bundles. Its final security remediation includes caller-bound ProfileList Desktop/Documents/Downloads roots, export-only caller impersonation, accepted/completed/failed/cancelled audit truth with rollback compensation, explicit principal isolation and legacy compatibility, bounded destination coordination, and strict `.bak`/`.zip` request validation.
+- WPF-06 final Opus remediation additionally preserves Identification for normal Local IPC, uses Impersonation only for `artifact.export.local`, enforces exact server-side SQOS per operation with Delegation rejected, independently binds the export Windows token SID to the authenticated principal, records local database backup Requested/Accepted/Started/Dispatch/terminal events in the shared privileged audit stream with pre-mutation fail-closed behavior, and requires a valid principal SID for every new backup registration. A real Windows Named Pipe test proves caller-token Impersonation and rejects Identification before destination mutation. ADR-0030 remains Proposed pending GPT-5.6 Sol acceptance.
+- WPF-06 does not implement database restore. #13034 remains Active/P1. Azure child #13129, `Implement guarded RMS database restore in WPF`, is New/P2 under #13034.
+- Preserve #13018 Active/P1, #13032 Active/P1, #13033 Closed/P1, #13035 Closed/P1, #13116 New/P2, #13019 New/P2, #13020 New/P2, and Online Order #13072-#13076 without unrelated changes.
+- The next recommendation is guarded RMS service control under #13032, not Safety Snapshots. Do not start #13036 or any WPF-08 slice.
+- No Production access, machine provisioning, Agent/operator-group provisioning, real RMS backup/restore, service mutation, fleet/remote work, or Online Order work is authorized until explicitly authorized for that separate execution.
 
-## Validation and live truth
+## Mandatory startup
 
-- Restore passed; strict Release solution build with process-local `PosAgentSecurity__SupportHubOrigin=https://localhost:4443` passed with 0 warnings/0 errors.
-- Release POS tests: Domain 12/12, Application 116/116, Infrastructure 156/156, Agent Integration 242/242, WPF 57/57; total 583/583. PowerShell 37/37; Pester 172/172, 0 failed/skipped/pending.
-- Context, diff-check, and focused remediation tests passed; `check_memory.py` must pass after this compact task record is finalized.
-- Azure 2026-08-23: #13017 Active/P2; #13018 Active/P1; #13031/#13033 Closed/P1; #13032/#13035 Active/P1; #13034/#13116 New/P2; #13019/#13020 New/P2; #13072-#13076 preserved New with live P1/P2 priorities.
-- PR #36 remains Draft/open; no ready/merge/deploy/provision/Production/RMS mutation; WPF-06 not started.
-- Runtime truth is recorded in `.ai/STATE.md`; no visual claim is made without Computer Use.
+Read `TASK.md`, `.ai/STATE.md`, run `python .ai/scripts/context.py`, read `.ai/HANDOFF.md` only if its status is `In Progress` or `Blocked`, then read only task-relevant sources, tests, and documentation. Inspect current code and tests before challenging accepted work. Do not restart WPF-06 discovery.
 
-## Full next prompt - WPF-06
+## Required delivery sequence before implementation
 
-SOL_ACCEPTED_WPF05_SHA=<provided by Sol after acceptance>
+The first action after Sol supplies the exact accepted SHA is to verify the delivery boundary. Stop immediately if any check fails or the PR head moved:
 
-Inert until Sol supplies the exact accepted SHA above; do not execute WPF-06 during WPF-05.
+1. Verify PR #37 is still Draft, its head branch is `feat/wpf-06-database-backup-artifact-delivery`, and its head commit is exactly `SOL_ACCEPTED_WPF06_SHA`.
+2. Verify exact-head POS CI and Support Hub CI are green.
+3. Do not continue if the head moved, the branch is dirty unexpectedly, or either required CI lane is not green.
+4. Run `gh pr ready 37` only after the exact accepted head and CI are verified.
+5. Merge only with `gh pr merge 37 --squash --match-head-commit <accepted SHA>`.
+6. Verify the PR reports `merged=true` and capture the resulting WPF-06 merge SHA.
+7. Check out `main`.
+8. Run `git pull --ff-only origin main`.
+9. Verify the worktree is clean and `HEAD == origin/main == <WPF-06 merge SHA>`.
+10. Update Azure WPF-06 evidence with the accepted SHA, PR #37, merge SHA, and validation evidence; keep #13034 Active/P1 because guarded restore remains outstanding.
+11. Set or retain #13032 as Active/P1 and use it as the WPF-07 story.
+12. Create branch `feat/wpf-07-guarded-rms-service-control` from the verified `main` head.
 
-### 1. Exact-head merge automation (first)
+Do not merge, mark ready, or start WPF-07 before all preceding acceptance-boundary checks succeed.
 
-Run first: `gh pr view 36 --json number,state,isDraft,baseRefName,headRefName,headRefOid,mergeCommit`. Verify PR #36 is open/Draft, base `main`, and `headRefOid` equals `SOL_ACCEPTED_WPF05_SHA`; verify exact-head POS and Support Hub CI are green. If moved, missing, or red, abort. Then run `gh pr ready 36`, `gh pr merge 36 --squash --match-head-commit <accepted SHA>`, verify `merged=true`, capture squash SHA, `git checkout main`, `git pull --ff-only`, and verify clean main with `HEAD==origin/main` containing that merge. Update #13035 Closed/P1 with PR/accepted SHA/merge SHA/CI evidence only after this proof. Create `git switch -c feat/wpf-06-database-backup-artifact-delivery` only then.
+## WPF-07 objective
 
-### 2. Baseline, Azure, and scope
+Implement only the guarded RMS service-control capability through:
 
-Use WPF-04 main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; verify WPF-01..05 from code/tests. Keep #13018 Active/P1, #13032 Active/P1, #13031/#13033 Closed/P1, #13035 Closed/P1 after merge, #13034 New/P2, #13017 Active/P2, #13019/#13020 New/P2, #13116, and #13072-#13076 unchanged except required evidence. Implement only fixed RMS backup creation, bounded inventory/metadata, local artifact delivery/export, and Support Bundle export. Restore is separately gated; do not implement it or start snapshots, cleanup/reset, package, rollback, SignalR/fleet, remote, installer, Online Order, or Production work.
+`WPF -> typed LocalIpcClient -> Agent Local IPC -> transport-neutral Application/Agent seam -> allow-listed Windows service manager`.
 
-### 3. Architecture and authorization
+The capability must use one fixed, server-owned service catalog and preserve the existing WPF-06 backup/export path and WPF-05 logs/evidence/Support Bundle behavior.
 
-Keep Domain independent; Application has no Contracts; Agent is composition/mapping root; WPF owns only typed Local IPC adapters. Preserve Core -> Data -> API layering and `IOrderModule.Capabilities` gates. Only `LocalIpcClient` owns WPF IPC. WPF must not use Agent/Infrastructure, EventLog, direct log readers, `SqlConnection`, `HttpClient`, `Process.Start`, PowerShell, `NamedPipeClientStream`, filesystem readers, or native RMS APIs. Add regression searches/tests.
+## Required scope
 
-Derive authority from trusted Windows invocation context, never payload role/SID/target claims. LocalOperator may read bounded inventory/metadata; LocalAdministrator is required for backup creation, Support Bundle export, and mutation. Bind artifact, capability, audit, correlation, and cancellation to the authenticated principal; wrong principals cannot read, download, revoke, or learn paths.
+- Expose only fixed catalog entries for the approved Agent/RMS services and only typed `Start`, `Stop`, and `Restart` actions. Reject arbitrary service names, arbitrary SCM targets, generic service-control payloads, and caller-supplied executables.
+- LocalAdministrator may mutate. LocalOperator is read-only. RemoteHub and unauthenticated callers are denied for local WPF service mutation.
+- Require explicit confirmation for every Stop and Restart request. Bind confirmation, target, action, principal, correlation, one-use mutation authorization, idempotency, and the fixed mutation lease at the Agent boundary.
+- Record durable `requested`, `accepted`, `completed`, `failed`, and `cancelled` audit outcomes. Never report success when the final audit is unavailable or service state is unknown.
+- Use one bounded, reference-counted mutation coordinator for service actions, with bounded status/progress, timeout/cancellation handling, truthful ambiguous outcomes, and no unbounded in-memory key growth.
+- Enforce dependency safety and deterministic preflight. Never stop or restart the Agent service itself unless a separately accepted architecture explicitly defines safe recovery; default behavior must reject that target.
+- Preserve backup/export capabilities and their security boundaries. Do not implement restore, snapshots, cleanup, branch reset, package install/upgrade/repair/uninstall, rollback/recovery, configuration changes, or remote/fleet service control in this slice.
+- Do not invoke PowerShell, `sc.exe`, arbitrary command shells, or a generic SCM console. Use the existing typed service-manager port and allow-list patterns.
+- Build the focused WPF workspace with design tokens, read-only operator presentation, administrator confirmation UX, bounded state/error handling, cancellation on shutdown, and no hidden service targets.
 
-### 4. Fixed targets and input boundary
+## Required tests
 
-Use only the server-owned Branch/Cashier RMS target catalog and opaque target IDs. Reject caller-selected SQL, connection strings, database names, source paths, UNC paths, filenames, shell, PowerShell, arbitrary files, and caller-selected filters. No request/IPC/URL/query field carries a caller-selected source SQL/path; no server path is returned.
+Add deterministic tests for:
 
-### 5. Artifact, audit, and delivery security
+- Fixed catalog and rejection of arbitrary service IDs, names, commands, and payload fields.
+- Operator read-only behavior; administrator Start/Stop/Restart authorization; RemoteHub and unauthenticated denial.
+- Stop/Restart confirmation, one-use authorization, principal/correlation binding, idempotency, same-target conflict, different-target concurrency, and coordinator cleanup.
+- Dependency safety, Agent-self protection, service-manager unavailable/timeout/error states, cancellation, unknown post-action state, and recovery truth.
+- Durable audit ordering and final-outcome failure behavior for requested/accepted/completed/failed/cancelled paths.
+- Bounded progress/status responses, malformed-response handling, WPF shutdown cancellation, and preservation of WPF-05/WPF-06 regression surfaces.
+- Architecture boundaries: WPF has no Agent/Infrastructure/SQL/HTTP/process/PowerShell/Named Pipe/filesystem-reader/service-controller dependency beyond typed Local IPC and approved native output dialogs; Application remains transport-neutral and Domain remains Contracts-free.
 
-Reuse fixed Agent roots, `ArtifactCatalog`, opaque IDs, principal scope, retention, size/time limits, expiry, checksum, cancellation, and fail-closed missing-artifact behavior. Exclude/redact credentials, secret connection values, keys, host paths, identities, SIDs, raw logs, customer payloads, and unbounded exception/stack data. Record exactly one durable audit per attempted operation and claim success only after acceptance. Audit/checksum/size/registration failure deletes/revokes the capability and file and records no successful timeline. Support Bundle export uses this same mechanism, never an ad hoc ZIP/path route.
+## Validation and delivery
 
-Destination UX is destination-only: if a save chooser is allowed, Agent validates it against an allowed local policy; source remains an opaque Agent artifact. Reject traversal, ADS, reparse/symlink escape, UNC/network, protected locations, and out-of-policy destinations without path leakage. Overwrite requires explicit admin confirmation, audit, atomic validated temp-file replacement, checksum/size verification, and temp cleanup; never silently overwrite.
+Run focused tests first, then every POS test project, strict Testing-origin Release build with `--warnaserror`, `.\scripts\test-powershell-quality.ps1`, `Invoke-Pester -Path .\scripts\tests -PassThru`, `python .ai/scripts/context.py`, `python .ai/scripts/check_memory.py`, `git diff --check`, and prohibited-reference/security searches. Report actual counts and distinguish unavailable live dependencies.
 
-### 6. Expiry, cancellation, concurrency, and WPF UI
+Update only affected tracked Markdown and Azure evidence. Review the final task-related diff, commit, push without force, create a Draft PR for #13032, wait for exact-head POS and Support Hub CI, and after authorized runtime verification leave the final current-head WPF process running. Do not provision Agent/operator groups, contact Production, run a real RMS backup/restore, or mutate services during this prompt unless separately authorized.
 
-Verify checksum and expiry before metadata/bytes; enforce bounded size/time, cooperative cancellation, retention cleanup, and truthful canceled/failed outcomes. Prevent concurrent backup/export/restore for one target with the existing typed lease; prove a second request cannot delete a valid first artifact. Reject malformed/oversized/mismatched-correlation/unsupported-version/invalid-enum/missing-file/wrong-principal requests without exception or path detail.
+After WPF-07 is complete, record concise history/state evidence, set `.ai/HANDOFF.md` to `Empty`, and stop. Do not begin WPF-08, Safety Snapshots, or another WPF slice in the same execution.
 
-Add only approved WPF-06 target, metadata, admin-confirmation, progress, cancel, checksum/expiry, destination, overwrite, and safe-state UI. Health polling stays read-only; backup/export is explicit. LocalOperator controls are read-only/disabled. Do not claim export, backup, restore, or remote/fleet behavior without evidence.
-
-### 7. Tests and required searches
-
-Add deterministic tests for fixed targets, no caller SQL/path, operator/admin authorization, principal-scoped read/revoke, opaque metadata, checksum/expiry/retention, size/time, cancel, audit failure/revocation, overwrite/reparse/traversal, concurrency, malformed responses, and WPF-05 regression. Preserve WPF-05 3-service/12-record/8-unknown/4-recommendation/15-second/on-demand bounds, no arbitrary input, secret/drive/UNC/credential/SID/user redaction, bounded redacted frames, audit-once/timeline-once success, audit-failure revocation, and HTTP origin + one-use-token tests.
-
-Architecture tests must prove Application has no Contracts reference/import, Domain has no Contracts, WPF has no Agent/Infrastructure/direct log reader/EventLog/SQL/HTTP/process/PowerShell/NamedPipe access beyond `LocalIpcClient`. Run all POS test projects, record actual counts, PowerShell quality, Pester, restore, strict Release `dotnet build pos/RmsSupportHub.Pos.slnx -c Release --no-restore --warnaserror` with Testing-only origin, `python .ai/scripts/context.py`, `python .ai/scripts/check_memory.py`, `git diff --check`, and prohibited-reference/security searches.
-
-### 8. Docs, Azure, runtime, Git, and report
-
-Update only affected tracked Markdown and live Azure evidence. State WPF-01..05 merged only after proof, WPF-06 current, #13035 closed after accepted merge, export scope, and the precise bounded-redaction caveat; never say "no customer data" or "no stack trace" when bounded redacted frames are exposed. Do not bulk-edit unrelated Azure items.
-
-Stop only stale project-owned Support Hub processes; build Release; launch final WPF with process-local `WINDIR=C:\WINDOWS` only if needed. Verify actual path/PID/title/responding/exactly one instance and actual frontend/backend probes; make no visual claim without Computer Use; preserve healthy API/Angular; never provision Agent/group or contact Production.
-
-Review diff, remove temporary files, commit, push without force, create/update a Draft PR, wait for exact-head POS and Support Hub CI, and report branch/commit/PR, Azure states, actual counts, runtime evidence, unavailable dependencies, and remaining gates. Do not ready or merge the WPF-06 PR.
-
-HARD STOP - DO NOT EXECUTE WPF-06 until GPT-5.6 Sol reviews and accepts WPF-05. Do not start WPF-06 now. Do not merge WPF-05 now. Leave the final WPF application running.
+HARD STOP - DO NOT EXECUTE WPF-07 UNTIL GPT-5.6 SOL ACCEPTS WPF-06 AND THE EXACT MERGE SEQUENCE ABOVE HAS SUCCEEDED.
+DO NOT IMPLEMENT DATABASE RESTORE IN WPF-07.
+DO NOT START WPF-08 OR SAFETY SNAPSHOTS.

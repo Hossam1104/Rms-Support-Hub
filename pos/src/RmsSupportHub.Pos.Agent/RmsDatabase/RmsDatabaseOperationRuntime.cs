@@ -111,7 +111,11 @@ public sealed class RmsDatabaseOperationRuntime(
             return null;
         }
 
-        var backups = await storage.ListAsync(definition.Kind, cancellationToken).ConfigureAwait(false);
+        var backups = await storage.ListAsync(
+            definition.Kind,
+            principalSid,
+            cancellationToken,
+            RmsDatabaseBackupAccessMode.LegacyCompatibility).ConfigureAwait(false);
         return new(
             ToContractTarget(definition.Kind),
             definition.DisplayName,
@@ -206,7 +210,7 @@ public sealed class RmsDatabaseOperationRuntime(
         RmsDatabaseLease? lease = null;
         try
         {
-            var preflight = await PreflightAsync(definition.Kind, operation, artifactId, cancellationToken)
+            var preflight = await PreflightAsync(definition.Kind, operation, artifactId, principalSid, cancellationToken)
                 .ConfigureAwait(false);
             if (preflight is not null)
             {
@@ -330,8 +334,8 @@ public sealed class RmsDatabaseOperationRuntime(
                 }
             });
             var result = operation == RmsDatabaseOperationKind.Backup
-                ? await workflow.BackupAsync(database, progress, CancellationToken.None).ConfigureAwait(false)
-                : await workflow.RestoreAsync(database, artifactId!, progress, CancellationToken.None).ConfigureAwait(false);
+                ? await workflow.BackupAsync(database, principalSid, progress, CancellationToken.None).ConfigureAwait(false)
+                : await workflow.RestoreAsync(database, artifactId!, progress, CancellationToken.None, principalSid).ConfigureAwait(false);
 
             operations.Complete(
                 handle.OperationId,
@@ -381,10 +385,16 @@ public sealed class RmsDatabaseOperationRuntime(
         RmsDatabaseKind database,
         RmsDatabaseOperationKind operation,
         string? artifactId,
+        string principalSid,
         CancellationToken cancellationToken)
     {
         if (operation == RmsDatabaseOperationKind.Restore
-            && await storage.ResolveAsync(database, artifactId ?? string.Empty, cancellationToken).ConfigureAwait(false) is null)
+            && await storage.ResolveAsync(
+                database,
+                artifactId ?? string.Empty,
+                principalSid,
+                cancellationToken,
+                RmsDatabaseBackupAccessMode.LegacyCompatibility).ConfigureAwait(false) is null)
         {
             return ("restore_backup_not_approved", "The selected backup is not an approved Agent-owned artifact.");
         }

@@ -157,6 +157,26 @@ public sealed class ArtifactCatalog
     }
 
     /// <summary>
+    /// Reads principal-bound metadata without pruning it first so a delivery caller can return a
+    /// truthful expired-artifact result. The method never returns the backing path.
+    /// </summary>
+    public bool TryGetIncludingExpired(string principal, string artifactId, out ArtifactMetadataDto? metadata)
+    {
+        lock (_gate)
+        {
+            if (_entries.TryGetValue(artifactId, out var entry)
+                && string.Equals(entry.Principal, principal, StringComparison.Ordinal))
+            {
+                metadata = entry.Metadata;
+                return true;
+            }
+
+            metadata = null;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Revokes a newly-created capability when a required post-generation security record cannot
     /// be persisted. The operation remains principal-scoped and never exposes the backing path.
     /// </summary>
@@ -233,6 +253,11 @@ public sealed class ArtifactCatalog
         {
             var stream = await _fileSystem.OpenReadAsync(entry.Path, cancellationToken).ConfigureAwait(false);
             return new ArtifactDownloadStream(stream, () => ReleaseDownload(entry));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ReleaseDownload(entry);
+            throw;
         }
         catch
         {

@@ -226,6 +226,15 @@
                                 </StackPanel>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding ShowBackupCommand}" Style="{StaticResource NavButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" Text="Backup" />
+                                    <TextBlock Margin="0,3,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Create &amp; deliver" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding ShowLogsCommand}" Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal">
                                 <Border Width="3" Height="18" Margin="0,0,13,0" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
@@ -237,7 +246,6 @@
                         </Button>
                         <TextBlock Margin="8,30,0,12" Style="{DynamicResource EyebrowStyle}" Text="COMING LATER" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="RMS" />
-                        <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Backup" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Maintenance" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Packages" />
                         <Button Style="{StaticResource NavButtonStyle}" IsEnabled="False" Content="Diagnostics" />
@@ -414,6 +422,151 @@
                     </Border>
 
                     <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Dashboard, Services, and Database are read-only. The Agent remains the only native diagnostic authority." TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer
+                Grid.Column="1"
+                Padding="34,30,34,40"
+                Visibility="{Binding IsBackupVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="920">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="DATABASE BACKUP  /  LOCAL DELIVERY" />
+                            <TextBlock Margin="0,8,0,0" Style="{DynamicResource PageTitleStyle}" Text="RMS database backups" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource PageSubtitleStyle}" Text="Fixed Branch and Cashier targets, Agent-owned artifacts, and administrator-controlled local export." TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Margin="24,8,0,0"
+                            Command="{Binding RefreshCommand}"
+                            Content="Refresh"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    </Grid>
+
+                    <Border
+                        Margin="0,28,0,0"
+                        Padding="26"
+                        Background="{DynamicResource HeroBrush}"
+                        BorderBrush="{DynamicResource HeroBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource CardCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="12" Height="12" Margin="0,3,12,0" Fill="{DynamicResource StatusNeutralBrush}" />
+                                    <TextBlock Style="{DynamicResource HeroStateStyle}" Text="{Binding BackupStateLabel}" />
+                                </StackPanel>
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource HeroMessageStyle}" Text="{Binding BackupStatusSummary}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,14,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding BackupAuthorizationNote}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" MinWidth="180" Margin="30,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="INVENTORY CHECKED" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding BackupInventoryCheckedDisplay}" />
+                                <TextBlock Margin="0,5,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Bounded, principal-scoped metadata" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,7,0" Style="{DynamicResource DetailCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="BRANCH DATABASE" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="RmsBranchSrv" />
+                                <TextBlock Margin="0,6,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Agent resolves the canonical source and fixed backup root." TextWrapping="Wrap" />
+                                <Button Margin="0,18,0,0" Command="{Binding CreateBranchBackupCommand}" Content="Create backup" Style="{StaticResource PrimaryButtonStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="7,0,0,0" Style="{DynamicResource DetailCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource EyebrowStyle}" Text="CASHIER DATABASE" />
+                                <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="RmsCashierSrv" />
+                                <TextBlock Margin="0,6,0,0" Style="{DynamicResource SmallBodyStyle}" Text="Agent resolves the canonical source and fixed backup root." TextWrapping="Wrap" />
+                                <Button Margin="0,18,0,0" Command="{Binding CreateCashierBackupCommand}" Content="Create backup" Style="{StaticResource PrimaryButtonStyle}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Margin="0,20,0,0" Style="{DynamicResource DetailCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource EyebrowStyle}" Text="RECENT BACKUPS" />
+                            <ItemsControl Margin="0,18,0,0" ItemsSource="{Binding BackupItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10" Padding="16" Background="{DynamicResource SurfaceMutedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource ControlCornerRadius}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Style="{DynamicResource DetailValueStyle}" Text="{Binding TargetLabel}" />
+                                                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding DisplayName}" />
+                                                    <TextBlock Margin="0,10,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding CreatedDisplay}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" MinWidth="150" Margin="22,0" HorizontalAlignment="Right">
+                                                    <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="SIZE" />
+                                                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding SizeDisplay}" />
+                                                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailLabelStyle}" Text="STATUS" />
+                                                    <TextBlock Margin="0,4,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding AvailabilityLabel}" />
+                                                </StackPanel>
+                                                <Button Grid.Column="2" Margin="18,0,0,0" VerticalAlignment="Center" Command="{Binding DataContext.ExportBackupCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Content="Save As..." Style="{StaticResource PrimaryButtonStyle}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,8,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding BackupErrorDetail}" TextWrapping="Wrap" />
+                            <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                                <TextBlock Style="{DynamicResource TinyMetaStyle}" Text="Result code: " />
+                                <TextBlock Style="{DynamicResource TinyMetaStyle}" Text="{Binding BackupErrorCode}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,20,0,0" Padding="22" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HeroBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource CardCornerRadius}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{DynamicResource EyebrowStyle}" Text="SUPPORT BUNDLE" />
+                                    <TextBlock Margin="0,8,0,0" Style="{DynamicResource DetailValueStyle}" Text="Export the latest generated bundle" />
+                                    <TextBlock Margin="0,6,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding SupportBundleArtifactDisplayName}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Margin="24,0,0,0" Command="{Binding ExportSupportBundleCommand}" Content="Save As..." Style="{StaticResource PrimaryButtonStyle}" />
+                            </Grid>
+                            <TextBlock Margin="0,14,0,0" Style="{DynamicResource TinyMetaStyle}" Text="{Binding ArtifactExportStatusSummary}" TextWrapping="Wrap" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Only the Agent reads source artifacts. The desktop supplies an output destination and receives no artifact bytes or server path." TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,20,0,0" Padding="14" Background="{DynamicResource SurfaceMutedBrush}" CornerRadius="{DynamicResource ControlCornerRadius}" Visibility="{Binding IsArtifactExportVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource DetailLabelStyle}" Text="DELIVERY STATUS" />
+                            <TextBlock Margin="0,6,0,0" Style="{DynamicResource DetailValueStyle}" Text="{Binding ArtifactExportStateLabel}" />
+                            <TextBlock Margin="0,5,0,0" Style="{DynamicResource SmallBodyStyle}" Text="{Binding ArtifactExportStatusSummary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,22,0,0" Style="{DynamicResource TinyMetaStyle}" Text="Backup creation and artifact delivery are explicit administrator operations. Database replacement and service mutation are not available in this slice." TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>
 

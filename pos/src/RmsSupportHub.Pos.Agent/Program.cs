@@ -31,6 +31,7 @@ using RmsSupportHub.Pos.Application.Diagnostics;
 using RmsSupportHub.Pos.Application.Maintenance;
 using RmsSupportHub.Pos.Application.Packages;
 using RmsSupportHub.Pos.Application.Repair;
+using RmsSupportHub.Pos.Application.Restore;
 using RmsSupportHub.Pos.Contracts.V1.Common;
 using RmsSupportHub.Pos.Contracts.V1.Security;
 using RmsSupportHub.Pos.Contracts.V1.Session;
@@ -248,6 +249,7 @@ builder.Services.AddSingleton<MaintenanceOperationRuntime>();
 builder.Services.AddSingleton<IBackupFileSystem, PhysicalBackupFileSystem>();
 builder.Services.AddSingleton<ArtifactCatalog>();
 builder.Services.AddSingleton(new RmsDatabaseStorageOptions());
+builder.Services.AddSingleton<IRestoreSqlPlanBuilder, RestoreSqlPlanBuilder>();
 builder.Services.AddSingleton<IRmsDatabaseSqlOperations, RmsSqlDatabaseOperations>();
 // RmsDatabaseBackupCatalog is the durable, Agent-owned record of approved database backups: it
 // persists to disk beneath the backup root so backups remain discoverable after an Agent restart,
@@ -255,6 +257,7 @@ builder.Services.AddSingleton<IRmsDatabaseSqlOperations, RmsSqlDatabaseOperation
 builder.Services.AddSingleton<RmsDatabaseBackupCatalog>();
 builder.Services.AddSingleton<IRmsDatabaseBackupStorage, RmsDatabaseBackupStorage>();
 builder.Services.AddSingleton<IRmsDatabaseWorkflow, RmsDatabaseWorkflowService>();
+builder.Services.AddSingleton<RmsDatabaseBackupQueryHandler>();
 builder.Services.AddSingleton<RmsDatabaseOperationStore>();
 builder.Services.AddSingleton<RmsDatabaseIdempotencyStore>();
 builder.Services.AddSingleton<RmsDatabaseConcurrencyGate>();
@@ -264,6 +267,15 @@ builder.Services.AddSingleton<IAgentAuditSink>(services => services.GetRequiredS
 builder.Services.AddSingleton<IAgentAuditReader>(services => services.GetRequiredService<FileAgentAuditSink>());
 builder.Services.AddSingleton<IRmsPrivilegedAuditSink>(services => services.GetRequiredService<FileAgentAuditSink>());
 builder.Services.AddSingleton<RmsDatabaseOperationRuntime>();
+builder.Services.AddSingleton<LocalRmsDatabaseBackupRuntime>();
+builder.Services.AddSingleton<ILocalCallerProfilePathProvider, WindowsProfileListPathProvider>();
+builder.Services.AddSingleton<ILocalCallerDestinationRootResolver, WindowsProfileListDestinationRootResolver>();
+builder.Services.AddSingleton<LocalArtifactDestinationPolicy>(services =>
+    new LocalArtifactDestinationPolicy(
+        services.GetRequiredService<ILocalCallerDestinationRootResolver>()));
+builder.Services.AddSingleton<IArtifactDestinationAuthority, WindowsArtifactDestinationAuthority>();
+builder.Services.AddSingleton<BoundedKeyedMutationCoordinator>();
+builder.Services.AddSingleton<ArtifactDeliveryService>();
 
 // Slice B server-owned Main Server profiles. The dedicated client is constructed separately
 // from the backup client so no browser-selected URL, header, or route can reach this boundary.

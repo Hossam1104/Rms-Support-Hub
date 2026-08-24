@@ -2,7 +2,7 @@
 
 **Azure DevOps Project:** `Rms_Support_Hub`
 **Implementation Source of Truth:** `Hossam1104/Rms-Support-Hub`
-**Prepared:** 2026-08-23
+**Prepared:** 2026-08-24
 **Architecture Rebaseline:** Post PR #30 / CR-001 / ADR-0029
 
 ## Status Rules
@@ -41,19 +41,20 @@ Azure DevOps items are classified by:
 
 ---
 
-## Live Azure reconciliation - 2026-08-23
+## Live Azure reconciliation - 2026-08-24
 
 This blueprint was reconciled against the live `Rms_Support_Hub` work items
-on 2026-08-23. The WPF epic and child states/priorities below are live values,
+on 2026-08-24. The WPF epic and child states/priorities below are live values,
 not the original architecture-baseline defaults.
 
 - E16 #13017 is Active/P2; #13022 and #13024 are Closed/P1; #13023,
   #13029, and #13030 are Active/P2; #13021, #13025, #13026, and #13028 are
   New/P1; #13027 is New/P2.
 - E17 #13018 is Active/P1; #13031 and #13033 are Closed/P1; #13032 is
-  Active/P1; #13034 is New/P2; #13035 is Active/P1; #13036, #13037,
+  Active/P1; #13034 is Active/P1; #13035 is Closed/P1; #13036, #13037,
   #13038, and #13040 are New/P2; #13039, #13041, #13042, and #13043 are
-  New/P1.
+  New/P1. Child task #13129 under #13034 is New/P2; #13142 is New/P2 and
+  #13143 is New/P3.
 - E18 #13019 remains New/P2 and E19 #13020 is New/P2. Their future
   children retain their live New states and priorities.
 - #13072 is New/P1; #13073 and #13074 are New/P1; #13075 is New/P2; and
@@ -61,10 +62,26 @@ not the original architecture-baseline defaults.
 - #12900, #12901, and #12902 remain New/P3 conditional upstream work;
   #12949 remains New/P3 deferred Production acceptance.
 
-The implementation-started note on #13035 records branch
-`feat/wpf-05-logs-support-bundle`, bounded redacted evidence, typed Local IPC
-Support Bundle metadata, and the requirement to wait for Sol acceptance and
-exact-head validation before closure.
+The implementation-started note on #13035 records the accepted WPF-05 SHA
+`ee2d62c030a2266ed410f91604ce8524df61e50b`, PR #36, and merge SHA
+`e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`. Story #13035 is Closed/P1.
+Story #13034 is Active/P1 for the current WPF-06 Draft PR: fixed
+Branch/Cashier backups, bounded principal-scoped inventory, and shared local
+artifact export are implemented. Final security/correctness remediation is
+pending Sol acceptance and includes caller-bound ProfileList destination roots,
+caller-token-only destination I/O, truthful final audit/rollback behavior,
+principal-isolated catalog access/retention, bounded destination coordination,
+operation-scoped SQOS, real Named Pipe caller-token evidence, and fail-closed
+privileged backup audit. Guarded restore remains separately gated; child #13129
+(`Implement guarded RMS database restore in WPF`) is New/P2 under #13034.
+
+#### Child task — Validate representative RMS backup size and retention limits (#13142)
+**Status:** New | **Priority:** 2 | **Parent:** US-E17-04 (#13034) | **Evidence:** Created during final WPF-06 remediation to validate representative RMS backup size and retention limits on an authorized Testing machine; no Production or real customer backup is implied.
+
+#### Child task — Harden age-only and global-root backup storage hygiene (#13143)
+**Status:** New | **Priority:** 3 | **Parent:** US-E17-04 (#13034) | **Evidence:** Deferred hardening task for age-only and global-root backup hygiene; not part of WPF-06 remediation or WPF-07.
+The next recommended WPF slice is guarded RMS service control under #13032
+(Active/P1), not Safety Snapshots.
 
 ---
 
@@ -620,16 +637,19 @@ exact-head validation before closure.
 **Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF shell/dashboard delivered and merged through WPF-02.
 
 ### US-E17-02 — Agent/RMS service health and approved service control (#13032)
-**Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028, BR-030 | **Evidence:** Read-only service health is delivered; Start/Stop/Restart mutation remains out of scope.
+**Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028, BR-030 | **Evidence:** Read-only service health is delivered; guarded Start/Stop/Restart mutation is the next recommended WPF slice after Sol acceptance of WPF-06.
 
 ### US-E17-03 — Database health and diagnostics (#13033)
 **Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF-04 was Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; live Azure was closed after reconciliation.
 
 ### US-E17-04 — Database backup/download and guarded restore (#13034)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
+**Status:** Active | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-06 Draft PR implements fixed Branch/Cashier backup creation, principal-scoped bounded inventory, and shared local export for database backups and Support Bundles. Guarded restore is deliberately deferred.
+
+#### Child task — Implement guarded RMS database restore in WPF (#13129)
+**Status:** New | **Priority:** 2 | **Parent:** US-E17-04 (#13034) | **Evidence:** Created during final WPF-06 security/correctness reconciliation; implementation is separately gated and is not part of WPF-06 or WPF-07.
 
 ### US-E17-05 — Logs and safe Support Bundle (#13035)
-**Status:** Active | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-05 current branch adds bounded redacted evidence and administrator-only typed Support Bundle metadata; Draft PR and Sol acceptance pending. Bounded redacted stack-frame labels are intentionally exposed; no universal customer-data/PII-free guarantee is claimed. Privacy policy and deterministic validation are tracked by Task #13116 (New/P2).
+**Status:** Closed | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-05 was accepted at `ee2d62c030a2266ed410f91604ce8524df61e50b`, merged through PR #36 as `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`. Bounded redacted stack-frame labels are intentionally exposed; no universal customer-data/PII-free guarantee is claimed. Privacy policy and deterministic validation remain tracked by Task #13116 (New/P2).
 
 ### Diagnostic evidence PII/redaction policy (#13116)
 **Status:** New | **Priority:** 2 | **Parent:** US-E17-05 (#13035) | **Traceability:** BR-030 | **Purpose:** Define permitted business/customer identifiers in diagnostic evidence and validate deterministic redaction/privacy rules before any remote or fleet log exposure.
