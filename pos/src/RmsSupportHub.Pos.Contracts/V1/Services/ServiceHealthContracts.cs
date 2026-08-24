@@ -23,4 +23,5 @@ public sealed record ServiceHealthItemDto(
     bool Required,
     bool Installed,
     ServiceRuntimeState RuntimeState,
-    string SafeStatusCode);
+    string SafeStatusCode,
+    bool CanControl = false);

@@ -14,6 +14,7 @@ public partial class App : Application
         var localIpcClient = new LocalIpcClient();
         var healthClient = new LocalAgentHealthClient(localIpcClient);
         var serviceHealthClient = new LocalAgentServiceHealthClient(localIpcClient);
+        var serviceControlClient = new LocalAgentServiceControlClient(localIpcClient);
         var databaseHealthClient = new LocalAgentDatabaseHealthClient(localIpcClient);
         var logEvidenceClient = new LocalAgentLogEvidenceClient(localIpcClient);
         var supportBundleClient = new LocalAgentSupportBundleClient(localIpcClient);
@@ -26,7 +27,9 @@ public partial class App : Application
             supportBundleClient,
             backupClient,
             new SaveFileDialogDestinationPicker(),
-            new MessageBoxOverwriteConfirmation());
+            new MessageBoxOverwriteConfirmation(),
+            serviceControlClient: serviceControlClient,
+            serviceActionConfirmation: new MessageBoxServiceActionConfirmation());
         MainWindow = new MainWindow(dashboard);
         MainWindow.Show();
     }

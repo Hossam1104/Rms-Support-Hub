@@ -18,4 +18,23 @@ public static class RmsServiceCatalog
         new(CashierServiceName, "RMS Cashier Service"),
         new(ServicesManagerServiceName, "RMS Services Manager")
     ];
+
+    public static bool TryResolveServiceId(string? serviceId, out RmsServiceDefinition? definition)
+    {
+        definition = null;
+        if (!ServiceIdentityCatalog.IsOpaqueServiceId(serviceId))
+        {
+            return false;
+        }
+
+        definition = Definitions.FirstOrDefault(item =>
+            string.Equals(ServiceIdentityCatalog.ToServiceId(item.ServiceName), serviceId, StringComparison.Ordinal));
+        return definition is not null;
+    }
+
+    public static bool IsAgentServiceId(string? serviceId) =>
+        string.Equals(
+            ServiceIdentityCatalog.ToServiceId(AgentProductIdentity.PermanentServiceName),
+            serviceId,
+            StringComparison.Ordinal);
 }

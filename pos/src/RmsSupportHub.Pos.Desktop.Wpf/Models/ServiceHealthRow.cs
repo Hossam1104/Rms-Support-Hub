@@ -19,6 +19,10 @@ public sealed record ServiceHealthRow(
     ServiceHealthRowState State,
     string SafeStatusCode)
 {
+    public string ServiceId { get; init; } = string.Empty;
+
+    public bool CanControl { get; init; }
+
     public string RuntimeLabel => State switch
     {
         ServiceHealthRowState.Running => "Running",
@@ -78,7 +82,11 @@ public sealed record ServiceHealthRow(
             item.Required,
             item.Installed,
             state.Value,
-            item.SafeStatusCode);
+            item.SafeStatusCode)
+        {
+            ServiceId = item.ServiceId,
+            CanControl = item.CanControl
+        };
         return true;
     }
 }

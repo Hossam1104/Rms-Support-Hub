@@ -2,7 +2,11 @@
 
 ## Status
 
-Proposed — pending GPT-5.6 Sol acceptance
+Accepted — GPT-5.6 Sol, 2026-08-24
+
+Accepted at WPF-06 head `8267e7de7e698c6d31be0e682c96a1c1ceca98fd`; PR #37
+was squash merged as `7af1e54042dbe31ef86a34d6ec687da66539be62`. Guarded
+database restore remains separately gated under #13034/#13129.
 
 ## Context
 

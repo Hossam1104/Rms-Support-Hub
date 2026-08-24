@@ -20,8 +20,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private readonly ILocalLogEvidenceClient logEvidenceClient;
     private readonly ILocalSupportBundleClient supportBundleClient;
     private readonly ILocalBackupClient backupClient;
+    private readonly ILocalServiceControlClient serviceControlClient;
     private readonly ILocalArtifactDestinationPicker destinationPicker;
     private readonly IOverwriteConfirmation overwriteConfirmation;
+    private readonly IServiceActionConfirmation serviceActionConfirmation;
     private readonly TimeSpan refreshInterval;
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource shutdown = new();
@@ -35,6 +37,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     private readonly AsyncCommand createBranchBackupCommand;
     private readonly AsyncCommand createCashierBackupCommand;
     private readonly AsyncParameterCommand<BackupArtifactRow> exportBackupCommand;
+    private readonly AsyncParameterCommand<ServiceHealthRow> startActionCommand;
+    private readonly AsyncParameterCommand<ServiceHealthRow> stopActionCommand;
+    private readonly AsyncParameterCommand<ServiceHealthRow> restartActionCommand;
     private readonly AsyncCommand exportSupportBundleCommand;
     private CancellationTokenSource? supportBundleCancellation;
     private Task? refreshLoop;
@@ -91,6 +96,18 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         ArtifactExportViewState.Idle,
         string.Empty,
         string.Empty);
+    private bool canManageRmsServices;
+    private string serviceControlErrorCode = string.Empty;
+    private string serviceControlErrorDetail = string.Empty;
+    private ServiceActionResult serviceAction = ServiceActionResult.Failure(
+        ServiceControlViewState.Idle,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Start,
+        string.Empty);
+    private string? activeServiceId;
+    private CancellationTokenSource? serviceControlCancellation;
 
     public DashboardViewModel(
         ILocalAgentHealthClient healthClient,
@@ -172,7 +189,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         ILocalBackupClient backupClient,
         ILocalArtifactDestinationPicker destinationPicker,
         IOverwriteConfirmation overwriteConfirmation,
-        TimeSpan? refreshInterval = null)
+        TimeSpan? refreshInterval = null,
+        ILocalServiceControlClient? serviceControlClient = null,
+        IServiceActionConfirmation? serviceActionConfirmation = null)
     {
         this.healthClient = healthClient ?? throw new ArgumentNullException(nameof(healthClient));
         this.serviceHealthClient = serviceHealthClient ?? throw new ArgumentNullException(nameof(serviceHealthClient));
@@ -180,8 +199,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         this.logEvidenceClient = logEvidenceClient ?? throw new ArgumentNullException(nameof(logEvidenceClient));
         this.supportBundleClient = supportBundleClient ?? throw new ArgumentNullException(nameof(supportBundleClient));
         this.backupClient = backupClient ?? throw new ArgumentNullException(nameof(backupClient));
+        this.serviceControlClient = serviceControlClient ?? new UnavailableServiceControlClient();
         this.destinationPicker = destinationPicker ?? throw new ArgumentNullException(nameof(destinationPicker));
         this.overwriteConfirmation = overwriteConfirmation ?? throw new ArgumentNullException(nameof(overwriteConfirmation));
+        this.serviceActionConfirmation = serviceActionConfirmation ?? new MessageBoxServiceActionConfirmation();
         this.refreshInterval = refreshInterval ?? DefaultRefreshInterval;
         if (this.refreshInterval < TimeSpan.FromSeconds(5)
             || this.refreshInterval > TimeSpan.FromMinutes(2))
@@ -222,6 +243,15 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         exportSupportBundleCommand = new AsyncCommand(
             ExportSupportBundleAsync,
             () => CanExportSupportBundle);
+        startActionCommand = new AsyncParameterCommand<ServiceHealthRow>(
+            row => ExecuteServiceActionAsync(row, RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Start),
+            CanStartAction);
+        stopActionCommand = new AsyncParameterCommand<ServiceHealthRow>(
+            row => ExecuteServiceActionAsync(row, RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Stop),
+            CanStopAction);
+        restartActionCommand = new AsyncParameterCommand<ServiceHealthRow>(
+            row => ExecuteServiceActionAsync(row, RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Restart),
+            CanRestartAction);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -247,6 +277,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ExportBackupCommand => exportBackupCommand;
 
     public ICommand ExportSupportBundleCommand => exportSupportBundleCommand;
+
+    public ICommand StartActionCommand => startActionCommand;
+
+    public ICommand StopActionCommand => stopActionCommand;
+
+    public ICommand RestartActionCommand => restartActionCommand;
 
     public HealthViewState State
     {
@@ -343,6 +379,60 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         get => serviceErrorDetail;
         private set => SetProperty(ref serviceErrorDetail, value);
     }
+
+    public bool CanManageRmsServices
+    {
+        get => canManageRmsServices;
+        private set
+        {
+            if (SetProperty(ref canManageRmsServices, value))
+            {
+                RaiseServiceControlCanExecuteChanged();
+            }
+        }
+    }
+
+    public string ServiceControlErrorCode
+    {
+        get => serviceControlErrorCode;
+        private set => SetProperty(ref serviceControlErrorCode, value);
+    }
+
+    public string ServiceControlErrorDetail
+    {
+        get => serviceControlErrorDetail;
+        private set => SetProperty(ref serviceControlErrorDetail, value);
+    }
+
+    public ServiceActionResult ServiceAction
+    {
+        get => serviceAction;
+        private set
+        {
+            if (SetProperty(ref serviceAction, value))
+            {
+                OnPropertyChanged(nameof(ServiceActionStateLabel));
+                OnPropertyChanged(nameof(ServiceActionStatusSummary));
+                OnPropertyChanged(nameof(IsServiceActionRunning));
+                RaiseServiceControlCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool IsServiceActionRunning => activeServiceId is not null;
+
+    public string ServiceActionStateLabel => ServiceAction.StateLabel;
+
+    public string ServiceActionStatusSummary => ServiceAction.State switch
+    {
+        ServiceControlViewState.Idle => "Choose an administrator-approved action for a fixed RMS service.",
+        ServiceControlViewState.Starting or ServiceControlViewState.Stopping or ServiceControlViewState.Restarting => $"{ServiceAction.StateLabel} The Agent is verifying the service state.",
+        ServiceControlViewState.Completed => "The service state was verified and the durable audit completed.",
+        ServiceControlViewState.OutcomeUnknown => ServiceAction.RecoveryRequired ? "The final state is ambiguous. Refresh service health before deciding what to do next." : "The action outcome is ambiguous. Refresh service health before retrying.",
+        ServiceControlViewState.Unauthorized => "Administrator authorization is required to control RMS services.",
+        ServiceControlViewState.Cancelled => "The service action was cancelled before a final result was available.",
+        _ => string.IsNullOrWhiteSpace(ServiceAction.Detail) ? "The service action could not be completed." : ServiceAction.Detail
+    };
 
     public DatabaseHealthViewState DatabaseState
     {
@@ -1191,6 +1281,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
 
             ApplyServiceResult(serviceResult);
 
+            var serviceAuthorization = await serviceControlClient
+                .GetAuthorizationAsync(requestCorrelationId, linkedCancellation.Token)
+                .ConfigureAwait(true);
+            if (!disposed && !linkedCancellation.IsCancellationRequested)
+            {
+                CanManageRmsServices = serviceAuthorization.CanManageRmsServices;
+                ServiceControlErrorCode = serviceAuthorization.ErrorCode;
+                ServiceControlErrorDetail = serviceAuthorization.ErrorDetail;
+                NotifyServiceControlStateChanged();
+            }
+
             DatabaseHealthResult databaseResult;
             try
             {
@@ -1305,8 +1406,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         createCashierBackupCommand.RaiseCanExecuteChanged();
         exportBackupCommand.RaiseCanExecuteChanged();
         exportSupportBundleCommand.RaiseCanExecuteChanged();
+        startActionCommand.RaiseCanExecuteChanged();
+        stopActionCommand.RaiseCanExecuteChanged();
+        restartActionCommand.RaiseCanExecuteChanged();
         supportBundleCancellation?.Cancel();
         backupCancellation?.Cancel();
+        serviceControlCancellation?.Cancel();
         shutdown.Dispose();
     }
 
@@ -1620,6 +1725,120 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private bool CanStartAction(ServiceHealthRow? row) => CanManageRmsService(row)
+        && row is not null
+        && row.State == ServiceHealthRowState.Stopped;
+
+    private bool CanStopAction(ServiceHealthRow? row) => CanManageRmsService(row)
+        && row is not null
+        && row.State == ServiceHealthRowState.Running;
+
+    private bool CanRestartAction(ServiceHealthRow? row) => CanManageRmsService(row)
+        && row is not null
+        && row.State == ServiceHealthRowState.Running;
+
+    private bool CanManageRmsService(ServiceHealthRow? row) =>
+        row is not null
+        && CanManageRmsServices
+        && row.CanControl
+        && activeServiceId is null
+        && !disposed
+        && !IsRefreshing;
+
+    private async Task ExecuteServiceActionAsync(
+        ServiceHealthRow? row,
+        RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind action)
+    {
+        if (row is null || !CanManageRmsService(row))
+        {
+            return;
+        }
+
+        if (action is RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Stop
+            or RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Restart)
+        {
+            var confirmed = await serviceActionConfirmation
+                .ConfirmAsync(row.DisplayName, action, shutdown.Token)
+                .ConfigureAwait(true);
+            if (!confirmed || disposed || shutdown.IsCancellationRequested)
+            {
+                return;
+            }
+        }
+
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(shutdown.Token);
+        serviceControlCancellation = linkedCancellation;
+        activeServiceId = row.ServiceId;
+        ServiceAction = new(
+            action switch
+            {
+                RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Start => ServiceControlViewState.Starting,
+                RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Stop => ServiceControlViewState.Stopping,
+                _ => ServiceControlViewState.Restarting
+            },
+            string.Empty,
+            row.ServiceId,
+            action,
+            5,
+            "queued",
+            null,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            false);
+        ServiceControlErrorCode = string.Empty;
+        ServiceControlErrorDetail = string.Empty;
+        NotifyServiceControlStateChanged();
+
+        try
+        {
+            var correlationId = Guid.NewGuid().ToString("N");
+            var result = await serviceControlClient
+                .ExecuteAsync(
+                    row.ServiceId,
+                    action,
+                    action == RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Stop ? "STOP" : action == RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind.Restart ? "RESTART" : null,
+                    correlationId,
+                    Guid.NewGuid().ToString("N"),
+                    linkedCancellation.Token)
+                .ConfigureAwait(true);
+            if (!disposed && !shutdown.IsCancellationRequested)
+            {
+                ServiceAction = result;
+                ServiceControlErrorCode = result.Code;
+                ServiceControlErrorDetail = result.Detail;
+                NotifyServiceControlStateChanged();
+                await RefreshAsync().ConfigureAwait(true);
+            }
+        }
+        catch (OperationCanceledException) when (shutdown.IsCancellationRequested || disposed)
+        {
+            // The Agent owns the post-dispatch observation. Window shutdown must never invent a
+            // successful or failed service outcome.
+        }
+        catch
+        {
+            if (!disposed && !shutdown.IsCancellationRequested)
+            {
+                ServiceAction = ServiceActionResult.Failure(
+                    ServiceControlViewState.Failed,
+                    "service_control_failed",
+                    "The service action could not be completed.",
+                    row.ServiceId,
+                    action,
+                    CorrelationId);
+                NotifyServiceControlStateChanged();
+            }
+        }
+        finally
+        {
+            activeServiceId = null;
+            serviceControlCancellation = null;
+            RaiseServiceControlCanExecuteChanged();
+            OnPropertyChanged(nameof(IsServiceActionRunning));
+        }
+    }
+
     private async Task RunAutomaticRefreshAsync(CancellationToken cancellationToken)
     {
         try
@@ -1732,6 +1951,25 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ServiceUnknownCount));
         OnPropertyChanged(nameof(ServiceSummaryDisplay));
         OnPropertyChanged(nameof(ServiceSummaryDetail));
+    }
+
+    private void NotifyServiceControlStateChanged()
+    {
+        OnPropertyChanged(nameof(CanManageRmsServices));
+        OnPropertyChanged(nameof(ServiceControlErrorCode));
+        OnPropertyChanged(nameof(ServiceControlErrorDetail));
+        OnPropertyChanged(nameof(ServiceAction));
+        OnPropertyChanged(nameof(ServiceActionStateLabel));
+        OnPropertyChanged(nameof(ServiceActionStatusSummary));
+        OnPropertyChanged(nameof(IsServiceActionRunning));
+        RaiseServiceControlCanExecuteChanged();
+    }
+
+    private void RaiseServiceControlCanExecuteChanged()
+    {
+        startActionCommand?.RaiseCanExecuteChanged();
+        stopActionCommand?.RaiseCanExecuteChanged();
+        restartActionCommand?.RaiseCanExecuteChanged();
     }
 
     private void NotifyDatabaseStateChanged()
@@ -1882,5 +2120,30 @@ public sealed class DashboardViewModel : INotifyPropertyChanged, IDisposable
                 "agent_unavailable",
                 "RMS Support Agent is not available on this machine.",
                 request.ArtifactId));
+    }
+
+    private sealed class UnavailableServiceControlClient : ILocalServiceControlClient
+    {
+        public Task<ServiceControlAuthorizationResult> GetAuthorizationAsync(
+            string correlationId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ServiceControlAuthorizationResult.Unavailable(
+                "agent_unavailable",
+                "RMS Support Agent is not available on this machine."));
+
+        public Task<ServiceActionResult> ExecuteAsync(
+            string serviceId,
+            RmsSupportHub.Pos.Contracts.V1.Services.ServiceActionKind action,
+            string? confirmation,
+            string correlationId,
+            string idempotencyKey,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ServiceActionResult.Failure(
+                ServiceControlViewState.Unavailable,
+                "agent_unavailable",
+                "RMS Support Agent is not available on this machine.",
+                serviceId,
+                action,
+                correlationId));
     }
 }

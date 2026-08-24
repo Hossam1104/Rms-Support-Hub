@@ -28,7 +28,8 @@ public static class ServiceHealthContractMapper
         item.Required,
         item.RuntimeState != ServiceStatus.NotFound,
         MapRuntimeState(item.RuntimeState),
-        item.SafeStatusCode);
+        item.SafeStatusCode,
+        item.CanControl);
 
     private static ServiceSummaryDto MapLegacyItem(
         ServiceHealthItem item,

@@ -23,34 +23,29 @@ Do not copy facts that can be cheaply discovered from the repository.
 - Drafts are JSON under API `var/drafts`, isolated by HttpOnly session GUID plus
   module key, serialized per key, and replaced atomically.
 - Angular uses standalone lazy components, typed models, signals, relative `/api`, and a dev proxy; privileged POS is direct trusted HTTPS/HTTP/1.1 browser -> loopback `RmsSupportHub.Pos.Agent`, not API/Core/Data; CORS is exact-origin anonymous preflight; application requests use Windows Negotiate/authorization; tokens are single-use/server-bound; SSE is read-only; artifacts use authenticated fetch.
-- Supplied assets use the typed `app-assets.ts` catalog and semantic public
-  folders; `frontend/public/assets/Saudi_Riyal.svg` remains verifier-required.
-  Shared identity marks use `app-brand-mark` with contain-fit sizing and
-  explicit decorative accessibility state.
 - Prompt Studio uses typed reactive forms, namespaced drafts, deterministic
   builders, advisory quality analysis, and local history capped at ten records;
   it never stores attachments or sends data to an external provider.
-- U4 exposes only the resolved send environment's key, label, and API URL via
-  `GET /api/modules/{key}/endpoint`; module catalog responses do not disclose
-  URLs or connection metadata.
-- U4's flat-order summary consumes `TotalsSummary` from the server. The
-  frontend may show display-only derived values, but authoritative totals stay
-  in `TotalsCalculator` and the draft mutation responses.
-- U5 shared UI primitives are standalone, signal-based, token-only components
-  exported through `frontend/src/app/shared/ui/index.ts`. Toast state is
-  capped/queued/deduplicated in `ToastService`, and sidebar collapse is
-  persisted by `SidebarStateService` and published to the module shell.
 - The isolated POS Agent is Windows-Service-capable and uses versioned OpenAPI,
   generated client artifacts, direct browser transport, and no Support Hub API
   relay. Its typed database recovery, downloader, maintenance, health,
   diagnostics, timeline, and Support Bundle surfaces keep paths, SQL,
   credentials and capabilities server-owned; WPF uses typed Local IPC for read-only RMS/Agent health; inspection remains Agent-owned. Application diagnostics are transport-neutral and mapped to V1 at the Agent boundary.
 - WPF-04/05 merged; WPF-05 is `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`;
-  WPF-06 adds backup, inventory, and export. Its proposed ADR-0030 boundary
+  WPF-06 is merged in `7af1e54042dbe31ef86a34d6ec687da66539be62` after
+  accepted head `8267e7de7e698c6d31be0e682c96a1c1ceca98fd`; ADR-0030 is
+  accepted. WPF-06 adds backup, inventory, and export. Its boundary
   binds roots to the authenticated SID's ProfileList, uses caller-token-only
   destination I/O, exact operation-scoped SQOS, truthful audit/rollback,
   owner-scoped retention, explicit legacy compatibility, principal-required
   registration, and bounded coordination; restore remains gated.
+- WPF-07 is the current Draft implementation branch for guarded RMS service
+  control. It uses a fixed opaque catalog, typed Start/Stop/Restart, the shared
+  transport-neutral Application seam, local Administrator authorization,
+  operator read-only behavior, Agent self-protection, exact confirmation,
+  bounded mutation coordination, ordered audit, and truthful state recovery.
+  No real service mutation has been performed; Sol acceptance and Draft PR
+  delivery remain pending.
   Redacted frames are not universal PII-free evidence; #13116 tracks it.
 - Slice C establishes permanent `RmsSupportAgent` identity, safe legacy-name
   migration, machine-pinned package trust, LocalMachine signing, checkpointed

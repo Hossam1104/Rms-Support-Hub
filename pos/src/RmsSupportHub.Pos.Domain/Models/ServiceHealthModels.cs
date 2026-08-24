@@ -54,7 +54,11 @@ public sealed record ServiceHealthItem(
     string DisplayName,
     bool Required,
     ServiceStatus RuntimeState,
-    string SafeStatusCode);
+    string SafeStatusCode)
+{
+    public bool CanControl => RmsServiceCatalog.Definitions.Any(definition =>
+        string.Equals(definition.ServiceName, ServiceName, StringComparison.Ordinal));
+}
 
 public sealed record ServiceHealthSnapshot(
     ServiceHealthOverallState OverallState,

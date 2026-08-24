@@ -218,6 +218,10 @@ builder.Services.AddSingleton<ServiceActionIdempotencyStore>();
 builder.Services.AddSingleton<ServiceActionConcurrencyGate>();
 builder.Services.AddSingleton<IMutationOperationTargetResolver, MutationOperationTargetResolver>();
 builder.Services.AddSingleton<ServiceActionRuntime>();
+builder.Services.AddSingleton(new ServiceControlOptions());
+builder.Services.AddSingleton<ServiceMutationCoordinator>();
+builder.Services.AddSingleton<ServiceMutationAuthorizationStore>();
+builder.Services.AddSingleton<ServiceControlApplicationService>();
 
 // Downloader and maintenance are composed from the already-tested typed Application and
 // Infrastructure seams. Their configuration and credentials are projected server-side by

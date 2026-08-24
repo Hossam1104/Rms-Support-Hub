@@ -85,6 +85,26 @@ public sealed class LocalIpcClient
             correlationId,
             cancellationToken);
 
+    public Task<LocalIpcCallResult<LocalIpcServiceActionResponseDto>> ExecuteServiceActionAsync(
+        LocalIpcServiceActionRequestDto request,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcServiceActionResponseDto>(
+            LocalIpcProtocol.ServiceControlOperation,
+            correlationId,
+            request,
+            cancellationToken);
+
+    public Task<LocalIpcCallResult<LocalIpcServiceActionAuthorizationResponseDto>> IssueServiceActionAuthorizationAsync(
+        LocalIpcServiceActionAuthorizationRequestDto request,
+        string? correlationId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<LocalIpcServiceActionAuthorizationResponseDto>(
+            LocalIpcProtocol.ServiceControlAuthorizationOperation,
+            correlationId,
+            request,
+            cancellationToken);
+
     public Task<LocalIpcCallResult<RmsDatabaseHealthSnapshotDto>> GetDatabaseHealthAsync(
         string? correlationId = null,
         CancellationToken cancellationToken = default) =>

@@ -51,7 +51,7 @@ not the original architecture-baseline defaults.
   #13029, and #13030 are Active/P2; #13021, #13025, #13026, and #13028 are
   New/P1; #13027 is New/P2.
 - E17 #13018 is Active/P1; #13031 and #13033 are Closed/P1; #13032 is
-  Active/P1; #13034 is Active/P1; #13035 is Closed/P1; #13036, #13037,
+  Active/P1; #13034 is Active/P2; #13035 is Closed/P1; #13036, #13037,
   #13038, and #13040 are New/P2; #13039, #13041, #13042, and #13043 are
   New/P1. Child task #13129 under #13034 is New/P2; #13142 is New/P2 and
   #13143 is New/P3.
@@ -65,14 +65,10 @@ not the original architecture-baseline defaults.
 The implementation-started note on #13035 records the accepted WPF-05 SHA
 `ee2d62c030a2266ed410f91604ce8524df61e50b`, PR #36, and merge SHA
 `e0c82cdefaac47c1ab9d0649d249cbf85f4d8837`. Story #13035 is Closed/P1.
-Story #13034 is Active/P1 for the current WPF-06 Draft PR: fixed
-Branch/Cashier backups, bounded principal-scoped inventory, and shared local
-artifact export are implemented. Final security/correctness remediation is
-pending Sol acceptance and includes caller-bound ProfileList destination roots,
-caller-token-only destination I/O, truthful final audit/rollback behavior,
-principal-isolated catalog access/retention, bounded destination coordination,
-operation-scoped SQOS, real Named Pipe caller-token evidence, and fail-closed
-privileged backup audit. Guarded restore remains separately gated; child #13129
+Story #13034 is Active/P2 after WPF-06 acceptance and merge through PR #37 as
+`7af1e54042dbe31ef86a34d6ec687da66539be62`: fixed Branch/Cashier backups,
+bounded principal-scoped inventory, and shared local artifact export are
+delivered. Guarded restore remains separately gated; child #13129
 (`Implement guarded RMS database restore in WPF`) is New/P2 under #13034.
 
 #### Child task — Validate representative RMS backup size and retention limits (#13142)
@@ -637,13 +633,13 @@ The next recommended WPF slice is guarded RMS service control under #13032
 **Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF shell/dashboard delivered and merged through WPF-02.
 
 ### US-E17-02 — Agent/RMS service health and approved service control (#13032)
-**Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028, BR-030 | **Evidence:** Read-only service health is delivered; guarded Start/Stop/Restart mutation is the next recommended WPF slice after Sol acceptance of WPF-06.
+**Status:** Active | **Priority:** 1 | **Traceability:** BR-027, BR-028, BR-030 | **Evidence:** Read-only health and WPF-07 guarded Start/Stop/Restart are implemented on `feat/wpf-07-guarded-rms-service-control`; Draft PR/CI and GPT-5.6 Sol acceptance remain required before merge or closure. Fixed opaque catalog, local Administrator authorization, Agent self-protection, exact confirmation, bounded coordination, ordered audit, and truthful state recovery are covered by WPF-07 tests. No real RMS service mutation was performed.
 
 ### US-E17-03 — Database health and diagnostics (#13033)
 **Status:** Closed | **Priority:** 1 | **Traceability:** BR-027, BR-028 | **Evidence:** WPF-04 was Sol accepted and merged in PR #35 at main `0b9d0b678cfb33a3828876fb0a980fa8fdeb7676`; live Azure was closed after reconciliation.
 
 ### US-E17-04 — Database backup/download and guarded restore (#13034)
-**Status:** Active | **Priority:** 1 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-06 Draft PR implements fixed Branch/Cashier backup creation, principal-scoped bounded inventory, and shared local export for database backups and Support Bundles. Guarded restore is deliberately deferred.
+**Status:** Active | **Priority:** 2 | **Traceability:** BR-028, BR-030 | **Evidence:** WPF-06 was accepted at `8267e7de7e698c6d31be0e682c96a1c1ceca98fd` and merged through PR #37 as `7af1e54042dbe31ef86a34d6ec687da66539be62`; fixed Branch/Cashier backup creation, principal-scoped inventory, and shared local export are delivered. Guarded restore remains separately tracked by #13129 New/P2; #13142 remains New/P2 and #13143 retains its live priority.
 
 #### Child task — Implement guarded RMS database restore in WPF (#13129)
 **Status:** New | **Priority:** 2 | **Parent:** US-E17-04 (#13034) | **Evidence:** Created during final WPF-06 security/correctness reconciliation; implementation is separately gated and is not part of WPF-06 or WPF-07.
@@ -655,7 +651,7 @@ The next recommended WPF slice is guarded RMS service control under #13032
 **Status:** New | **Priority:** 2 | **Parent:** US-E17-05 (#13035) | **Traceability:** BR-030 | **Purpose:** Define permitted business/customer identifiers in diagnostic evidence and validate deterministic redaction/privacy rules before any remote or fleet log exposure.
 
 ### US-E17-06 — Safety Snapshots and incident timeline (#13036)
-**Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
+**Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030 | **Evidence:** Prepared as WPF-08 in TASK.md; implementation is explicitly gated on Sol acceptance and merge of WPF-07.
 
 ### US-E17-07 — Cleanup and branch-reset workflows (#13037)
 **Status:** New | **Priority:** 2 | **Traceability:** BR-028, BR-030
