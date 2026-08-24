@@ -10,7 +10,8 @@
   creation, principal-scoped bounded inventory, and one shared Agent-owned
   local artifact-delivery path for database backups and Support Bundles.
   Restore is deliberately not implemented and formal Sol acceptance is still
-  pending.
+  pending. Delivered in commit `f548477265d3718a3e568fa62768b0dbb471a0d2`;
+  PR #37 remains open and Draft.
 - **Authority:** CR-001 and ADR-0029 remain accepted; ADR-0030 is Proposed
   pending GPT-5.6 Sol acceptance. Sol is the acceptance authority. The WPF-06
   PR must remain Draft and must not be marked ready or merged by this
@@ -61,8 +62,7 @@
 - `dotnet restore pos/RmsSupportHub.Pos.slnx`: passed; all projects up to date.
 - Strict Testing-origin Release solution build with `--warnaserror`: passed,
   0 warnings and 0 errors.
-- Release POS tests: Domain 12/12, Application 122/122, Infrastructure
-  156/156, Agent Integration 261/261, WPF 62/62; aggregate 613/613.
+- Release POS tests: aggregate 622/622 passed with no failures or skips.
 - Focused WPF-06 coverage includes Application authorization/inventory,
   Agent backup runtime and shared artifact delivery, WPF workspace behavior,
   architecture boundaries, principal isolation, cancellation, audit failure,
@@ -70,9 +70,10 @@
   same-destination conflict control.
 - PowerShell quality: 37/37 files parsed with no dangling continuations.
   Pester: 172 passed, 0 failed, 0 skipped, 0 pending.
-- `python .ai/scripts/context.py` and `python .ai/scripts/check_memory.py`
-  passed. `git diff --check` passed; line-ending normalization warnings are
-  Git working-copy warnings only.
+- Repository build gate: backend 342/342, backend Release build 0/0, and
+  Angular production build passed. `python .ai/scripts/context.py` and
+  `python .ai/scripts/check_memory.py` passed. `git diff --check` passed;
+  line-ending normalization warnings are Git working-copy warnings only.
 
 ## Azure and backlog
 
@@ -92,14 +93,14 @@
 
 ## Runtime and environment boundary
 
-- Final WPF runtime verification is complete for PR #37 commit `a85c6f0` at
+- Final WPF runtime verification is complete for PR #37 commit `f548477` at
   `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
-  PID 44220, title `RMS Support Hub`, `Responding=True`, exactly one process,
-  started `2026-08-24T01:15:35.9254800+03:00`, Session 2. It is left running.
+  PID 44076, title `RMS Support Hub`, `Responding=True`, exactly one process,
+  started `2026-08-24T12:23:48.0785680+03:00`, Session 2. It is left running.
 - `scripts/dev.ps1` runtime probes returned API live 200/healthy, API ready
   200/ready with Testing tier, and Angular `http://localhost:4200/` 200 HTML.
-  Current project-owned API PID is 24472 and Angular PID is 33020; both remain
-  running. WPF required process-local `WINDIR=C:\WINDOWS` normalization.
+  Current project-owned API PID is 41932 and Angular PID is 44228; both remain
+  running. WPF was launched with process-local `WINDIR=C:\WINDOWS`.
 - The current machine has no authorized Agent service/operator-group/database
   mutation session. No live backup, restore, service mutation, Production
   contact, machine provisioning, fleet/remote work, or customer-data mutation
