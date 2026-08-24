@@ -74,10 +74,10 @@
   Angular production build passed. `python .ai/scripts/context.py` and
   `python .ai/scripts/check_memory.py` passed. `git diff --check` passed;
   line-ending normalization warnings are Git working-copy warnings only.
-- Exact-head GitHub CI has five completed passing checks; the hosted POS
-  Infrastructure job failed 42 existing ACL-fixture cases while local
-  Infrastructure tests pass 156/156. The Support Hub workflow was still
-  pending when the watch was stopped; no green CI claim is made.
+- Exact-head GitHub CI for final head `53233d4` passed all seven checks.
+  An earlier hosted run exposed a transient ACL-fixture failure; its rerun
+  passed the POS Infrastructure job 156/156 and the complete workflow is
+  green.
 
 ## Azure and backlog
 
