@@ -97,10 +97,11 @@
 
 ## Runtime and environment boundary
 
-- Final WPF runtime verification is complete for PR #37 commit `f548477` at
+- Final WPF runtime verification is complete for the current Release artifact
+  from PR #37 at
   `pos/src/RmsSupportHub.Pos.Desktop.Wpf/bin/Release/net10.0-windows10.0.19041.0/RmsSupportHub.Pos.Desktop.Wpf.exe`:
-  PID 44076, title `RMS Support Hub`, `Responding=True`, exactly one process,
-  started `2026-08-24T12:23:48.0785680+03:00`, Session 2. It is left running.
+  PID 34128, title `RMS Support Hub`, `Responding=True`, exactly one process,
+  started `2026-08-24T12:40:11.7268188+03:00`, Session 2. It is left running.
 - `scripts/dev.ps1` runtime probes returned API live 200/healthy, API ready
   200/ready with Testing tier, and Angular `http://localhost:4200/` 200 HTML.
   Current project-owned API PID is 41932 and Angular PID is 44228; both remain
